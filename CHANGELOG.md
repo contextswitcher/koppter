@@ -32,6 +32,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- The desktop application no longer starts with warnings of Java about the loading of native libraries.
 - An order of the tasks changed on one device is no longer lost in the synchronization through git when another device changed another file meanwhile.
 
 ## [2026-11-14] - 2026-11-14
