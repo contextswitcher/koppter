@@ -14,6 +14,13 @@ import kotlinx.datetime.plus
 const val ICE_RECUR_FILE = "ice_recur.txt"
 
 /**
+ * The schedule of a todo.txt file that has no schedule file: the weekly review of Getting Things Done,
+ * so that a new user sees what an entry looks like. An empty file means no entries.
+ */
+// [impl->dsn~ice-recur-default~1]
+const val DEFAULT_ICE_RECUR = "weekly ; day Friday - Weekly review @review dur:1h\n"
+
+/**
  * One entry of an `ice_recur.txt` file: a schedule and the task it adds on the days of the schedule.
  *
  * The format is that of the `ice_recur` add-on: `[@start] [@@end] timing - task`, where the timing is

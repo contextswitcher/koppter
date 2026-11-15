@@ -25,6 +25,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- A `todo.txt` file in a folder or a git repository that has no `ice_recur.txt` gets the task `Weekly review @review dur:1h` on every Friday; a schedule file, also one without entries, replaces this default.
 - The time by which a task is due on its due date is written `dueby:14:00`; the former `by:14:00` is not read anymore and has to be renamed in a file that has it.
 - The guide to organizing many tasks and the skill for agents describe projects as the outline of areas and outcomes, and contexts as the kinds of work and the places; the guide compares this with areas as contexts, and the skill follows the way that the file uses.
 - The edit dialog suggests a known project, context or hashtag by any part of its name, so that `rea` finds `research>reading`.
