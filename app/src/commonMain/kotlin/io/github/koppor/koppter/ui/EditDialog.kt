@@ -105,6 +105,7 @@ fun EditDialog(
     var duration by remember(base) { mutableStateOf(base.tag(Task.DURATION).orEmpty()) }
     var at by remember(base) { mutableStateOf(base.tag(Task.AT).orEmpty()) }
     var travel by remember(base) { mutableStateOf(base.tag(Task.TRAVEL).orEmpty()) }
+    var spent by remember(base) { mutableStateOf(base.tag(Task.SPENT).orEmpty()) }
     var by by remember(base) { mutableStateOf(base.tag(Task.BY).orEmpty()) }
     var contextSwitcher by remember(base) { mutableStateOf(base.tag(Task.CONTEXT_SWITCHER).orEmpty()) }
     var projects by remember(base) { mutableStateOf(base.projects) }
@@ -119,6 +120,7 @@ fun EditDialog(
     val durationValid = duration.isBlank() || Task.parseDuration(duration.trim()) != null
     val atValid = at.isBlank() || Task.parseTime(at.trim()) != null
     val travelValid = travel.isBlank() || Task.parseDuration(travel.trim()) != null
+    val spentValid = spent.isBlank() || Task.parseDuration(spent.trim()) != null
     val byValid = by.isBlank() || Task.parseTime(by.trim()) != null
     val result = base
         .edit(description = description, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
@@ -130,12 +132,13 @@ fun EditDialog(
         .withTag(Task.DURATION, duration.trim())
         .withTag(Task.AT, at.trim())
         .withTag(Task.TRAVEL, travel.trim())
+        .withTag(Task.SPENT, spent.trim())
         // A link pasted into the description counts only while the field is empty.
         .withTag(Task.CONTEXT_SWITCHER, Task.contextSwitcherId(contextSwitcher))
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
-    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && result.body.isNotBlank()
+    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank()
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current
@@ -249,6 +252,16 @@ fun EditDialog(
                         isError = !travelValid,
                         singleLine = true,
                         modifier = field.testTag("edit-travel"),
+                    )
+                    // [impl->dsn~time-spent~1]
+                    OutlinedTextField(
+                        value = spent,
+                        onValueChange = { spent = it },
+                        label = { Text("Time spent") },
+                        placeholder = { Text("1h30m") },
+                        isError = !spentValid,
+                        singleLine = true,
+                        modifier = field.testTag("edit-spent"),
                     )
                 }
 

@@ -1,5 +1,7 @@
 package io.github.koppor.koppter.todotxt
 
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.hours
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -305,5 +307,18 @@ class TaskTest {
             "Send the report rec:+1w deadline:2026-12-07T23:59-12:00",
             Task.parse("Send the report rec:+1w deadline:2026-11-30T23:59-12:00").nextOccurrence(today)!!.toLine(),
         )
+    }
+
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun theTimeSpentIsATagThatGrowsAndThatTheNextOccurrenceDoesNotKeep() {
+        val task = Task.parse("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h")
+        assertEquals(null, task.spent)
+        assertEquals("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h spent:45m", task.withSpent(45.minutes).toLine())
+        val worked = task.withSpent(45.minutes).withSpent(90.minutes)
+        assertEquals("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h spent:2h15m", worked.toLine())
+        assertEquals(135.minutes, worked.spent)
+        assertEquals("spent:2h", Task.parse("Call Mom spent:1h").withSpent(1.hours).toLine().substringAfter("Mom "))
+        assertEquals("Prepare the lecture @work due:2026-11-23 rec:+1w dur:4h", worked.nextOccurrence(today)?.toLine())
     }
 }

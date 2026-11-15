@@ -105,6 +105,18 @@ Covers:
 
 Needs: dsn
 
+### Time spent
+`req~time-spent~1`
+
+A task can state the time that was worked on it.
+Planning gives the task the rest of its duration, and the estimate stays on the task.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan as a file
 `req~plan-file~1`
 
@@ -289,6 +301,22 @@ Covers:
 
 * `req~travel-time~1`
 * `adr~travel-time-tag~1`
+
+Needs: impl, utest
+
+### Time spent
+`dsn~time-spent~1`
+
+The tag `spent:` holds a time in the form of the tag `dur:`; `Task.spent` reads it, and the edit dialog has a field for it that rejects what is no time.
+The planner gives a task its duration without that time, and the default duration if nothing is left, as an open task is not done.
+A task with a fixed time keeps its length.
+In the agenda, a block of today has a button that adds the length of the block to the tag through `Task.withSpent`, once per block.
+The next occurrence of a recurring task has no time spent, and the check of a todo.txt file reads the tag as it reads `dur:`.
+
+Covers:
+
+* `req~time-spent~1`
+* `adr~time-spent-tag~1`
 
 Needs: impl, utest
 

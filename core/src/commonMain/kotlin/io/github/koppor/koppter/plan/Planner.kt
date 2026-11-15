@@ -10,6 +10,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -141,6 +142,16 @@ data class Plan(val blocks: List<Block>, val unplaced: List<Entry>, val problems
 // ponytail: a constant; a setting when half an hour does not fit the tasks without duration.
 val DEFAULT_DURATION = 30.minutes
 
+/**
+ * The minutes that the plan gives a task: its duration without the time spent on it.
+ * A task that took its duration and is still open is not done, so that it gets the default duration again.
+ */
+// [impl->dsn~time-spent~1]
+internal fun minutesLeft(task: Task): Int {
+    val left = (task.duration ?: DEFAULT_DURATION) - (task.spent ?: Duration.ZERO)
+    return (if (left.inWholeMinutes > 0) left else DEFAULT_DURATION).inWholeMinutes.toInt()
+}
+
 /** A block does not start between these minutes after a time that is taken by something else than a task. */
 private const val GRID = 15
 
@@ -229,7 +240,7 @@ private class Planning(
     private val busy = busy + (today to busy[today].orEmpty() + Span(0, now))
     private val taken = mutableMapOf<LocalDate, MutableList<Span>>()
     private val blocks = mutableMapOf<Entry, MutableList<Block>>()
-    private val left = dependencies.order.associateWithTo(mutableMapOf()) { (it.task.duration ?: DEFAULT_DURATION).inWholeMinutes.toInt() }
+    private val left = dependencies.order.associateWithTo(mutableMapOf()) { minutesLeft(it.task) }
     private val unplaced = mutableListOf<Entry>()
 
     /** The tasks that are not to be planned yet: their threshold date lies behind their barrier, or they wait for such a task. */

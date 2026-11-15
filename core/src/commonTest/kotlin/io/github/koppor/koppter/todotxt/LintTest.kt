@@ -90,6 +90,12 @@ class LintTest {
         )
     }
 
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun aTimeSpentThatIsNoDurationIsAnError() {
+        assertEquals(listOf("todo.txt:1: error: spent:much is not a duration such as 30m or 1h30m"), findings("Write the report @work dur:4h spent:much\nCall Mom @phone spent:20m\n"))
+    }
+
     // [utest->dsn~lint-formats~1]
     @Test
     fun findingsAreWrittenForAnEditorForGitHubActionsOrAsATable() {

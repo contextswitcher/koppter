@@ -519,6 +519,39 @@ class AppTest {
         assertEquals("Post signs +GarageSale tt:30m", storage.text.lines()[1])
     }
 
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun theDialogSetsTheTimeSpent() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-spent").performScrollTo().performTextInput("long")
+        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-spent").performScrollTo().performTextReplacement("1h30m")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("Post signs +GarageSale spent:1h30m", storage.text.lines()[1])
+    }
+
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun aBlockOfTodayAddsItsLengthToTheTimeSpentOnItsTask() = runComposeUiTest {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:45 Schedule pickup +GarageSale @phone. 10:00-11:30 Post signs +GarageSale. 12:00-12:30 A task that is gone
+            2026-11-13 w46 Fri  09:00-10:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        start()
+        onNodeWithTag("agenda-switch").performClick()
+        // Only the blocks of today whose task is there offer it.
+        onAllNodesWithTag("agenda-worked").assertCountEquals(2)
+        onAllNodesWithTag("agenda-worked")[0].assertTextEquals("+45m spent")
+        onAllNodesWithTag("agenda-worked")[1].assertTextEquals("+1h30m spent").performClick()
+        assertEquals("Post signs +GarageSale spent:1h30m", storage.text.lines()[1])
+        // A block is counted once.
+        onAllNodesWithTag("agenda-worked").assertCountEquals(1)
+        onNodeWithTag("agenda-worked").performClick()
+        assertEquals(true, storage.text.lines().any { "Schedule pickup" in it && it.endsWith("spent:45m") })
+        onAllNodesWithTag("agenda-worked").assertCountEquals(0)
+    }
+
     // [utest->dsn~due-time~1]
     @Test
     fun theDialogSetsTheTimeByWhichATaskIsDue() = runComposeUiTest {

@@ -38,6 +38,7 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0031](0031-offset-from-utc-in-the-time-of-a-deadline.md) | The time of a deadline may state its offset from UTC |
 | [0032](0032-next-actions-derived-from-the-tasks.md) | Next actions are derived from the tasks |
 | [0033](0033-links-to-the-application-with-a-query.md) | Links to the application name a filter in a query |
+| [0034](0034-tag-for-the-time-spent-on-a-task.md) | The time spent on a task is a tag |
 
 ## Conventions
 

@@ -46,6 +46,7 @@ private val VALUES: Map<String, Pair<String, (String) -> Any?>> = mapOf(
     Task.RECURRENCE to ("a recurrence such as 2w or +1m" to Recurrence::parse),
     Task.DURATION to ("a duration such as 30m or 1h30m" to Task::parseDuration),
     Task.TRAVEL to ("a duration such as 30m or 1h30m" to Task::parseDuration),
+    Task.SPENT to ("a duration such as 30m or 1h30m" to Task::parseDuration),
     Task.AT to ("a time as HH:MM" to Task::parseTime),
     Task.BY to ("a time as HH:MM" to Task::parseTime),
 )

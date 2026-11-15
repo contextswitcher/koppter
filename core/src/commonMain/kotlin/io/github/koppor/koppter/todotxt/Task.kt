@@ -95,6 +95,13 @@ data class Task(
     /** The time the task is expected to take. */
     val duration: Duration? get() = tag(DURATION)?.let(::parseDuration)
 
+    /** The time that was worked on the task so far; the plan gives the task what is left of its duration. */
+    // [impl->dsn~time-spent~1]
+    val spent: Duration? get() = tag(SPENT)?.let(::parseDuration)
+
+    /** This task with [worked] added to the time spent on it. */
+    fun withSpent(worked: Duration): Task = withTag(SPENT, durationText((spent ?: Duration.ZERO) + worked))
+
     /** The minutes of the day at which the task takes place, for a task with a fixed time. */
     // [impl->dsn~fixed-time~1]
     val at: Int? get() = tag(AT)?.let(::parseTime)
@@ -202,7 +209,8 @@ data class Task(
         val threshold = threshold
         val from = if (recurrence.strict) due ?: threshold ?: today else today
         val next = recurrence.next(from)
-        val open = if (completed) reopen() else this
+        // The next occurrence starts anew: nothing was worked on it.
+        val open = (if (completed) reopen() else this).withTag(SPENT, null)
         return when {
             due != null && threshold != null ->
                 open.withTag(DUE, next.toString()).withTag(THRESHOLD, next.minus(threshold.daysUntil(due), DateTimeUnit.DAY).toString())
@@ -237,6 +245,7 @@ data class Task(
         const val AT = "at"
         const val BY = "dueby"
         const val TRAVEL = "tt"
+        const val SPENT = "spent"
 
         /** As topydo writes dependencies: a task with [ID] waits for the tasks whose [PARENT] has the same value. */
         const val ID = "id"
@@ -250,6 +259,10 @@ data class Task(
         /** Reads a duration such as `45m`, `2h` or `1h30m`; `null` if the text is none or not positive. */
         // [impl->dsn~duration~1]
         fun parseDuration(text: String): Duration? = Duration.parseOrNull(text)?.takeIf { it.isPositive() && it.isFinite() }
+
+        /** Writes a duration as [parseDuration] reads it, in hours and minutes: `1h30m`; empty for less than a minute. */
+        fun durationText(duration: Duration): String =
+            duration.inWholeMinutes.let { (if (it >= 60) "${it / 60}h" else "") + (if (it % 60 > 0) "${it % 60}m" else "") }
 
         /**
          * The link that makes ContextSwitcher switch to the task that a tag `cs:` names.

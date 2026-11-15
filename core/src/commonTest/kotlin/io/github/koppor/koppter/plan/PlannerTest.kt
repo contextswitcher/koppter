@@ -516,4 +516,27 @@ class PlannerTest {
         val done = TodoFile.parse("x Water the plants @home\nWater the plants @home\n").entries
         assertEquals(mapOf(done[1] to "Water the plants @home"), CalendarTxt.names(done))
     }
+
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun aTaskGetsWhatIsLeftOfItsDurationAfterTheTimeSpentOnIt() {
+        val plan = plan(
+            """
+            (A) Write the report dur:4h spent:2h30m
+            (B) Review the paper dur:1h spent:1h15m
+            (C) Answer the mail spent:10m
+            (D) Call the landlord dur:45m
+            """,
+        )
+        assertEquals(
+            listOf(
+                "2026-11-12 8:00 90 Write the report",
+                // The time is used up and the task is open: it gets the half hour of a task without duration.
+                "2026-11-12 9:30 30 Review the paper",
+                "2026-11-12 10:00 20 Answer the mail",
+                "2026-11-12 10:20 45 Call the landlord",
+            ),
+            plan.lines(),
+        )
+    }
 }

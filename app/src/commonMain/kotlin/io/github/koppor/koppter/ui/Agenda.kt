@@ -1,5 +1,8 @@
 package io.github.koppor.koppter.ui
 
+import kotlin.time.Duration.Companion.minutes
+import io.github.koppor.koppter.todotxt.Task
+import androidx.compose.runtime.mutableStateListOf
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -78,7 +81,10 @@ fun Agenda(
     today: LocalDate,
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
+    onWorked: (Entry, Int) -> Unit,
 ) {
+    // A block is counted once, also when the button is hit twice.
+    val counted = remember { mutableStateListOf<TextBlock>() }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
         for (offset in 0..6) {
@@ -102,6 +108,16 @@ fun Agenda(
                             // The task was completed, deleted or edited after it was planned.
                             Text(block.text, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                    }
+                    // [impl->dsn~time-spent~1]
+                    if (entry != null && offset == 0 && block !in counted) {
+                        TextButton(
+                            onClick = {
+                                counted += block
+                                onWorked(entry, block.span.length)
+                            },
+                            modifier = Modifier.testTag("agenda-worked"),
+                        ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
                     }
                 }
             }

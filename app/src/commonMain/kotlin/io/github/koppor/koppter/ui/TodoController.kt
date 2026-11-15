@@ -50,6 +50,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * The state of the application and the operations on it.
@@ -616,6 +617,13 @@ class TodoController(
     fun delete(entry: Entry) {
         val index = locate(entry) ?: return
         write(file.remove(index), "Delete task: ${entry.task.description}")
+    }
+
+    /** Adds the minutes of a block of the plan to the time spent on its task. */
+    // [impl->dsn~time-spent~1]
+    fun worked(entry: Entry, minutes: Int) {
+        val index = locate(entry) ?: return
+        write(file.replace(index, entry.task.withSpent(minutes.minutes)), "Note the time spent: ${entry.task.description}")
     }
 
     fun updateSettings(new: Settings) {

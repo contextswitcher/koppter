@@ -211,6 +211,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `dueby:14:00` | The time of the due date by which the task has to be done | This application | Field *Due time* in the edit dialog, or typed into the task next to `due:`. Among the tasks of a day, the earlier time comes first, and the icon of the [plan](#planning) is red if the task is planned to end later ([decision 0030](docs/decisions/0030-tag-for-the-time-of-the-due-date-named-dueby.md)). |
 | `deadline:2026-11-30` | The day that others set for the task, next to the day to have it done by | This application | Field *Deadline* in the edit dialog, or typed into the task; see [Deadline next to the due date](#deadline-next-to-the-due-date) ([decision 0028](docs/decisions/0028-tag-for-the-deadline-next-to-the-due-date.md)). |
 | `at:12:00` | The time of the day at which the task takes place | This application | Field *Fixed time* in the edit dialog, or typed into the task. [Planning](#fixed-times) gives the task that time and plans the others around it ([decision 0021](docs/decisions/0021-tag-for-the-fixed-time-of-a-task.md)). |
+| `spent:1h30m` | The time that was worked on the task so far | This application | Field *Time spent* in the edit dialog, the button of a block in the agenda, or typed into the task. [Planning](#time-spent) gives the task the rest of its duration ([decision 0034](docs/decisions/0034-tag-for-the-time-spent-on-a-task.md)). |
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
@@ -521,6 +522,19 @@ Use it for what has its time, such as lunch, a training or an appointment, so th
 * The task of the day is completed like any other task, which takes its block from the next plan.
 * A time that is over is not planned any more.
 * The time counts for a budget of the project and the contexts of the task.
+
+### Time spent
+
+A task with the tag `spent:` was worked on already: the plan gives it the rest of its duration, and the estimate stays in `dur:`.
+
+| Line | Planned |
+| --- | --- |
+| `Write the report dur:4h spent:2h30m` | 1 hour and 30 minutes |
+| `Review the paper dur:1h spent:1h15m` | 30 minutes: the time is used up and the task is open, so it counts as a task without duration |
+
+* In the agenda, each block of today has a button such as *+45m spent*, which adds the length of the block to the tag.
+* The field *Time spent* of the edit dialog holds the sum and corrects it.
+* A completed task keeps both tags and tells what it was estimated at and what it took; the next occurrence of a recurring task starts without time spent.
 
 ### Travel time
 
