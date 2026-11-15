@@ -112,6 +112,8 @@ It also maps the terms of SkedPal to those of the application.
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
 
 If these files lie in a git repository, the application commits every change and synchronizes with the remote repository.
+A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
+On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 
 A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
 
@@ -421,7 +423,7 @@ A block whose task was completed, deleted or edited since shows the text it was 
 ### Calendars
 
 *Calendars with busy times* in the plan dialog takes the addresses at which calendar services publish a calendar as an iCalendar file, one per line.
-Nothing is planned into the times of their events; events of whole days, cancelled events and events marked as free do not count.
+Nothing is planned into the times of their events; events of whole days, canceled events and events marked as free do not count.
 
 * Outlook on the web: *Settings → Calendar → Shared calendars → Publish a calendar*, then the ICS link.
 * Google Calendar: *Settings → the calendar → Integrate calendar → Secret address in iCal format*.
@@ -525,9 +527,19 @@ The application writes all filters quoted.
 
 ## Installing
 
-The [latest release](https://github.com/koppor/koppter/releases/latest) carries the Android application as the file `koppter-<date>.apk`.
+The [latest release](https://github.com/koppor/koppter/releases/latest) carries the application as files to install:
+
+| File | System |
+| --- | --- |
+| `koppter-<date>.apk` | Android |
+| `koppter_<version>_amd64.deb` | Linux with Debian packages, such as Debian and Ubuntu |
+| `koppter-<version>.msi` | Windows; installs for the current user |
+| `koppter-<version>.dmg` | macOS on Apple Silicon |
+
 There is one release per day on which something changed, named after that day.
-The desktop application is not packaged yet; it is started from the sources, see [running](#running).
+The version of a desktop package is that day as `YY.M.D`, such as `26.11.14`.
+The desktop packages bring their own Java runtime.
+They are not signed: Windows and macOS warn before they open them, and macOS opens the application only after it is allowed under *Privacy & Security* in the system settings.
 
 ## Building
 
@@ -549,7 +561,8 @@ The Gradle wrapper downloads everything else, including that JDK and the Android
 ```
 
 starts the desktop application.
-It reads `todo.txt` in the home directory unless another file is set in the settings.
+It reads the file that is set in the settings, which may also be given as the address of a git repository, see [Files](#files).
+Without one, it reads `todo.txt` in the home directory if that file exists, and otherwise `todo.txt` in its data directory: `%APPDATA%\koppter` on Windows, `~/.local/share/koppter` on Linux ([decision 0025](docs/decisions/0025-locations-on-the-desktop-from-appdirs.md)).
 
 ```shell
 ./gradlew :android:assembleDebug

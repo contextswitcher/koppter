@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [2026-11-14] - 2026-11-14
+
+### Added
+
+- The field for the file in the settings takes the address of a git repository, also on the desktop: the application clones it into its data directory and uses its `todo.txt` file.
+- Examples in the empty fields for board columns, names of priorities and share actions in the settings.
+- Packages of the desktop application for Linux (deb), Windows (msi) and macOS (dmg) with the release of a day.
+
+### Changed
+
+- Colors chosen in the settings apply at once.
+- Without a file in the settings and without `todo.txt` in the home directory, the desktop application keeps `todo.txt` in its data directory.
+
+- Texts are a tenth smaller, and a field keeps its height when its first character is typed.
+- The filter panel has the heading *Filter*, and its text field shows *Search text* instead of the label *Text*.
+- The week stretches over the height of the window.
+
 ## [2026-11-13] - 2026-11-13
 
 ### Added
@@ -69,5 +86,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
 [2026-11-13]: https://github.com/koppor/koppter/compare/v2026-11-12...v2026-11-13
 [2026-11-12]: https://github.com/koppor/koppter/releases/tag/v2026-11-12

@@ -45,6 +45,8 @@ import io.github.koppor.koppter.storage.TodoStorage
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
     val companions = mutableMapOf<String, String>()
@@ -414,10 +416,21 @@ class AppTest {
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
+    @Test
+    fun aFieldOfOneLineKeepsItsHeightWhenTextIsTyped() = runComposeUiTest {
+        start()
+        for (tag in listOf("filter-text", "quick-add")) {
+            val empty = onNodeWithTag(tag).fetchSemanticsNode().size.height
+            onNodeWithTag(tag).performTextInput("mom")
+            assertEquals(empty, onNodeWithTag(tag).fetchSemanticsNode().size.height, tag)
+        }
+    }
+
     // [utest->dsn~filter-panel~1]
     @Test
     fun theFilterPanelRestrictsTheList() = runComposeUiTest {
         start()
+        onNodeWithTag("filter-heading").assertTextEquals("Filter")
         onNodeWithTag("filter-project-GarageSale").assertIsOff().performClick()
         onAllNodesWithTag("task").assertCountEquals(2)
         onNodeWithTag("filter-project-GarageSale").assertIsOn()
@@ -720,6 +733,9 @@ class AppTest {
 
         onNodeWithTag("week-title").assertTextEquals("Week 46 · 2026-11-09 to 2026-11-15")
         onAllNodesWithTag("week-block").assertCountEquals(3)
+        // The hours share the height of the window.
+        val window = onNodeWithTag("main-screen").fetchSemanticsNode().boundsInRoot.bottom
+        assertTrue(onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom > window - 24f)
         onNodeWithTag("week-next").performClick()
         onAllNodesWithTag("week-block").assertCountEquals(0)
         onNodeWithTag("week-next").performClick()
@@ -915,9 +931,10 @@ class AppTest {
         onNodeWithTag("settings-theme-Nord").assertIsSelected()
         onNodeWithTag("settings-theme-Everforest").performScrollTo().performClick()
         onNodeWithTag("settings-appearance-Dark").performScrollTo().performClick()
-        onNodeWithTag("settings-save").performScrollTo().performClick()
 
+        // The colors apply at once, without the button that saves the rest.
         assertEquals(ColorTheme.EVERFOREST to Appearance.DARK, saved.theme to saved.appearance)
+        onNodeWithTag("settings-theme-Everforest").assertIsSelected()
         assertEquals(saved, Settings.fromProperties(saved.toProperties()))
     }
 
@@ -967,14 +984,23 @@ class AppTest {
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").assertTextEquals("ecdsa-sha2-nistp256 AAAA koppter")
-        onNodeWithTag("settings-git-url").performScrollTo().performTextInput("git@example.org:other.git")
-        onNodeWithTag("settings-clone").performScrollTo().performClick()
-        onNodeWithTag("settings-clone-message").assertTextEquals("Not cloned: no such repository")
-
-        onNodeWithTag("settings-git-url").performTextReplacement("git@example.org:todo.git")
-        onNodeWithTag("settings-clone").performScrollTo().performClick()
+        // An address in the field of the file is cloned on saving; the dialog stays open if that fails.
+        onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
         onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-clone-message").assertTextEquals("Not cloned: no such repository")
+        assertEquals("", controller.settings.todoFile)
+
+        onNodeWithTag("settings-file").performTextReplacement("git@example.org:todo.git")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
         assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+    }
+
+    // [utest->dsn~git-setup-dialog~1]
+    @Test
+    fun onlyAnAddressOfARepositoryIsCloned() {
+        for (address in listOf("git@github.com:user/todo.git", "ssh://git@example.org/todo.git", "https://example.org/todo.git")) assertTrue(isGitAddress(address), address)
+        for (file in listOf("", "todo.txt", "/home/user/todo.txt", "C:\\Users\\user\\todo.txt", "content://documents/todo.txt")) assertFalse(isGitAddress(file), file)
     }
 
     // [utest->dsn~recurrence-on-completion~1]

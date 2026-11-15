@@ -88,7 +88,7 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
 
 /**
  * @param chooseFile lets the user pick the todo.txt file with the file dialog of the platform and returns its location,
- *   or `null` if the user cancelled.
+ *   or `null` if the user canceled.
  * @param git offered in the settings on platforms where the application has to bring its own git access
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
  */
@@ -116,7 +116,7 @@ fun App(
             }
         }
     }
-    MaterialTheme(colorScheme = colorScheme(controller.settings.theme, dark)) {
+    MaterialTheme(colorScheme = colorScheme(controller.settings.theme, dark), typography = compactTypography) {
         CompositionLocalProvider(
             LocalUriHandler provides uriHandler,
             LocalShowContext provides { controller.filter = controller.filter.copy(contexts = setOf(it)) },
@@ -347,6 +347,8 @@ private fun MainScreen(
             boardColumns = controller.boardColumnsText,
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,
+            // [impl->dsn~color-themes~1]
+            onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             onSave = { settings, boardColumns, shareActions, priorityNames ->
                 // The columns, share actions and names belong to the file that was open when the dialog was opened.
                 boardColumns?.let(controller::updateBoardColumns)
