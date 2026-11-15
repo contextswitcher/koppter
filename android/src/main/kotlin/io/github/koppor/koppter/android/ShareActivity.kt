@@ -20,6 +20,7 @@ import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.ui.TodoController
 import kotlinx.datetime.LocalDate
+import org.tinylog.Logger
 
 /**
  * Receives text that another application shares and adds it as a task, without showing a screen.
@@ -67,6 +68,9 @@ internal fun Context.todoController(gitSetup: GitSetup): TodoController {
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },
         minuteOfDay = { java.time.LocalTime.now().toSecondOfDay() / 60 },
         fetch = { address -> withContext(Dispatchers.IO) { fetchCalendar(address) } },
+        // [impl->dsn~failure-log~1]
+        // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
+        log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
     )
 }
 

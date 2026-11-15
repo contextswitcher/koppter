@@ -10,6 +10,7 @@ import io.github.koppor.koppter.plan.fetchCalendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.storage.SettingsFile
+import io.github.koppor.koppter.storage.logToFile
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.sync.storageForFile
 import io.github.koppor.koppter.ui.App
@@ -40,24 +41,7 @@ private fun chooseFile(owner: java.awt.Frame): String? {
     return dialog.file?.let { Path(dialog.directory, it).toString() }
 }
 
-/**
- * Adds the log file to the configuration of tinylog, which reads system properties in addition to `tinylog.properties`.
- * The file is named here because its directory is known at run time only, and so the tests write none.
- */
-// [impl->adr~log-messages-through-tinylog~1]
-private fun logToFile(directory: Path) {
-    mapOf(
-        "writer2" to "rolling file",
-        "writer2.file" to directory.resolve("koppter-{count}.log").toString(),
-        "writer2.policies" to "size: 1mb",
-        "writer2.backups" to "3",
-        "writer2.charset" to "UTF-8",
-        "writer2.format" to "{date: yyyy-MM-dd HH:mm:ss} {level} {class}: {message}",
-    ).forEach { (key, value) -> System.setProperty("tinylog.$key", value) }
-}
-
 fun main() {
-    // Before anything logs: tinylog reads its configuration once.
     logToFile(dataDirectory().resolve("logs"))
     // [impl->dsn~failure-log~1]
     Thread.setDefaultUncaughtExceptionHandler { _, e -> Logger.error(e, "The application failed") }

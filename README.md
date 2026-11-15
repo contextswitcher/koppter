@@ -604,6 +604,7 @@ starts the desktop application.
 It reads the file that is set in the settings, which may also be given as the address of a git repository, see [Files](#files).
 Without one, it reads `todo.txt` in the home directory if that file exists, and otherwise `todo.txt` in its data directory: `%APPDATA%\koppter` on Windows, `~/.local/share/koppter` on Linux ([decision 0025](docs/decisions/0025-locations-on-the-desktop-from-appdirs.md)).
 The directory `logs` in the data directory holds the log of the application, with what failed, such as a synchronization, and the messages of the git library: `koppter-0.log` and following, the highest number being the newest, at most three files of one megabyte.
+On Android, the log is in `Android/data/io.github.koppor.koppter/files/logs` of the shared storage, which a computer connected by USB shows, and warnings and errors go to logcat as well.
 A log can name the address of the git repository: look at it before passing it on.
 
 ```shell

@@ -13,8 +13,8 @@ Needs: impl
 ## Context and Problem Statement
 
 JGit and its SSH client write their log messages through SLF4J.
-The desktop application has nothing that takes these messages, so that SLF4J complains with three lines at every start and drops what the libraries report, warnings and errors of the synchronization included.
-What takes the log messages of the libraries in the desktop application?
+The application has nothing that takes these messages, so that SLF4J complains with three lines at every start of the desktop application and drops what the libraries report, warnings and errors of the synchronization included.
+What takes the log messages of the libraries?
 
 ## Considered Options
 
@@ -29,15 +29,17 @@ Chosen option: "tinylog", because it takes the messages of SLF4J with two small 
 
 The desktop application writes messages from the level of a warning on to the console.
 It writes messages from the level of an information on to a file in the directory `logs` of its data directory, which is kept to three files of one megabyte.
-The desktop application writes its own failures through the interface of tinylog.
+The Android application does the same, with logcat in place of the console and the file in the directory of the application in the shared storage.
+The application writes its own failures through the interface of tinylog.
 
 ### Consequences
 
 * Good, because the start is free of the complaint of SLF4J, and a warning of JGit is no longer lost.
 * Good, because a user who reports a problem of the synchronization can send a log file.
 * Bad, because the log file can name the address of the git repository of the user, who has to look at it before sending it.
-* Bad, because the desktop packages carry two more libraries.
-* Bad, because the Android application is not covered: its messages of SLF4J are still dropped.
+* Good, because one library serves the desktop and Android: it has a writer for logcat.
+* Bad, because the packages carry three more libraries.
+* Bad, because the log on Android is not verified on a device in the development sessions.
 
 ## Pros and Cons of the Options
 
