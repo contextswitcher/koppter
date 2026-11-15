@@ -237,7 +237,11 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     task.tags.forEach { (key, value) ->
         // [impl->dsn~deadline~1]
         // A due date that has passed is highlighted as on its day while the deadline lies ahead.
-        val date = if (key == Task.DUE || key == Task.DEADLINE) Task.parseDate(value) else null
+        val date = when (key) {
+            Task.DUE -> Task.parseDate(value)
+            Task.DEADLINE -> Task.parseDeadline(value)?.first
+            else -> null
+        }
         val passed = !task.completed && date != null && date < today
         val overdue = passed && (key == Task.DEADLINE || task.isOverdue(today))
         val dueToday = !task.completed && date == today || passed && !overdue

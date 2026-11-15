@@ -92,6 +92,7 @@ object CalendarTxt {
             planned == null -> PlanState.LATE
             due == null || deadline == null -> PlanState.FITS
             planned.lastDate > deadline -> PlanState.LATE
+            planned.lastDate == task.deadline && planned.lastEnd > (task.deadlineTime ?: (24 * 60)) -> PlanState.LATE
             planned.lastDate < due -> PlanState.FITS
             planned.lastDate == due && planned.lastEnd <= (task.by ?: (24 * 60)) -> PlanState.TIGHT
             else -> if (deadline > due) PlanState.TIGHT else PlanState.LATE

@@ -281,6 +281,8 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 * The days between the two are a buffer: after the due date, the task is highlighted as due and not as overdue, and a [plan](#planning) that ends in the buffer has a yellow icon and not a red one.
 * After the deadline, the task is overdue and its plan is late, wherever the due date is moved to.
 * A task with a deadline and without a due date is due on its deadline.
+* A deadline at a time of the day is written `deadline:2026-11-30T12:00`: a plan that ends on that day after that time is late ([decision 0029](docs/decisions/0029-time-of-a-deadline-as-part-of-its-date.md)).
+  The due date stays a date that other programs read, with its time in `by:`.
 * The next occurrence of a recurring task has its deadline moved as far as its due date.
 
 ## Dates in words

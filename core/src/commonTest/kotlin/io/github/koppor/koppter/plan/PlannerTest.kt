@@ -472,5 +472,10 @@ class PlannerTest {
         // Without a due date, the deadline is the due date.
         assertEquals(PlanState.TIGHT, state("deadline:2026-11-13"))
         assertEquals(PlanState.LATE, state("deadline:2026-11-12"))
+        // The plan ends at 9:00 on the day of the deadline.
+        assertEquals(PlanState.TIGHT, state("deadline:2026-11-13T09:00"))
+        assertEquals(PlanState.LATE, state("deadline:2026-11-13T08:30"))
+        assertEquals(PlanState.LATE, state("due:2026-11-12 deadline:2026-11-13T08:30"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-13T12:00"))
     }
 }

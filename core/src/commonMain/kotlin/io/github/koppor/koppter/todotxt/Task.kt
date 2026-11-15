@@ -75,7 +75,11 @@ data class Task(
     val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline
 
     /** The day that others set for the task, which the application does not move. */
-    val deadline: LocalDate? get() = tag(DEADLINE)?.let(::parseDate)
+    val deadline: LocalDate? get() = tag(DEADLINE)?.let(::parseDeadline)?.first
+
+    /** The time of the deadline in minutes of the day, for a tag that states one, as `deadline:2026-11-30T12:00`. */
+    // [impl->dsn~deadline~1]
+    val deadlineTime: Int? get() = tag(DEADLINE)?.let(::parseDeadline)?.second
 
     /** The threshold date: the task is not relevant before it. */
     val threshold: LocalDate? get() = tag(THRESHOLD)?.let(::parseDate)
@@ -95,7 +99,8 @@ data class Task(
 
     /** The minutes of the due date by which the task is due, for a task that is due at a time of that day. */
     // [impl->dsn~due-time~1]
-    val by: Int? get() = tag(BY)?.let(::parseTime)
+    // A task that is due on its deadline is due by the time of the deadline.
+    val by: Int? get() = tag(BY)?.let(::parseTime) ?: deadlineTime.takeIf { tag(DUE) == null }
 
     // [impl->dsn~task-serializer~1]
     fun toLine(): String = buildString {
@@ -201,7 +206,8 @@ data class Task(
             // [impl->dsn~deadline~1]
             // The deadline keeps its distance to the due date; where it was the due date itself, it stays that.
             val deadline = deadline ?: return@let moved
-            moved.withTag(DEADLINE, next.plus(due!!.daysUntil(deadline), DateTimeUnit.DAY).toString()).withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
+            val time = tag(DEADLINE)!!.substringAfter('T', "").let { if (it.isEmpty()) "" else "T$it" }
+            moved.withTag(DEADLINE, next.plus(due!!.daysUntil(deadline), DateTimeUnit.DAY).toString() + time).withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
         }.copy(creationDate = null, completionDate = null)
     }
 
@@ -282,6 +288,13 @@ data class Task(
                 creationDate = if (completed) dates.getOrNull(1) else dates.getOrNull(0),
                 body = rest,
             )
+        }
+
+        /** The day of a deadline, and its time in minutes of the day if the text states one: `2026-11-30` or `2026-11-30T12:00`. */
+        // [impl->dsn~deadline~1]
+        fun parseDeadline(text: String): Pair<LocalDate, Int?>? {
+            val date = parseDate(text.substringBefore('T')) ?: return null
+            return date to if ('T' in text) parseTime(text.substringAfter('T')) ?: return null else null
         }
 
         fun parseDate(text: String): LocalDate? = try {

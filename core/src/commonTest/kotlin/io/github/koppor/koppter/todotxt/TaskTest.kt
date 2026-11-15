@@ -262,4 +262,24 @@ class TaskTest {
         // A deadline that was the due date itself stays that.
         assertEquals("Pay rent rec:+1m deadline:2026-12-01", Task.parse("Pay rent rec:+1m deadline:2026-11-01").nextOccurrence(today)!!.toLine())
     }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aDeadlineMayStateATime() {
+        val task = Task.parse("Submit the paper deadline:2026-11-30T12:00")
+        assertEquals(LocalDate(2026, 11, 30), task.deadline)
+        assertEquals(12 * 60, task.deadlineTime)
+        // The task is due on its deadline, and by that time.
+        assertEquals(LocalDate(2026, 11, 30), task.due)
+        assertEquals(12 * 60, task.by)
+        // With a due date of its own, the task is due by the time of that date only.
+        assertNull(Task.parse("Submit the paper due:2026-11-20 deadline:2026-11-30T12:00").by)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30").deadlineTime)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30T25:00").deadline)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30T").deadline)
+        assertEquals(
+            "Send the report rec:+1m deadline:2026-12-30T12:00",
+            Task.parse("Send the report rec:+1m deadline:2026-11-30T12:00").nextOccurrence(today)!!.toLine(),
+        )
+    }
 }

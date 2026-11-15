@@ -162,9 +162,10 @@ class AppTest {
         onNodeWithTag("edit-deadline").assertTextContains("2026-11-30")
         onNodeWithTag("edit-deadline").performTextReplacement("soon")
         onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
-        onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04")
+        // The deadline may state a time.
+        onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04T12:00")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("File the tax return @home deadline:2026-12-04 due:2026-11-13", storage.text.lines()[4])
+        assertEquals("File the tax return @home deadline:2026-12-04T12:00 due:2026-11-13", storage.text.lines()[4])
     }
 
     // [utest->dsn~due-chips~1]

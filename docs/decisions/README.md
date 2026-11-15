@@ -33,6 +33,7 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0026](0026-levels-of-a-project-written-like-those-of-a-context.md) | The levels of a project are written like those of a context |
 | [0027](0027-log-messages-of-libraries-through-tinylog.md) | Log messages of libraries go through tinylog |
 | [0028](0028-tag-for-the-deadline-next-to-the-due-date.md) | A tag states the deadline next to the due date |
+| [0029](0029-time-of-a-deadline-as-part-of-its-date.md) | The time of a deadline is part of its date |
 
 ## Conventions
 

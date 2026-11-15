@@ -113,7 +113,7 @@ fun EditDialog(
     var note by remember { mutableStateOf(originalNote.orEmpty()) }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
-    val deadlineValid = deadline.isBlank() || Task.parseDate(deadline.trim()) != null
+    val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
     val thresholdValid = threshold.isBlank() || Task.parseDate(threshold.trim()) != null
     val recurrenceValid = recurrence.isBlank() || Recurrence.parse(recurrence.trim()) != null
     val durationValid = duration.isBlank() || Task.parseDuration(duration.trim()) != null
@@ -338,7 +338,7 @@ private fun DateField(label: String, value: String, onChange: (String) -> Unit, 
     )
     if (picking) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = Task.parseDate(value.trim())?.let { it.toEpochDays() * MILLIS_PER_DAY },
+            initialSelectedDateMillis = Task.parseDate(value.trim().substringBefore('T'))?.let { it.toEpochDays() * MILLIS_PER_DAY },
         )
         DatePickerDialog(
             onDismissRequest = { picking = false },
