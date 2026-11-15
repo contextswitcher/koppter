@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- While there is no `ice_recur.txt`, the editor of the scheduled tasks suggests a weekly review on every Friday; saving writes the entry to the file.
 - *Only the next action of each project* in the filter panel shows of each project the first task that can be worked on: one that neither has `@waiting` or `#someday` nor a threshold date in the future nor waits for another task. The overview by project names the projects without such a task.
 - The tag `deadline:` states the day that others set for a task next to its due date: the task is overdue, and its plan late, only after the deadline, and a task without a due date is due on its deadline. A deadline may state a time, as `deadline:2026-11-30T12:00`, and its offset from UTC, as `deadline:2026-11-30T23:59-12:00`, which is shown as the day and the time of the device.
 - `jbang lint@koppor/koppter todo.txt` checks a todo.txt file, and the notes, schedules and configuration next to it, for what the application does not read as it was probably meant; `--output-format` writes the findings for an editor, for GitHub Actions or as a table of comma-separated values.
@@ -25,7 +26,6 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
-- A `todo.txt` file in a folder or a git repository that has no `ice_recur.txt` gets the task `Weekly review @review dur:1h` on every Friday; a schedule file, also one without entries, replaces this default.
 - The time by which a task is due on its due date is written `dueby:14:00`; the former `by:14:00` is not read anymore and has to be renamed in a file that has it.
 - The guide to organizing many tasks and the skill for agents describe projects as the outline of areas and outcomes, and contexts as the kinds of work and the places; the guide compares this with areas as contexts, and the skill follows the way that the file uses.
 - The edit dialog suggests a known project, context or hashtag by any part of its name, so that `rea` finds `research>reading`.

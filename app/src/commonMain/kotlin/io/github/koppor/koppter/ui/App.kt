@@ -361,6 +361,7 @@ private fun MainScreen(
     schedule?.let {
         ScheduleDialog(
             schedule = it,
+            suggestion = remember { controller.scheduleSuggestion() },
             today = controller.today(),
             onSave = { text ->
                 controller.updateSchedule(text)

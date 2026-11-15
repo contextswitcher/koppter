@@ -38,11 +38,13 @@ private val EXAMPLES = """
 /** Edits the schedule of `ice_recur.txt` and tells for each entry on which day it adds its task next. */
 // [impl->dsn~ice-recur-editor~1]
 @Composable
-fun ScheduleDialog(schedule: String, today: LocalDate, onSave: (String) -> Unit, onDismiss: () -> Unit) {
-    var text by remember { mutableStateOf(schedule) }
+fun ScheduleDialog(schedule: String, today: LocalDate, onSave: (String) -> Unit, onDismiss: () -> Unit, suggestion: String? = null) {
+    // [impl->dsn~ice-recur-suggestion~1]
+    val initial = suggestion ?: schedule
+    var text by remember { mutableStateOf(initial) }
     val lines = iceRecurLines(text)
 
-    GuardedDialog(changed = text != schedule, onDismiss = onDismiss) {
+    GuardedDialog(changed = text != initial, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("schedule-dialog")) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Scheduled tasks", style = MaterialTheme.typography.titleLarge)
@@ -59,6 +61,13 @@ fun ScheduleDialog(schedule: String, today: LocalDate, onSave: (String) -> Unit,
                     minLines = 6,
                     modifier = Modifier.fillMaxWidth().testTag("schedule-text"),
                 )
+                if (suggestion != null && text == suggestion) {
+                    Text(
+                        "A suggestion: the weekly review of Getting Things Done. Nothing is scheduled until it is saved.",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.testTag("schedule-suggestion"),
+                    )
+                }
                 for (line in lines) {
                     val next = line.entry?.next(today)
                     Text(

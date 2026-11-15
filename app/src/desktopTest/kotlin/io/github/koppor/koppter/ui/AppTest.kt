@@ -1521,28 +1521,37 @@ class AppTest {
         assertEquals(1, storage.text.lines().count { "Check mail" in it })
     }
 
-    // [utest->dsn~ice-recur-default~1]
+    // [utest->dsn~ice-recur-suggestion~1]
     @Test
-    fun withoutAScheduleFileTheWeeklyReviewIsScheduled() = runComposeUiTest {
+    fun withoutAScheduleFileTheEditorSuggestsTheWeeklyReview() = runComposeUiTest {
         // A Friday.
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 13) })
         setContent { App(controller, "todo.txt") }
         mainClock.advanceTimeBy(2_500)
-        assertEquals("Weekly review @review dur:1h", storage.text.trim().lines().last())
-        // The editor shows the entry; the file is written only when the user changes it.
+        // Nothing is scheduled without a file.
+        assertEquals(0, storage.text.lines().count { "Weekly review" in it })
+
         onNodeWithTag("open-schedule").performClick()
         onNodeWithTag("schedule-text").assertTextContains("weekly ; day Friday - Weekly review @review dur:1h", substring = true)
+        onNodeWithTag("schedule-suggestion").assertExists()
         assertEquals(null, storage.companions["ice_recur.txt"])
+        // Saving writes the entry to the file, and from then on it is a schedule like any other.
+        onNodeWithTag("schedule-save").performScrollTo().performClick()
+        assertEquals("weekly ; day Friday - Weekly review @review dur:1h\n", storage.companions["ice_recur.txt"])
+        assertEquals("Weekly review @review dur:1h", storage.text.trim().lines().last())
+
+        onNodeWithTag("open-schedule").performClick()
+        onNodeWithTag("schedule-suggestion").assertDoesNotExist()
     }
 
-    // [utest->dsn~ice-recur-default~1]
+    // [utest->dsn~ice-recur-suggestion~1]
     @Test
-    fun anEmptyScheduleFileSchedulesNothing() = runComposeUiTest {
+    fun anEmptyScheduleFileGetsNoSuggestion() = runComposeUiTest {
         storage.companions["ice_recur.txt"] = ""
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 13) })
-        setContent { App(controller, "todo.txt") }
-        mainClock.advanceTimeBy(2_500)
-        assertEquals(0, storage.text.lines().count { "Weekly review" in it })
+        start()
+        onNodeWithTag("open-schedule").performClick()
+        onNodeWithTag("schedule-suggestion").assertDoesNotExist()
+        onNodeWithTag("schedule-text").assertTextContains("")
     }
 
     // [utest->dsn~ice-recur-run~1]

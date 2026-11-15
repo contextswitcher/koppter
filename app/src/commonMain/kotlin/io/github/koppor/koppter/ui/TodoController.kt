@@ -27,8 +27,8 @@ import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.PriorityNames
-import io.github.koppor.koppter.todotxt.DEFAULT_ICE_RECUR
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
+import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.todotxt.groupByColumns
@@ -361,7 +361,7 @@ class TodoController(
             val planConfig = ConfigFile.planConfig(newConfig)
             // A block does not start at an odd minute.
             // ponytail: a year ahead, as far as the widest named barrier; longer when a barrier with a date lies behind.
-            val upcoming = iceRecurOccurrences(files.readCompanion(ICE_RECUR_FILE) ?: DEFAULT_ICE_RECUR, today().plus(DatePeriod(days = 1))..today().plus(DatePeriod(days = 366)))
+            val upcoming = iceRecurOccurrences(files.readCompanion(ICE_RECUR_FILE).orEmpty(), today().plus(DatePeriod(days = 1))..today().plus(DatePeriod(days = 366)))
             val plan = plan(file.entries, planConfig, busy, today(), (minuteOfDay() + 14) / 15 * 15, upcoming)
             files.writeCompanion(CalendarTxt.NAME, CalendarTxt.write(files.readCompanion(CalendarTxt.NAME).orEmpty(), plan.blocks, today()))
             // [impl->dsn~ics-export~1]
@@ -431,8 +431,7 @@ class TodoController(
         val today = today()
         if (settings.iceRecurLastRun == today.toString() || syncStatus?.state == SyncState.RUNNING) return
         guarded {
-            // [impl->dsn~ice-recur-default~1]
-            val schedule = (storage as? CompanionFiles ?: return@guarded).readCompanion(ICE_RECUR_FILE) ?: DEFAULT_ICE_RECUR
+            val schedule = (storage as? CompanionFiles)?.readCompanion(ICE_RECUR_FILE) ?: return@guarded
             // The days since the last run, so that the tasks of a day on which the application was not open are not lost.
             val from = Task.parseDate(settings.iceRecurLastRun)?.plus(DatePeriod(days = 1))?.takeIf { it <= today } ?: today
             // A task that was added on these days, by any device, counts as present even if it is completed already.
@@ -449,11 +448,19 @@ class TodoController(
     /** Whether the storage keeps files next to the todo.txt file, of which the schedule is one. */
     val canSchedule: Boolean get() = config != null
 
-    /** The schedule of `ice_recur.txt`; the default one if the file does not exist, `null` if it cannot be read. */
+    /** The schedule of `ice_recur.txt`; empty if the file does not exist, `null` if it cannot be read. */
     fun schedule(): String? = try {
-        (storage as? CompanionFiles)?.let { (it.readCompanion(ICE_RECUR_FILE) ?: DEFAULT_ICE_RECUR).replace("\r\n", "\n") }
+        (storage as? CompanionFiles)?.let { it.readCompanion(ICE_RECUR_FILE).orEmpty().replace("\r\n", "\n") }
     } catch (e: Exception) {
         failed(e)
+        null
+    }
+
+    /** What the editor offers in place of an empty schedule: an entry to start with, as long as the file does not exist. */
+    // [impl->dsn~ice-recur-suggestion~1]
+    fun scheduleSuggestion(): String? = try {
+        SUGGESTED_ICE_RECUR.takeIf { (storage as? CompanionFiles)?.readCompanion(ICE_RECUR_FILE) == null }
+    } catch (_: Exception) {
         null
     }
 

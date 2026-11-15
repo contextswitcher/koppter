@@ -14,11 +14,11 @@ import kotlinx.datetime.plus
 const val ICE_RECUR_FILE = "ice_recur.txt"
 
 /**
- * The schedule of a todo.txt file that has no schedule file: the weekly review of Getting Things Done,
- * so that a new user sees what an entry looks like. An empty file means no entries.
+ * The entry that the editor suggests while there is no schedule file: the weekly review of Getting Things Done.
+ * It is only a text in the editor until the user saves it.
  */
-// [impl->dsn~ice-recur-default~1]
-const val DEFAULT_ICE_RECUR = "weekly ; day Friday - Weekly review @review dur:1h\n"
+// [impl->dsn~ice-recur-suggestion~1]
+const val SUGGESTED_ICE_RECUR = "weekly ; day Friday - Weekly review @review dur:1h\n"
 
 /**
  * One entry of an `ice_recur.txt` file: a schedule and the task it adds on the days of the schedule.

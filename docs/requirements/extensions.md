@@ -631,17 +631,16 @@ Covers:
 
 Needs: impl, utest
 
-### Default schedule
-`dsn~ice-recur-default~1`
+### Suggested schedule
+`dsn~ice-recur-suggestion~1`
 
-A todo.txt file without the file `ice_recur.txt` has the schedule `DEFAULT_ICE_RECUR`: the weekly review of Getting Things Done, on every Friday.
-The run, the plan and the editor read it in place of the file, so that the editor shows what an entry looks like.
-The file is written only when the user changes the schedule; a file without entries means none.
-A storage that keeps no files next to the todo.txt file has no schedule.
+While the file `ice_recur.txt` does not exist, `ScheduleDialog` shows the entry `SUGGESTED_ICE_RECUR` in place of an empty text, the weekly review of Getting Things Done on every Friday, and tells that it is a suggestion.
+The suggestion is a text of the editor only: the run and the plan read the file, so that nothing is scheduled until the user saves.
+A file without entries gets no suggestion.
 
 Covers:
 
-* `req~scheduled-tasks~1`
+* `req~scheduled-tasks-editor~1`
 
 Needs: impl, utest
 

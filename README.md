@@ -118,7 +118,7 @@ The application covers the lists and steps of Getting Things Done (GTD), the met
 | Calendar | The dates `due:` and `deadline:` and the time `at:`; the [agenda and the week](#agenda-and-week) |
 | Tickler file | The threshold date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
 | Reference material | The note of a task, a Markdown file next to the `todo.txt` file |
-| Weekly review | A task on every Friday, which is the [schedule](#by-the-calendar-the-file-ice_recurtxt) until another one is entered; the overview by project names the projects without next action, and the [plan](#planning) lists what does not fit |
+| Weekly review | A task on every Friday, which the editor of the [schedule](#by-the-calendar-the-file-ice_recurtxt) suggests for a new `ice_recur.txt`; the overview by project names the projects without next action, and the [plan](#planning) lists what does not fit |
 
 The [board](#board) by filter starts with the lists of the method, until other columns are entered in the settings:
 
@@ -270,8 +270,8 @@ The format is that of the [ice_recur](https://github.com/rlpowell/todo-text-stuf
    A task of an entry that is added or changed in the editor and occurs today is added at once.
 4. Below the text, the editor tells for each entry the next day on which it adds its task, and which lines it does not understand.
 
-Until the file exists, the schedule is `weekly ; day Friday - Weekly review @review dur:1h`, the weekly review of [Getting Things Done](#getting-things-done): the task is added on every Friday on which no such task is open.
-The editor shows the entry; emptying the editor and saving writes a file without entries, which adds nothing.
+Until the file exists, the editor suggests the entry `weekly ; day Friday - Weekly review @review dur:1h`, the weekly review of [Getting Things Done](#getting-things-done).
+Nothing is scheduled until the entry is saved, which writes it to `ice_recur.txt`.
 
 | Entry | Adds the task |
 | --- | --- |
