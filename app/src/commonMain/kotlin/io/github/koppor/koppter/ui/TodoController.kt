@@ -25,6 +25,7 @@ import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.PriorityNames
+import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.todotxt.groupByColumns
@@ -570,7 +571,6 @@ class TodoController(
     }
 
     private companion object {
-        const val ICE_RECUR_FILE = "ice_recur.txt"
         const val NOTES_DIRECTORY = "notes"
     }
 

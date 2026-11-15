@@ -10,6 +10,9 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.number
 import kotlinx.datetime.plus
 
+/** The file of the schedule, next to the todo.txt file. */
+const val ICE_RECUR_FILE = "ice_recur.txt"
+
 /**
  * One entry of an `ice_recur.txt` file: a schedule and the task it adds on the days of the schedule.
  *

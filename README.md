@@ -112,6 +112,9 @@ It also maps the terms of SkedPal to those of the application.
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
 
 If these files lie in a git repository, the application commits every change and synchronizes with the remote repository.
+Changes of two devices are merged without a conflict to resolve: `todo.txt` and `ice_recur.txt` line by line, where a line that both devices changed differently is kept in both versions, and of two plans the one made last is taken.
+A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
+This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 

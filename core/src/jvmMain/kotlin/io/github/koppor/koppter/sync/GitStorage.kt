@@ -1,10 +1,13 @@
 package io.github.koppor.koppter.sync
 
+import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.FileStorage
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
+import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import kotlinx.datetime.LocalDate
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
@@ -23,14 +26,15 @@ import org.eclipse.jgit.treewalk.TreeWalk
 import java.nio.file.Path
 import java.time.ZoneId
 import java.util.concurrent.Executors
+import kotlin.io.path.writeText
 
 /**
  * A todo.txt file in the working tree of a git repository.
  *
  * Every change of the file is committed at once, with the change as the commit message;
  * the exchange with the remote repository runs afterwards in the background.
- * Remote changes are merged, never rebased, and the todo.txt file is merged line by line
- * ([mergeLines]), so that concurrent changes on two devices do not conflict.
+ * Remote changes are merged, never rebased. The todo.txt file and `ice_recur.txt` are merged line by line
+ * ([mergeLines]), and of two plans the newer one is taken, so that concurrent changes on two devices do not conflict.
  */
 // [impl->dsn~git-storage~1]
 class GitStorage(
@@ -122,6 +126,7 @@ class GitStorage(
         error("Push rejected twice: the remote repository keeps changing")
     }
 
+    // [impl->dsn~git-sync~1]
     private fun mergeRemote(remote: String) {
         val theirs = repository.resolve("refs/remotes/$remote/${repository.branch}") ?: return
         val ours = repository.resolve("HEAD")
@@ -137,21 +142,43 @@ class GitStorage(
             return
         }
 
-        val merged = mergeLines(
-            base = base?.let { linesAt(it) } ?: emptyList(),
-            ours = linesAt(ours),
-            theirs = linesAt(theirs),
-        )
+        // The files that both sides changed and that are merged here instead of by git, with their merged content.
+        // A file that only one side changed is left to git, which takes that side as it is.
+        val merged = mutableMapOf<String, String>()
+        fun bothChanged(file: String): Triple<String?, String?, String?>? =
+            Triple(base?.let { textAt(it, file) }, textAt(ours, file), textAt(theirs, file))
+                .takeIf { (base, ours, theirs) -> ours != theirs && ours != base && theirs != base }
+        // [impl->dsn~merge-of-companions~1]
+        for (file in listOf(path, sibling(ICE_RECUR_FILE))) {
+            val (inBase, inOurs, inTheirs) = bothChanged(file) ?: continue
+            val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
+            merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")
+        }
+        // A plan is one whole: lines of two plans do not make a plan, so the plan made last is taken.
+        val newerPlan = if (lastChange(theirs, sibling(CalendarTxt.NAME)) > lastChange(ours, sibling(CalendarTxt.NAME))) theirs else ours
+        for (file in listOf(sibling(CalendarTxt.NAME), sibling(Ics.NAME))) {
+            if (bothChanged(file) != null) textAt(newerPlan, file)?.let { merged[file] = it }
+        }
+
         val result = git.merge().include(theirs).setCommit(false).setFastForward(MergeCommand.FastForwardMode.NO_FF).call()
-        val conflicts = result.conflicts?.keys.orEmpty() - path
+        val conflicts = result.conflicts?.keys.orEmpty() - merged.keys
         if (conflicts.isNotEmpty()) {
             git.reset().setMode(org.eclipse.jgit.api.ResetCommand.ResetType.HARD).call()
             error("Conflicting changes in " + conflicts.joinToString())
         }
-        files.write(merged.joinToString("\n", postfix = if (merged.isEmpty()) "" else "\n"), "")
-        git.add().addFilepattern(path).call()
+        for ((file, text) in merged) {
+            repository.workTree.toPath().resolve(file).writeText(text)
+            git.add().addFilepattern(file).call()
+        }
         git.commit().setMessage("Merge remote changes").setIdent().call()
     }
+
+    /** The path in the repository of a file next to the todo.txt file. */
+    private fun sibling(name: String): String = path.substringBeforeLast('/', "").let { if (it.isEmpty()) name else "$it/$name" }
+
+    /** When the file was changed last in the history of the commit, as seconds; 0 if it never was. */
+    private fun lastChange(commit: ObjectId, file: String): Int =
+        git.log().add(commit).addPath(file).setMaxCount(1).call().firstOrNull()?.commitTime ?: 0
 
     /** Commits the todo.txt file and the companion files written since the last commit, and nothing else. */
     private fun commit(message: String) {
@@ -182,12 +209,15 @@ class GitStorage(
         walk.next()
     }
 
-    private fun linesAt(commit: ObjectId): List<String> = RevWalk(repository).use { walk ->
+    private fun linesAt(commit: ObjectId): List<String> = textAt(commit, path).toLines()
+
+    /** The content of a file in a commit; `null` if the commit has no such file. */
+    private fun textAt(commit: ObjectId, file: String): String? = RevWalk(repository).use { walk ->
         val tree = walk.parseCommit(commit).tree
-        TreeWalk.forPath(repository, path, tree)?.use { treeWalk ->
-            repository.open(treeWalk.getObjectId(0)).bytes.decodeToString().lines().dropLastWhile { it.isEmpty() }
-        } ?: emptyList()
+        TreeWalk.forPath(repository, file, tree)?.use { treeWalk -> repository.open(treeWalk.getObjectId(0)).bytes.decodeToString() }
     }
+
+    private fun String?.toLines(): List<String> = orEmpty().lines().dropLastWhile { it.isEmpty() }
 
     /** Without a configured user, as on a phone, the commits are made in the name of the application. */
     private fun org.eclipse.jgit.api.CommitCommand.setIdent() = apply {

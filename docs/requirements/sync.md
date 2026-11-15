@@ -32,6 +32,7 @@ Needs: dsn
 
 Changes made to different tasks on two devices before either of them synchronized are both kept, without the user having to resolve a conflict.
 If the same task was changed differently on both devices, both versions are kept.
+The schedule in `ice_recur.txt` is kept in the same way, and of two plans made on two devices the one made last is kept.
 
 Covers:
 
@@ -99,6 +100,19 @@ Covers:
 
 Needs: impl, utest
 
+### Merge of the files next to todo.txt
+`dsn~merge-of-companions~1`
+
+Of the files that both sides of a merge changed, the todo.txt file and `ice_recur.txt` are the result of `mergeLines`, as both consist of lines that stand for themselves.
+`calendar.txt` and `calendar.ics` are taken whole from the side whose `calendar.txt` was committed last, as the lines of two plans do not make a plan; with the same time, the side of the device is taken.
+Notes and `koppter.yml` are left to the merge of git.
+
+Covers:
+
+* `req~no-merge-conflicts~1`
+
+Needs: impl, utest
+
 ### Git storage
 `dsn~git-storage~1`
 
@@ -133,7 +147,9 @@ Needs: impl, utest
 
 A synchronization commits pending changes of the file made by other programs, fetches, merges the remote branch of the current branch, and pushes.
 A branch that is behind is fast-forwarded.
-For diverged branches, the todo.txt file of the merge commit is the result of `mergeLines`; a conflict in any other file fails the synchronization and leaves the working tree as it was.
+For diverged branches, a file that both sides changed is merged as `dsn~merge-of-companions~1` says if it is the todo.txt file, `ice_recur.txt` or a file of the plan.
+A file that one side changed is taken from that side as it is, so that an order of the lines that one device changed is kept.
+A conflict in any other file fails the synchronization and leaves the working tree as it was.
 A push that is rejected because the remote branch moved is retried once after another fetch and merge.
 
 Covers:
