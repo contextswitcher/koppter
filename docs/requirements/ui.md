@@ -306,6 +306,7 @@ Needs: impl, utest
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
 Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
+A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
 *Save* is disabled while a date, the recurrence or the duration is invalid or the task is empty.
 The dialog also serves for a new task.
 

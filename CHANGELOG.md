@@ -13,6 +13,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The projects, contexts and hashtags of a task have the same colors in the edit dialog as in the list.
 - Overdue tasks stand first in the list whatever their priority is, above a line that separates them from the other tasks, and they are planned first.
 
 ## [2026-11-14] - 2026-11-14

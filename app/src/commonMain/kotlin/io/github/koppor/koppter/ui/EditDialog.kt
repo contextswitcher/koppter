@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,6 +43,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -241,11 +243,11 @@ fun EditDialog(
                     modifier = Modifier.fillMaxWidth().testTag("edit-cs"),
                 )
 
-                NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project")
-                NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context")
+                NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project", projectColors())
+                NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
                 // [impl->dsn~hashtags-in-ui~1]
                 // "#123" in a line is a word of the description, not a hashtag.
-                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag") { it.first().isLetter() }
+                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true) { it.first().isLetter() }
 
                 if (originalNote != null) {
                     OutlinedTextField(
@@ -346,6 +348,9 @@ private fun NameList(
     known: List<String>,
     onChange: (List<String>) -> Unit,
     tag: String,
+    /** Container and content color of a name of the task: those of its label in the list. */
+    chipColors: Pair<Color, Color>,
+    outlined: Boolean = false,
     /** Whether the name is one that the todo.txt line keeps as this kind of metadata. */
     valid: (String) -> Boolean = { true },
 ) {
@@ -365,6 +370,12 @@ private fun NameList(
                 onClick = { onChange(names - name) },
                 label = { Text("$sign$name") },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $kind $name") },
+                colors = InputChipDefaults.inputChipColors(
+                    selectedContainerColor = chipColors.first,
+                    selectedLabelColor = chipColors.second,
+                    selectedTrailingIconColor = chipColors.second,
+                ),
+                border = if (outlined) InputChipDefaults.inputChipBorder(true, selected = true, selectedBorderColor = colors.outline, selectedBorderWidth = 1.dp) else null,
                 modifier = Modifier.testTag("$tag-$name"),
             )
         }

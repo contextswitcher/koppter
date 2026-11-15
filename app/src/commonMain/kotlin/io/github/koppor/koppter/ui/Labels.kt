@@ -154,23 +154,39 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     task.priority?.let { PriorityLabel(it) }
 }
 
+/**
+ * Container and content color of a project, a context and a hashtag, wherever one is shown:
+ * as a label of a task, in the filter panel and as a chip of the edit dialog.
+ */
+@Composable
+fun projectColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { tertiaryContainer to onTertiaryContainer }
+
+@Composable
+fun contextColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { secondaryContainer to onSecondaryContainer }
+
+@Composable
+fun hashtagColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { surface to onSurface }
+
 /** @param suffix text after the value, such as the mark of a label that can be removed */
 @Composable
 fun ProjectLabel(project: String, modifier: Modifier = Modifier, suffix: String = "") {
-    Label("+$project$suffix", MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer, modifier)
+    val (container, content) = projectColors()
+    Label("+$project$suffix", container, content, modifier)
 }
 
 /** @param path shows all levels of a hierarchical context instead of the last one */
 @Composable
 fun ContextLabel(context: String, modifier: Modifier = Modifier, suffix: String = "", path: Boolean = false) {
-    Label("@${if (path) context else context.lastLevel}$suffix", MaterialTheme.colorScheme.secondaryContainer, MaterialTheme.colorScheme.onSecondaryContainer, modifier)
+    val (container, content) = contextColors()
+    Label("@${if (path) context else context.lastLevel}$suffix", container, content, modifier)
 }
 
 // [impl->dsn~hashtags-in-ui~1]
 /** Outlined, as the theme has no third container color that differs enough from those of projects and contexts. */
 @Composable
 fun HashtagLabel(hashtag: String, modifier: Modifier = Modifier, suffix: String = "") {
-    Label("#$hashtag$suffix", MaterialTheme.colorScheme.surface, MaterialTheme.colorScheme.onSurface, modifier, outlined = true)
+    val (container, content) = hashtagColors()
+    Label("#$hashtag$suffix", container, content, modifier, outlined = true)
 }
 
 @Composable
