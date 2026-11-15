@@ -20,6 +20,9 @@ interface TodoStorage {
     fun version(): Any?
 }
 
+/** The directory of the notes of tasks, next to the todo.txt file. */
+const val NOTES_DIRECTORY = "notes"
+
 /**
  * A storage that keeps further files next to the todo.txt file: the notes of tasks and the schedule of recurring tasks.
  * Paths are relative to the directory of the todo.txt file and use `/`.

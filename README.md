@@ -125,6 +125,25 @@ On the desktop, it uses the SSH configuration of the user for that; on Android, 
 
 A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
 
+## Checking a file
+
+A file that is edited by hand, by a script or by an agent is checked on the command line with [jbang](https://www.jbang.dev/), without the application:
+
+```shell
+jbang lint@koppor/koppter todo.txt
+```
+
+In a clone of this repository, `jbang .jbang/KoppterLint.kt todo.txt` checks with the sources of the clone.
+Each finding is one line, such as `todo.txt:12: error: due:tomorrow is not a date as YYYY-MM-DD`, and the command ends with 1 if an error is among them, so that it serves as a check of a repository of tasks.
+
+| Severity | Findings |
+| --- | --- |
+| error | A value of `due:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `by:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
+| warning | A tag given twice; a tag with a space after its colon; `by:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
+| info | The open tasks without context, which are in the [inbox](#inbox) |
+
+Only open tasks are checked.
+
 ## Extensions of the todo.txt format
 
 The [todo.txt format](https://github.com/todotxt/todo.txt) defines the completion mark `x`, the priority `(A)`, dates, `+project`, `@context` and tags of the form `key:value`.

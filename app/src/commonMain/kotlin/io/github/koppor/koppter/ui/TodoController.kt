@@ -13,6 +13,7 @@ import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.plan.busyTimes
 import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
+import io.github.koppor.koppter.storage.NOTES_DIRECTORY
 import io.github.koppor.koppter.storage.Settings
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
@@ -600,7 +601,6 @@ class TodoController(
     }
 
     private companion object {
-        const val NOTES_DIRECTORY = "notes"
     }
 
     private fun guarded(action: () -> Unit) {

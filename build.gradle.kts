@@ -16,6 +16,7 @@ requirementTracing {
         "docs/decisions",
         "build.gradle.kts",
         "core/build.gradle.kts",
+        ".jbang",
         "core/src",
         "app/build.gradle.kts",
         "app/src",

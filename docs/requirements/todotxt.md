@@ -110,6 +110,18 @@ Covers:
 
 Needs: dsn
 
+### Check of a file
+`req~lint~1`
+
+The user checks a todo.txt file, and the files of the application next to it, for what the application does not read the way it was probably meant.
+The check runs on the command line without the application, so that it also serves a file that is edited by hand or by an agent and a repository that checks its files on every change.
+
+Covers:
+
+* `feat~todo-txt-file~1`
+
+Needs: dsn
+
 ## Design
 
 ### Task model
@@ -289,5 +301,45 @@ Needs: impl, utest
 Covers:
 
 * `req~no-dates-by-default~1`
+
+Needs: impl, utest
+
+### Findings in the tasks
+`dsn~lint~1`
+
+`lint` returns the findings in the open tasks of a `TodoFile`, each with the number of its line and a severity, and uses the functions with which the application reads the tags.
+An error is a value that is not read: a date, recurrence, duration or time in a tag for one, a `p:` without a task of that `id:`, an `id:` of two tasks, and a note that does not exist.
+A warning is what probably has another effect than intended: a tag given twice, a known key without a value, `by:` without `due:`, a threshold date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
+The tasks without context are named in one finding of the severity information, as they are in the inbox.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Findings in the files
+`dsn~lint-files~1`
+
+`lintFiles` reads the todo.txt file at a path and adds what the files next to it have: a note is looked up in the directory `notes`, a line of `ice_recur.txt` that `iceRecurLines` does not understand is an error, and so is each problem of the plan configuration in `koppter.yml`.
+`lintMain` prints one finding per line as `file:line: severity: message` and a count, and ends with 1 if an error is among the findings and with 2 if the path is no file.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Check started by jbang
+`dsn~lint-jbang~1`
+
+`.jbang/KoppterLint.kt` is a script for [jbang](https://www.jbang.dev/) that compiles the common sources of the module `core` and `lintFiles` and calls `lintMain`; `jbang-catalog.json` names it `lint`.
+The check thereby needs no released file and is the one of the sources at hand.
+The script lists the sources one by one, as jbang reads no pattern from a web address, and names the JVM variant of the library for dates, as the common one leads jbang to a file that does not exist.
+A test compares the list with the sources and the versions with those of the build.
+
+Covers:
+
+* `req~lint~1`
 
 Needs: impl, utest

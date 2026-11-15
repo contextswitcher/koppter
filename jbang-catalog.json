@@ -1,0 +1,9 @@
+{
+  "catalogs": {},
+  "aliases": {
+    "lint": {
+      "script-ref": ".jbang/KoppterLint.kt",
+      "description": "Checks a todo.txt file and the files next to it for what koppter does not understand"
+    }
+  }
+}
