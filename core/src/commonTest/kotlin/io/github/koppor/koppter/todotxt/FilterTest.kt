@@ -69,6 +69,16 @@ class FilterTest {
         assertEquals(listOf("a", "a>b", "a1"), listOf("a1", "a>b", "a").sortedWith(hierarchyOrder))
     }
 
+    // [utest->dsn~project-hierarchy~1]
+    @Test
+    fun aProjectIncludesTheProjectsBelowIt() {
+        val tasks = listOf("Outline the related work +papers>survey", "Pick a venue +papers", "Print +paperwork").map(Task::parse)
+        fun matching(vararg projects: String) = tasks.filter { Filter(projects = projects.toSet()).matches(it, today) }.map { it.description }
+
+        assertEquals(listOf("Outline the related work", "Pick a venue"), matching("papers"))
+        assertEquals(listOf("Outline the related work"), matching("papers>survey"))
+    }
+
     // [utest->dsn~due-time~1]
     @Test
     fun onTheSameDueDateTheTaskThatIsDueAtAnEarlierTimeComesFirst() {

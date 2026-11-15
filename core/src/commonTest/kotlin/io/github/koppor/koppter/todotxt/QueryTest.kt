@@ -82,6 +82,15 @@ class QueryTest {
         assertEquals("Read the survey", applied("-@research", "Read the survey @research>reading"))
     }
 
+    // [utest->dsn~project-hierarchy~1]
+    @Test
+    fun aProjectTermMatchesAndRemovesTheProjectsBelowIt() {
+        val query = Query.parse("+papers")
+        assertEquals(true, query.matches(Task.parse("Outline the related work +papers>survey"), today))
+        assertEquals(false, query.matches(Task.parse("Print +paperwork"), today))
+        assertEquals("Outline the related work", applied("-+papers", "Outline the related work +papers>survey"))
+    }
+
     private fun applied(expression: String, line: String): String? = Query.parse(expression).applyTo(Task.parse(line), today)?.toLine()
 
     // [utest->dsn~board-move-to-filter~1]

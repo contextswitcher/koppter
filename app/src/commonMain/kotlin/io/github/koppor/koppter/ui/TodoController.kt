@@ -187,11 +187,29 @@ class TodoController(
         else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
     }
 
-    val projects: List<String> get() = file.entries.flatMap { it.task.projects }.distinct().sorted()
+    /** The projects of the file and the projects above them, a project directly before those below it. */
+    val projects: List<String> get() = file.entries.flatMap { it.task.projects }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     /** The contexts of the file and the contexts above them, a context directly before those below it. */
     val contexts: List<String> get() = file.entries.flatMap { it.task.contexts }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     val hashtags: List<String> get() = file.entries.flatMap { it.task.hashtags }.distinct().sorted()
     val priorities: List<Char> get() = file.entries.mapNotNull { it.task.priority }.distinct().sorted()
+
+    /**
+     * What the word at the end of a typed line can be completed to, if it starts a project, a context or a hashtag:
+     * the known names that contain what follows the sign, so that a context below another one is found by its last level.
+     */
+    // [impl->dsn~quick-add-completion~1]
+    fun completions(line: String): List<String> {
+        val word = line.substringAfterLast(' ')
+        val known = when (word.firstOrNull()) {
+            '+' -> projects
+            '@' -> contexts
+            '#' -> hashtags
+            else -> return emptyList()
+        }
+        val typed = word.drop(1)
+        return known.filter { it != typed && it.contains(typed, ignoreCase = true) }.take(8).map { word.first() + it }
+    }
 
     fun load() {
         guarded {

@@ -10,6 +10,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -32,6 +33,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -72,9 +75,13 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.PopupProperties
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
@@ -285,7 +292,7 @@ private fun MainScreen(
                     Column(Modifier.weight(1f)) {
                         // The views stand above the field for a new task: a task is looked up more often than added.
                         ViewOptions(controller)
-                        QuickAdd(onAdd = controller::add, preview = controller::datesPreview, focus = quickAddFocus)
+                        QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -459,34 +466,62 @@ private fun SyncIndicator(status: SyncStatus, onSync: () -> Unit) {
     }
 }
 
-/** A line that adds a task from text in todo.txt syntax, for input without opening the dialog. */
+/**
+ * A line that adds a task from text in todo.txt syntax, for input without opening the dialog.
+ * A project, a context or a hashtag that is being typed is completed from the known ones: Tab takes the first one offered.
+ */
 // [impl->dsn~quick-add~1]
 @Composable
-private fun QuickAdd(onAdd: (String) -> Unit, preview: (String) -> String?, focus: FocusRequester) {
-    var text by remember { mutableStateOf("") }
+private fun QuickAdd(onAdd: (String) -> Unit, preview: (String) -> String?, completions: (String) -> List<String>, focus: FocusRequester) {
+    var value by remember { mutableStateOf(TextFieldValue("")) }
+    val text = value.text
     fun submit() {
         onAdd(text)
-        text = ""
+        value = TextFieldValue("")
     }
-    OutlinedTextField(
-        value = text,
-        onValueChange = { text = it.replace("\n", "") },
-        placeholder = { Text("Add a task, such as: (A) Call Mom +Family @phone next week") },
-        // [impl->dsn~quick-add-dates~1]
-        // Shows the line before it is written, as words that were not meant as a date become one as well.
-        supportingText = preview(text)?.let { line -> { Text(line, Modifier.testTag("quick-add-preview")) } },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = KeyboardActions(onDone = { submit() }),
-        modifier = Modifier.fillMaxWidth().padding(8.dp).focusRequester(focus).testTag("quick-add")
-            // The Enter key of a hardware keyboard does not trigger the IME action on the desktop.
-            .onPreviewKeyEvent {
-                if (it.key == Key.Enter && it.type == KeyEventType.KeyDown) {
-                    submit()
-                    true
-                } else {
-                    false
-                }
-            },
-    )
+    // [impl->dsn~quick-add-completion~1]
+    // The text for which the user closed the offers; they come back with the next character.
+    var closedFor by remember { mutableStateOf<String?>(null) }
+    // ponytail: completes the word at the end of the line, not the one at the cursor; look at the selection if that is missed.
+    val offers = if (closedFor == text) emptyList() else completions(text)
+    fun complete(name: String) {
+        val completed = text.substringBeforeLast(' ', "").let { if (it.isEmpty()) "" else "$it " } + name + " "
+        value = TextFieldValue(completed, TextRange(completed.length))
+    }
+    Box(Modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = { value = it.copy(text = it.text.replace("\n", "")) },
+            placeholder = { Text("Add a task, such as: (A) Call Mom +Family @phone next week") },
+            // [impl->dsn~quick-add-dates~1]
+            // Shows the line before it is written, as words that were not meant as a date become one as well.
+            supportingText = preview(text)?.let { line -> { Text(line, Modifier.testTag("quick-add-preview")) } },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { submit() }),
+            modifier = Modifier.fillMaxWidth().padding(8.dp).focusRequester(focus).testTag("quick-add")
+                .onPreviewKeyEvent {
+                    when {
+                        it.type != KeyEventType.KeyDown -> false
+                        // The Enter key of a hardware keyboard does not trigger the IME action on the desktop.
+                        it.key == Key.Enter -> true.also { submit() }
+                        it.key == Key.Tab && offers.isNotEmpty() -> true.also { complete(offers.first()) }
+                        it.key == Key.Escape && offers.isNotEmpty() -> true.also { closedFor = text }
+                        else -> false
+                    }
+                },
+        )
+        // Not focusable, so that the keys keep going to the field.
+        DropdownMenu(
+            expanded = offers.isNotEmpty(),
+            onDismissRequest = { closedFor = text },
+            offset = DpOffset(8.dp, (-4).dp),
+            properties = PopupProperties(focusable = false),
+            modifier = Modifier.testTag("quick-add-completions"),
+        ) {
+            for (offer in offers) {
+                DropdownMenuItem(text = { Text(offer) }, onClick = { complete(offer) }, modifier = Modifier.testTag("quick-add-complete-$offer"))
+            }
+        }
+    }
 }

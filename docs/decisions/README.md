@@ -30,6 +30,7 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0023](0023-tag-for-the-travel-time-of-a-task.md) | A tag states the travel time of a task |
 | [0024](0024-names-for-priorities-kept-in-the-configuration-file.md) | Priorities keep their letters in the file and get names for display |
 | [0025](0025-locations-on-the-desktop-from-appdirs.md) | Locations on the desktop from the appdirs library |
+| [0026](0026-levels-of-a-project-written-like-those-of-a-context.md) | The levels of a project are written like those of a context |
 
 ## Conventions
 

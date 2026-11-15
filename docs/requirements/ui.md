@@ -27,6 +27,17 @@ Covers:
 
 Needs: dsn
 
+### Completion when adding a task
+`req~quick-add-completion~1`
+
+While the user types a project, a context or a hashtag into the line that adds a task, the application offers the known ones that fit.
+
+Covers:
+
+* `feat~task-editing~1`
+
+Needs: dsn
+
 ### Dates in words when adding a task
 `req~quick-add-dates~1`
 
@@ -344,6 +355,21 @@ A text field above the list passes its content to `TodoController.add` on Enter 
 Covers:
 
 * `req~quick-add~1`
+
+Needs: impl, utest
+
+### Completion in the quick add line
+`dsn~quick-add-completion~1`
+
+`TodoController.completions` takes the word at the end of the typed line.
+If it starts with `+`, `@` or `#`, it returns at most eight known projects, contexts or hashtags that contain the rest of the word, in any case of the letters, so that a name below another one is found by its last level.
+The line shows them in a menu below the field, which does not take the focus.
+Tab takes the first one, a click any of them: the word is replaced by the name, followed by a blank.
+Esc closes the menu until the text changes.
+
+Covers:
+
+* `req~quick-add-completion~1`
 
 Needs: impl, utest
 

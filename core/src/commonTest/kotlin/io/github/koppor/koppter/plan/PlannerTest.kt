@@ -138,6 +138,8 @@ class PlannerTest {
 
         assertEquals(LocalDate(2026, 11, 13), config.barrierOf(Task.parse("Write +Thesis @errands"), today))
         assertEquals(LocalDate(2026, 11, 15), config.barrierOf(Task.parse("Buy paint @errands>city"), today))
+        // [utest->dsn~project-hierarchy~1]
+        assertEquals(LocalDate(2026, 11, 13), config.barrierOf(Task.parse("Write the introduction +Thesis>chapter1"), today))
         assertEquals(LocalDate(2026, 12, 31), config.barrierOf(Task.parse("Anything"), today))
         // Without a default, the barrier is the end of the quarter.
         assertEquals(LocalDate(2026, 12, 31), PlanConfig().barrierOf(Task.parse("Anything"), today))

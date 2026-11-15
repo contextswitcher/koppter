@@ -4,11 +4,12 @@ import kotlinx.datetime.LocalDate
 
 enum class Completion { ALL, COMPLETED, OPEN }
 
-/** Separates the levels of a hierarchical context: `research>reading` lies below `research`. */
+/** Separates the levels of a context or a project: `research>reading` lies below `research`. */
 // [impl->dsn~context-hierarchy~1]
+// [impl->dsn~project-hierarchy~1]
 const val LEVEL_SEPARATOR = '>'
 
-/** Whether the context is [ancestor] or lies below it. */
+/** Whether the context or project is [ancestor] or lies below it. */
 fun String.isWithin(ancestor: String): Boolean = this == ancestor || startsWith("$ancestor$LEVEL_SEPARATOR")
 
 /** The context with its ancestors, the outermost first: `a`, `a>b`, `a>b>c`. */
@@ -24,7 +25,7 @@ val hierarchyOrder: Comparator<String> = compareBy { it.replace(LEVEL_SEPARATOR,
  * Restricts the task list.
  *
  * The criteria are combined with *and*; within [priorities], [projects], [contexts] and [hashtags] one match
- * suffices. An empty set does not restrict. A context also matches the contexts below it.
+ * suffices. An empty set does not restrict. A project or context also matches those below it.
  */
 // [impl->dsn~filter~1]
 data class Filter(
@@ -45,7 +46,7 @@ data class Filter(
         } &&
             (text.isBlank() || task.toLine().contains(text.trim(), ignoreCase = true)) &&
             (priorities.isEmpty() || task.priority in priorities) &&
-            (projects.isEmpty() || task.projects.any { it in projects }) &&
+            (projects.isEmpty() || task.projects.any { project -> projects.any(project::isWithin) }) &&
             (contexts.isEmpty() || task.contexts.any { context -> contexts.any(context::isWithin) }) &&
             (hashtags.isEmpty() || task.hashtags.any { it in hashtags }) &&
             !(hideFuture && !task.completed && task.threshold.let { it != null && it > today })

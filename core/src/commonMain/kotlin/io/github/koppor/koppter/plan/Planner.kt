@@ -25,9 +25,10 @@ class Limit(val key: String, val block: Int? = null, val maxDay: Int? = null, va
     fun names(task: Task): Boolean = key == PlanConfig.DEFAULT || key.names(task)
 }
 
-/** Whether the key, `+project` or `@context`, names a project of the task or a context that a context of the task is within. */
+/** Whether the key, `+project` or `@context`, names a project or a context that one of the task is within. */
 private fun String.names(task: Task): Boolean = when {
-    startsWith("+") -> substring(1) in task.projects
+    // [impl->dsn~project-hierarchy~1]
+    startsWith("+") -> task.projects.any { it.isWithin(substring(1)) }
     startsWith("@") -> task.contexts.any { it.isWithin(substring(1)) }
     else -> false
 }

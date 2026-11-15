@@ -307,6 +307,31 @@ class AppTest {
         assertEquals("(A) Thank Mom +GarageSale @phone due:2026-11-20", storage.text.lines()[4])
     }
 
+    // [utest->dsn~quick-add-completion~1]
+    @Test
+    fun theLineThatAddsATaskCompletesProjectsContextsAndHashtags() = runComposeUiTest {
+        storage.text += "Read the survey @research>reading #someday\n"
+        start()
+        onNodeWithTag("quick-add").performTextInput("Review the paper")
+        onNodeWithTag("quick-add-completions").assertDoesNotExist()
+        // A context below another one is found by its last level, and Tab takes the first one offered.
+        onNodeWithTag("quick-add").performTextInput(" @rea")
+        onNodeWithTag("quick-add-complete-@research>reading").assertExists()
+        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Tab) }
+        onNodeWithTag("quick-add").assertTextContains("Review the paper @research>reading ")
+        onNodeWithTag("quick-add-completions").assertDoesNotExist()
+        // The sign alone offers all known names, and a click takes one of them.
+        onNodeWithTag("quick-add").performTextInput("+")
+        onNodeWithTag("quick-add-complete-+Family").assertExists()
+        onNodeWithTag("quick-add-complete-+GarageSale").performClick()
+        onNodeWithTag("quick-add").performTextInput("#so")
+        // Esc closes the offers and leaves the word as it was typed.
+        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Escape) }
+        onNodeWithTag("quick-add-completions").assertDoesNotExist()
+        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
+        assertEquals("Review the paper @research>reading +GarageSale #so", storage.text.trim().lines().last())
+    }
+
     // [utest->dsn~quick-add-dates~1]
     @Test
     fun quickAddShowsAndWritesTheDatesOfTypedWords() = runComposeUiTest {
@@ -618,6 +643,24 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertDoesNotExist()
         onAllNodesWithTag("task").assertCountEquals(1)
         onNodeWithTag("filter-context-research>reading").assertIsOn()
+    }
+
+    // [utest->dsn~project-hierarchy~1]
+    @Test
+    fun aProjectBelowAnotherShowsItsLastLevelAndTheFilterPanelShowsATree() = runComposeUiTest {
+        storage.text += "Outline the related work +papers>survey\nPick a venue +papers\n"
+        start()
+        onAllNodesWithTag("task").assertCountEquals(5)
+        // The label shows the last level.
+        onNodeWithTag("label-project-papers>survey", useUnmergedTree = true).assertExists()
+        onAllNodesWithText("+survey").assertCountEquals(2)
+        // The upper project includes the lower one; selected, a project shows its path.
+        onNodeWithTag("filter-project-papers").performClick()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithTag("filter-project-papers").performClick()
+        onNodeWithTag("filter-project-papers>survey").performClick()
+        onAllNodesWithTag("task").assertCountEquals(1)
+        onNodeWithText("+papers>survey \u00d7").assertExists()
     }
 
     // [utest->dsn~priority-names~1]

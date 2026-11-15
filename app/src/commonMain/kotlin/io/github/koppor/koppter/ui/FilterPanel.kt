@@ -71,8 +71,13 @@ fun FilterPanel(
         LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }) { value, suffix, modifier ->
             PriorityLabel(value, modifier, suffix)
         }
-        LabelFilter("Projects", projects, filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) }) { value, suffix, modifier ->
-            ProjectLabel(value, modifier, suffix)
+        // [impl->dsn~project-hierarchy~1]
+        LabelFilter(
+            "Projects", projects, filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
+            order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
+        ) { value, suffix, modifier ->
+            // A selected project stands outside the tree and shows its path.
+            ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
         }
         // [impl->dsn~context-hierarchy~1]
         LabelFilter(

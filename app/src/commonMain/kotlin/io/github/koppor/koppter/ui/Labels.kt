@@ -125,7 +125,8 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             )
         }
     }
-    task.projects.forEach { ProjectLabel(it) }
+    // [impl->dsn~project-hierarchy~1]
+    task.projects.forEach { project -> WithPath("+$project") { ProjectLabel(project, Modifier.testTag("label-project-$project")) } }
     // [impl->dsn~context-hierarchy~1]
     val showContext = LocalShowContext.current
     task.contexts.forEach { context ->
@@ -138,15 +139,7 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-context-$context"),
             )
         }
-        if (LEVEL_SEPARATOR in context) {
-            TooltipBox(
-                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                tooltip = { PlainTooltip { Text("@$context") } },
-                state = rememberTooltipState(),
-            ) { label() }
-        } else {
-            label()
-        }
+        WithPath("@$context", label)
     }
     task.hashtags.forEach { HashtagLabel(it) }
     task.tags.forEach { (key, value) ->
@@ -191,10 +184,27 @@ fun contextColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { second
 fun hashtagColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { surface to onSurface }
 
 /** @param suffix text after the value, such as the mark of a label that can be removed */
+/** Shows the label, which holds the last level only, with the whole path when the pointer rests on it. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProjectLabel(project: String, modifier: Modifier = Modifier, suffix: String = "") {
+private fun WithPath(path: String, label: @Composable () -> Unit) {
+    if (LEVEL_SEPARATOR in path) {
+        TooltipBox(
+            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+            tooltip = { PlainTooltip { Text(path) } },
+            state = rememberTooltipState(),
+            content = label,
+        )
+    } else {
+        label()
+    }
+}
+
+/** @param path shows all levels of a project below another one instead of the last one */
+@Composable
+fun ProjectLabel(project: String, modifier: Modifier = Modifier, suffix: String = "", path: Boolean = false) {
     val (container, content) = projectColors()
-    Label("+$project$suffix", container, content, modifier)
+    Label("+${if (path) project else project.lastLevel}$suffix", container, content, modifier)
 }
 
 /** @param path shows all levels of a hierarchical context instead of the last one */

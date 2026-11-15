@@ -138,6 +138,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `note:k3f.md` | A note for the task, kept in the file `notes/k3f.md` | [note](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#note--take-notes-related-to-tasks), an add-on of the todo.txt command line | *Note* in the edit dialog; the application names the file. New notes are Markdown files, which the dialog edits as text; a note named otherwise, such as `note:k3f.txt`, keeps its file. As in the [note add-on](https://github.com/mgarrido/todo.txt-cli/tree/note/todo.actions.d), which reads these notes with `TODO_NOTE_EXT=.md` in its configuration. |
 | `#urgent` | Hashtag: a third kind of label next to `+project` and `@context`, without a fixed meaning | This application | *Add hashtag* in the edit dialog, or typed into the task. A hashtag starts with a letter: `#123` and `C#` stay words of the description ([decision 0014](docs/decisions/0014-hashtags-as-a-third-kind-of-label.md)). |
 | `@research>reading` | A context below another context, over any number of levels | This application | Typed as the context. The label shows `@reading`, and the path when the pointer rests on it; a click on it shows the tasks of the context. A filter for `@research` includes the contexts below it, and the filter panel shows the contexts as a tree ([decision 0017](docs/decisions/0017-levels-of-a-context-separated-by-a-greater-than-sign.md)). |
+| `+papers>survey` | A project below another project, over any number of levels | This application | Typed as the project. The label shows `+survey`, and the path when the pointer rests on it. A filter for `+papers` includes the projects below it, as do a barrier and a limit of the [plan](#planning), and the filter panel shows the projects as a tree ([decision 0026](docs/decisions/0026-levels-of-a-project-written-like-those-of-a-context.md)). |
 | `dur:1h30m` | The time the task is expected to take, in hours and minutes | This application | Field *Duration* in the edit dialog, or typed into the task. [Planning](#planning) gives the task that much time ([decision 0018](docs/decisions/0018-tag-for-the-duration-of-a-task.md)). |
 | `by:14:00` | The time of the due date by which the task has to be done | This application | Field *Due time* in the edit dialog, or typed into the task next to `due:`. Among the tasks of a day, the earlier time comes first, and the icon of the [plan](#planning) is red if the task is planned to end later ([decision 0022](docs/decisions/0022-tag-for-the-time-by-which-a-task-is-due.md)). |
 | `at:12:00` | The time of the day at which the task takes place | This application | Field *Fixed time* in the edit dialog, or typed into the task. [Planning](#fixed-times) gives the task that time and plans the others around it ([decision 0021](docs/decisions/0021-tag-for-the-fixed-time-of-a-task.md)). |
@@ -269,6 +270,13 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 * The phrases are English, and they are read in the line above the list only, not in the edit dialog.
 * Recurrence is not typed in words: use `rec:` or `ice_recur.txt`.
 
+## Completion while typing
+
+The line above the list completes a project, a context or a hashtag while it is typed.
+After `+`, `@` or `#` it offers the known names that contain what follows, so that `@rea` offers `@research>reading` and `+sur` offers `+papers>survey`.
+Tab takes the first name offered, a click any of them, and Esc closes the offers.
+The edit dialog narrows its known names in the same way.
+
 ## Order of the list
 
 The list shows the open tasks first, and among them the overdue ones: those whose due date has passed.
@@ -372,6 +380,7 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
   It holds for the contexts below it, such as `@research>reading`, unless they name their own.
 * A **barrier** is the day behind which a task is not planned: `week`, `month`, `quarter` (the default), `year` or a date.
   It is set in general (`default = year`), for a project (`+Thesis = 2027-03-31`) or for a context (`@research = year`); the earliest barrier of a task counts.
+  A barrier for a project or a context holds for those below it, such as `+Thesis>chapter1`.
   A task that does not fit before its barrier is listed after planning instead of being planned later.
   A task whose threshold date lies behind its barrier is not due yet: it is neither planned nor listed.
 * A **limit** states how much is planned for a project or a context, the contexts below it included, as rules separated by commas:

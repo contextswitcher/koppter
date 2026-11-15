@@ -55,9 +55,10 @@ class Query private constructor(private val terms: List<Term>) {
     }
 
     private class Project(val name: String) : Term {
-        override fun matches(task: Task, today: LocalDate) = name in task.projects
+        // [impl->dsn~project-hierarchy~1]
+        override fun matches(task: Task, today: LocalDate) = task.projects.any { it.isWithin(name) }
         override fun establish(task: Task, today: LocalDate) = task.edit(projects = task.projects + name)
-        override fun revoke(task: Task) = task.edit(projects = task.projects - name)
+        override fun revoke(task: Task) = task.edit(projects = task.projects.filterNot { it.isWithin(name) })
     }
 
     private class Context(val name: String) : Term {

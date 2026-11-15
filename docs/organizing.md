@@ -36,6 +36,8 @@ Levels below it, written with `>`, divide a large area: `@work>teaching`, `@home
 
 A project names an outcome that is reached one day: `+FirstPaper`, `+GarageSale`, `+TaxReturn2026`.
 A task carries both: `Outline the related work +FirstPaper @research>writing`.
+Projects of one kind stand below a common project, written with `>` as for contexts: `+papers>survey`, `+papers>comparison`.
+A filter for `+papers` then shows the tasks of all papers, and typing `+sur` in the line that adds a task offers `+papers>survey`.
 
 * A project gets a barrier in the plan dialog if it has a deadline: `+FirstPaper = 2027-03-31`.
 * A project whose tasks are all completed stays in the filter panel as long as these tasks are in the file.
@@ -83,7 +85,7 @@ A task of more than a day of work is a project: split it into tasks of at most a
 | SkedPal | koppter |
 | --- | --- |
 | Level of the outline | Context, with `>` for the levels |
-| Project with an end | Project `+`, with a barrier for its deadline |
+| Project with an end | Project `+`, with `>` for projects below it and a barrier for its deadline |
 | Time map | Time map, given to contexts |
 | Zone with a budget | Limit of a context: `max 5h/week` |
 | Minimum block length | Limit `block 2h` |
