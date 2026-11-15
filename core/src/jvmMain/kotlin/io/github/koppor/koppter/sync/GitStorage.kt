@@ -85,7 +85,7 @@ class GitStorage(
                 synchronize()
                 onStatus(SyncStatus(SyncState.IDLE))
             } catch (e: Exception) {
-                onStatus(SyncStatus(SyncState.FAILED, e.message ?: e.toString()))
+                onStatus(SyncStatus(SyncState.FAILED, e.message ?: e.toString(), e))
             }
         }
     }

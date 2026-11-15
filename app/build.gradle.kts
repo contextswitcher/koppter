@@ -39,6 +39,7 @@ kotlin {
                 implementation(libs.appdirs)
                 // [impl->adr~log-messages-through-tinylog~1]
                 // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
+                implementation(libs.tinylog.api)
                 runtimeOnly(libs.tinylog.slf4j)
                 runtimeOnly(libs.tinylog.impl)
             }

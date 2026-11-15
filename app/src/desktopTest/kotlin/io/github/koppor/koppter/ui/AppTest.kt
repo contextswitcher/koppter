@@ -44,6 +44,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -1111,6 +1112,40 @@ class AppTest {
         assertEquals(ColorTheme.EVERFOREST to Appearance.DARK, saved.theme to saved.appearance)
         onNodeWithTag("settings-theme-Everforest").assertIsSelected()
         assertEquals(saved, Settings.fromProperties(saved.toProperties()))
+    }
+
+    // [utest->dsn~failure-log~1]
+    @Test
+    fun whatFailsIsShownAndPassedToTheLog() {
+        val logged = mutableListOf<Pair<String, Throwable?>>()
+        val failing = object : SyncingStorage, CompanionFiles by storage {
+            override var onStatus: (SyncStatus) -> Unit = {}
+            override fun read() = storage.read()
+            override fun version(): Any? = storage.version()
+            override fun write(text: String, change: String) = error("The disk is full")
+            override fun sync() {}
+            override fun dates() = emptyMap<String, TaskDates>()
+        }
+        val controller = TodoController(
+            Settings(), { failing }, today = { LocalDate(2026, 11, 12) },
+            fetch = { error("No such calendar at https://example.org/secret") },
+            log = { message, cause -> logged += message to cause },
+        )
+        controller.add("Buy milk")
+        assertEquals("The disk is full", controller.error)
+        assertEquals("The disk is full", logged.single().first)
+        assertEquals("The disk is full", logged.single().second?.message)
+
+        val cause = IllegalStateException("no network")
+        failing.onStatus(SyncStatus(SyncState.FAILED, "no network", cause))
+        assertEquals("Synchronization failed: no network" to cause, logged.last())
+        failing.onStatus(SyncStatus(SyncState.IDLE))
+        assertEquals(2, logged.size)
+
+        // The address of a calendar is a secret: the log names its host and the kind of failure only.
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, "https://example.org/secret") }
+        assertEquals(true, ("Calendar of example.org was not read: IllegalStateException" to null) in logged)
+        assertEquals(false, logged.any { "secret" in it.first })
     }
 
     // [utest->dsn~sync-status~1]

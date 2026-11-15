@@ -29,7 +29,7 @@ Chosen option: "tinylog", because it takes the messages of SLF4J with two small 
 
 The desktop application writes messages from the level of a warning on to the console.
 It writes messages from the level of an information on to a file in the directory `logs` of its data directory, which is kept to three files of one megabyte.
-The application itself does not log yet; if it does, it uses the interface of tinylog.
+The desktop application writes its own failures through the interface of tinylog.
 
 ### Consequences
 

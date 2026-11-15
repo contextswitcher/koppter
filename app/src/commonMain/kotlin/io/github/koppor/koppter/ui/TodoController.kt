@@ -63,6 +63,8 @@ class TodoController(
     private val minuteOfDay: () -> Int = { 0 },
     /** Reads the file at an address of the web; `null` if the platform cannot. */
     private val fetch: (suspend (String) -> String)? = null,
+    /** Takes what failed, with its cause if there is one, for the log of the platform. */
+    private val log: (message: String, cause: Throwable?) -> Unit = { _, _ -> },
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -148,6 +150,8 @@ class TodoController(
         val syncing = storage as? SyncingStorage
         syncStatus = syncing?.let { SyncStatus(SyncState.IDLE) }
         syncing?.onStatus = { status ->
+            // [impl->dsn~failure-log~1]
+            if (status.state == SyncState.FAILED) log("Synchronization failed: ${status.message}", status.cause)
             // A storage that was replaced in the settings may still report.
             if (storage === syncing) syncStatus = status
         }
@@ -306,7 +310,10 @@ class TodoController(
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 // The address is a secret: only its host is shown.
-                problems += "Calendar of ${address.substringAfter("://").substringBefore('/')} was not read: ${e.message ?: e}"
+                val host = address.substringAfter("://").substringBefore('/')
+                problems += "Calendar of $host was not read: ${e.message ?: e}"
+                // The message of the exception may name the address, and a log is passed on.
+                log("Calendar of $host was not read: ${e::class.simpleName}", null)
             }
         }
         return plan(settings, busy, problems)
@@ -424,7 +431,7 @@ class TodoController(
     fun schedule(): String? = try {
         (storage as? CompanionFiles)?.let { it.readCompanion(ICE_RECUR_FILE).orEmpty().replace("\r\n", "\n") }
     } catch (e: Exception) {
-        error = e.message ?: e.toString()
+        failed(e)
         null
     }
 
@@ -597,7 +604,15 @@ class TodoController(
         try {
             action()
         } catch (e: Exception) {
-            error = e.message ?: e.toString()
+            failed(e)
         }
+    }
+
+    /** Shows the user what failed and passes it to the log. */
+    // [impl->dsn~failure-log~1]
+    private fun failed(e: Exception) {
+        val message = e.message ?: e.toString()
+        error = message
+        log(message, e)
     }
 }

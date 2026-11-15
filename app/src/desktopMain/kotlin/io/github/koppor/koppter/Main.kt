@@ -17,6 +17,7 @@ import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.TodoController
 import kotlinx.datetime.LocalDate
 import net.harawata.appdirs.AppDirsFactory
+import org.tinylog.Logger
 import java.nio.file.Path
 import kotlin.io.path.Path
 import kotlin.io.path.exists
@@ -58,6 +59,8 @@ private fun logToFile(directory: Path) {
 fun main() {
     // Before anything logs: tinylog reads its configuration once.
     logToFile(dataDirectory().resolve("logs"))
+    // [impl->dsn~failure-log~1]
+    Thread.setDefaultUncaughtExceptionHandler { _, e -> Logger.error(e, "The application failed") }
     // A file in the home directory, where earlier versions kept it, stays in use.
     val defaultTodoFile = Path(System.getProperty("user.home")).resolve("todo.txt").takeIf { it.exists() } ?: dataDirectory().resolve("todo.txt")
     // [impl->dsn~git-setup-dialog~1]
@@ -73,6 +76,8 @@ fun main() {
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },
         minuteOfDay = { java.time.LocalTime.now().toSecondOfDay() / 60 },
         fetch = { address -> withContext(Dispatchers.IO) { fetchCalendar(address) } },
+        // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
+        log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
     )
     // [impl->dsn~application-icon~1]
     val icon = BitmapPainter(object {}.javaClass.getResourceAsStream("/koppter.png")!!.readBytes().decodeToImageBitmap())

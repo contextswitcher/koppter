@@ -34,7 +34,8 @@ interface CompanionFiles {
 
 enum class SyncState { IDLE, RUNNING, FAILED }
 
-data class SyncStatus(val state: SyncState, val message: String = "")
+/** @param cause what made the synchronization fail, for the log */
+data class SyncStatus(val state: SyncState, val message: String = "", val cause: Throwable? = null)
 
 /** A storage that exchanges the file with a remote copy. */
 interface SyncingStorage : TodoStorage {

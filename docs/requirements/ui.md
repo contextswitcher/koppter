@@ -112,6 +112,17 @@ Covers:
 
 Needs: dsn
 
+### Failures in the log
+`req~failure-log~1`
+
+The desktop application records what failed in its log, so that a problem can be looked up after the fact.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Links in the text of a task
 `req~links~1`
 
@@ -280,6 +291,20 @@ A step and a drag stay within a group; a task is given another value on the boar
 Covers:
 
 * `req~list-groups~1`
+
+Needs: impl, utest
+
+### Log of failures
+`dsn~failure-log~1`
+
+`TodoController` passes what failed to the function `log` that the platform gives it: an operation whose failure it shows to the user, with the exception, and a synchronization that failed, with the cause that `SyncStatus` carries.
+For a calendar that was not read, it passes the host of the address and the kind of the exception only, as the address is a secret.
+The desktop application writes these as errors to tinylog, and it does the same for an exception that no code caught.
+The Android application passes no function.
+
+Covers:
+
+* `req~failure-log~1`
 
 Needs: impl, utest
 

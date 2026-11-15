@@ -9,7 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
-- The desktop application writes a log to the directory `logs` of its data directory, at most three files of one megabyte.
+- The desktop application writes a log to the directory `logs` of its data directory, at most three files of one megabyte; it holds what failed, such as a synchronization or the writing of the file, and the messages of the git library.
 - A click on the project label of a task shows the tasks of that project, as a click on a context label does for its context.
 - A project lies below another project, written as `+papers>survey`: the label shows the last level, a filter, a barrier and a limit for `+papers` include the projects below it, and the filter panel shows the projects as a tree.
 - The line that adds a task completes a project, a context or a hashtag while it is typed: Tab takes the first known name offered.
