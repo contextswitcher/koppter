@@ -24,6 +24,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The time by which a task is due on its due date is written `dueby:14:00`; the former `by:14:00` is not read anymore and has to be renamed in a file that has it.
 - The guide to organizing many tasks and the skill for agents describe projects as the outline of areas and outcomes, and contexts as the kinds of work and the places; the guide compares this with areas as contexts, and the skill follows the way that the file uses.
 - The edit dialog suggests a known project, context or hashtag by any part of its name, so that `rea` finds `research>reading`.
 - The settings open a chosen file and a cloned repository at once and then show the configuration that comes with it, so that it is not overwritten by the one of the file that was open before; the button reads *Clone* while the field holds an address, and *Cancel* returns to the file from before.

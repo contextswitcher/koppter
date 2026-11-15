@@ -13,7 +13,7 @@ class LintTest {
             emptyList(),
             findings(
                 """
-                (A) Call Mom @phone due:2026-11-20 by:18:00 t:2026-11-18 rec:+1w dur:30m tt:15m at:9:00 deadline:2026-11-27T12:00
+                (A) Call Mom @phone due:2026-11-20 dueby:18:00 t:2026-11-18 rec:+1w dur:30m tt:15m at:9:00 deadline:2026-11-27T12:00
                 Write the outline +papers>survey @writing id:1 note:k3f.md
                 Collect the sources +papers>survey @writing p:1
 
@@ -56,7 +56,7 @@ class LintTest {
         assertEquals(
             listOf(
                 "todo.txt: info: open tasks without context, which are in the inbox: lines 5",
-                "todo.txt:1: warning: by: has no effect without due:",
+                "todo.txt:1: warning: dueby: has no effect without due:",
                 "todo.txt:2: warning: the threshold date 2026-11-20 is after the due date 2026-11-18",
                 "todo.txt:3: warning: due: is given more than once; the first one counts",
                 "todo.txt:4: warning: due: has no value; a tag has no space after the colon",
@@ -65,7 +65,7 @@ class LintTest {
             ),
             findings(
                 """
-                Call Mom @phone by:18:00
+                Call Mom @phone dueby:18:00
                 Call Dad @phone t:2026-11-20 due:2026-11-18
                 Call the landlord @phone due:2026-11-18 due:2026-11-19
                 Call the bank @phone due: 2026-11-18

@@ -419,9 +419,9 @@ class PlannerTest {
         assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("New task"), planned["New task"]))
         // [utest->dsn~due-time~1]
         // The call is planned from 08:00 to 08:30: in time for 08:30, too late for 08:15.
-        assertEquals(PlanState.TIGHT, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 by:8:30"), planned[CalendarTxt.text(landlord)]))
-        assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 by:08:15"), planned[CalendarTxt.text(landlord)]))
-        assertEquals(PlanState.FITS, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-13 by:08:15"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.TIGHT, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 dueby:8:30"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 dueby:08:15"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.FITS, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-13 dueby:08:15"), planned[CalendarTxt.text(landlord)]))
 
         assertEquals(53, CalendarTxt.week(LocalDate(2027, 1, 1)))
         assertEquals(1, CalendarTxt.week(LocalDate(2024, 12, 30)))

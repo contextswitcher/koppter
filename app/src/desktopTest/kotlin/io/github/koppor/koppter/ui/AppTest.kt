@@ -516,7 +516,7 @@ class AppTest {
         onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
         onNodeWithTag("edit-by").performScrollTo().performTextReplacement("14:00")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("Post signs +GarageSale due:2026-11-16 by:14:00", storage.text.lines()[1])
+        assertEquals("Post signs +GarageSale due:2026-11-16 dueby:14:00", storage.text.lines()[1])
     }
 
     // [utest->dsn~edit-dialog~1]

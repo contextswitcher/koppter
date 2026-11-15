@@ -92,7 +92,7 @@ fun lint(file: TodoFile, noteExists: (String) -> Boolean = { true }): List<Findi
             if (parent !in ids) entry.report(Severity.ERROR, "p:$parent names no task: no line has id:$parent")
         }
         task.tag(Task.NOTE)?.let { if (!noteExists(it)) entry.report(Severity.ERROR, "the note $it does not exist") }
-        if (task.by != null && task.due == null) entry.report(Severity.WARNING, "by: has no effect without due:")
+        if (task.by != null && task.due == null) entry.report(Severity.WARNING, "dueby: has no effect without due:")
         val (threshold, due) = task.threshold to task.due
         if (threshold != null && due != null && threshold > due) entry.report(Severity.WARNING, "the threshold date $threshold is after the due date $due")
         val line = file.lines[entry.index]

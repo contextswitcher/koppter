@@ -253,7 +253,7 @@ Needs: impl, utest
 ### Time by which a task is due
 `dsn~due-time~1`
 
-The tag `by:` holds a time of the day as `H:MM` or `HH:MM`; `Task.by` reads it, and the edit dialog has a field for it that rejects what is no time.
+The tag `dueby:` holds a time of the day as `H:MM` or `HH:MM`; `Task.by` reads it, and the edit dialog has a field for it that rejects what is no time.
 `listOrder` puts, among the tasks of a due date, the one with the earlier time first and those without a time last, which is the order in which the planner gives the tasks their times.
 `CalendarTxt.state` counts a task as late if its last block lies on the due date and ends after that time.
 
@@ -261,6 +261,7 @@ Covers:
 
 * `req~due-time~1`
 * `adr~due-time-tag~1`
+* `adr~due-time-tag-name~1`
 
 Needs: impl, utest
 

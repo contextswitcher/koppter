@@ -82,7 +82,7 @@ class FilterTest {
     // [utest->dsn~due-time~1]
     @Test
     fun onTheSameDueDateTheTaskThatIsDueAtAnEarlierTimeComesFirst() {
-        val tasks = TodoFile.parse("Pack due:2026-11-16\nPrepare the slides due:2026-11-16 by:14:00\nPrint the agenda due:2026-11-16 by:9:00\nBook a room due:2026-11-15")
+        val tasks = TodoFile.parse("Pack due:2026-11-16\nPrepare the slides due:2026-11-16 dueby:14:00\nPrint the agenda due:2026-11-16 dueby:9:00\nBook a room due:2026-11-15")
         assertEquals(listOf("Book a room", "Print the agenda", "Prepare the slides", "Pack"), tasks.entries.sortedWith(listOrder(today)).map { it.task.description })
     }
 

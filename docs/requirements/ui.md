@@ -450,7 +450,7 @@ Needs: impl, utest
 `TodoController.add` applies `Task.withDates` to the typed line, which `DatePhrase` implements.
 The phrases are those that SkedPal reads in the title of a task, in English and in any case of the letters; the README lists them.
 A phrase is read at the end of the text only, where projects, contexts, hashtags and tags may follow it; the same words elsewhere stay text.
-It is removed from the text and becomes the tags `t:`, `due:`, `at:` and `by:`.
+It is removed from the text and becomes the tags `t:`, `due:`, `at:` and `dueby:`.
 A tag that the line already has stays.
 A weekday or a day of a month names the first such day from today on, and a week runs from Monday to Sunday.
 The quick add field shows the line that `TodoController.datesPreview` returns below the typed one, as there is no other sign that words become a date.

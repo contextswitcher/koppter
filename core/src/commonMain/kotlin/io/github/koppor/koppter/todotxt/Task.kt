@@ -226,7 +226,7 @@ data class Task(
         const val CONTEXT_SWITCHER = "cs"
         const val DURATION = "dur"
         const val AT = "at"
-        const val BY = "by"
+        const val BY = "dueby"
         const val TRAVEL = "tt"
 
         /** As topydo writes dependencies: a task with [ID] waits for the tasks whose [PARENT] has the same value. */

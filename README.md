@@ -146,8 +146,8 @@ The option `--output-format` before the file selects another form of the finding
 
 | Severity | Findings |
 | --- | --- |
-| error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `by:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
-| warning | A tag given twice; a tag with a space after its colon; `by:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
+| error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `dueby:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
+| warning | A tag given twice; a tag with a space after its colon; `dueby:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
 | info | The open tasks without context, which are in the [inbox](#inbox) |
 
 Only open tasks are checked.
@@ -169,7 +169,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `@research>reading` | A context below another context, over any number of levels | This application | Typed as the context. The label shows `@reading`, and the path when the pointer rests on it; a click on it shows the tasks of the context. A filter for `@research` includes the contexts below it, and the filter panel shows the contexts as a tree ([decision 0017](docs/decisions/0017-levels-of-a-context-separated-by-a-greater-than-sign.md)). |
 | `+papers>survey` | A project below another project, over any number of levels | This application | Typed as the project. The label shows `+survey`, and the path when the pointer rests on it; a click on it shows the tasks of the project. A filter for `+papers` includes the projects below it, as do a barrier and a limit of the [plan](#planning), and the filter panel shows the projects as a tree ([decision 0026](docs/decisions/0026-levels-of-a-project-written-like-those-of-a-context.md)). |
 | `dur:1h30m` | The time the task is expected to take, in hours and minutes | This application | Field *Duration* in the edit dialog, or typed into the task. [Planning](#planning) gives the task that much time ([decision 0018](docs/decisions/0018-tag-for-the-duration-of-a-task.md)). |
-| `by:14:00` | The time of the due date by which the task has to be done | This application | Field *Due time* in the edit dialog, or typed into the task next to `due:`. Among the tasks of a day, the earlier time comes first, and the icon of the [plan](#planning) is red if the task is planned to end later ([decision 0022](docs/decisions/0022-tag-for-the-time-by-which-a-task-is-due.md)). |
+| `dueby:14:00` | The time of the due date by which the task has to be done | This application | Field *Due time* in the edit dialog, or typed into the task next to `due:`. Among the tasks of a day, the earlier time comes first, and the icon of the [plan](#planning) is red if the task is planned to end later ([decision 0030](docs/decisions/0030-tag-for-the-time-of-the-due-date-named-dueby.md)). |
 | `deadline:2026-11-30` | The day that others set for the task, next to the day to have it done by | This application | Field *Deadline* in the edit dialog, or typed into the task; see [Deadline next to the due date](#deadline-next-to-the-due-date) ([decision 0028](docs/decisions/0028-tag-for-the-deadline-next-to-the-due-date.md)). |
 | `at:12:00` | The time of the day at which the task takes place | This application | Field *Fixed time* in the edit dialog, or typed into the task. [Planning](#fixed-times) gives the task that time and plans the others around it ([decision 0021](docs/decisions/0021-tag-for-the-fixed-time-of-a-task.md)). |
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
@@ -282,7 +282,7 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 * After the deadline, the task is overdue and its plan is late, wherever the due date is moved to.
 * A task with a deadline and without a due date is due on its deadline.
 * A deadline at a time of the day is written `deadline:2026-11-30T12:00`: a plan that ends on that day after that time is late ([decision 0029](docs/decisions/0029-time-of-a-deadline-as-part-of-its-date.md)).
-  The due date stays a date that other programs read, with its time in `by:`.
+  The due date stays a date that other programs read, with its time in `dueby:`.
 * The next occurrence of a recurring task has its deadline moved as far as its due date.
 
 ## Dates in words
@@ -299,7 +299,7 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 | `weekend` | `t:2026-11-14 due:2026-11-15` |
 | `Wed`, `on Wed`, `on Sep 15` | `t:` and `due:` on that day |
 | `by Wed`, `due by Sep 15`, `Sep 15` | `due:` on that day |
-| `by Mon 14:00` | `due:2026-11-16 by:14:00` |
+| `by Mon 14:00` | `due:2026-11-16 dueby:14:00` |
 | `tomorrow 3pm`, `15 Jul 14:00`, `on Wed at 9:30` | `due:` on that day and `at:15:00`, `at:14:00`, `at:9:30` |
 | `at 3pm` | `at:15:00` |
 | `in 4 days`, `start in two weeks`, `begin in a month` | `t:` that much later |
@@ -312,7 +312,7 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 * The phrase stands at the end of the text; projects, contexts, hashtags and tags may follow it: `Buy milk tomorrow @shop`.
 * While typing, the field shows the line that will be written.
   If words are not meant as a date, end the line with a full stop: `Buy tickets for the weekend.` stays as it is.
-* A `due:`, `t:`, `at:` or `by:` tag that is typed as well stays.
+* A `due:`, `t:`, `at:` or `dueby:` tag that is typed as well stays.
 * The phrases are English, and they are read in the line above the list only, not in the edit dialog.
 * Recurrence is not typed in words: use `rec:` or `ice_recur.txt`.
 
@@ -444,7 +444,7 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
   A paper that is finished one day is a project below a project that stays, `+papers>FirstPaper`: a limit of `+papers` then holds for every paper, and `+papers>FirstPaper` gets its barrier.
 
 After the first plan, each open task carries a calendar icon: green if its plan ends before its due date or it has none, yellow if it ends on the due date, red if it ends later or the task is not planned.
-For a task that is due at a time of the day, such as `due:2026-11-16 by:14:00`, red also tells that the plan ends on that day after that time.
+For a task that is due at a time of the day, such as `due:2026-11-16 dueby:14:00`, red also tells that the plan ends on that day after that time.
 The pointer on the icon shows the start of the plan.
 
 `calendar.txt` has the [format of calendar.txt](https://terokarvinen.com/2021/calendar-txt/), one line per day:
