@@ -37,6 +37,10 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.appdirs)
+                // [impl->adr~log-messages-through-tinylog~1]
+                // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
+                runtimeOnly(libs.tinylog.slf4j)
+                runtimeOnly(libs.tinylog.impl)
             }
         }
         named("desktopTest") {
