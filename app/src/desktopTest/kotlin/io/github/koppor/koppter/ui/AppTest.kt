@@ -900,6 +900,34 @@ class AppTest {
     }
 
     // [utest->dsn~plan-dialog~1]
+    // [utest->dsn~plan-names~1]
+    @Test
+    fun twoTasksWithTheSameTextHaveTheirOwnBlocksAndStates() = runComposeUiTest {
+        // The second lecture is due tomorrow and is planned in time; the first one was due yesterday.
+        storage.text = "Prepare the lecture @home dur:1h due:2026-11-11\nPrepare the lecture @home dur:1h due:2026-11-13\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 5 })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-summary").performScrollTo().assertTextEquals("Planned 2 tasks until 2026-11-12.")
+        assertEquals(
+            "2026-11-12 w46 Thu  09:15-10:15 Prepare the lecture @home (due 2026-11-11). 10:15-11:15 Prepare the lecture @home (due 2026-11-13)\n",
+            storage.companions.getValue("calendar.txt"),
+        )
+        // What tells the tasks apart is in the plan only.
+        assertEquals("Prepare the lecture @home dur:1h due:2026-11-11\nPrepare the lecture @home dur:1h due:2026-11-13\n", storage.text)
+        onNodeWithTag("plan-close").performClick()
+        onAllNodesWithTag("plan-LATE", useUnmergedTree = true).assertCountEquals(1)
+        onAllNodesWithTag("plan-FITS", useUnmergedTree = true).assertCountEquals(1)
+
+        // The week names the blocks as the plan does, and each block opens its own task.
+        onNodeWithTag("week-switch").performClick()
+        onNodeWithText("09:15 Prepare the lecture (due 2026-11-11)").assertExists()
+        onNodeWithText("10:15 Prepare the lecture (due 2026-11-13)").performClick()
+        onNodeWithTag("edit-due").assertTextContains("2026-11-13")
+    }
+
     // [utest->dsn~plan-state~1]
     @Test
     fun planningWritesTheCalendarAndMarksTheTasksWithTheStateOfTheirPlan() = runComposeUiTest {

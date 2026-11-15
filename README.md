@@ -456,6 +456,7 @@ The pointer on the icon shows the start of the plan.
 ```
 
 The lines of past days stay; the lines from today on are written anew by every plan, so what is written there by hand is lost.
+Open tasks with the same text are told apart in the plan by their due date, as `Prepare the lecture @home (due 2026-11-16)`, and by a number if that is the same as well, as `Water the plants @home (2)`; the `todo.txt` file does not hold these additions.
 In a git repository, each plan is one commit ([decision 0019](docs/decisions/0019-the-plan-is-derived-and-kept-in-calendar-txt.md)).
 The plan is also written to `calendar.ics`, with tentative events, for import into a calendar program.
 

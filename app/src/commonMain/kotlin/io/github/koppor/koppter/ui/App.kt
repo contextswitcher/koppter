@@ -308,7 +308,7 @@ private fun MainScreen(
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open)
                         } else if (controller.view == View.WEEK) {
-                            Week(controller.planBlocks, controller::entryOf, controller.today(), open)
+                            Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {
                             Inbox(controller.inbox, controller.contexts, controller::assignContext, open)
                         } else if (controller.board) {

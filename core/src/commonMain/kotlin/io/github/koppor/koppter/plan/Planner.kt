@@ -124,10 +124,11 @@ class PlanConfig(
  * A time in which a task is to be worked on.
  *
  * @param travel whether the time is the way to the task or back from it
+ * @param name what the plan calls the task, if another open task has the same text; see [CalendarTxt.names]
  */
-data class Block(val date: LocalDate, val span: Span, val entry: Entry, val travel: Boolean = false) {
+data class Block(val date: LocalDate, val span: Span, val entry: Entry, val travel: Boolean = false, val name: String? = null) {
     /** What the plan shows for the block. */
-    val text: String get() = (if (travel) "Travel: " else "") + CalendarTxt.text(entry.task)
+    val text: String get() = (if (travel) "Travel: " else "") + (name ?: CalendarTxt.text(entry.task))
 }
 
 /**
@@ -391,5 +392,8 @@ fun plan(
             plain.unplaced.filter { limit.names(it.task) }.map { config.barrierOf(it.task, today) }
         days.maxOrNull()?.let { limit.key to it }
     }.toMap()
-    return if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed).run(reserveUntil)
+    val plan = if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed).run(reserveUntil)
+    // [impl->dsn~plan-names~1]
+    val names = CalendarTxt.names(entries)
+    return plan.copy(blocks = plan.blocks.map { block -> names[block.entry]?.takeIf { it != CalendarTxt.text(block.entry.task) }?.let { block.copy(name = it) } ?: block })
 }

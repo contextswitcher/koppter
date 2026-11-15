@@ -123,7 +123,7 @@ private val MIN_HOUR_HEIGHT = 48.dp
 /** The blocks of the plan of one week as a calendar: one column per day, the time running down. */
 // [impl->dsn~agenda~1]
 @Composable
-fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, today: LocalDate, onOpen: (Entry) -> Unit) {
+fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (Entry) -> String, today: LocalDate, onOpen: (Entry) -> Unit) {
     val thisWeek = today.minus(DatePeriod(days = today.dayOfWeek.isoDayNumber - 1))
     var monday by remember { mutableStateOf(thisWeek) }
     val days = (0..6).map { monday.plus(DatePeriod(days = it)) }
@@ -181,7 +181,7 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, today: LocalD
                                         .testTag("week-block"),
                                 ) {
                                     Text(
-                                        "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.task?.description ?: block.text}",
+                                        "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
                                         style = MaterialTheme.typography.labelSmall,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),

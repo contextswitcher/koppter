@@ -478,4 +478,42 @@ class PlannerTest {
         assertEquals(PlanState.LATE, state("due:2026-11-12 deadline:2026-11-13T08:30"))
         assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-13T12:00"))
     }
+
+    // [utest->dsn~plan-names~1]
+    @Test
+    fun tasksWithTheSameTextAreToldApartInThePlan() {
+        val todo = """
+            Prepare the lecture +Course @home due:2026-11-16 rec:+1w dur:1h
+            Prepare the lecture +Course @home due:2026-11-20 rec:+1w dur:1h
+            Water the plants @home
+            Water the plants @home
+            Review the paper
+        """.trimIndent()
+        val entries = TodoFile.parse(todo).entries
+        val names = CalendarTxt.names(entries)
+        assertEquals(
+            listOf(
+                "Prepare the lecture +Course @home (due 2026-11-16)",
+                "Prepare the lecture +Course @home (due 2026-11-20)",
+                "Water the plants @home",
+                "Water the plants @home (2)",
+                "Review the paper",
+            ),
+            entries.map { names[it] },
+        )
+
+        // Each of the five tasks has its own blocks in the file, and so its own state.
+        val plan = plan(todo)
+        val planned = CalendarTxt.planned(CalendarTxt.write("", plan.blocks, today), today)
+        assertEquals(names.values.toSet(), planned.keys)
+        // A task that stands alone is called by its text.
+        assertEquals(null, plan.blocks.single { it.entry.task.description == "Review the paper" }.name)
+
+        // The lecture of Monday is completed and has its next occurrence: the one of Friday is still found by the name it was planned with.
+        val later = TodoFile.parse(todo.replace("due:2026-11-16", "due:2026-11-23")).entries
+        assertEquals("Prepare the lecture +Course @home (due 2026-11-20)", CalendarTxt.names(later)[later[1]])
+        // Completed tasks have no name in a plan and do not count as the same.
+        val done = TodoFile.parse("x Water the plants @home\nWater the plants @home\n").entries
+        assertEquals(mapOf(done[1] to "Water the plants @home"), CalendarTxt.names(done))
+    }
 }

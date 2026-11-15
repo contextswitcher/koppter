@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.plan
 
+import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.Task
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -30,6 +31,20 @@ object CalendarTxt {
 
     /** What a block shows of its task: the body without tags, which change in the life of a task. */
     fun text(task: Task): String = (listOf(task.description) + task.projects.map { "+$it" } + task.contexts.map { "@$it" }).joinToString(" ")
+
+    /**
+     * What the plan calls each open task: its text, and for tasks with the same text also what tells them apart,
+     * which is the due date, and a number for those that share the due date as well.
+     * The addition exists in the plan only; the todo.txt file does not hold it.
+     */
+    // The due date and not a number alone: a number would pass to another task when the first of them is completed, while the plan still has the old blocks.
+    // [impl->dsn~plan-names~1]
+    fun names(entries: List<Entry>): Map<Entry, String> = entries.filterNot { it.task.completed }.groupBy { text(it.task) }.flatMap { (text, same) ->
+        if (same.size == 1) return@flatMap listOf(same.single() to text)
+        same.groupBy { it.task.due }.flatMap { (due, alike) ->
+            alike.mapIndexed { index, entry -> entry to text + (due?.let { " (due $it)" } ?: "") + (if (index > 0) " (${index + 1})" else "") }
+        }
+    }.toMap()
 
     /** The week of the year according to ISO 8601: the week of a day is that of its Thursday. */
     fun week(date: LocalDate): Int = (date.plus(DatePeriod(days = 4 - date.dayOfWeek.isoDayNumber)).dayOfYear - 1) / 7 + 1

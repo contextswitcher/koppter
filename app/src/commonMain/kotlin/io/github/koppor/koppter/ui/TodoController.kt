@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -105,8 +106,15 @@ class TodoController(
     /** When the tasks are planned from today on, by the text of their blocks. */
     private val planned: Map<String, Planned>? get() = planBlocks?.let { CalendarTxt.planned(it, today()) }
 
+    /** What the plan calls the open tasks: tasks with the same text are told apart there. */
+    // [impl->dsn~plan-names~1]
+    private val planNames: Map<Entry, String> by derivedStateOf { CalendarTxt.names(file.entries) }
+
     /** The open task that a block of the plan is for; `null` if the task was completed, deleted or edited since. */
-    fun entryOf(block: TextBlock): Entry? = file.entries.firstOrNull { !it.task.completed && CalendarTxt.text(it.task) == block.text }
+    fun entryOf(block: TextBlock): Entry? = planNames.entries.firstOrNull { it.value == block.text }?.key
+
+    /** What the plan adds to the text of the task to tell it from another task with the same text; empty for most tasks. */
+    fun planSuffix(entry: Entry): String = planNames[entry]?.removePrefix(CalendarTxt.text(entry.task)).orEmpty()
 
     /** The open tasks that are due today or earlier and have no block today. */
     // [impl->dsn~agenda~1]
@@ -115,7 +123,7 @@ class TodoController(
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
             return file.entries.filter { entry ->
-                !entry.task.completed && entry.task.due.let { it != null && it <= today } && CalendarTxt.text(entry.task) !in plannedToday
+                !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
             }.sortedWith(listOrder(today))
         }
 
@@ -277,7 +285,8 @@ class TodoController(
     // [impl->dsn~plan-state~1]
     fun planOf(task: Task): Pair<PlanState, String>? {
         val plan = planned?.takeIf { !task.completed } ?: return null
-        val own = plan[CalendarTxt.text(task)]
+        // ponytail: by the task, as the labels know no line; of two lines that are the same, both show the plan of the first.
+        val own = plan[planNames.entries.firstOrNull { it.key.task == task }?.value]
         // A task that is not due for work yet is not late for not being planned.
         if (own == null && task.threshold.let { it != null && it > today() }) return null
         return CalendarTxt.state(task, own) to (own?.let { "Planned for ${CalendarTxt.startText(it)}" } ?: "Not planned")

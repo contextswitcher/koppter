@@ -39,6 +39,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- Open tasks with the same text, such as two occurrences of a recurring task, have their own times and their own state in the plan: the plan names them with their due date, or with a number.
 - The desktop application no longer starts with warnings of Java about the loading of native libraries.
 - The desktop application no longer starts with a complaint of SLF4J, and warnings of the git library appear on the console.
 - An order of the tasks changed on one device is no longer lost in the synchronization through git when another device changed another file meanwhile.

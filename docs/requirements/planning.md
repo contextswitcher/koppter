@@ -117,6 +117,18 @@ Covers:
 
 Needs: dsn
 
+### Tasks with the same text in the plan
+`req~plan-names~1`
+
+Open tasks with the same text, such as the two occurrences of a recurring task in a week, each have their own times and their own state in the plan.
+What tells them apart is part of the plan only: the todo.txt file is not changed for it.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Busy times of calendars
 `req~busy-times~1`
 
@@ -284,7 +296,7 @@ Needs: impl, utest
 `dsn~calendar-txt~1`
 
 `CalendarTxt.write` writes the plan in the format of calendar.txt: one line per day from today to the last planned day, with the date, the ISO week, the weekday and, after two blanks, the blocks of the day as `HH:MM-HH:MM text`, separated by a full stop and a blank.
-The text of a block is the description of the task with its projects and contexts.
+The text of a block is the description of the task with its projects and contexts, or the name of `CalendarTxt.names` for a task that shares that text with another one.
 Lines of days before today and lines that are no day stay as they are.
 `CalendarTxt.planned` reads the blocks from today on; `CalendarTxt.state` compares the day of the last block of a task with its due date.
 
@@ -366,5 +378,20 @@ Green is the green of the palette, which `Theme.kt` provides beside the Material
 Covers:
 
 * `req~plan-state~1`
+
+Needs: impl, utest
+
+### Names of tasks in the plan
+`dsn~plan-names~1`
+
+The plan file holds texts, not lines of the todo.txt file, so that a task is found again by its text.
+`CalendarTxt.names` gives each open task its name in the plan: the text, and for tasks that share the text also ` (due 2026-11-16)` with their due date, and a number as ` (2)` from the second of those on that share the due date as well.
+The due date, unlike a number alone, stays with its task when another one of that text is completed while the plan still holds the blocks of both.
+`plan` sets the name of the blocks of such tasks, which `CalendarTxt.write` and `Ics.write` use as the text.
+`TodoController` finds the task of a block, the state of the plan of a task and the tasks without a block today by these names, and the week shows the addition after the description.
+
+Covers:
+
+* `req~plan-names~1`
 
 Needs: impl, utest
