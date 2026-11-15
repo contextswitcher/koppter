@@ -467,8 +467,8 @@ Use it for what has its time, such as lunch, a training or an appointment, so th
 
 | Line | Where | Planned |
 | --- | --- | --- |
-| `Dentist at:14:00 dur:1h due:2026-11-20` | todo.txt | on 20 November from 14:00 to 15:00 |
-| `Call the tax office at:9:30` | todo.txt | today from 9:30 to 10:00 |
+| `Dentist at:14:00 dur:1h due:2026-11-20` | `todo.txt` | on 20 November from 14:00 to 15:00 |
+| `Call the tax office at:9:30` | `todo.txt` | today from 9:30 to 10:00 |
 | `weekly ; day Monday, Tuesday, Wednesday, Thursday, Friday - Lunch at:12:00 dur:45m` | `ice_recur.txt` | on every working day from 12:00 to 12:45 |
 | `weekly ; day Tuesday - Training @sport at:18:30 dur:1h30m` | `ice_recur.txt` | on every Tuesday from 18:30 to 20:00 |
 
