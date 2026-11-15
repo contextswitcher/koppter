@@ -37,7 +37,7 @@ Levels below it, written with `>`, divide a large area: `@work>teaching`, `@home
 A project names an outcome that is reached one day: `+FirstPaper`, `+GarageSale`, `+TaxReturn2026`.
 A task carries both: `Outline the related work +FirstPaper @research>writing`.
 Projects of one kind stand below a common project, written with `>` as for contexts: `+papers>survey`, `+papers>comparison`.
-A filter for `+papers` then shows the tasks of all papers, and typing `+sur` in the line that adds a task offers `+papers>survey`.
+A filter for `+papers` then shows the tasks of all papers, and typing `+survey` in the line that adds a task offers `+papers>survey`.
 
 * A project gets a barrier in the plan dialog if it has a deadline: `+FirstPaper = 2027-03-31`.
 * A project whose tasks are all completed stays in the filter panel as long as these tasks are in the file.

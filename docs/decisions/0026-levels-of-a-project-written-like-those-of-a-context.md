@@ -28,7 +28,7 @@ How does a task name a project that lies below another project?
 Chosen option: "The upper level first, separated by `>`", because it is the notation that contexts already have, so that the user learns one rule and the application has one implementation.
 
 The name that the user thinks of is the last level, and typing the upper levels first would be in the way.
-The fields that take a project therefore complete a typed part of a name: `sur` offers `+papers>survey`.
+The fields that take a project therefore complete a typed part of a name: `survey` offers `+papers>survey`.
 
 ### Consequences
 

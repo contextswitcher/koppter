@@ -273,7 +273,7 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 ## Completion while typing
 
 The line above the list completes a project, a context or a hashtag while it is typed.
-After `+`, `@` or `#` it offers the known names that contain what follows, so that `@rea` offers `@research>reading` and `+sur` offers `+papers>survey`.
+After `+`, `@` or `#` it offers the known names that contain what follows, so that `@rea` offers `@research>reading` and `+survey` offers `+papers>survey`.
 Tab takes the first name offered, a click any of them, and Esc closes the offers.
 The edit dialog narrows its known names in the same way.
 
