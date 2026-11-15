@@ -603,6 +603,38 @@ class AppTest {
 
     // [utest->dsn~links~1]
     @Test
+    fun aLongAddressIsCutAndShownAsAWholeWhenThePointerRestsOnIt() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        val address = "https://example.org/structure/java/blob/master/docs/decisions/0001-use-records.md"
+        val cut = "https://example.org/structure/java/blob/master/do\u2026"
+        storage.text += "$address\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
+
+        onNodeWithText(cut).assertExists()
+        onNodeWithText(address).assertDoesNotExist()
+        onNodeWithText(cut).performMouseInput { moveTo(center) }
+        mainClock.advanceTimeBy(2_000)
+        onNodeWithText(address).assertExists()
+        // The pointer beside the address shows nothing.
+        onNodeWithText(cut).performMouseInput { moveTo(Offset(width + 40f, centerY)) }
+        mainClock.advanceTimeBy(2_000)
+        onNodeWithText(address).assertDoesNotExist()
+        // The link leads to the whole address, and the file keeps it.
+        onNodeWithText(cut).performFirstLinkClick()
+        assertEquals(listOf(address), opened)
+        assertEquals(address, storage.text.trim().lines().last())
+
+        assertEquals("https://example.org/a", shortened("https://example.org/a"))
+    }
+
+    // [utest->dsn~links~1]
+    @Test
     fun anAddressEndsBeforeTheMarkThatFollowsIt() {
         fun addresses(text: String) = webAddresses(text).map { text.substring(it) }
         assertEquals(listOf("https://example.org/a?b=1#c", "http://example.org"), addresses("See https://example.org/a?b=1#c, then (http://example.org)."))

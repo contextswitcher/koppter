@@ -116,6 +116,7 @@ Needs: dsn
 `req~links~1`
 
 An address of the web in the text of a task opens in the browser with a click.
+A long address takes little room, and the user sees the whole one on request.
 
 Covers:
 
@@ -285,8 +286,11 @@ Needs: impl, utest
 ### Links
 `dsn~links~1`
 
-`linked` marks the parts of a description that start with `http://` or `https://` (`webAddresses`) as links, which the task card and the tasks of a context in the overview show in the primary color and underlined.
+`LinkedText` shows the parts of a description that start with `http://` or `https://` (`webAddresses`) as links, which the task card and the tasks of a context in the overview show in the primary color and underlined.
 An address ends at a blank, and before a mark that ends a sentence or closes a bracket.
+An address of more than 50 characters is shown with its first 49 characters and an ellipsis (`shortened`); the link and the file keep the whole address.
+While the pointer of the mouse rests on a cut address, a tooltip shows the whole one.
+The tooltip does not react to a long press, which starts the drag of a card.
 A click on a link opens it through the `UriHandler` of the application and does not open the task.
 
 Covers:

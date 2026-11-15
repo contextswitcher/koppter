@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
@@ -19,22 +20,33 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.PlanState
 import io.github.koppor.koppter.todotxt.Entry
@@ -64,14 +76,81 @@ private val WEB_ADDRESS = Regex("https?://\\S*[^\\s.,;:!?)\\]]")
 /** The parts of a text that are addresses of the web. */
 internal fun webAddresses(text: String): List<IntRange> = WEB_ADDRESS.findAll(text).map { it.range }.toList()
 
-/** The text with its addresses of the web as links, which open in the browser. */
+/** The number of characters of an address that a task shows. */
+private const val ADDRESS_LENGTH = 50
+
+/** The address as a task shows it: a long one is cut. */
+internal fun shortened(address: String): String =
+    if (address.length > ADDRESS_LENGTH) address.take(ADDRESS_LENGTH - 1) + "\u2026" else address
+
+/**
+ * The text with its addresses of the web as links, which open in the browser.
+ * A long address is cut, and the whole one appears when the pointer of the mouse rests on it.
+ */
 // [impl->dsn~links~1]
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun linked(text: String): AnnotatedString {
-    val style = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
-    return buildAnnotatedString {
-        append(text)
-        for (range in webAddresses(text)) addLink(LinkAnnotation.Url(text.substring(range), style), range.first, range.last + 1)
+fun LinkedText(
+    text: String,
+    modifier: Modifier = Modifier,
+    style: TextStyle = LocalTextStyle.current,
+    color: Color = Color.Unspecified,
+    textDecoration: TextDecoration? = null,
+) {
+    val linkStyle = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
+    // The places of the cut addresses in the text that is shown.
+    val cut = mutableListOf<Pair<IntRange, String>>()
+    val shown = buildAnnotatedString {
+        var end = 0
+        for (range in webAddresses(text)) {
+            append(text.substring(end, range.first))
+            val address = text.substring(range)
+            val start = length
+            withLink(LinkAnnotation.Url(address, linkStyle)) { append(shortened(address)) }
+            if (address.length > ADDRESS_LENGTH) cut += (start until length) to address
+            end = range.last + 1
+        }
+        append(text.substring(end))
+    }
+    if (cut.isEmpty()) {
+        Text(shown, modifier, style = style, color = color, textDecoration = textDecoration)
+        return
+    }
+    var layout by remember { mutableStateOf<TextLayoutResult?>(null) }
+    var hovered by remember { mutableStateOf<String?>(null) }
+    val tooltip = rememberTooltipState(isPersistent = true)
+    LaunchedEffect(hovered) { if (hovered != null) tooltip.show() else tooltip.dismiss() }
+    // The tooltip box would show its tooltip over the whole text and on a long press, which starts the drag of a card.
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(hovered.orEmpty()) } },
+        state = tooltip,
+        modifier = modifier,
+        focusable = false,
+        enableUserInput = false,
+    ) {
+        Text(
+            shown,
+            Modifier.pointerInput(text) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val pointer = event.changes.first()
+                        hovered = layout?.takeIf { event.type != PointerEventType.Exit && pointer.type == PointerType.Mouse }?.let { layout ->
+                            // The place between two characters that is nearest, also for a pointer beside the text.
+                            val offset = layout.getOffsetForPosition(pointer.position)
+                            cut.firstOrNull { (range, _) ->
+                                listOf(offset - 1, offset).any { it in range && layout.getBoundingBox(it).contains(pointer.position) }
+                            }?.second
+                        }
+                    }
+                }
+            },
+            style = style,
+            color = color,
+            textDecoration = textDecoration,
+            onTextLayout = { layout = it },
+        )
     }
 }
 
