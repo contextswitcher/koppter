@@ -186,4 +186,24 @@ class FilterTest {
         assertEquals(Filter(contexts = setOf("Küche")), filterOfLink(linkTo(LINK_CONTEXT, "Küche")))
         assertEquals(Filter(hashtags = setOf("R&D")), filterOfLink(linkTo(LINK_HASHTAG, "R&D")))
     }
+
+    // [utest->dsn~filter-exclusion~1]
+    @Test
+    fun excludedProjectsContextsAndHashtagsLeaveTheirTasksOut() {
+        val today = LocalDate(2026, 11, 12)
+        fun shown(filter: Filter) = listOf(
+            "Book the stand +Fair @phone #import",
+            "Outline the survey +papers>survey @writing",
+            "Fix the bike @home>garage",
+            "Call Mom",
+        ).filter { filter.matches(Task.parse(it), today) }.map { it.substringBefore(" +").substringBefore(" @") }
+
+        assertEquals(listOf("Outline the survey", "Fix the bike", "Call Mom"), shown(Filter(excludedHashtags = setOf("import"))))
+        // A project or a context is excluded with those below it.
+        assertEquals(listOf("Book the stand", "Fix the bike", "Call Mom"), shown(Filter(excludedProjects = setOf("papers"))))
+        assertEquals(listOf("Book the stand", "Outline the survey", "Call Mom"), shown(Filter(excludedContexts = setOf("home"))))
+        // The exclusion holds against what is selected.
+        assertEquals(emptyList(), shown(Filter(projects = setOf("Fair"), excludedHashtags = setOf("import"))))
+        assertEquals(false, Filter(excludedHashtags = setOf("import")).isDefault)
+    }
 }

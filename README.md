@@ -22,6 +22,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 ![Task list with the filter panel on the left](docs/screenshots/list.png)
 
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
+A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
 ![Task list filtered by two projects and a context](docs/screenshots/filter.png)

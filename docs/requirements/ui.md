@@ -538,6 +538,21 @@ Covers:
 
 Needs: impl, utest
 
+### Excluding in the filter panel
+`dsn~filter-exclusion~1`
+
+`Filter` holds excluded projects, contexts and hashtags: `Filter.matches` leaves out a task that has one of them, a project or a context with those below it, whatever is selected.
+The menu of a label of the filter panel, which a click with the secondary button or a long press opens, has the entry *Hide these tasks*; it excludes the value and ends its selection.
+An excluded value stands beside the title of its criterion after the word *not*, and a click on it ends the exclusion; *Clear all filters* ends all of them.
+The exclusion is part of the filter, so that the list, the board, the overview and the inbox follow it.
+
+Covers:
+
+* `req~filter-panel~1`
+* `req~filter-criteria~1`
+
+Needs: impl, utest
+
 ### Main screen
 `dsn~main-screen~1`
 

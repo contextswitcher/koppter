@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -82,21 +83,35 @@ fun FilterPanel(
         LabelFilter(
             "Projects", projects, filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
             order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
+            excluded = filter.excludedProjects, onInclude = { onChange(filter.copy(excludedProjects = filter.excludedProjects - it)) },
         ) { value, suffix, modifier ->
+            val exclude = { onChange(filter.copy(projects = filter.projects - value, excludedProjects = filter.excludedProjects + value)) }
             // A selected project stands outside the tree and shows its path.
-            WithLinkMenu(LINK_PROJECT, value, longPress = true) { ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
+            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }) {
+                ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+            }
         }
         // [impl->dsn~context-hierarchy~1]
         LabelFilter(
             "Contexts", contexts, filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
             order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
+            excluded = filter.excludedContexts, onInclude = { onChange(filter.copy(excludedContexts = filter.excludedContexts - it)) },
         ) { value, suffix, modifier ->
+            val exclude = { onChange(filter.copy(contexts = filter.contexts - value, excludedContexts = filter.excludedContexts + value)) }
             // A selected context stands outside the tree and shows its path.
-            WithLinkMenu(LINK_CONTEXT, value, longPress = true) { ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
+            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }) {
+                ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+            }
         }
         // [impl->dsn~hashtags-in-ui~1]
-        LabelFilter("Hashtags", hashtags, filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) }) { value, suffix, modifier ->
-            WithLinkMenu(LINK_HASHTAG, value, longPress = true) { HashtagLabel(value, modifier, suffix) }
+        LabelFilter(
+            "Hashtags", hashtags, filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
+            excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
+        ) { value, suffix, modifier ->
+            val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
+            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }) {
+                HashtagLabel(value, modifier, suffix)
+            }
         }
 
         // The criterion that is changed least often stands last.
@@ -135,6 +150,7 @@ fun FilterPanel(
 /**
  * One criterion with several values, shown as the labels the task list uses for them.
  * The selected values stand beside the title, the others below it; a click moves a label to the other group.
+ * The excluded values stand beside the title as well, after the word *not*; a click on one ends its exclusion.
  * Both groups are sorted.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -148,9 +164,11 @@ private fun <T : Comparable<T>> LabelFilter(
     order: Comparator<T> = naturalOrder(),
     /** The level of a value in a hierarchy; with levels, the values form a tree, one value per line. */
     depth: (T) -> Int = { 0 },
+    excluded: Set<T> = emptySet(),
+    onInclude: (T) -> Unit = {},
     label: @Composable (value: T, suffix: String, modifier: Modifier) -> Unit,
 ) {
-    if (values.isEmpty() && selected.isEmpty()) return
+    if (values.isEmpty() && selected.isEmpty() && excluded.isEmpty()) return
     // The area that reacts to a click is larger than the label, which is too small for a finger.
     fun modifier(value: T, isSelected: Boolean) = Modifier
         .clip(CircleShape)
@@ -159,7 +177,7 @@ private fun <T : Comparable<T>> LabelFilter(
         .padding(vertical = 5.dp)
     FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.align(Alignment.CenterVertically).padding(vertical = 5.dp))
-        if (selected.isEmpty()) {
+        if (selected.isEmpty() && excluded.isEmpty()) {
             Text(
                 "all",
                 style = MaterialTheme.typography.labelMedium,
@@ -168,8 +186,22 @@ private fun <T : Comparable<T>> LabelFilter(
             )
         }
         for (value in selected.sortedWith(order)) label(value, " \u00d7", modifier(value, true))
+        // [impl->dsn~filter-exclusion~1]
+        for (value in excluded.sortedWith(order)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text("not", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                label(
+                    value,
+                    " \u00d7",
+                    Modifier.clip(CircleShape)
+                        .clickable(onClickLabel = "Show these tasks again", role = Role.Button) { onInclude(value) }
+                        .testTag("${tag(value)}-excluded")
+                        .padding(vertical = 5.dp),
+                )
+            }
+        }
     }
-    val others = values.sortedWith(order).filter { it !in selected }
+    val others = values.sortedWith(order).filter { it !in selected && it !in excluded }
     if (values.any { depth(it) > 0 }) {
         Column {
             for (value in others) label(value, "", modifier(value, false).padding(start = 16.dp * depth(value)))

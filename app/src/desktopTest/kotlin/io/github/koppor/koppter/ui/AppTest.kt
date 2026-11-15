@@ -1494,6 +1494,38 @@ class AppTest {
         onNodeWithTag("link-menu").assertDoesNotExist()
     }
 
+    // [utest->dsn~filter-exclusion~1]
+    @Test
+    fun theMenuOfALabelOfTheFilterPanelHidesItsTasks() = runComposeUiTest {
+        storage.text = "Book the stand +Fair @phone #import\nPrint the flyers +Fair #import\nFix the bike @home\nCall Mom\n"
+        start()
+        onAllNodesWithTag("task").assertCountEquals(4)
+        onNodeWithTag("filter-hashtag-import").performMouseInput { rightClick() }
+        onNodeWithTag("exclude-label").assertTextEquals("Hide these tasks").performClick()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithText("Fix the bike").assertExists()
+        // The hashtag stands beside the title as excluded and is not offered below it.
+        onNodeWithTag("filter-hashtag-import").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-import-excluded").assertExists()
+        // The inbox and the overview follow the filter.
+        onNodeWithText("Inbox 1").assertExists()
+
+        // A click on the excluded label shows its tasks again.
+        onNodeWithTag("filter-hashtag-import-excluded").performClick()
+        onAllNodesWithTag("task").assertCountEquals(4)
+        onNodeWithTag("filter-hashtag-import").assertExists()
+
+        // Excluding a selected label ends its selection, and the exclusion is cleared with the other filters.
+        onNodeWithTag("filter-project-Fair").performClick()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithTag("filter-project-Fair").performTouchInput { longClick() }
+        onNodeWithTag("exclude-label").performClick()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithText("Call Mom").assertExists()
+        onNodeWithTag("filter-clear").performClick()
+        onAllNodesWithTag("task").assertCountEquals(4)
+    }
+
     // [utest->dsn~top-tasks~1]
     @Test
     fun theTopViewShowsTheFirstTasksOnly() = runComposeUiTest {

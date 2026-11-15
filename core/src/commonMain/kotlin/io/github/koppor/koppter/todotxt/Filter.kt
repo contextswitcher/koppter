@@ -26,6 +26,7 @@ val hierarchyOrder: Comparator<String> = compareBy { it.replace(LEVEL_SEPARATOR,
  *
  * The criteria are combined with *and*; within [priorities], [projects], [contexts] and [hashtags] one match
  * suffices. An empty set does not restrict. A project or context also matches those below it.
+ * A task that has one of the excluded projects, contexts or hashtags is left out, whatever else it has.
  */
 // [impl->dsn~filter~1]
 data class Filter(
@@ -35,6 +36,10 @@ data class Filter(
     val projects: Set<String> = emptySet(),
     val contexts: Set<String> = emptySet(),
     val hashtags: Set<String> = emptySet(),
+    // [impl->dsn~filter-exclusion~1]
+    val excludedProjects: Set<String> = emptySet(),
+    val excludedContexts: Set<String> = emptySet(),
+    val excludedHashtags: Set<String> = emptySet(),
     /** Hides tasks whose threshold date (`t:`) lies after today. */
     val hideFuture: Boolean = true,
 ) {
@@ -49,6 +54,9 @@ data class Filter(
             (projects.isEmpty() || task.projects.any { project -> projects.any(project::isWithin) }) &&
             (contexts.isEmpty() || task.contexts.any { context -> contexts.any(context::isWithin) }) &&
             (hashtags.isEmpty() || task.hashtags.any { it in hashtags }) &&
+            task.projects.none { project -> excludedProjects.any(project::isWithin) } &&
+            task.contexts.none { context -> excludedContexts.any(context::isWithin) } &&
+            task.hashtags.none { it in excludedHashtags } &&
             !(hideFuture && !task.completed && task.threshold.let { it != null && it > today })
 
     val isDefault: Boolean get() = this == Filter()

@@ -334,11 +334,12 @@ private fun WithTooltip(text: String, label: @Composable () -> Unit) {
  * Offers the link to the tasks of a project, a context or a hashtag in a menu that a click with the secondary button on the label opens.
  *
  * @param key the key of the link, such as [LINK_PROJECT]
+ * @param onExclude hides the tasks of the label; `null` where the menu does not offer that
  * @param longPress opens the menu also when a finger stays on the label; not for the label of a task, where a long press picks up the card
  */
 // [impl->dsn~app-link-copy~1]
 @Composable
-fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, label: @Composable () -> Unit) {
+fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclude: (() -> Unit)? = null, label: @Composable () -> Unit) {
     var open by remember { mutableStateOf(false) }
     // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
     @Suppress("DEPRECATION")
@@ -384,6 +385,17 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, label: @
                 },
                 modifier = Modifier.testTag("copy-link"),
             )
+            // [impl->dsn~filter-exclusion~1]
+            if (onExclude != null) {
+                DropdownMenuItem(
+                    text = { Text("Hide these tasks") },
+                    onClick = {
+                        onExclude()
+                        open = false
+                    },
+                    modifier = Modifier.testTag("exclude-label"),
+                )
+            }
         }
     }
 }
