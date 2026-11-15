@@ -133,6 +133,7 @@ fun App(
         CompositionLocalProvider(
             LocalUriHandler provides uriHandler,
             LocalShowContext provides { controller.filter = controller.filter.copy(contexts = setOf(it)) },
+            LocalShowProject provides { controller.filter = controller.filter.copy(projects = setOf(it)) },
             LocalFineColor provides fineColor(controller.settings.theme, dark),
             LocalPlanOf provides controller::planOf,
             LocalKeyboard provides keyboard,

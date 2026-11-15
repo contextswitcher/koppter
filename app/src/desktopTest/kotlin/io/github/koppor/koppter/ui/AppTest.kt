@@ -661,6 +661,13 @@ class AppTest {
         onNodeWithTag("filter-project-papers>survey").performClick()
         onAllNodesWithTag("task").assertCountEquals(1)
         onNodeWithText("+papers>survey \u00d7").assertExists()
+        onNodeWithTag("filter-clear").performScrollTo().performClick()
+
+        // A click on the label of a task shows the tasks of its project and does not open the task.
+        onNodeWithTag("label-project-papers", useUnmergedTree = true).performClick()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithTag("filter-project-papers").assertIsOn()
     }
 
     // [utest->dsn~priority-names~1]

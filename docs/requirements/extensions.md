@@ -70,6 +70,7 @@ Needs: dsn
 
 A project lies below another project, over any number of levels.
 A task shows the last level of its project and, on request, the whole path.
+From the project of a task, the user gets to the tasks of that project.
 Restricting the list to a project includes the projects below it, and so does what the plan states for a project.
 
 Covers:
@@ -470,7 +471,7 @@ Needs: impl, utest
 `>` separates the levels of a project as it separates those of a context: `papers>survey` lies below `papers`.
 `Filter` and the project term of `Query` match a project and the projects below it (`isWithin`); removing a project term from a task removes the projects below it as well.
 A barrier or a limit of the plan for a project holds for the projects below it.
-`TaskLabels` shows the last level of a project and the path in a tooltip.
+`TaskLabels` shows the last level of a project and the path in a tooltip; a click on the label sets the filter to this project.
 `FilterPanel` offers the projects of the file and the projects above them as a tree, one project per line and indented by its level, as soon as one project has levels.
 A group of the list or the board stands for one project with its whole path, without those below it.
 

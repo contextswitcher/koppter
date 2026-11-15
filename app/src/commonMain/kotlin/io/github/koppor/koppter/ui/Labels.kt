@@ -53,6 +53,8 @@ val LocalPriorityNames = staticCompositionLocalOf { PriorityNames() }
 
 val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
 
+val LocalShowProject = staticCompositionLocalOf<(String) -> Unit> { {} }
+
 /** Sets the due date of a task of the list, as the menu of a task card does. */
 val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate) -> Unit> { { _, _ -> } }
 
@@ -126,7 +128,18 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
         }
     }
     // [impl->dsn~project-hierarchy~1]
-    task.projects.forEach { project -> WithPath("+$project") { ProjectLabel(project, Modifier.testTag("label-project-$project")) } }
+    val showProject = LocalShowProject.current
+    task.projects.forEach { project ->
+        WithPath("+$project") {
+            ProjectLabel(
+                project,
+                Modifier.clip(RoundedCornerShape(percent = 50))
+                    .clickable(onClickLabel = "Show the tasks of this project", role = Role.Button) { showProject(project) }
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .testTag("label-project-$project"),
+            )
+        }
+    }
     // [impl->dsn~context-hierarchy~1]
     val showContext = LocalShowContext.current
     task.contexts.forEach { context ->
