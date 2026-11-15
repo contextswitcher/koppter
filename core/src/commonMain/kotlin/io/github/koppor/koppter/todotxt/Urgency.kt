@@ -10,12 +10,15 @@ import kotlinx.datetime.minus
  *
  * @param daysLeft the days until the due date; negative if it has passed
  * @param elapsed the part of the time from the start of the task to its due date that has passed, from 0 to 1
+ * @param deadlineLeft the days until the deadline of a task that has one apart from its due date; negative if it has passed
  */
-data class Urgency(val daysLeft: Int, val elapsed: Float) {
+data class Urgency(val daysLeft: Int, val elapsed: Float, val deadlineLeft: Int? = null) {
+    /** A due date that has passed is no failure while the deadline lies ahead: the task is then due, as on its due date. */
+    // [impl->dsn~deadline~1]
     val state: UrgencyState
         get() = when {
-            daysLeft < 0 -> UrgencyState.OVERDUE
-            daysLeft == 0 -> UrgencyState.DUE
+            (deadlineLeft ?: daysLeft) < 0 -> UrgencyState.OVERDUE
+            daysLeft <= 0 -> UrgencyState.DUE
             else -> UrgencyState.FINE
         }
 
@@ -26,10 +29,16 @@ data class Urgency(val daysLeft: Int, val elapsed: Float) {
             daysLeft == 0 -> "Due today"
             daysLeft == 1 -> "Due tomorrow"
             else -> "Due in $daysLeft days"
+        } + when (deadlineLeft) {
+            null -> ""
+            -1 -> ", deadline yesterday"
+            0 -> ", deadline today"
+            1 -> ", deadline tomorrow"
+            else -> if (deadlineLeft < 0) ", deadline ${-deadlineLeft} days ago" else ", deadline in $deadlineLeft days"
         }
 }
 
-/** Ordered from the best to the worst state. */
+/** Ordered from the best to the worst state; [DUE] is due today, or due earlier with the deadline still ahead. */
 enum class UrgencyState { FINE, DUE, OVERDUE }
 
 /**
@@ -41,7 +50,7 @@ enum class UrgencyState { FINE, DUE, OVERDUE }
 fun Task.urgency(today: LocalDate): Urgency? {
     val due = due?.takeIf { !completed } ?: return null
     val start = (threshold ?: creationDate)?.takeIf { it < due } ?: due.minus(DatePeriod(days = 14))
-    return Urgency(today.daysUntil(due), (start.daysUntil(today).toFloat() / start.daysUntil(due)).coerceIn(0f, 1f))
+    return Urgency(today.daysUntil(due), (start.daysUntil(today).toFloat() / start.daysUntil(due)).coerceIn(0f, 1f), deadline?.takeIf { it != due }?.let(today::daysUntil))
 }
 
 /**

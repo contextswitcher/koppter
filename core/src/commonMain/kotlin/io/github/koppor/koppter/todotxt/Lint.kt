@@ -42,6 +42,7 @@ private fun String.escaped() = replace("%", "%25").replace("\r", "%0D").replace(
 private val VALUES: Map<String, Pair<String, (String) -> Any?>> = mapOf(
     Task.DUE to ("a date as YYYY-MM-DD" to Task::parseDate),
     Task.THRESHOLD to ("a date as YYYY-MM-DD" to Task::parseDate),
+    Task.DEADLINE to ("a date as YYYY-MM-DD" to Task::parseDate),
     Task.RECURRENCE to ("a recurrence such as 2w or +1m" to Recurrence::parse),
     Task.DURATION to ("a duration such as 30m or 1h30m" to Task::parseDuration),
     Task.TRAVEL to ("a duration such as 30m or 1h30m" to Task::parseDuration),

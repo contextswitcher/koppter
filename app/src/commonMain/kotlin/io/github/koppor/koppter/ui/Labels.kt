@@ -235,8 +235,12 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     }
     task.hashtags.forEach { HashtagLabel(it) }
     task.tags.forEach { (key, value) ->
-        val overdue = key == Task.DUE && task.isOverdue(today)
-        val dueToday = key == Task.DUE && !task.completed && task.due == today
+        // [impl->dsn~deadline~1]
+        // A due date that has passed is highlighted as on its day while the deadline lies ahead.
+        val date = if (key == Task.DUE || key == Task.DEADLINE) Task.parseDate(value) else null
+        val passed = !task.completed && date != null && date < today
+        val overdue = passed && (key == Task.DEADLINE || task.isOverdue(today))
+        val dueToday = !task.completed && date == today || passed && !overdue
         // [impl->dsn~due-menu~1]
         val dueMenu = Modifier.clip(RoundedCornerShape(percent = 50))
             .clickable(onClickLabel = "Move the due date", role = Role.Button, onClick = onDue)
@@ -254,8 +258,8 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-cs"),
                 key = "$key:",
             )
-            overdue -> Label(value, colors.errorContainer, colors.onErrorContainer, dueMenu, key = "$key:")
-            dueToday -> Label(value, colors.primaryContainer, colors.onPrimaryContainer, dueMenu, key = "$key:")
+            overdue -> Label(value, colors.errorContainer, colors.onErrorContainer, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
+            dueToday -> Label(value, colors.primaryContainer, colors.onPrimaryContainer, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
             else -> Label(value, colors.surfaceVariant, colors.onSurfaceVariant, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
         }
     }

@@ -146,6 +146,27 @@ class AppTest {
         onNodeWithTag("due-none").assertDoesNotExist()
     }
 
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aDeadlineStandsNextToTheDueDateAndIsNotMoved() = runComposeUiTest {
+        storage.text += "File the tax return @home deadline:2026-11-30\n"
+        start()
+        onNodeWithText("deadline:", substring = true, useUnmergedTree = true).assertExists()
+        // The task is due on its deadline and has no due date that the menu could take away.
+        onNodeWithText("File the tax return").performMouseInput { rightClick() }
+        onNodeWithTag("due-none").assertDoesNotExist()
+        onNodeWithTag("due-2026-11-13").performClick()
+        assertEquals("File the tax return @home deadline:2026-11-30 due:2026-11-13", storage.text.lines()[4])
+
+        openTask("File the tax return")
+        onNodeWithTag("edit-deadline").assertTextContains("2026-11-30")
+        onNodeWithTag("edit-deadline").performTextReplacement("soon")
+        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("File the tax return @home deadline:2026-12-04 due:2026-11-13", storage.text.lines()[4])
+    }
+
     // [utest->dsn~due-chips~1]
     @Test
     fun theEditDialogOffersTheDaysOfTheMenuForTheDueDate() = runComposeUiTest {

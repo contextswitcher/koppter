@@ -235,4 +235,31 @@ class TaskTest {
         assertEquals("jabref/fix-npe", Task.contextSwitcherId(" contextswitcher://switch/jabref/fix-npe "))
         assertEquals("My%20Category/task", Task.contextSwitcherId("My Category/task"))
     }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aTaskWithoutDueDateIsDueOnItsDeadline() {
+        val official = Task.parse("File the tax return deadline:2026-11-30")
+        assertEquals(LocalDate(2026, 11, 30), official.due)
+        assertEquals(LocalDate(2026, 11, 30), official.deadline)
+        val buffered = Task.parse("File the tax return due:2026-11-20 deadline:2026-11-30")
+        assertEquals(LocalDate(2026, 11, 20), buffered.due)
+        assertEquals(false, buffered.isOverdue(today))
+        // The days between the two dates are a buffer.
+        assertEquals(false, Task.parse("File the tax return due:2026-11-10 deadline:2026-11-30").isOverdue(today))
+        // A deadline that has passed keeps the task overdue, wherever the due date was moved to.
+        assertTrue(Task.parse("File the tax return due:2026-11-20 deadline:2026-07-31").isOverdue(today))
+        assertEquals(false, Task.parse("x File the tax return deadline:2026-07-31").isOverdue(today))
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun theNextOccurrenceMovesTheDeadlineWithTheDueDate() {
+        assertEquals(
+            "Pay rent due:2026-12-01 rec:+1m deadline:2026-12-04",
+            Task.parse("Pay rent due:2026-11-01 rec:+1m deadline:2026-11-04").nextOccurrence(today)!!.toLine(),
+        )
+        // A deadline that was the due date itself stays that.
+        assertEquals("Pay rent rec:+1m deadline:2026-12-01", Task.parse("Pay rent rec:+1m deadline:2026-11-01").nextOccurrence(today)!!.toLine())
+    }
 }

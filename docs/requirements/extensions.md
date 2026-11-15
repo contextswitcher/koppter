@@ -198,6 +198,19 @@ Covers:
 
 Needs: dsn
 
+### Deadline next to the due date
+`req~deadline~1`
+
+A task can state the day that others set for it next to the day by which the user wants to have it done.
+The days between the two are a buffer: the task is overdue, and its plan late, only after the deadline.
+A task that states the deadline only is due on it.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ## Design
 
 ### Hashtags of a task
@@ -601,5 +614,24 @@ Such a line does not prevent saving, as the run skips it.
 Covers:
 
 * `req~scheduled-tasks-editor~1`
+
+Needs: impl, utest
+
+### Deadline
+`dsn~deadline~1`
+
+The tag `deadline:` holds a date; `Task.deadline` reads it, and `Task.due` returns it for a task without the tag `due:`, so that the list order, the groups, the filters and the planner need no change.
+`Task.isOverdue` compares today with the deadline, and with the due date only for a task without deadline.
+`Urgency.state` is due for a task whose due date has passed and whose deadline has not, and `Urgency.text` names the deadline after the due date.
+`CalendarTxt.state` is tight for a plan that ends after the due date and not after the deadline, and late for one that ends after the deadline.
+The label of each of the two dates is highlighted by its own date: the deadline as overdue once it has passed, the due date as on its day while the deadline lies ahead.
+The edit dialog has a date field for the tag, and the menu that moves the due date offers to remove the due date only for a task that has the tag `due:`.
+`Task.nextOccurrence` moves the deadline as far as the due date; a deadline that stood in for the due date stays the only date.
+`lint` and the dates of a share action read the tag as they read `due:`.
+
+Covers:
+
+* `req~deadline~1`
+* `adr~deadline-tag~1`
 
 Needs: impl, utest

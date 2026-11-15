@@ -456,4 +456,21 @@ class PlannerTest {
         // The same plan gives the same file.
         assertEquals(ics, Ics.write(blocks, today))
     }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aPlanThatEndsBetweenDueDateAndDeadlineIsTight() {
+        val friday = LocalDate(2026, 11, 13)
+        val planned = Planned(friday, 8 * 60, friday, 9 * 60)
+        fun state(tags: String) = CalendarTxt.state(Task.parse("File the tax return $tags"), planned)
+        assertEquals(PlanState.FITS, state("due:2026-11-16 deadline:2026-11-20"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-20"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-13"))
+        assertEquals(PlanState.LATE, state("due:2026-11-11 deadline:2026-11-12"))
+        // The deadline has passed, wherever the due date was moved to.
+        assertEquals(PlanState.LATE, state("due:2026-11-20 deadline:2026-11-10"))
+        // Without a due date, the deadline is the due date.
+        assertEquals(PlanState.TIGHT, state("deadline:2026-11-13"))
+        assertEquals(PlanState.LATE, state("deadline:2026-11-12"))
+    }
 }

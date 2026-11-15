@@ -14,7 +14,7 @@ data class ShareAction(val title: String, val template: String) {
         val text = shared.trim().replace(WHITESPACE, " ")
         // The body is set directly: shared text that starts like a priority or a date is not read as one.
         val task = Task(body = if (PLACEHOLDER in template) template.replace(PLACEHOLDER, text) else "$text $template".trim())
-        return listOf(Task.DUE, Task.THRESHOLD).fold(task) { result, key ->
+        return listOf(Task.DUE, Task.THRESHOLD, Task.DEADLINE).fold(task) { result, key ->
             val date = result.tag(key)?.let { Query.date(it, today) } ?: return@fold result
             result.withTag(key, date.toString())
         }

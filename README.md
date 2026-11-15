@@ -146,7 +146,7 @@ The option `--output-format` before the file selects another form of the finding
 
 | Severity | Findings |
 | --- | --- |
-| error | A value of `due:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `by:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
+| error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `by:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
 | warning | A tag given twice; a tag with a space after its colon; `by:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
 | info | The open tasks without context, which are in the [inbox](#inbox) |
 
@@ -170,6 +170,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `+papers>survey` | A project below another project, over any number of levels | This application | Typed as the project. The label shows `+survey`, and the path when the pointer rests on it; a click on it shows the tasks of the project. A filter for `+papers` includes the projects below it, as do a barrier and a limit of the [plan](#planning), and the filter panel shows the projects as a tree ([decision 0026](docs/decisions/0026-levels-of-a-project-written-like-those-of-a-context.md)). |
 | `dur:1h30m` | The time the task is expected to take, in hours and minutes | This application | Field *Duration* in the edit dialog, or typed into the task. [Planning](#planning) gives the task that much time ([decision 0018](docs/decisions/0018-tag-for-the-duration-of-a-task.md)). |
 | `by:14:00` | The time of the due date by which the task has to be done | This application | Field *Due time* in the edit dialog, or typed into the task next to `due:`. Among the tasks of a day, the earlier time comes first, and the icon of the [plan](#planning) is red if the task is planned to end later ([decision 0022](docs/decisions/0022-tag-for-the-time-by-which-a-task-is-due.md)). |
+| `deadline:2026-11-30` | The day that others set for the task, next to the day to have it done by | This application | Field *Deadline* in the edit dialog, or typed into the task; see [Deadline next to the due date](#deadline-next-to-the-due-date) ([decision 0028](docs/decisions/0028-tag-for-the-deadline-next-to-the-due-date.md)). |
 | `at:12:00` | The time of the day at which the task takes place | This application | Field *Fixed time* in the edit dialog, or typed into the task. [Planning](#fixed-times) gives the task that time and plans the others around it ([decision 0021](docs/decisions/0021-tag-for-the-fixed-time-of-a-task.md)). |
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
@@ -267,6 +268,20 @@ The application differs from the add-on in these points:
 * Each device remembers on its own when it last ran the schedules.
   In a git repository, a task that any device added since then counts as existing, also when it is completed already.
   Without git, a second device may add a task again that was added and completed on the first.
+
+### Deadline next to the due date
+
+`due:` is the day to have a task done by, and the day that the menu of a task moves.
+A task whose official day is a later one states that day as `deadline:`, which the application does not move:
+
+```text
+File the tax return @home due:2026-11-20 deadline:2026-11-30
+```
+
+* The days between the two are a buffer: after the due date, the task is highlighted as due and not as overdue, and a [plan](#planning) that ends in the buffer has a yellow icon and not a red one.
+* After the deadline, the task is overdue and its plan is late, wherever the due date is moved to.
+* A task with a deadline and without a due date is due on its deadline.
+* The next occurrence of a recurring task has its deadline moved as far as its due date.
 
 ## Dates in words
 

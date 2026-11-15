@@ -73,4 +73,21 @@ class UrgencyTest {
         assertEquals(listOf("#quick", "#writing", "No hashtag"), hashtags.map { it.title })
         assertEquals(listOf(1, 1, 2), hashtags.map { it.entries.size })
     }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aPassedDueDateIsNoFailureBeforeTheDeadline() {
+        val buffered = Task.parse("File the tax return due:2026-11-10 deadline:2026-11-20").urgency(today)!!
+        assertEquals(UrgencyState.DUE, buffered.state)
+        assertEquals("2 days overdue, deadline in 8 days", buffered.text)
+        // A deadline that has passed is a failure, wherever the due date was moved to.
+        val missed = Task.parse("File the tax return due:2026-11-20 deadline:2026-11-11").urgency(today)!!
+        assertEquals(UrgencyState.OVERDUE, missed.state)
+        assertEquals("Due in 8 days, deadline yesterday", missed.text)
+        // Without a due date, the deadline is the due date.
+        val official = Task.parse("File the tax return deadline:2026-11-20").urgency(today)!!
+        assertEquals(UrgencyState.FINE, official.state)
+        assertEquals("Due in 8 days", official.text)
+        assertEquals(UrgencyState.OVERDUE, Task.parse("File the tax return deadline:2026-11-11").urgency(today)!!.state)
+    }
 }

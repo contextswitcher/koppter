@@ -12,6 +12,7 @@ It is a suggestion, not a rule of the application: the file is yours.
 | Context `@` | In which kind of work, or where, is it done? | `@reading` |
 | Priority | Does it matter more than the rest right now? | `(A)` |
 | `due:` | Is there a date that someone else set? | `due:2026-12-01` |
+| `deadline:` | Is that date later than the day to be done by? | `deadline:2026-12-10` |
 | `t:` | From when on is it worth looking at? | `t:2027-01-10` |
 | `dur:` | How long does it take? | `dur:2h` |
 | `at:` | At which time does it take place, if it has one? | `at:12:00` |
@@ -97,6 +98,7 @@ If half of the tasks have a priority, it says nothing anymore: the plan and the 
 
 * `due:` is a deadline that the world sets: a submission, an appointment, a bill.
   A day on which you would like to do the task is not a due date; the plan finds that day.
+* `deadline:` is that date for a task that should be done earlier: `due:2026-12-01 deadline:2026-12-10` keeps nine days as a buffer, in which the task is due and not overdue.
 * `t:` is the threshold date: before it, the task is hidden from the list and is not planned.
   It is the answer to "not now": a task for next semester gets `t:` at its start.
 * A task for some day gets a threshold date far ahead, such as the start of the next quarter.

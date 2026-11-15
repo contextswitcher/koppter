@@ -90,7 +90,7 @@ class ScreenshotTest {
             (B) Schedule Goodwill pickup +GarageSale @phone due:2026-11-14
             (B) Prepare the slides for the team meeting +Work @computer #meeting due:2026-11-17 dur:2h cs:work/team-meeting note:k3f.md
             (C) Post signs around the neighborhood +GarageSale @errands
-            (C) Renew the library card @errands>city #someday due:2026-11-20
+            (C) Renew the library card @errands>city #someday due:2026-11-20 deadline:2026-11-27
             Water the plants @home due:2026-11-12 rec:1w
             Book the train to Hamburg +Vacation @computer @waiting
             Compare prices for a new bike +Vacation #money #someday

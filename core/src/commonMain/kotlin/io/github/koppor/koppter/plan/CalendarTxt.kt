@@ -79,15 +79,22 @@ object CalendarTxt {
     /** A day as a text, such as `Mon 2026-11-16`. */
     fun dayText(date: LocalDate): String = "${WEEKDAYS[date.dayOfWeek.isoDayNumber - 1]} $date"
 
-    /** The state of an open task in a plan: late if it is not planned at all or its last block ends behind its due date, or behind the time by which it is due on that day. */
+    /**
+     * The state of an open task in a plan: late if it is not planned at all or its last block ends behind its due date, or behind the time by which it is due on that day.
+     * With a deadline after the due date, the time between the two is a buffer: a plan that ends in it is tight, and one that ends behind the deadline is late.
+     */
     // [impl->dsn~due-time~1]
+    // [impl->dsn~deadline~1]
     fun state(task: Task, planned: Planned?): PlanState {
         val due = task.due
+        val deadline = task.deadline ?: due
         return when {
             planned == null -> PlanState.LATE
-            due == null || planned.lastDate < due -> PlanState.FITS
+            due == null || deadline == null -> PlanState.FITS
+            planned.lastDate > deadline -> PlanState.LATE
+            planned.lastDate < due -> PlanState.FITS
             planned.lastDate == due && planned.lastEnd <= (task.by ?: (24 * 60)) -> PlanState.TIGHT
-            else -> PlanState.LATE
+            else -> if (deadline > due) PlanState.TIGHT else PlanState.LATE
         }
     }
 

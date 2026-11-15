@@ -354,7 +354,8 @@ private fun DueMenu(expanded: Boolean, entry: Entry, today: LocalDate, onDismiss
                 modifier = Modifier.testTag("due-$date"),
             )
         }
-        if (entry.task.due != null) {
+        // A task that is due on its deadline has no due date to take away.
+        if (entry.task.tag(Task.DUE) != null) {
             DropdownMenuItem(
                 text = { Text("No due date") },
                 onClick = {

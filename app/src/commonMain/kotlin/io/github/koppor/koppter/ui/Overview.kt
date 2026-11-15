@@ -78,7 +78,7 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onOpen: (Entry) -> U
                             Text(
                                 listOfNotNull(
                                     state.overdue.takeIf { it > 0 }?.let { "$it overdue" },
-                                    state.dueToday.takeIf { it > 0 }?.let { "$it due today" },
+                                    state.dueToday.takeIf { it > 0 }?.let { "$it due now" },
                                 ).joinToString(" · ").ifEmpty { "Nothing due" },
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,

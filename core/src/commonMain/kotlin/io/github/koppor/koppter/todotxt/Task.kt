@@ -4,6 +4,7 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlin.time.Duration
 
 /**
@@ -46,8 +47,9 @@ data class Task(
     /** The value of the first tag with the given key. */
     fun tag(key: String): String? = tags.firstOrNull { it.first == key }?.second
 
-    /** Whether the task is open and its due date has passed. */
-    fun isOverdue(today: LocalDate): Boolean = !completed && due.let { it != null && it < today }
+    /** Whether the task is open and its deadline has passed, or its due date if it has no deadline: the days between the two are a buffer. */
+    // [impl->dsn~deadline~1]
+    fun isOverdue(today: LocalDate): Boolean = !completed && (deadline ?: due).let { it != null && it < today }
 
     /**
      * Whether this task can step over the other one, its neighbor in the list.
@@ -68,7 +70,12 @@ data class Task(
         return copy(body = (tokens.filterNot(CONTEXT_SWITCHER_LINK::matches) + ids.map { "$CONTEXT_SWITCHER:$it" }).joinToString(" "))
     }
 
-    val due: LocalDate? get() = tag(DUE)?.let(::parseDate)
+    /** The day to have the task done by; a task without that tag is due on its deadline. */
+    // [impl->dsn~deadline~1]
+    val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline
+
+    /** The day that others set for the task, which the application does not move. */
+    val deadline: LocalDate? get() = tag(DEADLINE)?.let(::parseDate)
 
     /** The threshold date: the task is not relevant before it. */
     val threshold: LocalDate? get() = tag(THRESHOLD)?.let(::parseDate)
@@ -190,6 +197,11 @@ data class Task(
                 open.withTag(DUE, next.toString()).withTag(THRESHOLD, next.minus(threshold.daysUntil(due), DateTimeUnit.DAY).toString())
             due == null && threshold != null -> open.withTag(THRESHOLD, next.toString())
             else -> open.withTag(DUE, next.toString())
+        }.let { moved ->
+            // [impl->dsn~deadline~1]
+            // The deadline keeps its distance to the due date; where it was the due date itself, it stays that.
+            val deadline = deadline ?: return@let moved
+            moved.withTag(DEADLINE, next.plus(due!!.daysUntil(deadline), DateTimeUnit.DAY).toString()).withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
         }.copy(creationDate = null, completionDate = null)
     }
 
@@ -200,6 +212,7 @@ data class Task(
 
     companion object {
         const val DUE = "due"
+        const val DEADLINE = "deadline"
         const val THRESHOLD = "t"
         const val RECURRENCE = "rec"
         const val PRIORITY = "pri"

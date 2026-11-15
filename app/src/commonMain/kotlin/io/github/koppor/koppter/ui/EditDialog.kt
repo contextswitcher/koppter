@@ -99,6 +99,7 @@ fun EditDialog(
     var description by remember(base) { mutableStateOf(base.description) }
     var priority by remember(base) { mutableStateOf(base.priority) }
     var due by remember(base) { mutableStateOf(base.tag(Task.DUE).orEmpty()) }
+    var deadline by remember(base) { mutableStateOf(base.tag(Task.DEADLINE).orEmpty()) }
     var threshold by remember(base) { mutableStateOf(base.tag(Task.THRESHOLD).orEmpty()) }
     var recurrence by remember(base) { mutableStateOf(base.tag(Task.RECURRENCE).orEmpty()) }
     var duration by remember(base) { mutableStateOf(base.tag(Task.DURATION).orEmpty()) }
@@ -112,6 +113,7 @@ fun EditDialog(
     var note by remember { mutableStateOf(originalNote.orEmpty()) }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
+    val deadlineValid = deadline.isBlank() || Task.parseDate(deadline.trim()) != null
     val thresholdValid = threshold.isBlank() || Task.parseDate(threshold.trim()) != null
     val recurrenceValid = recurrence.isBlank() || Recurrence.parse(recurrence.trim()) != null
     val durationValid = duration.isBlank() || Task.parseDuration(duration.trim()) != null
@@ -122,6 +124,7 @@ fun EditDialog(
         .edit(description = description, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
         .withTag(Task.DUE, due.trim())
         .withTag(Task.BY, by.trim())
+        .withTag(Task.DEADLINE, deadline.trim())
         .withTag(Task.THRESHOLD, threshold.trim())
         .withTag(Task.RECURRENCE, recurrence.trim())
         .withTag(Task.DURATION, duration.trim())
@@ -132,7 +135,7 @@ fun EditDialog(
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
-    val valid = dueValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && result.body.isNotBlank()
+    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && result.body.isNotBlank()
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current
@@ -205,6 +208,8 @@ fun EditDialog(
                         singleLine = true,
                         modifier = field.testTag("edit-by"),
                     )
+                    // [impl->dsn~deadline~1]
+                    DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
                     DateField("Threshold", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
                     OutlinedTextField(
                         value = recurrence,
