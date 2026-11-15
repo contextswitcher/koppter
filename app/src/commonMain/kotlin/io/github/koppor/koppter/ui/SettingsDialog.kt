@@ -190,7 +190,7 @@ fun SettingsDialog(
                 // [impl->dsn~share-actions~1]
                 actions?.let { text ->
                     ConfigField(
-                        "Share actions", text, { actions = it }, "inbox = {}\nreading = {} @research>reading due:2w dur:1h",
+                        "Share actions", text, { actions = it }, "inbox = {}\nreading = {} +research @reading due:2w dur:1h",
                         "What sharing a text to koppter on Android adds: one action per line as title = task; {} stands for the shared text.",
                         "settings-share-actions",
                     )
