@@ -25,6 +25,8 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.click
+import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
@@ -1456,6 +1458,40 @@ class AppTest {
         // The card still has its menu.
         onNodeWithText("Post signs").performMouseInput { rightClick() }
         onNodeWithTag("due-menu").assertExists()
+    }
+
+    // [utest->dsn~app-link-copy~1]
+    @Test
+    @Suppress("DEPRECATION")
+    fun aLongPressOnALabelOffersItsLinkOnATouchScreen() = runComposeUiTest {
+        storage.text = "Post signs +GarageSale @errands>city #quick\nCall Mom @phone\n"
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt") } }
+
+        // The long press on a label of the filter panel opens the menu and does not select the label.
+        onNodeWithTag("filter-context-phone").performTouchInput { longClick() }
+        onNodeWithTag("copy-link").performClick()
+        assertEquals("koppter://filter?context=phone", copied)
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithTag("filter-project-GarageSale").performTouchInput { longClick() }
+        onNodeWithTag("copy-link").performClick()
+        assertEquals("koppter://filter?project=GarageSale", copied)
+
+        // A short touch selects the label as before.
+        onNodeWithTag("filter-context-phone").performTouchInput { click() }
+        onNodeWithTag("link-menu").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(1)
+
+        // The label of a task has no menu for a finger: a long press there picks up the card.
+        onNodeWithTag("label-context-phone", useUnmergedTree = true).performTouchInput { longClick() }
+        onNodeWithTag("link-menu").assertDoesNotExist()
     }
 
     // [utest->dsn~top-tasks~1]

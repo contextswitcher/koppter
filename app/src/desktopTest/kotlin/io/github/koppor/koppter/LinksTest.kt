@@ -1,5 +1,7 @@
 package io.github.koppor.koppter
 
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.nio.file.Files
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -22,9 +24,16 @@ class LinksTest {
         assertEquals(true, port.pass("koppter://filter?context=phone"))
         assertEquals("koppter://filter?context=phone", received.poll(5, TimeUnit.SECONDS))
 
-        // The file of an application that ended names a port that nothing answers on.
         listening.close()
-        assertEquals(false, port.pass("koppter://filter?project=Fair"))
+    }
+
+    // [utest->dsn~link-single-instance~1]
+    @Test
+    fun theFileOfAnApplicationThatEndedIsNoRunningApplication() {
+        val file = Files.createTempDirectory("koppter-links").resolve("link.port")
+        // A port that was listened on and is closed, as after the end of the application.
+        file.writeText(ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { it.localPort }.toString())
+        assertEquals(false, LinkPort(file).pass("koppter://filter?project=Fair"))
     }
 
     // [utest->dsn~link-single-instance~1]

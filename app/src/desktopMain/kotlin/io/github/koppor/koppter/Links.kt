@@ -45,6 +45,8 @@ class LinkPort(private val file: Path) {
             while (!server.isClosed) {
                 try {
                     server.accept().use { socket ->
+                        // A connection that came in while the port was being closed is not answered.
+                        if (server.isClosed) return@use
                         socket.soTimeout = 1000
                         val line = socket.getInputStream().bufferedReader().readLine() ?: return@use
                         onLink(line)

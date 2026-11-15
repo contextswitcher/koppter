@@ -84,7 +84,7 @@ fun FilterPanel(
             order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
         ) { value, suffix, modifier ->
             // A selected project stands outside the tree and shows its path.
-            WithLinkMenu(LINK_PROJECT, value) { ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
+            WithLinkMenu(LINK_PROJECT, value, longPress = true) { ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
         }
         // [impl->dsn~context-hierarchy~1]
         LabelFilter(
@@ -92,11 +92,11 @@ fun FilterPanel(
             order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
         ) { value, suffix, modifier ->
             // A selected context stands outside the tree and shows its path.
-            WithLinkMenu(LINK_CONTEXT, value) { ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
+            WithLinkMenu(LINK_CONTEXT, value, longPress = true) { ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty()) }
         }
         // [impl->dsn~hashtags-in-ui~1]
         LabelFilter("Hashtags", hashtags, filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) }) { value, suffix, modifier ->
-            WithLinkMenu(LINK_HASHTAG, value) { HashtagLabel(value, modifier, suffix) }
+            WithLinkMenu(LINK_HASHTAG, value, longPress = true) { HashtagLabel(value, modifier, suffix) }
         }
 
         // The criterion that is changed least often stands last.

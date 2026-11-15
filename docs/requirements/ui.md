@@ -730,6 +730,7 @@ Needs: impl, utest
 `linkTo` writes the link to a project, a context or a hashtag and encodes every character of the name that is not a letter, a digit or one of `-._~`, so that a program that finds links in a text takes the whole link.
 `WithLinkMenu` wraps the labels of projects, contexts and hashtags of a task and of the filter panel: a click with the secondary button opens a menu whose entry *Copy link* puts the link on the clipboard.
 The click is taken before the card of the task sees it, so that the card does not open its menu of due dates.
+In the filter panel, a finger that stays on a label opens the menu as well, and lifting it does not select the label; the label of a task has no such menu, as a long press there picks up the card.
 
 Covers:
 

@@ -637,6 +637,7 @@ koppter://filter?project=Fair&context=phone
 ```
 
 * A right click on the label of a project, a context or a hashtag, at a task or in the filter panel, offers *Copy link*.
+  On a touch screen, a long press on the label in the filter panel does.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
   A project or a context includes those below it.

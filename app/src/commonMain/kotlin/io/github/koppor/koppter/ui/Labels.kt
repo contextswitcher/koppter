@@ -2,6 +2,9 @@ package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
@@ -32,6 +35,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventTimeoutCancellationException
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
@@ -330,10 +334,11 @@ private fun WithTooltip(text: String, label: @Composable () -> Unit) {
  * Offers the link to the tasks of a project, a context or a hashtag in a menu that a click with the secondary button on the label opens.
  *
  * @param key the key of the link, such as [LINK_PROJECT]
+ * @param longPress opens the menu also when a finger stays on the label; not for the label of a task, where a long press picks up the card
  */
 // [impl->dsn~app-link-copy~1]
 @Composable
-fun WithLinkMenu(key: String, name: String, label: @Composable () -> Unit) {
+fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, label: @Composable () -> Unit) {
     var open by remember { mutableStateOf(false) }
     // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
     @Suppress("DEPRECATION")
@@ -348,6 +353,23 @@ fun WithLinkMenu(key: String, name: String, label: @Composable () -> Unit) {
                         event.changes.forEach { it.consume() }
                         open = true
                     }
+                }
+            }
+        }.pointerInput(longPress) {
+            // A finger that stays on the label: there is no secondary button on a touch screen.
+            if (longPress) awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                if (down.type == PointerType.Mouse) return@awaitEachGesture
+                try {
+                    // Ends without the menu if the finger is lifted, which is a click on the label, or moves, which scrolls the list.
+                    withTimeout(viewConfiguration.longPressTimeoutMillis) { waitForUpOrCancellation(PointerEventPass.Initial) }
+                } catch (_: PointerEventTimeoutCancellationException) {
+                    open = true
+                    // The rest of the touch is taken, so that lifting the finger is no click on the label or on the card.
+                    do {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
                 }
             }
         },
