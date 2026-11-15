@@ -194,6 +194,13 @@ class ScreenshotTest {
     }
 
     @Test
+    fun rendersListInGroups() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        start()
+        onNodeWithTag("group-PROJECT").performClick()
+        save("list-project.png")
+    }
+
+    @Test
     fun rendersDueMenu() = runDesktopComposeUiTest(width = 1100, height = 520) {
         start()
         onNodeWithText("Submit the travel expense report").performMouseInput { rightClick() }

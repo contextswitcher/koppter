@@ -85,6 +85,9 @@ class TodoController(
     /** The attribute whose values are the columns of the board; `null` for the columns the user defined. */
     var groupKey by mutableStateOf<GroupKey?>(GroupKey.PRIORITY)
 
+    /** The attribute by whose values the list is divided into groups; `null` for a list without groups. */
+    var listGroupKey by mutableStateOf<GroupKey?>(null)
+
     /** The configuration file next to the todo.txt file; `null` if the storage keeps no files next to the todo.txt file. */
     private var config by mutableStateOf<String?>(null)
 
@@ -170,11 +173,18 @@ class TodoController(
     // [impl->dsn~board~1]
     // [impl->dsn~board-defined-columns~1]
     val groups: List<Group>
-        get() = groupKey?.let { key ->
-            val groups = groupEntries(visible, key, today())
-            if (key != GroupKey.PRIORITY) groups
-            else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
-        } ?: groupByColumns(visible, boardColumns, today())
+        get() = groupKey?.let(::groupsBy) ?: groupByColumns(visible, boardColumns, today())
+
+    /** The visible tasks as the groups of the list: one group without title if the list is not divided. */
+    // [impl->dsn~list-groups~1]
+    val listGroups: List<Group>
+        get() = listGroupKey?.let(::groupsBy) ?: listOf(Group("", visible))
+
+    private fun groupsBy(key: GroupKey): List<Group> {
+        val groups = groupEntries(visible, key, today())
+        return if (key != GroupKey.PRIORITY) groups
+        else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
+    }
 
     val projects: List<String> get() = file.entries.flatMap { it.task.projects }.distinct().sorted()
     /** The contexts of the file and the contexts above them, a context directly before those below it. */

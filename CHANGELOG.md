@@ -9,10 +9,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The list is divided into groups with headings by priority, project, context, hashtag or due date range, with the switches below the views.
 - A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, the next Monday or the day a week from today.
 
 ### Changed
 
+- The views are one row of switches of which one is always selected, the list among them, and they stand above the field that adds a task.
+- *Top* is the option *Only the first 10 tasks* of the filter panel, and *Clear all filters* turns it off.
+- *Plan* is a button of the top bar, and the buttons of the top bar show what they do while the pointer rests on them.
 - The projects, contexts and hashtags of a task have the same colors in the edit dialog as in the list.
 - Overdue tasks stand first in the list whatever their priority is, above a line that separates them from the other tasks, and they are planned first.
 

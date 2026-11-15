@@ -101,6 +101,17 @@ Covers:
 
 Needs: dsn
 
+### Groups in the list
+`req~list-groups~1`
+
+The user divides the list into groups with headings: by priority, project, context, hashtag or due date range.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
 ### Filter panel
 `req~filter-panel~1`
 
@@ -235,10 +246,24 @@ Covers:
 
 Needs: impl, utest
 
+### Groups of the list
+`dsn~list-groups~1`
+
+`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns; without an attribute, the list is one group.
+`TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
+A task with several values of the attribute stands in each of their groups.
+A step and a drag stay within a group; a task is given another value on the board or in the edit dialog.
+
+Covers:
+
+* `req~list-groups~1`
+
+Needs: impl, utest
+
 ### Line below the overdue tasks
 `dsn~overdue-separator~1`
 
-`TaskList` draws a line between the last overdue task and the first task that is not overdue, if it shows tasks of both kinds.
+`TaskList` draws a line between the last overdue task and the first task that is not overdue, in each group that has tasks of both kinds.
 
 Covers:
 
@@ -365,7 +390,9 @@ Needs: impl, utest
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the quick add field, the task list and a button for a new task.
+The main screen consists of the top bar, the filter panel, the switches for the view, the quick add field below them, the task list and a button for a new task.
+The switches stand above the field, as a task is looked up more often than added.
+A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use the type scale of Material reduced by a tenth (`compactTypography`), which suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
@@ -381,7 +408,7 @@ Needs: impl
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
 With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, and 1 to 6 show the list and the views in the order of their switches.
-The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter and the *Top* switch and gives the focus to the text of the filter.
+The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.

@@ -83,9 +83,15 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.plus
 
+/**
+ * The tasks as a list, in the groups they are given in: one after the other, each below its title if [headings] is set.
+ * A task is moved by a step or by dragging within its group.
+ */
+// [impl->dsn~list-groups~1]
 @Composable
 fun TaskList(
-    entries: List<Entry>,
+    groups: List<Group>,
+    headings: Boolean,
     today: LocalDate,
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
@@ -94,20 +100,21 @@ fun TaskList(
     emptyText: String,
     modifier: Modifier = Modifier,
 ) {
-    if (entries.isEmpty()) {
+    if (groups.all { it.entries.isEmpty() }) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text(emptyText, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         return
     }
+    // A task with two projects stands in two groups, so a card is told apart by its group and its task.
     // [impl->dsn~list-drag~1]
-    val drag = remember { CardDrag<Entry>() }
-    fun target(): Pair<Entry, Boolean>? = drag.dragged?.let { entry -> drag.target { true }?.takeIf { (target) -> entry.task.canStepOver(target.task, today) } }
+    val drag = remember { CardDrag<Pair<String, Entry>>() }
+    fun target(): Pair<Pair<String, Entry>, Boolean>? = drag.dragged?.let { (group, entry) ->
+        drag.target { it.first == group }?.takeIf { (target) -> entry.task.canStepOver(target.second.task, today) }
+    }
     val list = rememberLazyListState()
     var area by remember { mutableStateOf<Rect?>(null) }
     DragScroll(drag, list) { area }
-    // The overdue tasks are the first ones of the list: see listOrder.
-    val firstNotOverdue = entries.indexOfFirst { !it.task.isOverdue(today) }
     Box(
         modifier.fillMaxSize().onGloballyPositioned {
             drag.origin = it.positionInRoot()
@@ -120,27 +127,43 @@ fun TaskList(
             contentPadding = PaddingValues(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            itemsIndexed(entries, key = { _, entry -> entry.index }) { position, entry ->
-                // [impl->dsn~list-step~1]
-                fun step(up: Boolean): (() -> Unit)? =
-                    entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task, today) }?.let { { onStep(entry, it, up) } }
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // [impl->dsn~overdue-separator~1]
-                    if (position == firstNotOverdue && position > 0) {
-                        HorizontalDivider(Modifier.padding(top = 2.dp).testTag("overdue-separator"), thickness = 2.dp)
+            for (group in groups) {
+                val entries = group.entries
+                if (headings) {
+                    item(key = "group/${group.title}") {
+                        Text(
+                            "${group.title} (${entries.size})",
+                            style = MaterialTheme.typography.titleSmall,
+                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+                                .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
+                        )
                     }
-                    Box(Modifier.cardDrag(drag, entry) { target()?.let { (target, before) -> onDrop(entry, target, before) } }) {
-                        TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) {
-                            Column {
-                                StepButton(Icons.Default.KeyboardArrowUp, "Move up", "task-up", step(up = true))
-                                StepButton(Icons.Default.KeyboardArrowDown, "Move down", "task-down", step(up = false))
+                }
+                // The overdue tasks are the first ones of a group: see listOrder.
+                val firstNotOverdue = entries.indexOfFirst { !it.task.isOverdue(today) }
+                itemsIndexed(entries, key = { _, entry -> "task/${group.title}/${entry.index}" }) { position, entry ->
+                    // [impl->dsn~list-step~1]
+                    fun step(up: Boolean): (() -> Unit)? =
+                        entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task, today) }?.let { { onStep(entry, it, up) } }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // [impl->dsn~overdue-separator~1]
+                        if (position == firstNotOverdue && position > 0) {
+                            HorizontalDivider(Modifier.padding(top = 2.dp).testTag("overdue-separator"), thickness = 2.dp)
+                        }
+                        Box(Modifier.cardDrag(drag, group.title to entry) { target()?.let { (target, before) -> onDrop(entry, target.second, before) } }) {
+                            TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) {
+                                Column {
+                                    StepButton(Icons.Default.KeyboardArrowUp, "Move up", "task-up", step(up = true))
+                                    StepButton(Icons.Default.KeyboardArrowDown, "Move down", "task-down", step(up = false))
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        DragMarks(drag, drag.dragged?.task?.description, target()?.let { (target, before) -> drag.cards[target]?.let { it to before } })
+        DragMarks(drag, drag.dragged?.second?.task?.description, target()?.let { (target, before) -> drag.cards[target]?.let { it to before } })
     }
 }
 

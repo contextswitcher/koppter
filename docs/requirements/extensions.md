@@ -228,7 +228,8 @@ Needs: impl, utest
 ### Top tasks
 `dsn~top-tasks~1`
 
-With the *Top* switch on, `TodoController.visible` is cut to the first `topCount` entries of the filtered list in list order.
+With the option *Only the first n tasks* of the filter panel on, `TodoController.visible` is cut to the first `topCount` entries of the filtered list in list order.
+*Clear all filters* turns the option off.
 
 Covers:
 
@@ -240,7 +241,7 @@ Needs: impl, utest
 `dsn~most-important-tasks~1`
 
 There is no separate notation for most important tasks.
-Such a task has priority `A` and a due date; the list order shows it first, and the *Top* view restricts the list to these tasks.
+Such a task has priority `A` and a due date; the list order shows it first, and the option for the first tasks restricts the list to these tasks.
 
 Covers:
 
@@ -393,12 +394,15 @@ Needs: impl, utest
 ### View options
 `dsn~view-options~1`
 
-A row of switches above the tasks turns the *Top* view on and off, shows one of the views that replace the list (board, overview, agenda, week, inbox) and, for the board, selects the attribute of the columns or the columns defined by filters.
+A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
+One of them is always selected.
+For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
+Each row is one line that scrolls sideways in a window that is too narrow for it.
 
 Covers:
 
 * `req~board~1`
-* `req~top-tasks~1`
+* `req~list-groups~1`
 
 Needs: impl, utest
 

@@ -77,7 +77,7 @@ The screenshots above show Nord in its light variant.
 * Synchronization through git, with one commit per added and per completed task.
   The dates a task was added and completed are then read from the history instead of being written into the file.
 * Synchronization through a local folder and through OneDrive.
-* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task.
+* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task, divided into groups by one of them if wanted.
 * An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
 * A filter panel for completion state, text, priorities, projects, contexts and hashtags.
 * A Kanban board.
@@ -140,7 +140,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
 | `pri:A` | The priority a completed task had | [todo.txt format](https://github.com/todotxt/todo.txt#complete-tasks-2-format-rules) | Written when a task with a priority is completed, as the format has no priority for completed tasks; reopening the task restores the priority. |
 
-The *Top* switch above the list restricts it to the first tasks, whose number is a setting, as the add-on [top](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#top-see-the-top-tasks) of the todo.txt command line does.
+The option *Only the first 10 tasks* of the filter panel restricts the list to the first tasks, whose number is a setting, as the add-on [top](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#top-see-the-top-tasks) of the todo.txt command line does.
 There is no notation for a most important task as the add-ons [mit](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mit-most-important-task) and [mitf](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mitf-most-important-task-in-the-future) have it: priority `(A)` together with a due date serves that purpose ([decision 0009](docs/decisions/0009-no-notation-for-most-important-tasks.md)).
 
 Notes, `ice_recur.txt`, the board columns by filter and the names of the priorities need a `todo.txt` file in a folder or a git repository.
@@ -289,6 +289,17 @@ On the [board](#board), a card is dragged to a place in its column in the same w
 Dragged to another column, it changes what the column stands for and keeps its priority otherwise, so that it gets its place only among the cards of that priority.
 The list and the columns of the board scroll while a task is held at their upper or lower edge, and the board scrolls sideways while a card is held at its left or right edge.
 
+## Groups in the list
+
+The switches below the views divide the list into groups: by priority, project, context, hashtag or due date range.
+Each group stands below a heading with its title and the number of its tasks, and a second click on the switch shows the list without groups again.
+A task with two projects stands in the groups of both.
+
+![Task list divided into groups by project](docs/screenshots/list-project.png)
+
+Within a group, the tasks have the [order of the list](#order-of-the-list), and a task is moved within its group only.
+The [board](#board) shows the same groups side by side and gives a task another project, context or priority by dragging.
+
 ## Names for priorities
 
 The todo.txt format has the priorities `(A)` to `(Z)`, of which A is the highest.
@@ -339,7 +350,7 @@ The arrow keys up and down mark another task, to leave one where it is.
 
 ## Planning
 
-*Plan* above the tasks gives each open task times in which it is to be worked on and writes them to `calendar.txt` next to the `todo.txt` file.
+*Plan*, the arrow in the top bar, gives each open task times in which it is to be worked on and writes them to `calendar.txt` next to the `todo.txt` file.
 The `todo.txt` file leads: the plan is computed from it, and planning does not change it.
 
 * A task with a higher priority is planned first, and every task gets the earliest free times, so that tasks without dates are planned soon as well.

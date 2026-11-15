@@ -1055,16 +1055,55 @@ class AppTest {
     }
 
     // [utest->dsn~top-tasks~1]
-    // [utest->dsn~view-options~1]
     @Test
     fun theTopViewShowsTheFirstTasksOnly() = runComposeUiTest {
         start(Settings(topCount = 2))
-        onNodeWithTag("top").assertTextEquals("Top 2").performClick()
+        onNodeWithTag("top").assertTextEquals("Only the first 2 tasks").performClick()
         onAllNodesWithTag("task").assertCountEquals(2)
         onNodeWithText("Thank Mom").assertExists()
         onNodeWithText("Schedule pickup").assertExists()
-        onNodeWithTag("top").performClick()
+        // It is a criterion of the filter panel and is cleared with the others.
+        onNodeWithTag("filter-clear").performClick()
+        onNodeWithTag("top").assertIsOff()
         onAllNodesWithTag("task").assertCountEquals(3)
+    }
+
+    // [utest->dsn~view-options~1]
+    @Test
+    fun oneViewIsAlwaysSelected() = runComposeUiTest {
+        start()
+        onNodeWithTag("list-switch").assertIsSelected()
+        onNodeWithTag("overview-switch").performClick()
+        onNodeWithTag("overview-switch").assertIsSelected()
+        // A click on the selected view leaves it selected.
+        onNodeWithTag("overview-switch").performClick()
+        onNodeWithTag("overview-switch").assertIsSelected()
+        // The overview has no groups to choose.
+        onNodeWithTag("group-PROJECT").assertDoesNotExist()
+        onNodeWithTag("list-switch").performClick()
+        onAllNodesWithTag("task").assertCountEquals(3)
+    }
+
+    // [utest->dsn~list-groups~1]
+    // [utest->dsn~view-options~1]
+    @Test
+    fun theListIsDividedIntoGroupsWithHeadings() = runComposeUiTest {
+        storage.text += "Order the cake +Family +GarageSale\n"
+        start()
+        onNodeWithTag("list-group").assertDoesNotExist()
+        onNodeWithTag("group-PROJECT").performClick()
+        onAllNodesWithTag("list-group").assertCountEquals(3)
+        onNodeWithText("+Family (1)").assertExists()
+        onNodeWithText("+GarageSale (3)").assertExists()
+        onNodeWithText("No project (1)").assertExists()
+        // A task with two projects stands in both groups.
+        onAllNodesWithText("Order the cake").assertCountEquals(2)
+        // A step stays within the group: the last task of a group has no way down.
+        onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
+        // A second click on the attribute shows the list without groups again.
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("list-group").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(4)
     }
 
     // [utest->dsn~board~1]

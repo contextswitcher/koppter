@@ -134,7 +134,7 @@ fun SettingsDialog(
                 OutlinedTextField(
                     value = topCount,
                     onValueChange = { topCount = it },
-                    label = { Text("Number of tasks in the Top view") },
+                    label = { Text("Number of tasks for the filter option of the first tasks") },
                     isError = topCountValue == null,
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("settings-top-count"),

@@ -44,6 +44,10 @@ fun FilterPanel(
     projects: List<String>,
     contexts: List<String>,
     hashtags: List<String>,
+    /** The number of tasks that the list is cut to if [topOnly] is set. */
+    topCount: Int,
+    topOnly: Boolean,
+    onTopOnly: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** For the field of the text, so that a shortcut can give it the focus. */
     textModifier: Modifier = Modifier,
@@ -61,6 +65,8 @@ fun FilterPanel(
         Option("Show tasks before their threshold date", !filter.hideFuture, "filter-future") {
             onChange(filter.copy(hideFuture = !it))
         }
+        // [impl->dsn~top-tasks~1]
+        Option("Only the first $topCount tasks", topOnly, "top", onTopOnly)
 
         LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }) { value, suffix, modifier ->
             PriorityLabel(value, modifier, suffix)
@@ -101,8 +107,11 @@ fun FilterPanel(
         }
 
         OutlinedButton(
-            onClick = { onChange(Filter()) },
-            enabled = !filter.isDefault,
+            onClick = {
+                onChange(Filter())
+                onTopOnly(false)
+            },
+            enabled = !filter.isDefault || topOnly,
             modifier = Modifier.padding(top = 12.dp).testTag("filter-clear"),
         ) {
             Text("Clear all filters")

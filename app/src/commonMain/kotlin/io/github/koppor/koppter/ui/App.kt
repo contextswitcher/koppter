@@ -11,10 +11,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,11 +28,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -41,13 +41,18 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -58,6 +63,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -227,6 +233,9 @@ private fun MainScreen(
             projects = controller.projects,
             contexts = controller.contexts,
             hashtags = controller.hashtags,
+            topCount = controller.settings.topCount,
+            topOnly = controller.topOnly,
+            onTopOnly = { controller.topOnly = it },
             modifier = modifier,
             textModifier = Modifier.focusRequester(filterFocus),
         )
@@ -253,13 +262,11 @@ private fun MainScreen(
                         actions = {
                             controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
                             if (controller.canSchedule) {
-                                IconButton(onClick = { schedule = controller.schedule() }, modifier = Modifier.testTag("open-schedule")) {
-                                    Icon(Icons.Default.DateRange, contentDescription = "Scheduled tasks")
-                                }
+                                // [impl->dsn~plan-dialog~1]
+                                BarButton(Icons.Default.PlayArrow, "Plan", "open-plan") { planning = controller.planSettings }
+                                BarButton(Icons.Default.DateRange, "Scheduled tasks", "open-schedule") { schedule = controller.schedule() }
                             }
-                            IconButton(onClick = { showSettings = true }, modifier = Modifier.testTag("open-settings")) {
-                                Icon(Icons.Default.Settings, contentDescription = "Settings")
-                            }
+                            BarButton(Icons.Default.Settings, "Settings", "open-settings") { showSettings = true }
                         },
                     )
                 },
@@ -276,8 +283,9 @@ private fun MainScreen(
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
+                        // The views stand above the field for a new task: a task is looked up more often than added.
+                        ViewOptions(controller)
                         QuickAdd(onAdd = controller::add, preview = controller::datesPreview, focus = quickAddFocus)
-                        ViewOptions(controller, onPlan = { planning = controller.planSettings })
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -296,7 +304,10 @@ private fun MainScreen(
                                 emptyText = emptyText,
                             )
                         } else {
-                            TaskList(controller.visible, controller.today(), controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText)
+                            TaskList(
+                                controller.listGroups, controller.listGroupKey != null, controller.today(),
+                                controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
+                            )
                         }
                     }
                 }
@@ -363,40 +374,38 @@ private fun MainScreen(
     }
 }
 
-/** The switches above the tasks: only the top tasks, the view that replaces the list, and what forms the columns of the board. */
+/**
+ * The switches above the tasks: one row for the view, of which one is always shown,
+ * and below it what forms the groups of the list or the columns of the board.
+ */
 // [impl->dsn~view-options~1]
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ViewOptions(controller: TodoController, onPlan: () -> Unit) {
-    FlowRow(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FilterChip(
-            selected = controller.topOnly,
-            onClick = { controller.topOnly = !controller.topOnly },
-            label = { Text("Top ${controller.settings.topCount}") },
-            modifier = Modifier.testTag("top"),
-        )
-        for (view in View.entries - View.LIST) {
-            FilterChip(
-                selected = controller.view == view,
-                onClick = { controller.view = if (controller.view == view) View.LIST else view },
-                label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} ${controller.inbox.size}" else view.title) },
-                modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
-            )
+private fun ViewOptions(controller: TodoController) {
+    Column(Modifier.padding(horizontal = 8.dp)) {
+        // Each row is one line that scrolls sideways: in a narrow window, wrapped rows would take the place of the tasks.
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (view in View.entries) {
+                FilterChip(
+                    selected = controller.view == view,
+                    onClick = { controller.view = view },
+                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} ${controller.inbox.size}" else view.title) },
+                    modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
+                )
+            }
         }
-        // [impl->dsn~plan-dialog~1]
-        if (controller.canSchedule) {
-            AssistChip(onClick = onPlan, label = { Text("Plan") }, modifier = Modifier.testTag("open-plan"))
-        }
-        if (controller.board) {
+        val list = controller.view == View.LIST
+        if (!list && !controller.board) return
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (key in GroupKey.entries) {
                 FilterChip(
-                    selected = controller.groupKey == key,
-                    onClick = { controller.groupKey = key },
+                    selected = (if (list) controller.listGroupKey else controller.groupKey) == key,
+                    // The board always has columns; the list is divided or not.
+                    onClick = { if (list) controller.listGroupKey = key.takeIf { it != controller.listGroupKey } else controller.groupKey = key },
                     label = { Text("by ${key.label.lowercase()}") },
                     modifier = Modifier.testTag("group-${key.name}"),
                 )
             }
-            if (controller.boardColumns.isNotEmpty()) {
+            if (controller.board && controller.boardColumns.isNotEmpty()) {
                 FilterChip(
                     selected = controller.groupKey == null,
                     onClick = { controller.groupKey = null },
@@ -405,6 +414,19 @@ private fun ViewOptions(controller: TodoController, onPlan: () -> Unit) {
                 )
             }
         }
+    }
+}
+
+/** A button of the top bar. Its description is its tooltip as well, as an icon alone does not tell what it does. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BarButton(icon: ImageVector, description: String, tag: String, onClick: () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(description) } },
+        state = rememberTooltipState(),
+    ) {
+        IconButton(onClick = onClick, modifier = Modifier.testTag(tag)) { Icon(icon, contentDescription = description) }
     }
 }
 
