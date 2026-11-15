@@ -14,7 +14,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
-- Without columns by filter and share actions of the user, the columns *Today* and *Waiting* and the share action *reading* are in effect, and the settings show them; an emptied field means none.
+- Without columns by filter and share actions of the user, the columns *Today* and *Waiting* and the share actions *inbox*, which takes the shared text as it is, and *reading* are in effect, and the settings show them; an emptied field means none.
 - The settings tell below the field for the file what holds for a file in a git repository.
 - Synchronization through git merges `ice_recur.txt` line by line as it does `todo.txt`, and of two plans made on two devices it takes the one made last, instead of stopping at a conflict.
 - The views are one row of switches of which one is always selected, the list among them, and they stand above the field that adds a task.

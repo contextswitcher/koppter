@@ -39,8 +39,11 @@ object ConfigFile {
     /** The columns of a configuration that does not have the key, so that a new user sees what columns by filter are. */
     val DEFAULT_BOARD_COLUMNS = listOf(BoardColumn("Today", "due:<=today -@waiting"), BoardColumn("Waiting", "@waiting"))
 
-    /** The share actions of a configuration that does not have the key. */
-    val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("reading", "{} @research>reading due:2w dur:1h"))
+    /**
+     * The share actions of a configuration that does not have the key: the shared text alone, which the entry of the application
+     * in the share sheet applies as the first action, and an example of an action that adds something, for the user to choose.
+     */
+    val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("inbox", "{}"), ShareAction("reading", "{} @research>reading due:2w dur:1h"))
 
     /** The columns in the order of the file; the default ones if the file does not have the key. */
     // [impl->dsn~config-defaults~1]

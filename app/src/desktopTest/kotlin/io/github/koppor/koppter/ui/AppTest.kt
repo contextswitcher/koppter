@@ -618,10 +618,14 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
         // [utest->dsn~config-defaults~1]
-        // Without actions in the configuration, the default one is there, and the settings show it.
-        assertEquals("Added (reading): An article", controller.share("An article"))
+        // Without actions in the configuration, the default ones are there, and the settings show them.
+        // The first one takes the shared text as it is, and the other one is there to choose.
+        assertEquals("Added (inbox): An article", controller.share("An article"))
+        assertEquals("An article", storage.text.trim().lines().last())
+        assertEquals("Added (reading): A paper", controller.share("A paper", "reading"))
+        assertEquals("A paper @research>reading due:2026-11-26 dur:1h", storage.text.trim().lines().last())
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("reading = {} @research>reading due:2w dur:1h")
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} @research>reading due:2w dur:1h")
         // With the field cleared, there is no action, and the shared text is the task.
         onNodeWithTag("settings-share-actions").performTextReplacement("")
         onNodeWithTag("settings-save").performScrollTo().performClick()
