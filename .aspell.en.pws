@@ -1,4 +1,4 @@
-personal_ws-1.1 en 112 utf-8
+personal_ws-1.1 en 113 utf-8
 APIs
 APK
 appdirs
@@ -111,3 +111,4 @@ Logback
 NOP
 tinylog
 logcat
+JabRef

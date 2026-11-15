@@ -136,6 +136,13 @@ jbang lint@koppor/koppter todo.txt
 Before its first run from the web, jbang asks whether it trusts the address; `jbang trust add https://github.com/koppor/koppter/` answers that beforehand, which a run without a terminal needs.
 In a clone of this repository, `jbang .jbang/KoppterLint.kt todo.txt` checks with the sources of the clone.
 Each finding is one line, such as `todo.txt:12: error: due:tomorrow is not a date as YYYY-MM-DD`, and the command ends with 1 if an error is among them, so that it serves as a check of a repository of tasks.
+The option `--output-format` before the file selects another form of the findings:
+
+| Format | Findings |
+| --- | --- |
+| `errorformat` | `file:line: severity: message`, as above; the default |
+| `github-actions` | Annotations at the lines of a pull request, for a workflow of GitHub Actions |
+| `csv` | A table with the columns file, line, severity and message |
 
 | Severity | Findings |
 | --- | --- |

@@ -12,6 +12,32 @@ data class Finding(val line: Int, val severity: Severity, val message: String, v
     override fun toString(): String = file + (if (line > 0) ":$line" else "") + ": ${severity.name.lowercase()}: $message"
 }
 
+/** The forms in which findings are written, each with the name that the command line has for it. */
+enum class LintFormat(val option: String) { ERRORFORMAT("errorformat"), GITHUB_ACTIONS("github-actions"), CSV("csv") }
+
+/** The lines that tell the findings in the format. */
+// [impl->dsn~lint-formats~1]
+fun List<Finding>.written(format: LintFormat): List<String> = when (format) {
+    LintFormat.ERRORFORMAT -> map(Finding::toString)
+    LintFormat.GITHUB_ACTIONS -> map {
+        val command = when (it.severity) {
+            Severity.ERROR -> "error"
+            Severity.WARNING -> "warning"
+            Severity.INFO -> "notice"
+        }
+        // The service takes "%", line ends and, in a property, ":" and "," as its own syntax.
+        val file = it.file.replace('\\', '/').escaped().replace(":", "%3A").replace(",", "%2C")
+        "::$command file=$file" + (if (it.line > 0) ",line=${it.line}" else "") + "::" + it.message.escaped()
+    }
+    LintFormat.CSV -> listOf("file,line,severity,message") + map {
+        listOf(it.file, if (it.line > 0) "${it.line}" else "", it.severity.name.lowercase(), it.message).joinToString(",") { field ->
+            if (field.any { c -> c in ",\"\r\n" }) "\"" + field.replace("\"", "\"\"") + "\"" else field
+        }
+    }
+}
+
+private fun String.escaped() = replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+
 /** The tags that the application reads, each with what its value has to be. */
 private val VALUES: Map<String, Pair<String, (String) -> Any?>> = mapOf(
     Task.DUE to ("a date as YYYY-MM-DD" to Task::parseDate),

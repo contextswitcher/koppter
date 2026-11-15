@@ -5,7 +5,9 @@ import kotlin.io.path.createDirectory
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 import kotlin.test.Test
+import io.github.koppor.koppter.todotxt.LintFormat
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class LintFilesTest {
@@ -25,9 +27,21 @@ class LintFilesTest {
                 "ice_recur.txt:3: error: the line is not understood",
                 "koppter.yml: error: General: \"noon\" is neither days nor times",
                 "koppter.yml: error: @reading: \"max 2h/year\" is no limit",
-            ),
+            ).map { directory.resolve(it).toString() },
             lintFiles(todo).map { it.toString() },
         )
+    }
+
+    // [utest->dsn~lint-formats~1]
+    @Test
+    fun theCommandLineNamesTheFormatAndTheFile() {
+        assertEquals(LintFormat.ERRORFORMAT to "todo.txt", lintOptions(emptyList()))
+        assertEquals(LintFormat.GITHUB_ACTIONS to "tasks/todo.txt", lintOptions(listOf("--output-format", "github-actions", "tasks/todo.txt")))
+        assertEquals(LintFormat.CSV to "todo.txt", lintOptions(listOf("todo.txt", "--output-format=CSV")))
+        assertNull(lintOptions(listOf("--output-format", "xml")))
+        assertNull(lintOptions(listOf("--output-format")))
+        assertNull(lintOptions(listOf("--verbose")))
+        assertNull(lintOptions(listOf("todo.txt", "done.txt")))
     }
 
     // The launcher is not built by Gradle: without this, a new source file or a new version is noticed by its users only.

@@ -9,7 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
-- `jbang lint@koppor/koppter todo.txt` checks a todo.txt file, and the notes, schedules and configuration next to it, for what the application does not read as it was probably meant.
+- `jbang lint@koppor/koppter todo.txt` checks a todo.txt file, and the notes, schedules and configuration next to it, for what the application does not read as it was probably meant; `--output-format` writes the findings for an editor, for GitHub Actions or as a table of comma-separated values.
 - The overview shows its tiles by project or by hashtag as well as by context.
 - On Android, *Share log* in the settings passes the end of the log as text to another application.
 - The Android application writes a log as the desktop application does, to the directory `logs` of the application in the shared storage of the device and to logcat.

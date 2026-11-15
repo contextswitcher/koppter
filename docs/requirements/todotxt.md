@@ -322,7 +322,23 @@ Needs: impl, utest
 `dsn~lint-files~1`
 
 `lintFiles` reads the todo.txt file at a path and adds what the files next to it have: a note is looked up in the directory `notes`, a line of `ice_recur.txt` that `iceRecurLines` does not understand is an error, and so is each problem of the plan configuration in `koppter.yml`.
-`lintMain` prints one finding per line as `file:line: severity: message` and a count, and ends with 1 if an error is among the findings and with 2 if the path is no file.
+The findings name each file by the path that the path of the todo.txt file gives it.
+`lintMain` prints the findings, writes their count to the error stream, and ends with 1 if an error is among the findings and with 2 if the arguments are not understood or the path is no file.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Formats of the findings
+`dsn~lint-formats~1`
+
+The option `--output-format` of the command line, read by `lintOptions`, selects how `written` writes the findings; the names are those of the check of JabRef.
+`errorformat`, the default, writes `file:line: severity: message`, which editors and compilers share.
+`github-actions` writes the workflow commands `::error`, `::warning` and `::notice` with file and line, which GitHub shows as annotations at the lines of a pull request.
+`csv` writes a table with the columns file, line, severity and message.
+A finding that belongs to no single line has no line.
 
 Covers:
 

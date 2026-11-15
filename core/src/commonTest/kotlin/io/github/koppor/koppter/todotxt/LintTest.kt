@@ -73,4 +73,39 @@ class LintTest {
             ),
         )
     }
+
+    // [utest->dsn~lint-formats~1]
+    @Test
+    fun findingsAreWrittenForAnEditorForGitHubActionsOrAsATable() {
+        val findings = listOf(
+            Finding(3, Severity.ERROR, "due:tomorrow is not a date as YYYY-MM-DD", "tasks\\todo.txt"),
+            Finding(4, Severity.WARNING, "a change of this task writes the line as: Buy tea, 100% \"green\"", "todo.txt"),
+            Finding(0, Severity.INFO, "open tasks without context, which are in the inbox: lines 5", "todo.txt"),
+        )
+        assertEquals(
+            listOf(
+                "tasks\\todo.txt:3: error: due:tomorrow is not a date as YYYY-MM-DD",
+                "todo.txt:4: warning: a change of this task writes the line as: Buy tea, 100% \"green\"",
+                "todo.txt: info: open tasks without context, which are in the inbox: lines 5",
+            ),
+            findings.written(LintFormat.ERRORFORMAT),
+        )
+        assertEquals(
+            listOf(
+                "::error file=tasks/todo.txt,line=3::due:tomorrow is not a date as YYYY-MM-DD",
+                "::warning file=todo.txt,line=4::a change of this task writes the line as: Buy tea, 100%25 \"green\"",
+                "::notice file=todo.txt::open tasks without context, which are in the inbox: lines 5",
+            ),
+            findings.written(LintFormat.GITHUB_ACTIONS),
+        )
+        assertEquals(
+            listOf(
+                "file,line,severity,message",
+                "tasks\\todo.txt,3,error,due:tomorrow is not a date as YYYY-MM-DD",
+                "todo.txt,4,warning,\"a change of this task writes the line as: Buy tea, 100% \"\"green\"\"\"",
+                "todo.txt,,info,\"open tasks without context, which are in the inbox: lines 5\"",
+            ),
+            findings.written(LintFormat.CSV),
+        )
+    }
 }
