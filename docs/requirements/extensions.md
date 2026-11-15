@@ -212,6 +212,18 @@ Covers:
 
 Needs: dsn
 
+### Next actions
+`req~next-actions~1`
+
+One click restricts the list to the next actions as Getting Things Done has them: of each project, the first task that can be worked on now.
+The user sees which projects have open tasks but no next action.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ## Design
 
 ### Hashtags of a task
@@ -639,5 +651,21 @@ Covers:
 * `adr~deadline-tag~1`
 * `adr~deadline-time~1`
 * `adr~deadline-offset~1`
+
+Needs: impl, utest
+
+### Next actions
+`dsn~next-actions~1`
+
+`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose threshold date has come, and that wait for no other open task through `id:` and `p:`.
+With the option *Only the next action of each project* of the filter panel on, `TodoController.visible` is cut by `nextActions` to these tasks, and of each project to the first one in list order among the filtered tasks; a task without project stays.
+*Clear all filters* turns the option off.
+`projectsWithoutNextAction` gives the projects that have an open task whose threshold date has come, but none that can be worked on, in the projects below them neither.
+`overviewStates` adds them to the tiles by project from all tasks of the file, whatever the filter shows, and `Overview` names them on the tile.
+
+Covers:
+
+* `req~next-actions~1`
+* `adr~next-actions-derived~1`
 
 Needs: impl, utest

@@ -125,7 +125,7 @@ A task of more than a day of work is a project: split it into tasks of at most a
 * **Whenever something comes up:** type it into the line that adds a task, or share it to koppter on the phone.
   It does not need a context yet.
 * **Once a day:** empty the inbox, which takes a few keys per task, and work from the agenda.
-* **Once a week:** look at the overview for the contexts with overdue tasks, then plan.
+* **Once a week:** look at the overview for the contexts with overdue tasks and, by project, for the projects without next action, then plan.
   The tasks that the plan lists as not fitting are the decisions of the week: give each a later threshold date, a later barrier, less duration, or delete it.
 
 ## Coming from SkedPal

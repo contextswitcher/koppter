@@ -111,14 +111,14 @@ The application covers the lists and steps of Getting Things Done (GTD), the met
 | --- | --- |
 | Capture | The line that adds a task, and [sharing](#sharing-to-koppter-on-android) on Android: a task needs nothing but its text |
 | Clarify the inbox | The [inbox](#inbox) lists the open tasks without context; a few keys give each its context |
-| Next actions by context | Contexts as `@phone`; the list in [groups](#groups-in-the-list) by context, the [overview](#overview-of-the-contexts) and the board column *Next* |
+| Next actions by context | Contexts as `@phone`, and the option *Only the next action of each project* of the filter panel; the list in [groups](#groups-in-the-list) by context, the [overview](#overview-of-the-contexts) and the board column *Next* |
 | Projects | Projects as `+Thesis`, with levels as `+papers>survey`; the list in groups by project |
 | Waiting for | The context `@waiting` and the board column *Waiting* |
 | Someday/maybe | The hashtag `#someday` and the board column *Someday* |
 | Calendar | The dates `due:` and `deadline:` and the time `at:`; the [agenda and the week](#agenda-and-week) |
 | Tickler file | The threshold date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
 | Reference material | The note of a task, a Markdown file next to the `todo.txt` file |
-| Weekly review | A task by the calendar, such as `weekly ; day Friday - Weekly review @review` in `ice_recur.txt`; the overview and the [plan](#planning) tell what needs a decision |
+| Weekly review | A task by the calendar, such as `weekly ; day Friday - Weekly review @review` in `ice_recur.txt`; the overview by project names the projects without next action, and the [plan](#planning) lists what does not fit |
 
 The [board](#board) by filter starts with the lists of the method, until other columns are entered in the settings:
 
@@ -130,6 +130,15 @@ Someday = #someday
 ```
 
 Dragging a task to *Someday* adds `#someday`, and dragging it to *Next* removes `#someday` and `@waiting`.
+
+The next action of a project is its first task in the [order of the list](#order-of-the-list) that can be worked on ([decision 0032](docs/decisions/0032-next-actions-derived-from-the-tasks.md)).
+A task cannot be worked on if it has the context `@waiting`, the hashtag `#someday` or a threshold date in the future, or if it waits for another open task through `id:` and `p:`.
+
+* *Only the next action of each project* in the filter panel shows one task per project, and each task without project.
+  Together with a context in the filter, it shows what is next at the phone or at home.
+* The overview by project marks a tile with *No next action* if the open tasks of the project all wait or are for someday.
+  For a project below the one of the tile, it names the project: *No next action: survey*.
+* A project whose tasks are all completed is no longer in the file as a project and is not marked.
 
 ## Files
 
@@ -424,6 +433,7 @@ The switch *Overview* above the tasks shows one tile per context of the outermos
 A tile counts the open tasks of the context and of the contexts below it, and its dot tells the state of the most urgent one: overdue, due today, or neither.
 The tasks without context have a tile of their own.
 The switches below the views show the tiles *by project* or *by hashtag* instead: one tile per project of the outermost level with the projects below it, or one per hashtag.
+A tile of a project tells if the project, or one below it, has [no next action](#getting-things-done).
 The filter panel applies to the overview as it does to the list.
 
 A click on a tile lists the tasks of the context, the most urgent first and those without due date last.

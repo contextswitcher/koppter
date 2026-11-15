@@ -114,4 +114,40 @@ class FilterTest {
         assertEquals(listOf("Call Mom", "Pay bill"), matching(Filter(hashtags = setOf("family", "urgent"))))
         assertEquals(listOf("Call Mom", "Pay bill", "Post signs"), matching(Filter()))
     }
+
+    // [utest->dsn~next-actions~1]
+    @Test
+    fun theNextActionOfAProjectIsItsFirstTaskThatCanBeWorkedOn() {
+        val today = LocalDate(2026, 11, 12)
+        val entries = TodoFile.parse(
+            """
+            Ask the printer for an offer +Fair @waiting
+            Book the stand +Fair @phone
+            Print the flyers +Fair
+            The stand is ready +Fair id:fair
+            Build the stand +Fair p:fair t:2026-12-01
+            Outline the survey +papers>survey #someday
+            Collect the reviews +papers>draft @waiting>reviewers
+            Fix the bike
+            Learn to sail +Sailing t:2027-06-01
+            x Call the fair office +Fair
+            """.trimIndent(),
+        ).entries
+        fun texts(found: List<Entry>) = found.map { it.task.description }
+
+        assertEquals(listOf("Book the stand", "Print the flyers", "Fix the bike"), texts(actionable(entries, today).sortedBy { it.index }))
+        // One task per project, and each task without project.
+        assertEquals(listOf("Book the stand", "Fix the bike"), texts(nextActions(entries, entries, today)))
+        // Of the listed tasks: with the task at the phone filtered out, the next one of the project takes its place.
+        assertEquals(listOf("Print the flyers", "Fix the bike"), texts(nextActions(entries.filterNot { "phone" in it.task.contexts }, entries, today)))
+        // A task with two projects is the next action of both.
+        val two = TodoFile.parse("Order the cake +Party +Family\nSend the invitations +Party\nCall Mom +Family\n").entries
+        assertEquals(listOf("Order the cake"), texts(nextActions(two, two, today)))
+
+        // Stuck are the projects whose tasks all wait or are for someday; a project that only has tasks before their threshold date is not.
+        assertEquals(listOf("papers>draft", "papers>survey"), projectsWithoutNextAction(entries, today))
+        val moving = TodoFile.parse("Outline the survey +papers>survey #someday\nWrite the draft +papers>draft\nSubmit +papers @waiting\n").entries
+        // A project is not stuck while one below it moves.
+        assertEquals(listOf("papers>survey"), projectsWithoutNextAction(moving, today))
+    }
 }

@@ -51,7 +51,7 @@ koppter writes tasks in that order, so a line written the same way does not chan
 | --- | --- | --- |
 | Description | What is to be done, starting with a verb | Keep URLs as they are. |
 | `+Project` | What the task belongs to: the area, and below it the outcome that ends | Levels with `>`: `+research>FirstPaper`. Reuse the path that the file has for the project; a new outcome goes below the existing project of its area. Leave it out if the task belongs to nothing larger. |
-| `@context` | The kind of work or the place: `@reading`, `@phone`, `@errands` | It decides when the task is planned. Usually one; a second one if the task can be done in either way. `@waiting` in addition marks a task that waits for someone. A context may have levels as well (`@errands>city`): reuse them where the file has them, and do not introduce them. |
+| `@context` | The kind of work or the place: `@reading`, `@phone`, `@errands` | It decides when the task is planned. Usually one; a second one if the task can be done in either way. `@waiting` in addition marks a task that waits for someone: it is not a next action of its project. A context may have levels as well (`@errands>city`): reuse them where the file has them, and do not introduce them. |
 | `(A)` | What has to happen this week | `(B)` for what should. Most tasks have none; ask rather than guess. The file holds the letter also when the user names priorities otherwise: the key `priorities` of `koppter.yml` next to the file maps letters to their names, such as `"D": "5"`. |
 | `due:2026-12-01` | A deadline that someone else set | Not the day the user would like to do it: the plan finds that day. |
 | `deadline:2026-12-10` | The deadline that someone else set, for a task that the user wants to have done earlier | Only when the user names both days: "the report has to be in on the 10th, I want it done by the 1st" is `due:2026-12-01 deadline:2026-12-10`. A deadline at a time of the day is written `deadline:2026-12-10T12:00`, and one that is announced for another place with its offset from UTC, `deadline:2026-12-10T23:59-12:00` for "anywhere on Earth"; the time of a due date stays in `dueby:`. |
@@ -60,7 +60,7 @@ koppter writes tasks in that order, so a line written the same way does not chan
 | `dur:1h30m` | The time the task takes | Without it, the plan assumes half an hour. Give it when the user states it or the task clearly takes longer. |
 | `tt:30m` | The time that the way to the task takes; the way back counts the same | Only when the user states it for a task that takes place somewhere else. The plan keeps it free before and after the task. |
 | `at:14:00` | The time of the day at which the task takes place | Only for what has its time: an appointment, lunch, a training. The plan does not move the task. The day is `due:`, else `t:`, else today. |
-| `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter. |
+| `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter. `#someday` marks a task that is not decided yet: it is not a next action of its project either. |
 | `id:1`, `p:1` | Order between tasks | The task with `id:1` waits for the tasks with `p:1`. Pick a value that the file does not use yet: `grep -o ' id:[^ ]*' todo.txt`. |
 | `note:k3f.md` | Details of several lines | Write them to `notes/k3f.md` (three characters, a name not in use) and name the file in the tag. |
 

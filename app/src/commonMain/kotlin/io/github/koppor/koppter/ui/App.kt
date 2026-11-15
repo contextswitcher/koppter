@@ -196,6 +196,7 @@ private fun MainScreen(
                 // Every task: also the completed ones and those before their threshold date, and not only the top ones.
                 controller.filter = Filter(completion = Completion.ALL, hideFuture = false)
                 controller.topOnly = false
+                controller.nextOnly = false
                 controller.view = View.LIST
             }
             // The agenda and the week show the plan, which the filter does not apply to.
@@ -248,6 +249,8 @@ private fun MainScreen(
             topCount = controller.settings.topCount,
             topOnly = controller.topOnly,
             onTopOnly = { controller.topOnly = it },
+            nextOnly = controller.nextOnly,
+            onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             textModifier = Modifier.focusRequester(filterFocus),
         )
@@ -303,7 +306,7 @@ private fun MainScreen(
                         if (controller.view == View.OVERVIEW) {
                             // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
                             androidx.compose.runtime.key(controller.overviewKey) {
-                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey), controller.today(), open, emptyText)
+                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), open, emptyText)
                             }
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open)

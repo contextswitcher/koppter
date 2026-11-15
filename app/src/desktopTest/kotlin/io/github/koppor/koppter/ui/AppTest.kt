@@ -1379,6 +1379,28 @@ class AppTest {
         onAllNodesWithTag("task").assertCountEquals(1)
     }
 
+    // [utest->dsn~next-actions~1]
+    @Test
+    fun theListShowsTheNextActionOfEachProjectAndTheOverviewTheProjectsWithoutOne() = runComposeUiTest {
+        storage.text = "Book the stand +Fair @phone\nPrint the flyers +Fair\nAsk for an offer +Fair @waiting\nOutline the survey +papers>survey #someday\nFix the bike @home\n"
+        start()
+        onAllNodesWithTag("task").assertCountEquals(5)
+        onNodeWithTag("next-actions").assertTextEquals("Only the next action of each project").performClick()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithText("Book the stand").assertExists()
+        onNodeWithText("Fix the bike").assertExists()
+        // It is a criterion of the filter panel and is cleared with the others.
+        onNodeWithTag("filter-clear").performClick()
+        onNodeWithTag("next-actions").assertIsOff()
+        onAllNodesWithTag("task").assertCountEquals(5)
+
+        onNodeWithTag("overview-switch").performClick()
+        onAllNodesWithTag("overview-stuck", useUnmergedTree = true).assertCountEquals(0)
+        onNodeWithTag("group-PROJECT").performClick()
+        onAllNodesWithTag("overview-stuck", useUnmergedTree = true).assertCountEquals(1)
+        onNodeWithText("No next action: survey", useUnmergedTree = true).assertExists()
+    }
+
     // [utest->dsn~top-tasks~1]
     @Test
     fun theTopViewShowsTheFirstTasksOnly() = runComposeUiTest {

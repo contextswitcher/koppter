@@ -59,8 +59,9 @@ fun Task.urgency(today: LocalDate): Urgency? {
  * @param name `null` for the tasks that have none
  * @param title the name with its sign, as the tile shows it
  * @param entries the open tasks, the most urgent first and those without due date last
+ * @param stuck the projects of the tile that have no next action
  */
-data class OverviewState(val name: String?, val title: String, val entries: List<Entry>, val dueToday: Int, val overdue: Int) {
+data class OverviewState(val name: String?, val title: String, val entries: List<Entry>, val dueToday: Int, val overdue: Int, val stuck: List<String> = emptyList()) {
     val state: UrgencyState
         get() = when {
             overdue > 0 -> UrgencyState.OVERDUE
@@ -75,15 +76,19 @@ val OVERVIEW_KEYS = listOf(GroupKey.CONTEXT, GroupKey.PROJECT, GroupKey.HASHTAG)
 /**
  * The contexts, projects or hashtags that have open tasks, sorted by name; the tasks that have none last.
  * Contexts and projects are those of the outermost level, each with what lies below it.
+ *
+ * @param all the tasks of the file, which tell the projects without next action whatever the filter shows
  */
 // [impl->dsn~overview~1]
-fun overviewStates(entries: List<Entry>, today: LocalDate, key: GroupKey = GroupKey.CONTEXT): List<OverviewState> {
+fun overviewStates(entries: List<Entry>, today: LocalDate, key: GroupKey = GroupKey.CONTEXT, all: List<Entry> = entries): List<OverviewState> {
     val (sign, values) = when (key) {
         GroupKey.PROJECT -> "+" to Task::projects
         GroupKey.HASHTAG -> "#" to Task::hashtags
         else -> "@" to Task::contexts
     }
     val open = entries.filterNot { it.task.completed }
+    // [impl->dsn~next-actions~1]
+    val stuck = if (key == GroupKey.PROJECT) projectsWithoutNextAction(all, today) else emptyList()
     val names = open.flatMap { values(it.task) }.map { it.substringBefore(LEVEL_SEPARATOR) }.distinct().sorted()
     return (names + null).mapNotNull { name ->
         val own = open.filter { entry ->
@@ -92,6 +97,6 @@ fun overviewStates(entries: List<Entry>, today: LocalDate, key: GroupKey = Group
         if (own.isEmpty()) return@mapNotNull null
         val states = own.mapNotNull { it.task.urgency(today)?.state }
         val title = name?.let { sign + it } ?: "No ${key.label.lowercase()}"
-        OverviewState(name, title, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE })
+        OverviewState(name, title, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE }, stuck.filter { name != null && it.isWithin(name) })
     }
 }

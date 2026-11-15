@@ -36,6 +36,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.todotxt.OverviewState
 import io.github.koppor.koppter.todotxt.Entry
+import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import io.github.koppor.koppter.todotxt.UrgencyState
 import io.github.koppor.koppter.todotxt.urgency
 import kotlinx.datetime.LocalDate
@@ -83,6 +84,16 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onOpen: (Entry) -> U
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            // [impl->dsn~next-actions~1]
+                            if (state.stuck.isNotEmpty()) {
+                                Text(
+                                    // The project of the tile itself is stuck only if all below it are.
+                                    if (state.name in state.stuck) "No next action" else "No next action: " + state.stuck.joinToString { it.removePrefix("${state.name}$LEVEL_SEPARATOR") },
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.testTag("overview-stuck"),
+                                )
+                            }
                         }
                     }
                 }

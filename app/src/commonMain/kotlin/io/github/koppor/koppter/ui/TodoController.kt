@@ -40,6 +40,7 @@ import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
 import io.github.koppor.koppter.todotxt.TodoFile
 import io.github.koppor.koppter.todotxt.listOrder
+import io.github.koppor.koppter.todotxt.nextActions
 import io.github.koppor.koppter.todotxt.moveToGroup
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -81,6 +82,10 @@ class TodoController(
      */
     // [impl->dsn~most-important-tasks~1]
     var topOnly by mutableStateOf(false)
+
+    /** Restricts the list to the next actions: of each project, the first task that can be worked on. */
+    // [impl->dsn~next-actions~1]
+    var nextOnly by mutableStateOf(false)
 
     /** Shows the tasks as a board instead of as a list. */
     var view by mutableStateOf(View.LIST)
@@ -183,6 +188,8 @@ class TodoController(
     // [impl->dsn~visible-tasks~1]
     val visible: List<Entry>
         get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
+            // [impl->dsn~next-actions~1]
+            .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
             .let { if (topOnly) it.take(settings.topCount) else it }
 

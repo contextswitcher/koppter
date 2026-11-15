@@ -90,4 +90,19 @@ class UrgencyTest {
         assertEquals("Due in 8 days", official.text)
         assertEquals(UrgencyState.OVERDUE, Task.parse("File the tax return deadline:2026-11-11").urgency(today)!!.state)
     }
+
+    // [utest->dsn~next-actions~1]
+    @Test
+    fun theOverviewByProjectNamesTheProjectsWithoutNextAction() {
+        val today = LocalDate(2026, 11, 12)
+        val entries = TodoFile.parse(
+            "Outline the survey +papers>survey #someday\nWrite the draft +papers>draft\nAsk for an offer +Fair @waiting\nFix the bike @home\n",
+        ).entries
+        val states = overviewStates(entries, today, GroupKey.PROJECT)
+        assertEquals(listOf("Fair" to listOf("Fair"), "papers" to listOf("papers>survey"), null to emptyList()), states.map { it.name to it.stuck })
+        // The tiles by context do not tell it.
+        assertEquals(emptyList(), overviewStates(entries, today).flatMap { it.stuck })
+        // The filter does not hide what a project has: with the draft filtered out, the project of the papers is not stuck.
+        assertEquals(listOf("papers>survey"), overviewStates(entries.filter { "someday" in it.task.hashtags }, today, GroupKey.PROJECT, entries).single().stuck)
+    }
 }

@@ -48,6 +48,8 @@ fun FilterPanel(
     topCount: Int,
     topOnly: Boolean,
     onTopOnly: (Boolean) -> Unit,
+    nextOnly: Boolean,
+    onNextOnly: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     /** For the field of the text, so that a shortcut can give it the focus. */
     textModifier: Modifier = Modifier,
@@ -67,6 +69,8 @@ fun FilterPanel(
         }
         // [impl->dsn~top-tasks~1]
         Option("Only the first $topCount tasks", topOnly, "top", onTopOnly)
+        // [impl->dsn~next-actions~1]
+        Option("Only the next action of each project", nextOnly, "next-actions", onNextOnly)
 
         LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }) { value, suffix, modifier ->
             PriorityLabel(value, modifier, suffix)
@@ -115,8 +119,9 @@ fun FilterPanel(
             onClick = {
                 onChange(Filter())
                 onTopOnly(false)
+                onNextOnly(false)
             },
-            enabled = !filter.isDefault || topOnly,
+            enabled = !filter.isDefault || topOnly || nextOnly,
             modifier = Modifier.padding(top = 12.dp).testTag("filter-clear"),
         ) {
             Text("Clear all filters")
