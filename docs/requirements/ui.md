@@ -505,7 +505,9 @@ Needs: impl
 
 `SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities and the colors.
 A changed location makes the controller load the other file.
-The fields for the blocks of the configuration file show an example in a pale color while they are empty.
+The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
+A field for a block of the configuration file shows an example in a pale color while it is empty.
+Below the field for the file stands what holds for a file in a git repository.
 
 Covers:
 

@@ -109,7 +109,8 @@ fun SettingsDialog(
                     supportingText = {
                         Text(
                             "Empty: $defaultTodoFile" +
-                                if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned on Save, and the todo.txt file of the clone is used.",
+                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned on Save, and the todo.txt file of the clone is used.") +
+                                "\nA file in a git repository is committed after every change and synchronized with the remote repository.",
                         )
                     },
                     singleLine = true,
@@ -173,11 +174,6 @@ fun SettingsDialog(
                 Text("Colors", style = MaterialTheme.typography.titleMedium)
                 RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
                 RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
-                Text(
-                    "A file in a git repository is committed after every change and synchronized with the remote repository.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 if (git != null) {
                     GitSection(git)
                 }

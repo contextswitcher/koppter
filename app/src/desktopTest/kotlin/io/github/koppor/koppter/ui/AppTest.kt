@@ -585,7 +585,7 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-board-columns").performScrollTo().performTextInput("High = (>3)\nTop = (A)")
+        onNodeWithTag("settings-board-columns").performScrollTo().performTextReplacement("High = (>3)\nTop = (A)")
         // The third scale offered: the first steps of the Fibonacci sequence.
         onNodeWithTag("settings-priorities-preset-2").performScrollTo().performClick()
         onNodeWithTag("settings-priorities").assertTextContains("A = 1\nB = 2\nC = 3\nD = 5\nE = 8")
@@ -617,8 +617,15 @@ class AppTest {
     fun aShareActionFromTheSettingsMakesATaskOfSharedText() = runComposeUiTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
-        // Without an action, the shared text is the task.
-        assertEquals("Added: An article", controller.share("An article"))
+        // [utest->dsn~config-defaults~1]
+        // Without actions in the configuration, the default one is there, and the settings show it.
+        assertEquals("Added (reading): An article", controller.share("An article"))
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("reading = {} @research>reading due:2w dur:1h")
+        // With the field cleared, there is no action, and the shared text is the task.
+        onNodeWithTag("settings-share-actions").performTextReplacement("")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals("Added: A book", controller.share("A book"))
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-share-actions").performScrollTo().performTextInput("inbox = @inbox\nreading = {} @research>reading due:2w dur:1h")
@@ -1249,10 +1256,15 @@ class AppTest {
     fun columnsDefinedInTheSettingsFormTheBoard() = runComposeUiTest {
         start()
         onNodeWithTag("board-switch").performClick()
-        onNodeWithTag("group-FILTER").assertDoesNotExist()
+        // [utest->dsn~config-defaults~1]
+        // Without columns in the configuration, the default ones are there, and the settings show them.
+        onNodeWithTag("group-FILTER").performClick()
+        onNodeWithText("Today (0)").assertExists()
+        onNodeWithText("Waiting (0)").assertExists()
 
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-board-columns").performTextInput("Phone = @phone\nSoon = due:<2w\nNothing = +Nowhere")
+        onNodeWithTag("settings-board-columns").assertTextContains("Today = due:<=today -@waiting\nWaiting = @waiting")
+        onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nSoon = due:<2w\nNothing = +Nowhere")
         onNodeWithTag("settings-save").performScrollTo().performClick()
         assertEquals(
             "# Configuration of koppter for the todo.txt file in this directory\n" +
@@ -1260,7 +1272,6 @@ class AppTest {
             storage.companions["koppter.yml"],
         )
         assertEquals("Edit board columns", storage.changes.last())
-        onNodeWithTag("group-FILTER").performClick()
 
         onNodeWithText("Phone (2)").assertExists()
         onNodeWithText("Soon (1)").assertExists()

@@ -58,7 +58,8 @@ class ConfigFileTest {
             "other: value\nboard-columns:\n  \"Now\": \"due:<=today -@waiting\"\n  \"Waiting\": \"@waiting\"\n\n# next\nmore: 1\n",
             ConfigFile.withBoardColumns(config, columns),
         )
-        assertEquals("other: value\n\n# next\nmore: 1\n", ConfigFile.withBoardColumns(config, emptyList()))
+        // Without columns, the key stays: the user wants none, not the default ones.
+        assertEquals("other: value\nboard-columns:\n\n# next\nmore: 1\n", ConfigFile.withBoardColumns(config, emptyList()))
         assertEquals(
             "other: value\n\nboard-columns:\n  \"A \\\"b\\\"\": \"c\\\\d\"\n",
             ConfigFile.withBoardColumns("other: value\n", listOf(BoardColumn("A \"b\"", "c\\d"))),
@@ -75,10 +76,17 @@ class ConfigFileTest {
         )
     }
 
+    // [utest->dsn~config-defaults~1]
     @Test
-    fun aConfigurationWithoutColumnsHasNone() {
-        assertEquals(emptyList(), ConfigFile.boardColumns(""))
-        assertEquals(emptyList(), ConfigFile.boardColumns("other: value\n"))
-        assertEquals("", ConfigFile.withBoardColumns("", emptyList()))
+    fun aConfigurationWithoutTheKeyHasTheDefaultColumnsAndOneWithTheKeyAloneHasNone() {
+        assertEquals(ConfigFile.DEFAULT_BOARD_COLUMNS, ConfigFile.boardColumns(""))
+        assertEquals(ConfigFile.DEFAULT_BOARD_COLUMNS, ConfigFile.boardColumns("other: value\n"))
+        assertEquals(ConfigFile.DEFAULT_SHARE_ACTIONS, ConfigFile.shareActions("other: value\n"))
+
+        val none = ConfigFile.withBoardColumns("", emptyList())
+        assertEquals("# Configuration of koppter for the todo.txt file in this directory\nboard-columns:\n", none)
+        assertEquals(emptyList(), ConfigFile.boardColumns(none))
+        // The other key is still missing.
+        assertEquals(ConfigFile.DEFAULT_SHARE_ACTIONS, ConfigFile.shareActions(none))
     }
 }

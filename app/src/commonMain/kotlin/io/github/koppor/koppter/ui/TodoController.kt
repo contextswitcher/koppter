@@ -120,8 +120,8 @@ class TodoController(
     /** Gives a task of the inbox its context. */
     fun assignContext(entry: Entry, context: String) = replace(entry, entry.task.edit(contexts = listOf(context)))
 
-    /** The columns the user defined, as the configuration states them. */
-    private val definedColumns: List<BoardColumn> get() = ConfigFile.boardColumns(config.orEmpty())
+    /** The columns the user defined, as the configuration states them; none if the storage keeps no configuration file. */
+    private val definedColumns: List<BoardColumn> get() = config?.let(ConfigFile::boardColumns).orEmpty()
 
     /** The columns the user defined; their filters name a priority by its letter, also where the configuration uses its name. */
     // [impl->dsn~priority-names~1]
@@ -338,7 +338,8 @@ class TodoController(
     }
 
     // [impl->dsn~share-actions~1]
-    val shareActions: List<ShareAction> get() = ConfigFile.shareActions(config.orEmpty())
+    // Without a configuration file, the user could not change the default actions, so there are none.
+    val shareActions: List<ShareAction> get() = config?.let(ConfigFile::shareActions).orEmpty()
 
     /** The share actions as the settings show them; `null` if the storage keeps no configuration file. */
     val shareActionsText: String? get() = config?.let { shareActions.joinToString("\n") { "${it.title} = ${it.template}" } }

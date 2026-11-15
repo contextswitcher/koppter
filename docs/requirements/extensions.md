@@ -309,6 +309,20 @@ Covers:
 
 Needs: impl, utest
 
+### Defaults of the configuration
+`dsn~config-defaults~1`
+
+A configuration without the key `board-columns` has the columns `ConfigFile.DEFAULT_BOARD_COLUMNS`, *Today* and *Waiting*, and one without the key `share-actions` has the action `ConfigFile.DEFAULT_SHARE_ACTIONS`, *reading*, so that the board and the settings show what such a definition looks like.
+A user who removes all columns or actions wants none: the key is then written without entries, which is read as none.
+A storage that keeps no configuration file has neither columns nor actions, as the user could not change them.
+
+Covers:
+
+* `req~board-defined-columns~1`
+* `req~share-actions~1`
+
+Needs: impl, utest
+
 ### Columns defined by filters
 `dsn~board-defined-columns~1`
 

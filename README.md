@@ -514,6 +514,7 @@ inbox = @inbox
 * `{}` stands for the shared text; without it, the shared text stands in front.
 * `due:` and `t:` may be relative to the day of sharing: `2w`, `3d`, `tomorrow`.
 * From Android 10 on, each action is a target of its own in the share sheet, named as the action; the entry *koppter* applies the first action.
+* Until actions are entered, there is the action `reading` of this example; an emptied field in the settings means that the shared text alone is the task.
 * The actions are kept in `koppter.yml` next to the `todo.txt` file, so that they can be edited on the desktop.
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
@@ -532,6 +533,8 @@ Waiting = @waiting
 This week = due:<1w
 Important = (>C)
 ```
+
+Until columns are entered, there are the two columns `Today = due:<=today -@waiting` and `Waiting = @waiting`; an emptied field in the settings means no columns by filter.
 
 | Term | Matches a task |
 | --- | --- |
