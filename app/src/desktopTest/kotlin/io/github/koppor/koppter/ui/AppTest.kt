@@ -47,6 +47,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
+import io.github.koppor.koppter.todotxt.Task
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -166,6 +167,15 @@ class AppTest {
         onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04T12:00")
         onNodeWithTag("edit-save").performScrollTo().performClick()
         assertEquals("File the tax return @home deadline:2026-12-04T12:00 due:2026-11-13", storage.text.lines()[4])
+        onNodeWithText("2026-12-04T12:00", substring = true, useUnmergedTree = true).assertExists()
+
+        // A deadline with an offset from UTC is shown as it counts on this device: that is another text than the one written.
+        openTask("File the tax return")
+        onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04T12:00Z")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("File the tax return @home deadline:2026-12-04T12:00Z due:2026-11-13", storage.text.lines()[4])
+        onNodeWithText(Task.localDeadline("2026-12-04T12:00Z")!!, substring = true, useUnmergedTree = true).assertExists()
+        onNodeWithText("2026-12-04T12:00Z", substring = true, useUnmergedTree = true).assertDoesNotExist()
     }
 
     // [utest->dsn~due-chips~1]

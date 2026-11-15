@@ -283,6 +283,8 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 * A task with a deadline and without a due date is due on its deadline.
 * A deadline at a time of the day is written `deadline:2026-11-30T12:00`: a plan that ends on that day after that time is late ([decision 0029](docs/decisions/0029-time-of-a-deadline-as-part-of-its-date.md)).
   The due date stays a date that other programs read, with its time in `dueby:`.
+* A deadline that is given for another place states the offset of its time from UTC, as ISO 8601 writes it: `deadline:2026-11-30T23:59-12:00` is the end of that day "anywhere on Earth" ([decision 0031](docs/decisions/0031-offset-from-utc-in-the-time-of-a-deadline.md)).
+  The application counts with the day and the time of the device, here `2026-12-01 12:59` in Germany, and shows them in the label; the pointer on the label shows what is written.
 * The next occurrence of a recurring task has its deadline moved as far as its due date.
 
 ## Dates in words

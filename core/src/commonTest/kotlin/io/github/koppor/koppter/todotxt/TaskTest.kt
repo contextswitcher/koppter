@@ -282,4 +282,28 @@ class TaskTest {
             Task.parse("Send the report rec:+1m deadline:2026-11-30T12:00").nextOccurrence(today)!!.toLine(),
         )
     }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aDeadlineWithAnOffsetCountsAsTheDayAndTimeOfTheZone() {
+        val berlin = kotlinx.datetime.TimeZone.of("Europe/Berlin")
+        // Anywhere on Earth: the end of 30 November there is noon of 1 December in Berlin.
+        assertEquals(LocalDate(2026, 12, 1) to 12 * 60 + 59, Task.parseDeadline("2026-11-30T23:59-12:00", berlin))
+        assertEquals("2026-12-01 12:59", Task.localDeadline("2026-11-30T23:59-12:00", berlin))
+        assertEquals(LocalDate(2026, 11, 30) to 13 * 60, Task.parseDeadline("2026-11-30T12:00Z", berlin))
+        // In summer, Berlin is two hours ahead of UTC; seconds are read and not used.
+        assertEquals(LocalDate(2026, 7, 1) to 60 + 59, Task.parseDeadline("2026-06-30T23:59:59Z", berlin))
+        assertEquals(LocalDate(2026, 11, 30) to 12 * 60, Task.parseDeadline("2026-11-30T12:00+01:00", berlin))
+        // Without an offset, the time is the one of the zone, and nothing is shown in another way.
+        assertEquals(LocalDate(2026, 11, 30) to 12 * 60, Task.parseDeadline("2026-11-30T12:00", berlin))
+        assertNull(Task.localDeadline("2026-11-30T12:00", berlin))
+        assertNull(Task.localDeadline("2026-11-30", berlin))
+        assertNull(Task.parseDeadline("2026-11-30T12:00+1", berlin))
+        assertNull(Task.parseDeadline("2026-11-30T12:00 Europe/Berlin", berlin))
+        // The next occurrence moves the day as it is written.
+        assertEquals(
+            "Send the report rec:+1w deadline:2026-12-07T23:59-12:00",
+            Task.parse("Send the report rec:+1w deadline:2026-11-30T23:59-12:00").nextOccurrence(today)!!.toLine(),
+        )
+    }
 }

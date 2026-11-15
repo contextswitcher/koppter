@@ -204,7 +204,7 @@ Needs: dsn
 A task can state the day that others set for it next to the day by which the user wants to have it done.
 The days between the two are a buffer: the task is overdue, and its plan late, only after the deadline.
 A task that states the deadline only is due on it.
-The deadline can state a time of its day.
+The deadline can state a time of its day, and for a deadline that is given for another place, the offset of that time from UTC.
 
 Covers:
 
@@ -622,13 +622,14 @@ Needs: impl, utest
 `dsn~deadline~1`
 
 The tag `deadline:` holds a date, or a date and a time as `2026-11-30T12:00`; `Task.parseDeadline` reads both, `Task.deadline` is the date and `Task.deadlineTime` the time.
+After the time, the tag may hold seconds, which are not used, and an offset from UTC as `Z`, `+hh:mm` or `-hh:mm`: `Task.parseDeadline` then returns the date and the time in the time zone of the device, and the label shows them, as `Task.localDeadline` writes them, with the value of the tag when the pointer rests on it.
 `Task.due` returns the deadline for a task without the tag `due:`, and `Task.by` the time of the deadline, so that the list order, the groups, the filters and the planner need no change.
 `Task.isOverdue` compares today with the deadline, and with the due date only for a task without deadline.
 `Urgency.state` is due for a task whose due date has passed and whose deadline has not, and `Urgency.text` names the deadline after the due date.
 `CalendarTxt.state` is tight for a plan that ends after the due date and not after the deadline, and late for one that ends after the deadline, or on its day after its time.
 The label of each of the two dates is highlighted by its own date: the deadline as overdue once it has passed, the due date as on its day while the deadline lies ahead.
 The edit dialog has a date field for the tag, and the menu that moves the due date offers to remove the due date only for a task that has the tag `due:`.
-`Task.nextOccurrence` moves the deadline as far as the due date; a deadline that stood in for the due date stays the only date.
+`Task.nextOccurrence` moves the day that the tag holds as far as the due date; a deadline that stood in for the due date stays the only date.
 `lint` and the dates of a share action read the tag as they read `due:`.
 
 Covers:
@@ -636,5 +637,6 @@ Covers:
 * `req~deadline~1`
 * `adr~deadline-tag~1`
 * `adr~deadline-time~1`
+* `adr~deadline-offset~1`
 
 Needs: impl, utest

@@ -9,7 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
-- The tag `deadline:` states the day that others set for a task next to its due date: the task is overdue, and its plan late, only after the deadline, and a task without a due date is due on its deadline. A deadline may state a time, as `deadline:2026-11-30T12:00`.
+- The tag `deadline:` states the day that others set for a task next to its due date: the task is overdue, and its plan late, only after the deadline, and a task without a due date is due on its deadline. A deadline may state a time, as `deadline:2026-11-30T12:00`, and its offset from UTC, as `deadline:2026-11-30T23:59-12:00`, which is shown as the day and the time of the device.
 - `jbang lint@koppor/koppter todo.txt` checks a todo.txt file, and the notes, schedules and configuration next to it, for what the application does not read as it was probably meant; `--output-format` writes the findings for an editor, for GitHub Actions or as a table of comma-separated values.
 - The overview shows its tiles by project or by hashtag as well as by context.
 - On Android, *Share log* in the settings passes the end of the log as text to another application.

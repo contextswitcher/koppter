@@ -262,9 +262,20 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-cs"),
                 key = "$key:",
             )
-            overdue -> Label(value, colors.errorContainer, colors.onErrorContainer, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
-            dueToday -> Label(value, colors.primaryContainer, colors.onPrimaryContainer, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
-            else -> Label(value, colors.surfaceVariant, colors.onSurfaceVariant, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
+            else -> {
+                val (container, content) = when {
+                    overdue -> colors.errorContainer to colors.onErrorContainer
+                    dueToday -> colors.primaryContainer to colors.onPrimaryContainer
+                    else -> colors.surfaceVariant to colors.onSurfaceVariant
+                }
+                // [impl->dsn~deadline~1]
+                // A deadline of another zone is shown as it counts here; what was written is at hand as well.
+                val local = if (key == Task.DEADLINE) Task.localDeadline(value) else null
+                val label = @Composable {
+                    Label(local ?: value, container, content, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
+                }
+                if (local != null) WithTooltip("As written: $value", label) else label()
+            }
         }
     }
     task.priority?.let { PriorityLabel(it) }
@@ -288,16 +299,19 @@ fun hashtagColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { surfac
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithPath(path: String, label: @Composable () -> Unit) {
-    if (LEVEL_SEPARATOR in path) {
-        TooltipBox(
-            positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-            tooltip = { PlainTooltip { Text(path) } },
-            state = rememberTooltipState(),
-            content = label,
-        )
-    } else {
-        label()
-    }
+    if (LEVEL_SEPARATOR in path) WithTooltip(path, label) else label()
+}
+
+/** Shows the label with the text when the pointer rests on it. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WithTooltip(text: String, label: @Composable () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(text) } },
+        state = rememberTooltipState(),
+        content = label,
+    )
 }
 
 /** @param path shows all levels of a project below another one instead of the last one */

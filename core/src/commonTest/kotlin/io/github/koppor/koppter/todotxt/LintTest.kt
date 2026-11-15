@@ -13,7 +13,7 @@ class LintTest {
             emptyList(),
             findings(
                 """
-                (A) Call Mom @phone due:2026-11-20 dueby:18:00 t:2026-11-18 rec:+1w dur:30m tt:15m at:9:00 deadline:2026-11-27T12:00
+                (A) Call Mom @phone due:2026-11-20 dueby:18:00 t:2026-11-18 rec:+1w dur:30m tt:15m at:9:00 deadline:2026-11-27T12:00-12:00
                 Write the outline +papers>survey @writing id:1 note:k3f.md
                 Collect the sources +papers>survey @writing p:1
 
@@ -35,7 +35,7 @@ class LintTest {
                 "todo.txt:3: error: p:7 names no task: no line has id:7",
                 "todo.txt:3: error: the note lost.md does not exist",
                 "todo.txt:5: error: id:1 is the id of line 4 as well",
-                "todo.txt:6: error: deadline:soon is not a date as YYYY-MM-DD, or with a time as YYYY-MM-DDTHH:MM",
+                "todo.txt:6: error: deadline:soon is not a date as YYYY-MM-DD, or with a time as YYYY-MM-DDTHH:MM and an offset such as -12:00",
             ),
             findings(
                 """

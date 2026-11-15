@@ -2,9 +2,15 @@ package io.github.koppor.koppter.todotxt
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.UtcOffset
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
 
 /**
@@ -206,8 +212,11 @@ data class Task(
             // [impl->dsn~deadline~1]
             // The deadline keeps its distance to the due date; where it was the due date itself, it stays that.
             val deadline = deadline ?: return@let moved
-            val time = tag(DEADLINE)!!.substringAfter('T', "").let { if (it.isEmpty()) "" else "T$it" }
-            moved.withTag(DEADLINE, next.plus(due!!.daysUntil(deadline), DateTimeUnit.DAY).toString() + time).withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
+            // The day as it is written moves, as with an offset it can be another one than the day in the zone of the device.
+            val written = tag(DEADLINE)!!
+            val day = parseDate(written.substringBefore('T'))!!.plus(due!!.daysUntil(next), DateTimeUnit.DAY)
+            moved.withTag(DEADLINE, day.toString() + written.substringAfter('T', "").let { if (it.isEmpty()) "" else "T$it" })
+                .withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
         }.copy(creationDate = null, completionDate = null)
     }
 
@@ -290,11 +299,30 @@ data class Task(
             )
         }
 
-        /** The day of a deadline, and its time in minutes of the day if the text states one: `2026-11-30` or `2026-11-30T12:00`. */
+        // Hours, minutes, seconds that are not used, and the offset from UTC, as ISO 8601 and RFC 3339 write them.
+        private val DEADLINE_TIME = Regex("^([01]?\\d|2[0-3]):([0-5]\\d)(?::[0-5]\\d)?(Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)?$")
+
+        /**
+         * The day of a deadline, and its time in minutes of the day if the text states one: `2026-11-30` or `2026-11-30T12:00`.
+         * A time with an offset from UTC, as `2026-11-30T23:59-12:00`, is given as the day and the time of the zone.
+         */
+        // ponytail: the zone of the device is read here, not passed in as today is; pass it down from the callers if tasks are ever read for another place.
         // [impl->dsn~deadline~1]
-        fun parseDeadline(text: String): Pair<LocalDate, Int?>? {
+        fun parseDeadline(text: String, zone: TimeZone = TimeZone.currentSystemDefault()): Pair<LocalDate, Int?>? {
             val date = parseDate(text.substringBefore('T')) ?: return null
-            return date to if ('T' in text) parseTime(text.substringAfter('T')) ?: return null else null
+            if ('T' !in text) return date to null
+            val (hours, minutes, offset) = DEADLINE_TIME.matchEntire(text.substringAfter('T'))?.destructured ?: return null
+            val written = LocalDateTime(date, LocalTime(hours.toInt(), minutes.toInt()))
+            val local = if (offset.isEmpty()) written else written.toInstant(UtcOffset.parse(offset)).toLocalDateTime(zone)
+            return local.date to local.hour * 60 + local.minute
+        }
+
+        /** The day and the time of a deadline with an offset from UTC as they are in the zone; `null` for a deadline without offset, which is written as it counts. */
+        // [impl->dsn~deadline~1]
+        fun localDeadline(text: String, zone: TimeZone = TimeZone.currentSystemDefault()): String? {
+            if (text.substringAfter('T', "").none { it == 'Z' || it == '+' || it == '-' }) return null
+            val (date, minutes) = parseDeadline(text, zone) ?: return null
+            return "$date ${(minutes!! / 60).toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}"
         }
 
         fun parseDate(text: String): LocalDate? = try {
