@@ -260,6 +260,20 @@ Covers:
 
 Needs: impl, utest
 
+### A file opened from the settings
+`dsn~settings-open-file~1`
+
+A file that the user chooses with *Choose file*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
+The fields for the board columns, the names of the priorities and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
+The configuration of the dialog is thus written to the file it was read from, never to another one.
+A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
+
+Covers:
+
+* `req~choose-file~1`
+
+Needs: impl, utest
+
 ### Line below the overdue tasks
 `dsn~overdue-separator~1`
 

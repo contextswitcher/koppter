@@ -361,8 +361,10 @@ private fun MainScreen(
             priorityNames = controller.priorityNamesText,
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
+            // [impl->dsn~settings-open-file~1]
+            onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
             onSave = { settings, boardColumns, shareActions, priorityNames ->
-                // The columns, share actions and names belong to the file that was open when the dialog was opened.
+                // The columns, share actions and names belong to the file that is open, not to one whose path was typed into the field.
                 boardColumns?.let(controller::updateBoardColumns)
                 shareActions?.let(controller::updateShareActions)
                 priorityNames?.let(controller::updatePriorityNames)

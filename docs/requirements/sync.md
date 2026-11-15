@@ -256,7 +256,7 @@ Needs: impl, utest
 `dsn~git-setup-dialog~1`
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
-Saving clones such an address and saves the location of the todo.txt file of the clone; if the clone fails, the dialog stays open and shows the reason.
+With such an address in the field, the button of the dialog reads *Clone*: it clones the address and opens the todo.txt file of the clone as `dsn~settings-open-file~1` says; if the clone fails, the dialog shows the reason.
 The dialog shows the public key of the device where the actions have one.
 The Android application passes actions with the key of the application; the desktop application passes actions without a key, which clone into the data directory with the SSH configuration of the user.
 

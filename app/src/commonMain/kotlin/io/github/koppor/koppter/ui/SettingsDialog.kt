@@ -56,6 +56,8 @@ interface GitSetupActions {
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
 internal fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
 
+private const val OPENED = "Opened. The fields below show the configuration of this file."
+
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
 private val PRIORITY_PRESETS = listOf(
     emptyList(),
@@ -80,22 +82,32 @@ fun SettingsDialog(
     priorityNames: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
+    /**
+     * Called with a file that the user chose or cloned: it is opened at once, so that the fields for its configuration
+     * show what the file brings along instead of what belonged to the file before.
+     */
+    onOpenFile: (String) -> Unit,
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var todoFile by remember { mutableStateOf(settings.todoFile) }
+    // [impl->dsn~settings-open-file~1]
+    // What depends on the file starts anew when another file is opened from the dialog.
+    val openFile = settings.todoFile
+    var todoFile by remember(openFile) { mutableStateOf(openFile) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
-    var columns by remember { mutableStateOf(boardColumns) }
-    var actions by remember { mutableStateOf(shareActions) }
-    var priorities by remember { mutableStateOf(priorityNames) }
+    var columns by remember(openFile) { mutableStateOf(boardColumns) }
+    var actions by remember(openFile) { mutableStateOf(shareActions) }
+    var priorities by remember(openFile) { mutableStateOf(priorityNames) }
     var cloning by remember { mutableStateOf(false) }
-    var cloneMessage by remember { mutableStateOf("") }
+    var fileMessage by remember { mutableStateOf("") }
+    /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
+    val address = git != null && isGitAddress(todoFile.trim())
 
     val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities)
-    val initial = remember { state }
+    val initial = remember(openFile) { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
@@ -109,18 +121,28 @@ fun SettingsDialog(
                     supportingText = {
                         Text(
                             "Empty: $defaultTodoFile" +
-                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned on Save, and the todo.txt file of the clone is used.") +
+                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, and the todo.txt file of the clone is opened.") +
                                 "\nA file in a git repository is committed after every change and synchronized with the remote repository.",
                         )
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("settings-file"),
                 )
-                if (cloneMessage.isNotEmpty()) {
-                    Text(cloneMessage, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-clone-message"))
+                if (fileMessage.isNotEmpty()) {
+                    Text(fileMessage, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-file-message"))
                 }
                 if (chooseFile != null) {
-                    OutlinedButton(onClick = { scope.launch { chooseFile()?.let { todoFile = it } } }, modifier = Modifier.testTag("settings-choose-file")) {
+                    OutlinedButton(
+                        onClick = {
+                            scope.launch {
+                                chooseFile()?.let {
+                                    onOpenFile(it)
+                                    fileMessage = OPENED
+                                }
+                            }
+                        },
+                        modifier = Modifier.testTag("settings-choose-file"),
+                    ) {
                         Text("Choose file")
                     }
                 }
@@ -189,14 +211,15 @@ fun SettingsDialog(
                     Button(
                         onClick = {
                             val file = todoFile.trim()
-                            if (git != null && isGitAddress(file)) {
+                            if (git != null && address) {
                                 cloning = true
-                                cloneMessage = "Cloning"
+                                fileMessage = "Cloning"
                                 scope.launch {
                                     try {
-                                        save(git.clone(file))
+                                        onOpenFile(git.clone(file))
+                                        fileMessage = OPENED
                                     } catch (e: Exception) {
-                                        cloneMessage = "Not cloned: ${e.message ?: e}"
+                                        fileMessage = "Not cloned: ${e.message ?: e}"
                                     }
                                     cloning = false
                                 }
@@ -206,7 +229,8 @@ fun SettingsDialog(
                         },
                         enabled = topCountValue != null && !cloning,
                         modifier = Modifier.testTag("settings-save"),
-                    ) { Text("Save") }
+                        // The dialog stays open after cloning, so the button says what it does.
+                    ) { Text(if (address) "Clone" else "Save") }
                 }
             }
         }

@@ -47,6 +47,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
@@ -1031,21 +1032,47 @@ class AppTest {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") "/data/repository/todo.txt" else error("no such repository")
         }
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
+        val controller = TodoController(Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", git = git) }
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").assertTextEquals("ecdsa-sha2-nistp256 AAAA koppter")
-        // An address in the field of the file is cloned on saving; the dialog stays open if that fails.
+        // With an address in the field of the file, the button clones.
         onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
-        onNodeWithTag("settings-clone-message").assertTextEquals("Not cloned: no such repository")
+        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals("Not cloned: no such repository")
         assertEquals("", controller.settings.todoFile)
 
+        // [utest->dsn~settings-open-file~1]
+        // The clone is opened at once, and the dialog stays open with the configuration that the repository brings along.
         onNodeWithTag("settings-file").performTextReplacement("git@example.org:todo.git")
         onNodeWithTag("settings-save").performScrollTo().performClick()
-        onNodeWithTag("settings-dialog").assertDoesNotExist()
+        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
         assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+        onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
+        // What is changed now belongs to the repository, and the file that was open before stays as it was.
+        onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nHome = @home")
+        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Save").performClick()
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
+        assertEquals(true, cloned.companions.getValue("koppter.yml").contains("\"Home\": \"@home\""))
+        assertNull(storage.companions["koppter.yml"])
+        onNodeWithText("Read the paper").assertExists()
+    }
+
+    // [utest->dsn~settings-open-file~1]
+    @Test
+    fun aChosenFileIsOpenedAtOnceWithItsConfiguration() = runComposeUiTest {
+        val chosen = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "share-actions:\n  later: \"{} due:1w\"\n" }
+        val controller = TodoController(Settings(), { if (it.todoFile == "/data/other/todo.txt") chosen else storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", chooseFile = { "/data/other/todo.txt" }) }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} @research>reading due:2w dur:1h")
+        onNodeWithTag("settings-choose-file").performScrollTo().performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
+        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
+        onNodeWithTag("settings-file-message").assertExists()
     }
 
     // [utest->dsn~git-setup-dialog~1]

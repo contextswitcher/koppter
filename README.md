@@ -116,6 +116,7 @@ Changes of two devices are merged without a conflict to resolve: `todo.txt` and 
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
+A cloned repository and a file chosen with *Choose file* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 
 A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
