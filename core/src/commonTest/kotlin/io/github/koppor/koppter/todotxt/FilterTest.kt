@@ -73,7 +73,7 @@ class FilterTest {
     @Test
     fun onTheSameDueDateTheTaskThatIsDueAtAnEarlierTimeComesFirst() {
         val tasks = TodoFile.parse("Pack due:2026-11-16\nPrepare the slides due:2026-11-16 by:14:00\nPrint the agenda due:2026-11-16 by:9:00\nBook a room due:2026-11-15")
-        assertEquals(listOf("Book a room", "Print the agenda", "Prepare the slides", "Pack"), tasks.entries.sortedWith(listOrder).map { it.task.description })
+        assertEquals(listOf("Book a room", "Print the agenda", "Prepare the slides", "Pack"), tasks.entries.sortedWith(listOrder(today)).map { it.task.description })
     }
 
     // [utest->dsn~sort-order~1]
@@ -81,7 +81,17 @@ class FilterTest {
     fun ordersByCompletionPriorityDueDateAndPosition() {
         assertEquals(
             listOf("Pay bill", "Thank Mom", "Schedule pickup", "Post signs", "Plan holiday", "Call Mom"),
-            file.entries.sortedWith(listOrder).map { it.task.description },
+            file.entries.sortedWith(listOrder(today)).map { it.task.description },
+        )
+    }
+
+    // [utest->dsn~sort-order~1]
+    @Test
+    fun overdueTasksComeFirstWhateverTheirPriorityIs() {
+        val tasks = TodoFile.parse("(A) Write the report\n(C) Return the books due:2026-11-10\n(B) Pay the rent due:2026-11-11\nx (A) Send the form due:2026-11-01\nWater the plants due:2026-11-12")
+        assertEquals(
+            listOf("Pay the rent", "Return the books", "Write the report", "Water the plants", "Send the form"),
+            tasks.entries.sortedWith(listOrder(today)).map { it.task.description },
         )
     }
 

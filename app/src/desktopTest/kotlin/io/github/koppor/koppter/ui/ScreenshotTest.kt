@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
@@ -190,6 +191,13 @@ class ScreenshotTest {
     fun rendersNordDark() = runDesktopComposeUiTest(width = 1100, height = 620) {
         start(Settings(appearance = Appearance.DARK))
         save("nord-dark.png")
+    }
+
+    @Test
+    fun rendersDueMenu() = runDesktopComposeUiTest(width = 1100, height = 520) {
+        start()
+        onNodeWithText("Submit the travel expense report").performMouseInput { rightClick() }
+        save("due-menu.png")
     }
 
     @Test

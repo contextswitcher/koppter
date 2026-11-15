@@ -265,7 +265,9 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 
 ## Order of the list
 
-The list shows the open tasks first, ordered by priority, then by due date and due time, then by the position of their lines in the file.
+The list shows the open tasks first, and among them the overdue ones: those whose due date has passed.
+A line separates them from the other tasks.
+Each of the two parts is ordered by priority, then by due date and due time, then by the position of the lines in the file.
 A task is moved by dragging it with the mouse, or with the finger after a long press, or one step at a time with the two arrows at its right.
 A line shows where a dragged task would be put.
 
@@ -276,6 +278,12 @@ A line shows where a dragged task would be put.
 * Within a priority, the due date keeps its order: a task cannot pass one that is due on another day.
   Its arrow is disabled, and dragging shows no line there.
 * If the task and the one it is put next to are due on different days, it takes the priority and the due date decides its place.
+* No task crosses the line below the overdue tasks: the due date decides on which side a task stands.
+
+A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, the next Monday or the day a week from today.
+An overdue task that is moved this way leaves the upper part of the list.
+
+![Menu that moves the due date of a task](docs/screenshots/due-menu.png)
 
 On the [board](#board), a card is dragged to a place in its column in the same way.
 Dragged to another column, it changes what the column stands for and keeps its priority otherwise, so that it gets its place only among the cards of that priority.
@@ -436,7 +444,8 @@ The application only reads the calendars and writes nothing to them.
 
 * A budget counts what is planned from now on: what was planned earlier in the running week is not counted.
 * A minimum is planned in the weeks up to the day on which the tasks of its context would be done without it; a week in which they have no time left gets nothing.
-* A due date, with or without a time, does not move a task forward in the plan: the order of the task list decides, and the icon tells when the plan ends too late.
+* A due date that has not passed, with or without a time, does not move a task forward in the plan: the order of the task list decides, and the icon tells when the plan ends too late.
+  An overdue task is planned before the others, as it stands first in the list.
   A higher priority gives the task earlier times.
 * The list marks a task as overdue from the day after its due date on, not from the time by which it was due.
 * The travel time is one flat value per task: two tasks at the same place after each other each get both ways, and a way that is longer in one direction cannot be stated.

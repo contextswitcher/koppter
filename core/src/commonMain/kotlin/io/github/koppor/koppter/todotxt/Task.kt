@@ -46,11 +46,16 @@ data class Task(
     /** The value of the first tag with the given key. */
     fun tag(key: String): String? = tags.firstOrNull { it.first == key }?.second
 
+    /** Whether the task is open and its due date has passed. */
+    fun isOverdue(today: LocalDate): Boolean = !completed && due.let { it != null && it < today }
+
     /**
      * Whether this task can step over the other one, its neighbor in the list.
      * Within a priority, the due date orders the tasks, so only a task with the same due date and time can be passed.
+     * The overdue tasks stand before the others whatever their priority is, so no step leads across that border.
      */
-    fun canStepOver(other: Task): Boolean = !completed && !other.completed && (priority != other.priority || (due == other.due && by == other.by))
+    fun canStepOver(other: Task, today: LocalDate): Boolean = !completed && !other.completed && isOverdue(today) == other.isOverdue(today) &&
+        (priority != other.priority || (due == other.due && by == other.by))
 
     /** The task with a date typed as words at the end of its text, such as `next week` or `by Wed`, replaced by tags: see [DatePhrase]. */
     fun withDates(today: LocalDate): Task = DatePhrase.apply(this, today)

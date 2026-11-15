@@ -1,5 +1,7 @@
 package io.github.koppor.koppter.todotxt
 
+import kotlinx.datetime.LocalDate
+
 /** A task together with its position in the file, which identifies it for updates. */
 data class Entry(val index: Int, val task: Task)
 
@@ -38,10 +40,10 @@ data class TodoFile(
      * With another due date or time, the list orders the two tasks itself, so that only the priority changes.
      */
     // [impl->dsn~list-drag~1]
-    fun moveTo(index: Int, target: Int, before: Boolean): TodoFile? {
+    fun moveTo(index: Int, target: Int, before: Boolean, today: LocalDate): TodoFile? {
         val task = Task.parse(lines[index])
         val other = Task.parse(lines[target])
-        if (index == target || !task.canStepOver(other)) return null
+        if (index == target || !task.canStepOver(other, today)) return null
         val line = if (task.priority == other.priority) lines[index] else task.edit(priority = other.priority).toLine()
         if (task.due != other.due || task.by != other.by) return copy(lines = lines.toMutableList().also { it[index] = line })
         val at = (if (target > index) target - 1 else target) + if (before) 0 else 1
@@ -55,8 +57,8 @@ data class TodoFile(
      * A neighbor with the same priority and due date changes places with it.
      */
     // [impl->dsn~list-step~1]
-    fun step(index: Int, neighbor: Int, up: Boolean): TodoFile? =
-        moveTo(index, neighbor, before = up == (Task.parse(lines[index]).priority == Task.parse(lines[neighbor]).priority))
+    fun step(index: Int, neighbor: Int, up: Boolean, today: LocalDate): TodoFile? =
+        moveTo(index, neighbor, before = up == (Task.parse(lines[index]).priority == Task.parse(lines[neighbor]).priority), today)
 
     fun serialize(): String = if (lines.isEmpty()) "" else lines.joinToString(lineSeparator, postfix = lineSeparator)
 

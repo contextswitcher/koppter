@@ -27,6 +27,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.CompositionLocalProvider
@@ -98,6 +99,46 @@ class AppTest {
         // A card merges the semantics of its content; the labels are found in the unmerged tree only.
         onAllNodes(hasText("+GarageSale") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertCountEquals(2)
         onNode(hasText("2026-11-20") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
+        onNodeWithTag("overdue-separator").assertDoesNotExist()
+    }
+
+    // [utest->dsn~overdue-separator~1]
+    // [utest->dsn~list-step~1]
+    @Test
+    fun overdueTasksStandFirstAboveALineThatNoStepCrosses() = runComposeUiTest {
+        storage.text = "(A) Write the report\n(C) Return the books due:2026-11-10\n"
+        start()
+        fun bounds(text: String) = onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+        val line = onNodeWithTag("overdue-separator").fetchSemanticsNode().boundsInRoot
+        assertTrue(bounds("Return the books").bottom <= line.top)
+        assertTrue(line.bottom <= bounds("Write the report").top)
+        // The due date decides on which side of the line a task stands, not its priority.
+        onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
+        onAllNodesWithTag("task-up")[1].assertIsNotEnabled()
+    }
+
+    // [utest->dsn~due-menu~1]
+    @Test
+    fun theMenuOfATaskMovesItsDueDate() = runComposeUiTest {
+        start()
+        onNodeWithTag("due-menu").assertDoesNotExist()
+        onNodeWithText("Post signs").performMouseInput { rightClick() }
+        onNodeWithTag("due-2026-11-13").performClick()
+        assertEquals("Post signs +GarageSale due:2026-11-13", storage.text.lines()[1])
+        onNodeWithTag("due-menu").assertDoesNotExist()
+        // The label of the due date opens the menu as well: the first task of the list is the one that is due on 2026-11-20.
+        onAllNodesWithTag("label-due", useUnmergedTree = true)[0].performClick()
+        onNodeWithTag("due-2026-11-16").performClick()
+        assertEquals("(A) Thank Mom @phone due:2026-11-16", storage.text.lines()[2])
+    }
+
+    // [utest->dsn~due-menu~1]
+    @Test
+    fun theMenuOffersEachDayOnce() {
+        // 2026-11-12 is a Thursday.
+        assertEquals(listOf("2026-11-12", "2026-11-13", "2026-11-16", "2026-11-19"), dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() })
+        assertEquals(listOf("Due today", "Due tomorrow", "Due in a week"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
+        assertEquals(listOf("Due today", "Due tomorrow", "Due next Monday"), dueChoices(LocalDate(2026, 11, 16)).map { it.first })
     }
 
     // [utest->dsn~quick-add~1]

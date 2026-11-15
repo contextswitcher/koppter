@@ -29,7 +29,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -56,6 +58,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -73,7 +78,10 @@ import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.Task
 import kotlinx.coroutines.delay
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.plus
 
 @Composable
 fun TaskList(
@@ -94,10 +102,12 @@ fun TaskList(
     }
     // [impl->dsn~list-drag~1]
     val drag = remember { CardDrag<Entry>() }
-    fun target(): Pair<Entry, Boolean>? = drag.dragged?.let { entry -> drag.target { true }?.takeIf { (target) -> entry.task.canStepOver(target.task) } }
+    fun target(): Pair<Entry, Boolean>? = drag.dragged?.let { entry -> drag.target { true }?.takeIf { (target) -> entry.task.canStepOver(target.task, today) } }
     val list = rememberLazyListState()
     var area by remember { mutableStateOf<Rect?>(null) }
     DragScroll(drag, list) { area }
+    // The overdue tasks are the first ones of the list: see listOrder.
+    val firstNotOverdue = entries.indexOfFirst { !it.task.isOverdue(today) }
     Box(
         modifier.fillMaxSize().onGloballyPositioned {
             drag.origin = it.positionInRoot()
@@ -113,12 +123,18 @@ fun TaskList(
             itemsIndexed(entries, key = { _, entry -> entry.index }) { position, entry ->
                 // [impl->dsn~list-step~1]
                 fun step(up: Boolean): (() -> Unit)? =
-                    entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task) }?.let { { onStep(entry, it, up) } }
-                Box(Modifier.cardDrag(drag, entry) { target()?.let { (target, before) -> onDrop(entry, target, before) } }) {
-                    TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) {
-                        Column {
-                            StepButton(Icons.Default.KeyboardArrowUp, "Move up", "task-up", step(up = true))
-                            StepButton(Icons.Default.KeyboardArrowDown, "Move down", "task-down", step(up = false))
+                    entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task, today) }?.let { { onStep(entry, it, up) } }
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    // [impl->dsn~overdue-separator~1]
+                    if (position == firstNotOverdue && position > 0) {
+                        HorizontalDivider(Modifier.padding(top = 2.dp).testTag("overdue-separator"), thickness = 2.dp)
+                    }
+                    Box(Modifier.cardDrag(drag, entry) { target()?.let { (target, before) -> onDrop(entry, target, before) } }) {
+                        TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) {
+                            Column {
+                                StepButton(Icons.Default.KeyboardArrowUp, "Move up", "task-up", step(up = true))
+                                StepButton(Icons.Default.KeyboardArrowDown, "Move down", "task-down", step(up = false))
+                            }
                         }
                     }
                 }
@@ -248,7 +264,17 @@ private fun DragMarks(state: CardDrag<*>, description: String?, line: Pair<Rect,
 @Composable
 fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () -> Unit, trailing: @Composable () -> Unit = {}) {
     val task = entry.task
-    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().testTag("task")) {
+    var dueMenu by remember { mutableStateOf(false) }
+    // [impl->dsn~due-menu~1]
+    val secondaryClick = Modifier.pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) dueMenu = true
+            }
+        }
+    }
+    Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().then(secondaryClick).testTag("task")) {
         Row(Modifier.padding(end = 10.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("task-done"))
             Column(Modifier.weight(1f)) {
@@ -257,8 +283,10 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
                     horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    TaskLabels(task, today)
+                    TaskLabels(task, today, onDue = { dueMenu = true })
                 }
+                // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
+                Box(Modifier.align(Alignment.End)) { DueMenu(dueMenu, entry, today) { dueMenu = false } }
                 Text(
                     task.description,
                     modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
@@ -268,6 +296,35 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
                 )
             }
             trailing()
+        }
+    }
+}
+
+/** The days to which a due date is moved from the list, each with what the menu calls it. */
+internal fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
+    "Due today" to today,
+    "Due tomorrow" to today.plus(DatePeriod(days = 1)),
+    "Due next Monday" to today.plus(DatePeriod(days = 8 - today.dayOfWeek.isoDayNumber)),
+    "Due in a week" to today.plus(DatePeriod(days = 7)),
+    // On a Sunday, next Monday is tomorrow, and on a Monday, it is in a week.
+).distinctBy { it.second }
+
+/** The menu that moves the due date of a task. */
+// [impl->dsn~due-menu~1]
+@Composable
+private fun DueMenu(expanded: Boolean, entry: Entry, today: LocalDate, onDismiss: () -> Unit) {
+    val setDue = LocalSetDue.current
+    DropdownMenu(expanded, onDismissRequest = onDismiss, modifier = Modifier.testTag("due-menu")) {
+        for ((title, date) in dueChoices(today)) {
+            DropdownMenuItem(
+                text = { Text(title) },
+                trailingIcon = { Text(date.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                onClick = {
+                    onDismiss()
+                    setDue(entry, date)
+                },
+                modifier = Modifier.testTag("due-$date"),
+            )
         }
     }
 }
@@ -328,7 +385,7 @@ fun Board(
         val task = if (from == to) entry.task else moved(entry, currentGroups[from], currentGroups[to])
         val card = task?.let { drag.target { it.first == to } }?.takeIf { (card) ->
             val other = card.second.task
-            task.canStepOver(other) && (from == to || task.priority == other.priority)
+            task.canStepOver(other, today) && (from == to || task.priority == other.priority)
         }
         return if (from == to && card == null || task == null) null else Triple(currentGroups[to], card?.first, card?.second ?: false)
     }

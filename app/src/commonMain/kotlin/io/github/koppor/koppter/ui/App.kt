@@ -124,6 +124,7 @@ fun App(
             LocalPlanOf provides controller::planOf,
             LocalKeyboard provides keyboard,
             LocalPriorityNames provides controller.priorityNames,
+            LocalSetDue provides controller::setDue,
         ) {
             MainScreen(controller, defaultTodoFile, chooseFile, git)
         }

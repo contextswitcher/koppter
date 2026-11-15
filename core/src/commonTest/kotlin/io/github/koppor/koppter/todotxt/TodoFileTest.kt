@@ -1,9 +1,12 @@
 package io.github.koppor.koppter.todotxt
 
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+
+private val TODAY = LocalDate(2026, 11, 12)
 
 // [utest->dsn~todo-file-lines~1]
 class TodoFileTest {
@@ -46,7 +49,7 @@ class TodoFileTest {
     @Test
     fun aStepChangesPlacesWithinAPriorityAndTakesThePriorityAtItsBorder() {
         val file = TodoFile.parse("(A) Report\n\n(B) Shelf  @home\n(B) Photos\nLetter\n(B) Taxes due:2026-11-15\nx Done\n")
-        fun TodoFile.stepped(index: Int, neighbor: Int, up: Boolean) = step(index, neighbor, up)?.serialize()
+        fun TodoFile.stepped(index: Int, neighbor: Int, up: Boolean) = step(index, neighbor, up, TODAY)?.serialize()
 
         // Same priority and due date: the lines change places, as they are, and other lines stay where they are.
         assertEquals("(A) Report\n\n(B) Photos\n(B) Shelf  @home\nLetter\n(B) Taxes due:2026-11-15\nx Done\n", file.stepped(3, 2, up = true))
@@ -65,7 +68,7 @@ class TodoFileTest {
     @Test
     fun aTaskIsPutNextToAnotherOneAndTakesItsPriority() {
         val file = TodoFile.parse("(B) Shelf\n(B) Photos\n(B) Taxes\n(A) Report\nLetter due:2026-11-15\n")
-        fun moved(index: Int, target: Int, before: Boolean) = file.moveTo(index, target, before)?.serialize()
+        fun moved(index: Int, target: Int, before: Boolean) = file.moveTo(index, target, before, TODAY)?.serialize()
 
         assertEquals("(B) Taxes\n(B) Shelf\n(B) Photos\n(A) Report\nLetter due:2026-11-15\n", moved(2, 0, before = true))
         assertEquals("(B) Photos\n(B) Taxes\n(B) Shelf\n(A) Report\nLetter due:2026-11-15\n", moved(0, 2, before = false))
@@ -73,6 +76,8 @@ class TodoFileTest {
         // With another due date, the priority is all that changes.
         assertEquals("(B) Shelf\n(B) Photos\n(B) Taxes\n(A) Report\n(B) Letter due:2026-11-15\n", moved(4, 0, before = true))
         assertNull(moved(1, 1, before = true))
-        assertEquals(file, file.moveTo(1, 0, before = false))
+        assertEquals(file, file.moveTo(1, 0, before = false, TODAY))
+        // An overdue task stands before the others whatever its priority is, so it is not put next to one of them.
+        assertNull(file.moveTo(4, 3, before = true, LocalDate(2026, 11, 16)))
     }
 }

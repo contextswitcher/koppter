@@ -78,7 +78,7 @@ Needs: dsn
 ### List order
 `req~list-order~1`
 
-The list shows the tasks that need attention first: open before completed, higher priority first, earlier due date first.
+The list shows the tasks that need attention first: open before completed, overdue before the others, higher priority first, earlier due date first.
 
 Covers:
 
@@ -212,7 +212,8 @@ Needs: impl, utest
 ### Sort order
 `dsn~sort-order~1`
 
-`listOrder` compares by completion, priority (none last), due date (none last), the time by which the task is due on that day (none last) and line index.
+`listOrder` compares by completion, by whether the task is overdue, by priority (none last), due date (none last), the time by which the task is due on that day (none last) and line index.
+A task is overdue if it is open and its due date is before today (`Task.isOverdue`).
 
 Covers:
 
@@ -228,7 +229,9 @@ The order of the list stays as `listOrder` defines it; a step changes what that 
 If the neighbor has the same priority, due date and due time, the line of the task is moved directly before the line of the neighbor, or behind it on the way down, and is written as it was.
 If the neighbor has another priority, the task takes that priority and its line is moved so that it stays on its side of the neighbor: one step crosses the border, the next one passes the neighbor.
 If the due date or due time differs as well, only the priority changes, as the due date then orders the two tasks.
-A neighbor with the same priority and another due date or due time cannot be passed, and neither can a completed task; `Task.canStepOver` tells that, and the button is disabled.
+A neighbor with the same priority and another due date or due time cannot be passed, and neither can a completed task.
+An overdue task and one that is not overdue do not pass each other either, as the due date decides which of them stands first.
+`Task.canStepOver` tells that, and the button is disabled.
 
 Covers:
 
@@ -245,7 +248,7 @@ Dropping it calls `TodoController.drop`, which applies `TodoFile.moveTo`.
 The task takes the priority of the task it is put next to.
 If both have the same due date and due time, its line is moved directly before or behind the line of that task; a line whose priority stays is written as it was.
 If they differ in that, only the priority changes, as the due date then orders the two tasks.
-There is no line, and no drop, at a task of the same priority and another due date or due time, or at a completed task.
+There is no line, and no drop, at a task of the same priority and another due date or due time, at a completed task, or between an overdue task and one that is not overdue.
 
 Covers:
 

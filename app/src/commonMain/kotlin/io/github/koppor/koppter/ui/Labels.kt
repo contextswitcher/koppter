@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.PlanState
+import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.Task
@@ -45,6 +46,9 @@ val LocalPlanOf = staticCompositionLocalOf<(Task) -> Pair<PlanState, String>?> {
 val LocalPriorityNames = staticCompositionLocalOf { PriorityNames() }
 
 val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
+
+/** Sets the due date of a task of the list, as the menu of a task card does. */
+val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate) -> Unit> { { _, _ -> } }
 
 /**
  * One label of a task: a rounded box with an optional key, such as `due:`, in front of the value.
@@ -76,7 +80,7 @@ fun Label(text: String, container: Color, content: Color, modifier: Modifier = M
 // [impl->dsn~task-labels~1]
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TaskLabels(task: Task, today: LocalDate) {
+fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val uriHandler = LocalUriHandler.current
     // [impl->dsn~plan-state~1]
@@ -123,8 +127,13 @@ fun TaskLabels(task: Task, today: LocalDate) {
     }
     task.hashtags.forEach { HashtagLabel(it) }
     task.tags.forEach { (key, value) ->
-        val overdue = key == Task.DUE && !task.completed && task.due.let { it != null && it < today }
+        val overdue = key == Task.DUE && task.isOverdue(today)
         val dueToday = key == Task.DUE && !task.completed && task.due == today
+        // [impl->dsn~due-menu~1]
+        val dueMenu = Modifier.clip(RoundedCornerShape(percent = 50))
+            .clickable(onClickLabel = "Move the due date", role = Role.Button, onClick = onDue)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .testTag("label-due")
         when {
             // [impl->dsn~context-switcher-tag~1]
             key == Task.CONTEXT_SWITCHER -> Label(
@@ -137,9 +146,9 @@ fun TaskLabels(task: Task, today: LocalDate) {
                     .testTag("label-cs"),
                 key = "$key:",
             )
-            overdue -> Label(value, colors.errorContainer, colors.onErrorContainer, key = "$key:")
-            dueToday -> Label(value, colors.primaryContainer, colors.onPrimaryContainer, key = "$key:")
-            else -> Label(value, colors.surfaceVariant, colors.onSurfaceVariant, key = "$key:")
+            overdue -> Label(value, colors.errorContainer, colors.onErrorContainer, dueMenu, key = "$key:")
+            dueToday -> Label(value, colors.primaryContainer, colors.onPrimaryContainer, dueMenu, key = "$key:")
+            else -> Label(value, colors.surfaceVariant, colors.onSurfaceVariant, if (key == Task.DUE) dueMenu else Modifier, key = "$key:")
         }
     }
     task.priority?.let { PriorityLabel(it) }

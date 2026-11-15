@@ -90,6 +90,17 @@ Covers:
 
 Needs: dsn
 
+### Moving the due date
+`req~move-due-date~1`
+
+The user moves the due date of a task without opening the task: to today, tomorrow, the next Monday or the day a week from today.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
 ### Filter panel
 `req~filter-panel~1`
 
@@ -221,6 +232,30 @@ Covers:
 
 * `req~labels-top-right~1`
 * `req~complete-and-delete~1`
+
+Needs: impl, utest
+
+### Line below the overdue tasks
+`dsn~overdue-separator~1`
+
+`TaskList` draws a line between the last overdue task and the first task that is not overdue, if it shows tasks of both kinds.
+
+Covers:
+
+* `req~list-order~1`
+
+Needs: impl, utest
+
+### Menu of the due date
+`dsn~due-menu~1`
+
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, the next Monday and the day a week from today, each day once.
+Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
+The cards of the board and of the agenda are the same `TaskCard` and have the menu as well.
+
+Covers:
+
+* `req~move-due-date~1`
 
 Needs: impl, utest
 

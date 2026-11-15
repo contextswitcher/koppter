@@ -183,7 +183,7 @@ private val MOMENTS = compareBy<Pair<LocalDate, Int>>({ it.first }, { it.second 
  * As topydo writes it, a task with the tag `id:` waits for the tasks whose tag `p:` has the same value.
  */
 // [impl->dsn~dependencies~1]
-private class Dependencies(open: List<Entry>) {
+private class Dependencies(open: List<Entry>, today: LocalDate) {
     val problems = mutableListOf<String>()
 
     /** The open tasks a task waits for. */
@@ -191,7 +191,7 @@ private class Dependencies(open: List<Entry>) {
     val order: List<Entry>
 
     init {
-        val sorted = open.sortedWith(listOrder)
+        val sorted = open.sortedWith(listOrder(today))
         val parts = sorted.flatMap { entry -> entry.task.tags.filter { it.first == Task.PARENT }.map { it.second to entry } }.groupBy({ it.first }, { it.second })
         val result = LinkedHashSet<Entry>()
         val visiting = mutableSetOf<Entry>()
@@ -382,7 +382,7 @@ fun plan(
     now: Int,
     upcoming: List<Pair<LocalDate, Task>> = emptyList(),
 ): Plan {
-    val dependencies = Dependencies(entries.filterNot { it.task.completed })
+    val dependencies = Dependencies(entries.filterNot { it.task.completed }, today)
     val fixed = fixedBlocks(dependencies.order, upcoming, today, now)
     val plain = Planning(config, busy, today, now, dependencies, fixed).run(emptyMap())
     val reserveUntil = config.minimums.mapNotNull { limit ->

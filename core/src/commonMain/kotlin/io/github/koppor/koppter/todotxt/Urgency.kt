@@ -67,7 +67,7 @@ fun contextStates(entries: List<Entry>, today: LocalDate): List<ContextState> {
     return (contexts + null).mapNotNull { context ->
         val own = open.filter { entry ->
             if (context == null) entry.task.contexts.isEmpty() else entry.task.contexts.any { it.isWithin(context) }
-        }.sortedWith(compareBy<Entry> { it.task.urgency(today)?.daysLeft ?: Int.MAX_VALUE }.then(listOrder))
+        }.sortedWith(compareBy<Entry> { it.task.urgency(today)?.daysLeft ?: Int.MAX_VALUE }.then(listOrder(today)))
         if (own.isEmpty()) return@mapNotNull null
         val states = own.mapNotNull { it.task.urgency(today)?.state }
         ContextState(context, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE })

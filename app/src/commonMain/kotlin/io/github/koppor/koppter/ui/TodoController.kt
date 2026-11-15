@@ -106,7 +106,7 @@ class TodoController(
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
             return file.entries.filter { entry ->
                 !entry.task.completed && entry.task.due.let { it != null && it <= today } && CalendarTxt.text(entry.task) !in plannedToday
-            }.sortedWith(listOrder)
+            }.sortedWith(listOrder(today))
         }
 
     /** The visible open tasks without context, which wait for one. */
@@ -162,7 +162,7 @@ class TodoController(
     /** The tasks to show, filtered and in list order. */
     // [impl->dsn~visible-tasks~1]
     val visible: List<Entry>
-        get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder)
+        get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~top-tasks~1]
             .let { if (topOnly) it.take(settings.topCount) else it }
 
@@ -499,16 +499,20 @@ class TodoController(
         val index = locate(entry) ?: return
         var new = task?.let { file.replace(index, it) } ?: file
         // A move to another column changes what the column stands for and nothing else: the task gets its place only among tasks of its priority.
-        if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before)?.let { new = it } }
+        if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before, today())?.let { new = it } }
         write(new, if (task == null) "Move task: ${entry.task.description}" else "Move task to ${to.title}: ${task.description}")
     }
+
+    /** Moves the due date of the task to the given day. */
+    // [impl->dsn~due-menu~1]
+    fun setDue(entry: Entry, date: LocalDate) = replace(entry, entry.task.withTag(Task.DUE, date.toString()))
 
     /** Puts the task before or behind another one of the list: see [TodoFile.moveTo]. */
     // [impl->dsn~list-drag~1]
     fun drop(entry: Entry, target: Entry, before: Boolean) {
         val index = locate(entry) ?: return
         val other = locate(target) ?: return
-        write(file.moveTo(index, other, before) ?: return, "Move task: ${entry.task.description}")
+        write(file.moveTo(index, other, before, today()) ?: return, "Move task: ${entry.task.description}")
     }
 
     /** Lets the task step over its neighbor in the list: see [TodoFile.step]. */
@@ -516,7 +520,7 @@ class TodoController(
     fun step(entry: Entry, neighbor: Entry, up: Boolean) {
         val index = locate(entry) ?: return
         val other = locate(neighbor) ?: return
-        write(file.step(index, other, up) ?: return, "Move task ${if (up) "up" else "down"}: ${entry.task.description}")
+        write(file.step(index, other, up, today()) ?: return, "Move task ${if (up) "up" else "down"}: ${entry.task.description}")
     }
 
     fun delete(entry: Entry) {
