@@ -136,10 +136,36 @@ const val LINK_HASHTAG = "hashtag"
  * Everything but letters, digits and a few signs is encoded, so that a program that finds links in a text does not cut the link short.
  */
 // [impl->dsn~app-link-copy~1]
-fun linkTo(key: String, name: String): String = "koppter://filter?$key=" + name.encodeToByteArray().joinToString("") { byte ->
+fun linkTo(key: String, name: String): String = "koppter://filter?$key=${encoded(name)}"
+
+private fun encoded(name: String): String = name.encodeToByteArray().joinToString("") { byte ->
     val char = byte.toInt().toChar()
     if (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in "-._~") char.toString() else "%" + (byte.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0')
 }
+
+private const val LINK_NOT = "not-"
+private const val LINK_PRIORITY = "priority"
+private const val LINK_TEXT = "text"
+private const val LINK_SHOW = "show"
+private const val LINK_FUTURE = "future"
+
+/**
+ * The link that names the whole filter, which [filterOfLink] reads back:
+ * besides projects, contexts and hashtags also the excluded ones (`not-hashtag=import`), the priorities (`priority=A`), the text (`text=mom`),
+ * the completed tasks (`show=all` or `show=done`) and the tasks before their threshold date (`future=1`).
+ */
+// [impl->dsn~filter-remembered~1]
+fun Filter.toLink(): String = "koppter://filter?" + (
+    projects.map { LINK_PROJECT to it } + contexts.map { LINK_CONTEXT to it } + hashtags.map { LINK_HASHTAG to it } +
+        excludedProjects.map { LINK_NOT + LINK_PROJECT to it } + excludedContexts.map { LINK_NOT + LINK_CONTEXT to it } +
+        excludedHashtags.map { LINK_NOT + LINK_HASHTAG to it } + priorities.map { LINK_PRIORITY to it.toString() } +
+        listOfNotNull(
+            (LINK_TEXT to text).takeIf { text.isNotBlank() },
+            (LINK_SHOW to "all").takeIf { completion == Completion.ALL },
+            (LINK_SHOW to "done").takeIf { completion == Completion.COMPLETED },
+            (LINK_FUTURE to "1").takeIf { !hideFuture },
+        )
+    ).joinToString("&") { (key, value) -> "$key=${encoded(value)}" }
 
 /**
  * The filter that a link to the application names, such as `koppter://filter?project=papers>survey&context=phone&hashtag=someday`;
@@ -157,5 +183,20 @@ fun filterOfLink(link: String): Filter? {
         (key to value).takeIf { value.isNotEmpty() }
     }
     fun named(key: String, sign: String) = values.filter { it.first == key }.map { it.second.removePrefix(sign) }.filter(String::isNotEmpty).toSet()
-    return Filter(projects = named(LINK_PROJECT, "+"), contexts = named(LINK_CONTEXT, "@"), hashtags = named(LINK_HASHTAG, "#")).takeIf { !it.isDefault }
+    return Filter(
+        completion = when (values.lastOrNull { it.first == LINK_SHOW }?.second) {
+            "all" -> Completion.ALL
+            "done" -> Completion.COMPLETED
+            else -> Completion.OPEN
+        },
+        text = values.lastOrNull { it.first == LINK_TEXT }?.second.orEmpty(),
+        priorities = values.filter { it.first == LINK_PRIORITY }.mapNotNull { (_, letter) -> letter.singleOrNull()?.takeIf { it in 'A'..'Z' } }.toSet(),
+        projects = named(LINK_PROJECT, "+"),
+        contexts = named(LINK_CONTEXT, "@"),
+        hashtags = named(LINK_HASHTAG, "#"),
+        excludedProjects = named(LINK_NOT + LINK_PROJECT, "+"),
+        excludedContexts = named(LINK_NOT + LINK_CONTEXT, "@"),
+        excludedHashtags = named(LINK_NOT + LINK_HASHTAG, "#"),
+        hideFuture = values.none { it == LINK_FUTURE to "1" },
+    ).takeIf { !it.isDefault }
 }

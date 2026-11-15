@@ -23,6 +23,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
+The filter is kept on the device: after a restart, the list shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
 ![Task list filtered by two projects and a context](docs/screenshots/filter.png)
@@ -641,6 +642,7 @@ koppter://filter?project=Fair&context=phone
   On a touch screen, a long press on the label in the filter panel does.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
+* A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their threshold date.
   A project or a context includes those below it.
 * If the application is open, its window shows the tasks and comes to the front; no second window opens.
 * On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.

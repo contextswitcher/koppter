@@ -43,6 +43,7 @@ import io.github.koppor.koppter.todotxt.TodoFile
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.todotxt.listOrder
 import io.github.koppor.koppter.todotxt.nextActions
+import io.github.koppor.koppter.todotxt.toLink
 import io.github.koppor.koppter.todotxt.moveToGroup
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
@@ -75,7 +76,17 @@ class TodoController(
         private set
     var file by mutableStateOf(TodoFile())
         private set
-    var filter by mutableStateOf(Filter())
+    private var shownFilter by mutableStateOf(filterOfLink(settings.filter) ?: Filter())
+
+    /** The filter of the task list, which the settings keep so that it is there again after a restart. */
+    // ponytail: the settings are saved with every change of the filter, also with every typed character of its text; delay the saving if that is felt.
+    // [impl->dsn~filter-remembered~1]
+    var filter: Filter
+        get() = shownFilter
+        set(value) {
+            shownFilter = value
+            updateSettings(settings.copy(filter = if (value.isDefault) "" else value.toLink()))
+        }
     var error by mutableStateOf<String?>(null)
 
     /**
@@ -613,6 +624,8 @@ class TodoController(
         settings = new
         guarded { saveSettings(new) }
         if (fileChanged) {
+            // The filter names projects and contexts of the file that was open.
+            filter = Filter()
             storage = storageFor(new)
             open()
         }

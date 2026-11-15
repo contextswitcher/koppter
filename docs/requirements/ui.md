@@ -553,6 +553,21 @@ Covers:
 
 Needs: impl, utest
 
+### Filter after a restart
+`dsn~filter-remembered~1`
+
+`Filter.toLink` writes the whole filter as a link to the application, and `filterOfLink` reads it back.
+`TodoController` keeps that link in the settings of the device with every change of the filter and starts with the filter it names; the filter that restricts nothing is kept as an empty value.
+A change of the todo.txt file in the settings ends the filter, as it names projects and contexts of the former file.
+The options of the first tasks and of the next actions are not kept.
+
+Covers:
+
+* `req~persistent-settings~1`
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Main screen
 `dsn~main-screen~1`
 
@@ -701,6 +716,7 @@ Needs: impl
 `dsn~app-links~1`
 
 A link has the form `koppter://filter?project=papers>survey&context=phone&hashtag=someday`: each of the keys `project`, `context` and `hashtag` may be given, also several times.
+The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their threshold date.
 `filterOfLink` reads it into a filter; it decodes characters that a program wrote as `%3E`, takes a name with or without its sign, and accepts the forms `koppter:filter?` and `koppter://filter/?`, which programs make of the link.
 `TodoController.openLink` replaces the filter by that of the link, turns off the options of the first tasks and of the next actions, and shows the list; a text that is no such link changes nothing.
 

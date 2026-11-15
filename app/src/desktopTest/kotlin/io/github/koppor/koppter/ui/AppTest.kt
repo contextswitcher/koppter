@@ -1526,6 +1526,30 @@ class AppTest {
         onAllNodesWithTag("task").assertCountEquals(4)
     }
 
+    // [utest->dsn~filter-remembered~1]
+    @Test
+    fun theFilterIsThereAgainAfterARestart() = runComposeUiTest {
+        var saved = Settings()
+        val controller = TodoController(Settings(), { storage }, saveSettings = { saved = it }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("filter-context-phone").performMouseInput { rightClick() }
+        onNodeWithTag("exclude-label").performClick()
+        onAllNodesWithTag("task").assertCountEquals(1)
+        assertEquals("koppter://filter?not-context=phone", saved.filter)
+
+        // The application starts again with the settings it saved.
+        val restarted = TodoController(saved, { storage }, today = { LocalDate(2026, 11, 12) })
+        assertEquals(listOf("Post signs"), restarted.visible.map { it.task.description })
+
+        // The filter that restricts nothing is not kept, and another file starts without the filter of this one.
+        onNodeWithTag("filter-clear").performClick()
+        assertEquals("", saved.filter)
+        onNodeWithTag("filter-project-GarageSale").performClick()
+        runOnUiThread { controller.updateSettings(controller.settings.copy(todoFile = "other.txt")) }
+        assertEquals("", saved.filter)
+        assertEquals(true, controller.filter.isDefault)
+    }
+
     // [utest->dsn~top-tasks~1]
     @Test
     fun theTopViewShowsTheFirstTasksOnly() = runComposeUiTest {

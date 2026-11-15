@@ -206,4 +206,33 @@ class FilterTest {
         assertEquals(emptyList(), shown(Filter(projects = setOf("Fair"), excludedHashtags = setOf("import"))))
         assertEquals(false, Filter(excludedHashtags = setOf("import")).isDefault)
     }
+
+    // [utest->dsn~filter-remembered~1]
+    @Test
+    fun theLinkOfAFilterIsReadBackAsThatFilter() {
+        val filter = Filter(
+            completion = Completion.ALL,
+            text = "call mom",
+            priorities = setOf('A', 'C'),
+            projects = setOf("papers>survey"),
+            contexts = setOf("phone"),
+            hashtags = setOf("quick"),
+            excludedProjects = setOf("Old"),
+            excludedContexts = setOf("waiting"),
+            excludedHashtags = setOf("import"),
+            hideFuture = false,
+        )
+        assertEquals(
+            "koppter://filter?project=papers%3Esurvey&context=phone&hashtag=quick&not-project=Old&not-context=waiting&not-hashtag=import" +
+                "&priority=A&priority=C&text=call%20mom&show=all&future=1",
+            filter.toLink(),
+        )
+        assertEquals(filter, filterOfLink(filter.toLink()))
+        assertEquals(Filter(completion = Completion.COMPLETED), filterOfLink(Filter(completion = Completion.COMPLETED).toLink()))
+        assertEquals(Filter(excludedHashtags = setOf("import")), filterOfLink("koppter://filter?not-hashtag=import"))
+        // The filter that restricts nothing names nothing.
+        assertEquals(null, filterOfLink(Filter().toLink()))
+        // A value that is no priority is left out.
+        assertEquals(Filter(priorities = setOf('B')), filterOfLink("koppter://filter?priority=B&priority=high&priority=b"))
+    }
 }
