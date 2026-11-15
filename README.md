@@ -16,6 +16,7 @@ The notation is the [todo.txt format](https://github.com/todotxt/todo.txt): the 
 
 The task list with the filter panel.
 Projects, contexts, tags and the priority are labels at the top right of each task.
+An address of the web in the text of a task is a link that opens in the browser.
 
 ![Task list with the filter panel on the left](docs/screenshots/list.png)
 

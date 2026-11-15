@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
@@ -553,6 +554,45 @@ class AppTest {
         controller.add("Call cs:missing")
         onAllNodesWithTag("label-cs", useUnmergedTree = true)[1].performClick()
         onNodeWithText("Not opened: contextswitcher://switch/missing").assertExists()
+    }
+
+    // [utest->dsn~links~1]
+    @Test
+    fun anAddressOfTheWebInATaskOpensInTheBrowser() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        storage.text += "Read https://example.org/adr/issues/95. +Work\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
+
+        onNode(hasTestTag("task-description") and hasText("Read https://example.org/adr/issues/95."), useUnmergedTree = true).performFirstLinkClick()
+        // The full stop ends the sentence, not the address.
+        assertEquals(listOf("https://example.org/adr/issues/95"), opened)
+        // The click on the address does not open the task.
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+    }
+
+    // [utest->dsn~links~1]
+    @Test
+    fun anAddressEndsBeforeTheMarkThatFollowsIt() {
+        fun addresses(text: String) = webAddresses(text).map { text.substring(it) }
+        assertEquals(listOf("https://example.org/a?b=1#c", "http://example.org"), addresses("See https://example.org/a?b=1#c, then (http://example.org)."))
+        assertEquals(emptyList(), addresses("Call Mom at 10:00 about ftp://example.org"))
+    }
+
+    // [utest->dsn~edit-dialog~1]
+    @Test
+    fun aKnownNameIsSuggestedByAnyPartOfIt() = runComposeUiTest {
+        storage.text += "Read the survey @research>reading\n"
+        start()
+        openTask("Thank Mom")
+        onNodeWithTag("edit-context-add").performScrollTo().performTextInput("rea")
+        onNodeWithTag("edit-context-suggest-research>reading").performClick()
+        onNodeWithTag("edit-line").assertTextEquals("(A) Thank Mom @phone @research>reading due:2026-11-20")
     }
 
     // [utest->dsn~context-hierarchy~1]

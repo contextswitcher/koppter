@@ -361,7 +361,8 @@ private fun NameList(
         input = ""
     }
     // The names of the task first, then the known names that can be added with one click.
-    val suggestions = known.filter { it !in names && it.startsWith(input.trim().removePrefix(sign), ignoreCase = true) }.take(8)
+    // Any part of the name counts, so that a name below another one is found by its last level: `rea` finds `research>reading`.
+    val suggestions = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }.take(8)
     val colors = MaterialTheme.colorScheme
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (name in names) {

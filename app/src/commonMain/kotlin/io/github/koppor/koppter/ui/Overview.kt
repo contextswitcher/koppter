@@ -101,7 +101,7 @@ fun Overview(states: List<ContextState>, today: LocalDate, onOpen: (Entry) -> Un
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Text(entry.task.description, Modifier.weight(1f))
+                    Text(linked(entry.task.description), Modifier.weight(1f))
                     if (urgency != null) {
                         Column(Modifier.width(150.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             LinearProgressIndicator(

@@ -9,11 +9,13 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- An address of the web in the text of a task is a link that opens in the browser.
 - The list is divided into groups with headings by priority, project, context, hashtag or due date range, with the switches below the views.
 - A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, the next Monday or the day a week from today.
 
 ### Changed
 
+- The edit dialog suggests a known project, context or hashtag by any part of its name, so that `rea` finds `research>reading`.
 - The settings open a chosen file and a cloned repository at once and then show the configuration that comes with it, so that it is not overwritten by the one of the file that was open before; the button reads *Clone* while the field holds an address, and *Cancel* returns to the file from before.
 - Without columns by filter and share actions of the user, the columns *Today* and *Waiting* and the share actions *inbox*, which takes the shared text as it is, and *reading* are in effect, and the settings show them; an emptied field means none.
 - The settings tell below the field for the file what holds for a file in a git repository.

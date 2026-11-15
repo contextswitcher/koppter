@@ -28,7 +28,13 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.PlanState
 import io.github.koppor.koppter.todotxt.Entry
@@ -49,6 +55,23 @@ val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 /** Sets the due date of a task of the list, as the menu of a task card does. */
 val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate) -> Unit> { { _, _ -> } }
+
+// The address ends before a mark that ends a sentence or closes a bracket around it.
+private val WEB_ADDRESS = Regex("https?://\\S*[^\\s.,;:!?)\\]]")
+
+/** The parts of a text that are addresses of the web. */
+internal fun webAddresses(text: String): List<IntRange> = WEB_ADDRESS.findAll(text).map { it.range }.toList()
+
+/** The text with its addresses of the web as links, which open in the browser. */
+// [impl->dsn~links~1]
+@Composable
+fun linked(text: String): AnnotatedString {
+    val style = TextLinkStyles(SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline))
+    return buildAnnotatedString {
+        append(text)
+        for (range in webAddresses(text)) addLink(LinkAnnotation.Url(text.substring(range), style), range.first, range.last + 1)
+    }
+}
 
 /**
  * One label of a task: a rounded box with an optional key, such as `due:`, in front of the value.

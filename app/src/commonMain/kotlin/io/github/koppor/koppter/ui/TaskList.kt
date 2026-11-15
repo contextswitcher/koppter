@@ -311,8 +311,8 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
                 // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
                 Box(Modifier.align(Alignment.End)) { DueMenu(dueMenu, entry, today) { dueMenu = false } }
                 Text(
-                    task.description,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
+                    linked(task.description),
+                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp).testTag("task-description"),
                     style = MaterialTheme.typography.bodyLarge,
                     textDecoration = if (task.completed) TextDecoration.LineThrough else null,
                     color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,

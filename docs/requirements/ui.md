@@ -101,6 +101,17 @@ Covers:
 
 Needs: dsn
 
+### Links in the text of a task
+`req~links~1`
+
+An address of the web in the text of a task opens in the browser with a click.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
 ### Groups in the list
 `req~list-groups~1`
 
@@ -260,6 +271,19 @@ Covers:
 
 Needs: impl, utest
 
+### Links
+`dsn~links~1`
+
+`linked` marks the parts of a description that start with `http://` or `https://` (`webAddresses`) as links, which the task card and the tasks of a context in the overview show in the primary color and underlined.
+An address ends at a blank, and before a mark that ends a sentence or closes a bracket.
+A click on a link opens it through the `UriHandler` of the application and does not open the task.
+
+Covers:
+
+* `req~links~1`
+
+Needs: impl, utest
+
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
@@ -346,6 +370,7 @@ Needs: impl, utest
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
 Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
+Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
 *Save* is disabled while a date, the recurrence or the duration is invalid or the task is empty.
 The dialog also serves for a new task.
