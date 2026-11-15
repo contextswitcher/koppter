@@ -173,4 +173,17 @@ class FilterTest {
         assertEquals(null, filterOfLink("koppter://filter?color=red"))
         assertEquals(null, filterOfLink("koppter://other?project=Fair"))
     }
+
+    // [utest->dsn~app-link-copy~1]
+    @Test
+    fun theLinkToAProjectIsReadBackAsItsFilter() {
+        assertEquals("koppter://filter?project=Fair", linkTo(LINK_PROJECT, "Fair"))
+        assertEquals("koppter://filter?project=papers%3Esurvey", linkTo(LINK_PROJECT, "papers>survey"))
+        assertEquals("koppter://filter?context=K%C3%BCche", linkTo(LINK_CONTEXT, "Küche"))
+        assertEquals("koppter://filter?hashtag=R%26D", linkTo(LINK_HASHTAG, "R&D"))
+
+        assertEquals(Filter(projects = setOf("papers>survey")), filterOfLink(linkTo(LINK_PROJECT, "papers>survey")))
+        assertEquals(Filter(contexts = setOf("Küche")), filterOfLink(linkTo(LINK_CONTEXT, "Küche")))
+        assertEquals(Filter(hashtags = setOf("R&D")), filterOfLink(linkTo(LINK_HASHTAG, "R&D")))
+    }
 }

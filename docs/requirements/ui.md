@@ -255,6 +255,7 @@ Needs: dsn
 
 A link in another program, such as a page of a notebook, opens the application with the tasks of a project, a context or a hashtag.
 If the application is open already, its window shows the tasks; no second window opens.
+The user copies the link of a project, a context or a hashtag from its label.
 
 Covers:
 
@@ -716,6 +717,19 @@ Needs: impl, utest
 On Windows, the installed program writes at each start to the registry of the current user that links of the scheme `koppter` are opened with it: the key `Software\Classes\koppter` with the value `URL Protocol`, and the command of the program with the link as its argument.
 Writing at each start keeps the entry right after an update, and needs neither the installer nor rights of an administrator.
 A start from the build registers nothing.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest
+
+### Copying a link
+`dsn~app-link-copy~1`
+
+`linkTo` writes the link to a project, a context or a hashtag and encodes every character of the name that is not a letter, a digit or one of `-._~`, so that a program that finds links in a text takes the whole link.
+`WithLinkMenu` wraps the labels of projects, contexts and hashtags of a task and of the filter panel: a click with the secondary button opens a menu whose entry *Copy link* puts the link on the clipboard.
+The click is taken before the card of the task sees it, so that the card does not open its menu of due dates.
 
 Covers:
 

@@ -118,6 +118,21 @@ fun projectsWithoutNextAction(entries: List<Entry>, today: LocalDate): List<Stri
 private val LINK = Regex("^koppter:(?://)?filter/?\\?(.*)$", RegexOption.IGNORE_CASE)
 private val PERCENT_ENCODED = Regex("(?:%[0-9A-Fa-f]{2})+")
 
+/** The keys of a link to the application. */
+const val LINK_PROJECT = "project"
+const val LINK_CONTEXT = "context"
+const val LINK_HASHTAG = "hashtag"
+
+/**
+ * The link to the tasks of a project, a context or a hashtag, such as `koppter://filter?project=papers%3Esurvey`.
+ * Everything but letters, digits and a few signs is encoded, so that a program that finds links in a text does not cut the link short.
+ */
+// [impl->dsn~app-link-copy~1]
+fun linkTo(key: String, name: String): String = "koppter://filter?$key=" + name.encodeToByteArray().joinToString("") { byte ->
+    val char = byte.toInt().toChar()
+    if (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in "-._~") char.toString() else "%" + (byte.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0')
+}
+
 /**
  * The filter that a link to the application names, such as `koppter://filter?project=papers>survey&context=phone&hashtag=someday`;
  * `null` if the text is no such link or names nothing.
@@ -134,5 +149,5 @@ fun filterOfLink(link: String): Filter? {
         (key to value).takeIf { value.isNotEmpty() }
     }
     fun named(key: String, sign: String) = values.filter { it.first == key }.map { it.second.removePrefix(sign) }.filter(String::isNotEmpty).toSet()
-    return Filter(projects = named("project", "+"), contexts = named("context", "@"), hashtags = named("hashtag", "#")).takeIf { !it.isDefault }
+    return Filter(projects = named(LINK_PROJECT, "+"), contexts = named(LINK_CONTEXT, "@"), hashtags = named(LINK_HASHTAG, "#")).takeIf { !it.isDefault }
 }

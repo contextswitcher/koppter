@@ -2,12 +2,15 @@ package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalTextStyle
@@ -32,12 +35,15 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
@@ -51,9 +57,13 @@ import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.PlanState
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
+import io.github.koppor.koppter.todotxt.LINK_CONTEXT
+import io.github.koppor.koppter.todotxt.LINK_HASHTAG
+import io.github.koppor.koppter.todotxt.LINK_PROJECT
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.lastLevel
+import io.github.koppor.koppter.todotxt.linkTo
 import kotlinx.datetime.LocalDate
 
 /** Tells the state of the plan of a task and a text about it; `null` for a task that shows none. */
@@ -209,14 +219,16 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     // [impl->dsn~project-hierarchy~1]
     val showProject = LocalShowProject.current
     task.projects.forEach { project ->
-        WithPath("+$project") {
-            ProjectLabel(
-                project,
-                Modifier.clip(RoundedCornerShape(percent = 50))
-                    .clickable(onClickLabel = "Show the tasks of this project", role = Role.Button) { showProject(project) }
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .testTag("label-project-$project"),
-            )
+        WithLinkMenu(LINK_PROJECT, project) {
+            WithPath("+$project") {
+                ProjectLabel(
+                    project,
+                    Modifier.clip(RoundedCornerShape(percent = 50))
+                        .clickable(onClickLabel = "Show the tasks of this project", role = Role.Button) { showProject(project) }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .testTag("label-project-$project"),
+                )
+            }
         }
     }
     // [impl->dsn~context-hierarchy~1]
@@ -231,9 +243,9 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-context-$context"),
             )
         }
-        WithPath("@$context", label)
+        WithLinkMenu(LINK_CONTEXT, context) { WithPath("@$context", label) }
     }
-    task.hashtags.forEach { HashtagLabel(it) }
+    task.hashtags.forEach { hashtag -> WithLinkMenu(LINK_HASHTAG, hashtag) { HashtagLabel(hashtag, Modifier.testTag("label-hashtag-$hashtag")) } }
     task.tags.forEach { (key, value) ->
         // [impl->dsn~deadline~1]
         // A due date that has passed is highlighted as on its day while the deadline lies ahead.
@@ -312,6 +324,46 @@ private fun WithTooltip(text: String, label: @Composable () -> Unit) {
         state = rememberTooltipState(),
         content = label,
     )
+}
+
+/**
+ * Offers the link to the tasks of a project, a context or a hashtag in a menu that a click with the secondary button on the label opens.
+ *
+ * @param key the key of the link, such as [LINK_PROJECT]
+ */
+// [impl->dsn~app-link-copy~1]
+@Composable
+fun WithLinkMenu(key: String, name: String, label: @Composable () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    Box(
+        Modifier.pointerInput(Unit) {
+            awaitPointerEventScope {
+                while (true) {
+                    // Before the label and the card around it see the click, which the card would answer with its own menu.
+                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                    if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                        event.changes.forEach { it.consume() }
+                        open = true
+                    }
+                }
+            }
+        },
+    ) {
+        label()
+        DropdownMenu(open, onDismissRequest = { open = false }, modifier = Modifier.testTag("link-menu")) {
+            DropdownMenuItem(
+                text = { Text("Copy link") },
+                onClick = {
+                    clipboard.setText(AnnotatedString(linkTo(key, name)))
+                    open = false
+                },
+                modifier = Modifier.testTag("copy-link"),
+            )
+        }
+    }
 }
 
 /** @param path shows all levels of a project below another one instead of the last one */

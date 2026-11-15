@@ -35,6 +35,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -1420,6 +1421,41 @@ class AppTest {
         // A text that is no link of the application changes nothing.
         runOnUiThread { controller.openLink("https://example.org/?project=Family") }
         onAllNodesWithTag("task").assertCountEquals(2)
+    }
+
+    // [utest->dsn~app-link-copy~1]
+    @Test
+    @Suppress("DEPRECATION")
+    fun theMenuOfALabelCopiesTheLinkToItsTasks() = runComposeUiTest {
+        storage.text = "Post signs +GarageSale @errands>city #quick\n"
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt") } }
+
+        // A label of the task: the menu of the label opens, not that of the card.
+        onNodeWithTag("label-project-GarageSale", useUnmergedTree = true).performMouseInput { rightClick() }
+        onNodeWithTag("due-menu").assertDoesNotExist()
+        onNodeWithTag("copy-link").assertTextEquals("Copy link").performClick()
+        assertEquals("koppter://filter?project=GarageSale", copied)
+        onNodeWithTag("link-menu").assertDoesNotExist()
+        onNodeWithTag("label-hashtag-quick", useUnmergedTree = true).performMouseInput { rightClick() }
+        onNodeWithTag("copy-link").performClick()
+        assertEquals("koppter://filter?hashtag=quick", copied)
+
+        // A label of the filter panel, which is not selected by that click.
+        onNodeWithTag("filter-context-errands>city").performMouseInput { rightClick() }
+        onNodeWithTag("copy-link").performClick()
+        assertEquals("koppter://filter?context=errands%3Ecity", copied)
+        onNodeWithTag("filter-clear").assertIsNotEnabled()
+        // The card still has its menu.
+        onNodeWithText("Post signs").performMouseInput { rightClick() }
+        onNodeWithTag("due-menu").assertExists()
     }
 
     // [utest->dsn~top-tasks~1]

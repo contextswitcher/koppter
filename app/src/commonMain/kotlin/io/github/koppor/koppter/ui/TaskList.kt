@@ -293,7 +293,8 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
         awaitPointerEventScope {
             while (true) {
                 val event = awaitPointerEvent()
-                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) dueMenu = true
+                // Not a click that a label took for its own menu.
+                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed && event.changes.none { it.isConsumed }) dueMenu = true
             }
         }
     }
