@@ -821,6 +821,20 @@ class AppTest {
         onNodeWithTag("edit-cancel").performScrollTo().performClick()
         onNodeWithTag("overview-back").performClick()
         onNodeWithTag("overview-phone").assertExists()
+
+        // The tiles stand for contexts, projects or hashtags, and one of the three is always chosen.
+        onNodeWithTag("group-CONTEXT").assertIsSelected()
+        onNodeWithTag("group-PRIORITY").assertDoesNotExist()
+        onNodeWithTag("overview-home").performClick()
+        onNodeWithTag("group-PROJECT").performClick()
+        // The tiles again, not the tasks of the tile that was open.
+        onNodeWithTag("overview-GarageSale").assertExists()
+        onNodeWithTag("overview-home").assertDoesNotExist()
+        onNodeWithText("No project").assertExists()
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("group-PROJECT").assertIsSelected()
+        onNodeWithTag("group-HASHTAG").performClick()
+        onNodeWithText("No hashtag").assertExists()
     }
 
     // [utest->dsn~plan-dialog~1]
@@ -1329,7 +1343,10 @@ class AppTest {
         // A click on the selected view leaves it selected.
         onNodeWithTag("overview-switch").performClick()
         onNodeWithTag("overview-switch").assertIsSelected()
-        // The overview has no groups to choose.
+        // The overview has tiles for contexts, projects or hashtags; the agenda has nothing to choose.
+        onNodeWithTag("group-PROJECT").assertExists()
+        onNodeWithTag("group-DUE").assertDoesNotExist()
+        onNodeWithTag("agenda-switch").performClick()
         onNodeWithTag("group-PROJECT").assertDoesNotExist()
         onNodeWithTag("list-switch").performClick()
         onAllNodesWithTag("task").assertCountEquals(3)

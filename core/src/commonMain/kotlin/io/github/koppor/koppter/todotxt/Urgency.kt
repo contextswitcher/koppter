@@ -45,12 +45,13 @@ fun Task.urgency(today: LocalDate): Urgency? {
 }
 
 /**
- * The state of a context of the outermost level, with the contexts below it.
+ * The state of a tile of the overview: a context or a project of the outermost level with those below it, or a hashtag.
  *
- * @param context `null` for the tasks without context
+ * @param name `null` for the tasks that have none
+ * @param title the name with its sign, as the tile shows it
  * @param entries the open tasks, the most urgent first and those without due date last
  */
-data class ContextState(val context: String?, val entries: List<Entry>, val dueToday: Int, val overdue: Int) {
+data class OverviewState(val name: String?, val title: String, val entries: List<Entry>, val dueToday: Int, val overdue: Int) {
     val state: UrgencyState
         get() = when {
             overdue > 0 -> UrgencyState.OVERDUE
@@ -59,17 +60,29 @@ data class ContextState(val context: String?, val entries: List<Entry>, val dueT
         }
 }
 
-/** The contexts of the outermost level that have open tasks, sorted by name; the tasks without context last. */
+/** The attributes that the overview has tiles for. */
+val OVERVIEW_KEYS = listOf(GroupKey.CONTEXT, GroupKey.PROJECT, GroupKey.HASHTAG)
+
+/**
+ * The contexts, projects or hashtags that have open tasks, sorted by name; the tasks that have none last.
+ * Contexts and projects are those of the outermost level, each with what lies below it.
+ */
 // [impl->dsn~overview~1]
-fun contextStates(entries: List<Entry>, today: LocalDate): List<ContextState> {
+fun overviewStates(entries: List<Entry>, today: LocalDate, key: GroupKey = GroupKey.CONTEXT): List<OverviewState> {
+    val (sign, values) = when (key) {
+        GroupKey.PROJECT -> "+" to Task::projects
+        GroupKey.HASHTAG -> "#" to Task::hashtags
+        else -> "@" to Task::contexts
+    }
     val open = entries.filterNot { it.task.completed }
-    val contexts = open.flatMap { it.task.contexts }.map { it.substringBefore(LEVEL_SEPARATOR) }.distinct().sorted()
-    return (contexts + null).mapNotNull { context ->
+    val names = open.flatMap { values(it.task) }.map { it.substringBefore(LEVEL_SEPARATOR) }.distinct().sorted()
+    return (names + null).mapNotNull { name ->
         val own = open.filter { entry ->
-            if (context == null) entry.task.contexts.isEmpty() else entry.task.contexts.any { it.isWithin(context) }
+            if (name == null) values(entry.task).isEmpty() else values(entry.task).any { it.isWithin(name) }
         }.sortedWith(compareBy<Entry> { it.task.urgency(today)?.daysLeft ?: Int.MAX_VALUE }.then(listOrder(today)))
         if (own.isEmpty()) return@mapNotNull null
         val states = own.mapNotNull { it.task.urgency(today)?.state }
-        ContextState(context, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE })
+        val title = name?.let { sign + it } ?: "No ${key.label.lowercase()}"
+        OverviewState(name, title, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE })
     }
 }

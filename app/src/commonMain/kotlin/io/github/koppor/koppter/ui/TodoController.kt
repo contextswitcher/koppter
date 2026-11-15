@@ -91,6 +91,9 @@ class TodoController(
     /** The attribute by whose values the list is divided into groups; `null` for a list without groups. */
     var listGroupKey by mutableStateOf<GroupKey?>(null)
 
+    /** What the overview has its tiles for: one of [OVERVIEW_KEYS]. */
+    var overviewKey by mutableStateOf(GroupKey.CONTEXT)
+
     /** The configuration file next to the todo.txt file; `null` if the storage keeps no files next to the todo.txt file. */
     private var config by mutableStateOf<String?>(null)
 

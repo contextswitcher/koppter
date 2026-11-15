@@ -34,7 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
-import io.github.koppor.koppter.todotxt.ContextState
+import io.github.koppor.koppter.todotxt.OverviewState
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.UrgencyState
 import io.github.koppor.koppter.todotxt.urgency
@@ -48,16 +48,16 @@ private fun UrgencyState.color(): Color = when (this) {
 }
 
 /**
- * One tile per context of the outermost level, which tells by a colored dot how the context is doing.
- * A click on a tile shows the tasks of the context, the most urgent first, each with a bar that fills up to its due date.
+ * One tile per context, project or hashtag, which tells by a colored dot how it is doing.
+ * A click on a tile shows its tasks, the most urgent first, each with a bar that fills up to its due date.
  */
 // [impl->dsn~overview~1]
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Overview(states: List<ContextState>, today: LocalDate, onOpen: (Entry) -> Unit, emptyText: String) {
+fun Overview(states: List<OverviewState>, today: LocalDate, onOpen: (Entry) -> Unit, emptyText: String) {
     var selected by remember { mutableStateOf<String?>(null) }
     var showing by remember { mutableStateOf(false) }
-    val shown = states.firstOrNull { it.context == selected }.takeIf { showing }
+    val shown = states.firstOrNull { it.name == selected }.takeIf { showing }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("overview")) {
         if (states.isEmpty()) Text(emptyText, Modifier.padding(16.dp))
         if (shown == null) {
@@ -65,9 +65,9 @@ fun Overview(states: List<ContextState>, today: LocalDate, onOpen: (Entry) -> Un
                 for (state in states) {
                     Card(
                         Modifier.width(170.dp).clickable {
-                            selected = state.context
+                            selected = state.name
                             showing = true
-                        }.testTag("overview-${state.context ?: "none"}"),
+                        }.testTag("overview-${state.name ?: "none"}"),
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -90,7 +90,7 @@ fun Overview(states: List<ContextState>, today: LocalDate, onOpen: (Entry) -> Un
         } else {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { showing = false }, modifier = Modifier.testTag("overview-back")) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "All contexts")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back to the tiles")
                 }
                 Text(shown.title, style = MaterialTheme.typography.titleMedium)
             }
@@ -118,5 +118,3 @@ fun Overview(states: List<ContextState>, today: LocalDate, onOpen: (Entry) -> Un
         }
     }
 }
-
-private val ContextState.title: String get() = context?.let { "@$it" } ?: "No context"

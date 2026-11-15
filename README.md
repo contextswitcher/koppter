@@ -349,6 +349,7 @@ The line of the edit dialog and `ice_recur.txt` use the letters.
 The switch *Overview* above the tasks shows one tile per context of the outermost level instead of the tasks.
 A tile counts the open tasks of the context and of the contexts below it, and its dot tells the state of the most urgent one: overdue, due today, or neither.
 The tasks without context have a tile of their own.
+The switches below the views show the tiles *by project* or *by hashtag* instead: one tile per project of the outermost level with the projects below it, or one per hashtag.
 The filter panel applies to the overview as it does to the list.
 
 A click on a tile lists the tasks of the context, the most urgent first and those without due date last.

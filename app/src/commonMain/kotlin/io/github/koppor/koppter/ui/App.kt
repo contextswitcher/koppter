@@ -90,7 +90,8 @@ import io.github.koppor.koppter.todotxt.Completion
 import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.Task
-import io.github.koppor.koppter.todotxt.contextStates
+import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
+import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -300,7 +301,10 @@ private fun MainScreen(
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
-                            Overview(contextStates(controller.visible, controller.today()), controller.today(), open, emptyText)
+                            // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
+                            androidx.compose.runtime.key(controller.overviewKey) {
+                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey), controller.today(), open, emptyText)
+                            }
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open)
                         } else if (controller.view == View.WEEK) {
@@ -414,13 +418,24 @@ private fun ViewOptions(controller: TodoController) {
             }
         }
         val list = controller.view == View.LIST
-        if (!list && !controller.board) return
+        val overview = controller.view == View.OVERVIEW
+        if (!list && !overview && !controller.board) return
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (key in GroupKey.entries) {
+            for (key in if (overview) OVERVIEW_KEYS else GroupKey.entries) {
                 FilterChip(
-                    selected = (if (list) controller.listGroupKey else controller.groupKey) == key,
-                    // The board always has columns; the list is divided or not.
-                    onClick = { if (list) controller.listGroupKey = key.takeIf { it != controller.listGroupKey } else controller.groupKey = key },
+                    selected = when {
+                        list -> controller.listGroupKey
+                        overview -> controller.overviewKey
+                        else -> controller.groupKey
+                    } == key,
+                    // The board always has columns and the overview always has tiles; the list is divided or not.
+                    onClick = {
+                        when {
+                            list -> controller.listGroupKey = key.takeIf { it != controller.listGroupKey }
+                            overview -> controller.overviewKey = key
+                            else -> controller.groupKey = key
+                        }
+                    },
                     label = { Text("by ${key.label.lowercase()}") },
                     modifier = Modifier.testTag("group-${key.name}"),
                 )

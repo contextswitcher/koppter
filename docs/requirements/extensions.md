@@ -105,7 +105,8 @@ Needs: dsn
 `req~overview~1`
 
 The user sees for each context how it is doing: whether tasks are overdue or due today.
-For a context, the user sees its tasks ordered by urgency, each with the days until or since its due date and with the part of its time that has passed.
+The user sees the same for each project or for each hashtag instead.
+For a context, a project or a hashtag, the user sees its tasks ordered by urgency, each with the days until or since its due date and with the part of its time that has passed.
 
 Covers:
 
@@ -426,6 +427,7 @@ Needs: impl, utest
 A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
 One of them is always selected.
 For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
+For the overview, the second row selects what the tiles stand for: contexts, projects or hashtags.
 Each row is one line that scrolls sideways in a window that is too narrow for it.
 
 Covers:
@@ -500,9 +502,11 @@ Needs: impl, utest
 `dsn~overview~1`
 
 `Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the threshold date, else the creation date, else two weeks before the due date.
-`contextStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
-The state of a context is that of its most urgent task: overdue, due today, or neither.
-`Overview` shows the contexts of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that context with a progress bar and the text of their urgency.
+`overviewStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
+It groups by the projects of the outermost level or by the hashtags in the same way.
+The state of a group is that of its most urgent task: overdue, due today, or neither.
+`Overview` shows the groups of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that group with a progress bar and the text of their urgency.
+The second row of the view options selects contexts, projects or hashtags; contexts are selected at the start, and another choice shows the tiles again.
 A switch above the tasks turns the overview on; it and the other views that replace the list exclude each other.
 
 Covers:
