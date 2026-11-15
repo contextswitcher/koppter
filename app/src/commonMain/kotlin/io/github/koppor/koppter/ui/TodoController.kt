@@ -40,6 +40,7 @@ import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
 import io.github.koppor.koppter.todotxt.TodoFile
+import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.todotxt.listOrder
 import io.github.koppor.koppter.todotxt.nextActions
 import io.github.koppor.koppter.todotxt.moveToGroup
@@ -87,6 +88,18 @@ class TodoController(
     /** Restricts the list to the next actions: of each project, the first task that can be worked on. */
     // [impl->dsn~next-actions~1]
     var nextOnly by mutableStateOf(false)
+
+    /**
+     * Shows the tasks that a link to the application names, in the list; a text that is no such link changes nothing.
+     * The link replaces the filter, so that it shows the same tasks whatever was filtered before.
+     */
+    // [impl->dsn~app-links~1]
+    fun openLink(link: String) {
+        filter = filterOfLink(link) ?: return
+        topOnly = false
+        nextOnly = false
+        view = View.LIST
+    }
 
     /** Shows the tasks as a board instead of as a list. */
     var view by mutableStateOf(View.LIST)

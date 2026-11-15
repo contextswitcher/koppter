@@ -250,6 +250,19 @@ Covers:
 
 Needs: dsn
 
+### Links to the application
+`req~app-links~1`
+
+A link in another program, such as a page of a notebook, opens the application with the tasks of a project, a context or a hashtag.
+If the application is open already, its window shows the tasks; no second window opens.
+
+Covers:
+
+* `feat~filtering~1`
+* `feat~platforms~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -667,3 +680,45 @@ Covers:
 * `req~choose-file~1`
 
 Needs: impl
+
+### Links to the application
+`dsn~app-links~1`
+
+A link has the form `koppter://filter?project=papers>survey&context=phone&hashtag=someday`: each of the keys `project`, `context` and `hashtag` may be given, also several times.
+`filterOfLink` reads it into a filter; it decodes characters that a program wrote as `%3E`, takes a name with or without its sign, and accepts the forms `koppter:filter?` and `koppter://filter/?`, which programs make of the link.
+`TodoController.openLink` replaces the filter by that of the link, turns off the options of the first tasks and of the next actions, and shows the list; a text that is no such link changes nothing.
+
+Covers:
+
+* `req~app-links~1`
+* `adr~links-with-query~1`
+
+Needs: impl, utest
+
+### One window for links on the desktop
+`dsn~link-single-instance~1`
+
+The desktop application takes a link as its argument.
+The running application listens on a port of the computer itself and writes its number to the file `link.port` in the data directory.
+A start with a link sends it to that port and ends if the answer is that of the application; otherwise it starts as usual and opens the link itself.
+The running application opens a received link and brings its window to the front.
+A start without a link opens a window of its own, as before.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest
+
+### Scheme of the links on Windows
+`dsn~link-scheme-windows~1`
+
+On Windows, the installed program writes at each start to the registry of the current user that links of the scheme `koppter` are opened with it: the key `Software\Classes\koppter` with the value `URL Protocol`, and the command of the program with the link as its argument.
+Writing at each start keeps the entry right after an update, and needs neither the installer nor rights of an administrator.
+A start from the build registers nothing.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest

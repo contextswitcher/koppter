@@ -625,6 +625,24 @@ reading = {} +research @reading due:2w dur:1h
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
 
+## Links to koppter
+
+A link in another program, such as a page of OneNote, opens the application with the tasks of a project, a context or a hashtag ([decision 0033](docs/decisions/0033-links-to-the-application-with-a-query.md)):
+
+```text
+koppter://filter?project=papers>survey
+koppter://filter?context=phone
+koppter://filter?hashtag=someday
+koppter://filter?project=Fair&context=phone
+```
+
+* The link replaces the filter and shows the list.
+  A project or a context includes those below it.
+* If the application is open, its window shows the tasks and comes to the front; no second window opens.
+* On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
+* On Android, the installed application opens the links.
+* The packages for Linux and macOS do not register the links yet.
+
 ## Board
 
 The board shows one column per priority, project, context, hashtag or due date range.

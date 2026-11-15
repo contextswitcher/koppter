@@ -114,3 +114,25 @@ fun projectsWithoutNextAction(entries: List<Entry>, today: LocalDate): List<Stri
     return entries.filter { !it.task.completed && it.task.threshold.let { day -> day == null || day <= today } }
         .flatMap { it.task.projects }.distinct().filter { project -> moving.none { it.isWithin(project) } }.sortedWith(hierarchyOrder)
 }
+
+private val LINK = Regex("^koppter:(?://)?filter/?\\?(.*)$", RegexOption.IGNORE_CASE)
+private val PERCENT_ENCODED = Regex("(?:%[0-9A-Fa-f]{2})+")
+
+/**
+ * The filter that a link to the application names, such as `koppter://filter?project=papers>survey&context=phone&hashtag=someday`;
+ * `null` if the text is no such link or names nothing.
+ * A program that holds the link may have encoded characters as `%3E`, and a name may carry its sign.
+ */
+// [impl->dsn~app-links~1]
+fun filterOfLink(link: String): Filter? {
+    val query = LINK.matchEntire(link.trim())?.groupValues?.get(1) ?: return null
+    val values = query.split('&').mapNotNull { part ->
+        val key = part.substringBefore('=', "").lowercase()
+        val value = PERCENT_ENCODED.replace(part.substringAfter('=')) { encoded ->
+            encoded.value.split('%').drop(1).map { it.toInt(16).toByte() }.toByteArray().decodeToString()
+        }
+        (key to value).takeIf { value.isNotEmpty() }
+    }
+    fun named(key: String, sign: String) = values.filter { it.first == key }.map { it.second.removePrefix(sign) }.filter(String::isNotEmpty).toSet()
+    return Filter(projects = named("project", "+"), contexts = named("context", "@"), hashtags = named("hashtag", "#")).takeIf { !it.isDefault }
+}

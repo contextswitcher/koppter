@@ -150,4 +150,27 @@ class FilterTest {
         // A project is not stuck while one below it moves.
         assertEquals(listOf("papers>survey"), projectsWithoutNextAction(moving, today))
     }
+
+    // [utest->dsn~app-links~1]
+    @Test
+    fun aLinkNamesTheProjectsContextsAndHashtagsOfAFilter() {
+        assertEquals(Filter(projects = setOf("Fair")), filterOfLink("koppter://filter?project=Fair"))
+        assertEquals(Filter(contexts = setOf("phone")), filterOfLink("koppter://filter?context=phone"))
+        assertEquals(Filter(hashtags = setOf("someday")), filterOfLink("koppter://filter?hashtag=someday"))
+        assertEquals(
+            Filter(projects = setOf("papers>survey", "Fair"), contexts = setOf("phone")),
+            filterOfLink("koppter://filter?project=papers>survey&project=Fair&context=phone"),
+        )
+        // As other programs pass it on: with a slash after the name, encoded characters, the sign of the name, or without the slashes.
+        assertEquals(Filter(projects = setOf("papers>survey")), filterOfLink("koppter://filter/?project=papers%3Esurvey"))
+        assertEquals(Filter(projects = setOf("Küche")), filterOfLink("KOPPTER://filter?project=K%C3%BCche"))
+        assertEquals(Filter(projects = setOf("Fair"), contexts = setOf("phone"), hashtags = setOf("someday")), filterOfLink("koppter:filter?project=%2BFair&context=@phone&hashtag=%23someday "))
+
+        // No link of the application, or one that names nothing.
+        assertEquals(null, filterOfLink("https://example.org/?project=Fair"))
+        assertEquals(null, filterOfLink("koppter://filter"))
+        assertEquals(null, filterOfLink("koppter://filter?project="))
+        assertEquals(null, filterOfLink("koppter://filter?color=red"))
+        assertEquals(null, filterOfLink("koppter://other?project=Fair"))
+    }
 }

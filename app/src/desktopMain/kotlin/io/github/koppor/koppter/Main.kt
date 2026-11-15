@@ -1,5 +1,6 @@
 package io.github.koppor.koppter
 
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.dp
@@ -15,11 +16,14 @@ import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.sync.storageForFile
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
+import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.ui.TodoController
+import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.LocalDate
 import net.harawata.appdirs.AppDirsFactory
 import org.tinylog.Logger
 import java.nio.file.Path
+import kotlin.concurrent.thread
 import kotlin.io.path.Path
 import kotlin.io.path.exists
 
@@ -41,7 +45,12 @@ private fun chooseFile(owner: java.awt.Frame): String? {
     return dialog.file?.let { Path(dialog.directory, it).toString() }
 }
 
-fun main() {
+fun main(args: Array<String>) {
+    // [impl->dsn~link-single-instance~1]
+    // Before anything else: a start that only hands its link on ends at once.
+    val port = LinkPort(dataDirectory().resolve("link.port"))
+    val link = args.firstOrNull { filterOfLink(it) != null }
+    if (link != null && port.pass(link)) return
     logToFile(dataDirectory().resolve("logs"))
     // [impl->dsn~failure-log~1]
     Thread.setDefaultUncaughtExceptionHandler { _, e -> Logger.error(e, "The application failed") }
@@ -63,6 +72,10 @@ fun main() {
         // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
         log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
     )
+    val links = Channel<String>(Channel.UNLIMITED)
+    link?.let(links::trySend)
+    port.listen { links.trySend(it) }
+    thread(isDaemon = true) { registerLinkScheme() }
     // [impl->dsn~application-icon~1]
     val icon = BitmapPainter(object {}.javaClass.getResourceAsStream("/koppter.png")!!.readBytes().decodeToImageBitmap())
     application {
@@ -73,6 +86,16 @@ fun main() {
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
             App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, git = git)
+            // [impl->dsn~link-single-instance~1]
+            LaunchedEffect(Unit) {
+                for (received in links) {
+                    controller.openLink(received)
+                    // The window may be minimized or behind the program in which the link was clicked.
+                    window.extendedState = window.extendedState and java.awt.Frame.ICONIFIED.inv()
+                    window.toFront()
+                    window.requestFocus()
+                }
+            }
         }
     }
 }

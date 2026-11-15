@@ -1401,6 +1401,27 @@ class AppTest {
         onNodeWithText("No next action: survey", useUnmergedTree = true).assertExists()
     }
 
+    // [utest->dsn~app-links~1]
+    @Test
+    fun aLinkShowsTheTasksItNamesInTheList() = runComposeUiTest {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("board-switch").performClick()
+        onNodeWithTag("filter-context-phone").performClick()
+        onNodeWithTag("next-actions").performClick()
+
+        // The link replaces what was filtered and shows the list.
+        runOnUiThread { controller.openLink("koppter://filter?project=GarageSale") }
+        onNodeWithTag("board").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        onNodeWithText("Post signs").assertExists()
+        onNodeWithTag("next-actions").assertIsOff()
+
+        // A text that is no link of the application changes nothing.
+        runOnUiThread { controller.openLink("https://example.org/?project=Family") }
+        onAllNodesWithTag("task").assertCountEquals(2)
+    }
+
     // [utest->dsn~top-tasks~1]
     @Test
     fun theTopViewShowsTheFirstTasksOnly() = runComposeUiTest {

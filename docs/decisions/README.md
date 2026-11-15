@@ -37,6 +37,7 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0030](0030-tag-for-the-time-of-the-due-date-named-dueby.md) | The tag for the time of the due date is named `dueby:` |
 | [0031](0031-offset-from-utc-in-the-time-of-a-deadline.md) | The time of a deadline may state its offset from UTC |
 | [0032](0032-next-actions-derived-from-the-tasks.md) | Next actions are derived from the tasks |
+| [0033](0033-links-to-the-application-with-a-query.md) | Links to the application name a filter in a query |
 
 ## Conventions
 

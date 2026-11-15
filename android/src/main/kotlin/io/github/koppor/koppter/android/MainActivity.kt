@@ -73,8 +73,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         controller = todoController(gitSetup)
         publishShareTargets(controller.shareActions)
+        // [impl->dsn~android-links~1]
+        // Not after a change of the configuration, such as a rotation: the link would undo what the user filtered since.
+        if (savedInstanceState == null) intent?.dataString?.let(controller::openLink)
         val keyboard = resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
         setContent { App(controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, git = gitActions, keyboard = keyboard, shareLog = ::shareLog) }
+    }
+
+    // A link that is clicked while the application is open.
+    // [impl->dsn~android-links~1]
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent.dataString?.let(controller::openLink)
     }
 
     // The share actions may have been edited in the settings.
