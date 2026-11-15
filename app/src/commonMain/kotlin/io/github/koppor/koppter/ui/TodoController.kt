@@ -540,9 +540,9 @@ class TodoController(
         write(new, if (task == null) "Move task: ${entry.task.description}" else "Move task to ${to.title}: ${task.description}")
     }
 
-    /** Moves the due date of the task to the given day. */
+    /** Moves the due date of the task to the given day; without a day, the task has no due date anymore. */
     // [impl->dsn~due-menu~1]
-    fun setDue(entry: Entry, date: LocalDate) = replace(entry, entry.task.withTag(Task.DUE, date.toString()))
+    fun setDue(entry: Entry, date: LocalDate?) = replace(entry, entry.task.withTag(Task.DUE, date?.toString()))
 
     /** Puts the task before or behind another one of the list: see [TodoFile.moveTo]. */
     // [impl->dsn~list-drag~1]

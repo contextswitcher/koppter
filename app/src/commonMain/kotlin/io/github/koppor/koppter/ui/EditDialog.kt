@@ -86,6 +86,7 @@ fun EditDialog(
     knownProjects: List<String>,
     knownContexts: List<String>,
     knownHashtags: List<String>,
+    today: LocalDate,
     onSave: (Task, note: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -177,6 +178,19 @@ fun EditDialog(
                     }
                 }
 
+                // [impl->dsn~due-chips~1]
+                // The days of the menu of a task card, which a device without a mouse does not open for a task without due date.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Due", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+                    for ((title, date) in dueChoices(today)) {
+                        FilterChip(
+                            selected = due.trim() == date.toString(),
+                            onClick = { due = if (due.trim() == date.toString()) "" else date.toString() },
+                            label = { Text(title) },
+                            modifier = Modifier.testTag("edit-due-$date"),
+                        )
+                    }
+                }
                 // A flow row: three fields side by side on the desktop, wrapped on a phone.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val field = Modifier.width(165.dp)

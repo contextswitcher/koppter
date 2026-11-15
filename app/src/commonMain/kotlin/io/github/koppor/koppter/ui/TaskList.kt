@@ -323,13 +323,18 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
     }
 }
 
-/** The days to which a due date is moved from the list, each with what the menu calls it. */
+/**
+ * The days that are offered for a due date, each with what it is called; each day once, under its first name.
+ * A weekend and a week end on their Sunday, as in the dates that are typed in words.
+ */
 internal fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
-    "Due today" to today,
-    "Due tomorrow" to today.plus(DatePeriod(days = 1)),
-    "Due next Monday" to today.plus(DatePeriod(days = 8 - today.dayOfWeek.isoDayNumber)),
-    "Due in a week" to today.plus(DatePeriod(days = 7)),
-    // On a Sunday, next Monday is tomorrow, and on a Monday, it is in a week.
+    "today" to today,
+    "tomorrow" to today.plus(DatePeriod(days = 1)),
+    "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
+    "next week" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
+    "in two weeks" to today.plus(DatePeriod(days = 14)),
+    "in a month" to today.plus(DatePeriod(months = 1)),
+    // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
 ).distinctBy { it.second }
 
 /** The menu that moves the due date of a task. */
@@ -340,13 +345,23 @@ private fun DueMenu(expanded: Boolean, entry: Entry, today: LocalDate, onDismiss
     DropdownMenu(expanded, onDismissRequest = onDismiss, modifier = Modifier.testTag("due-menu")) {
         for ((title, date) in dueChoices(today)) {
             DropdownMenuItem(
-                text = { Text(title) },
+                text = { Text("Due $title") },
                 trailingIcon = { Text(date.toString(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 onClick = {
                     onDismiss()
                     setDue(entry, date)
                 },
                 modifier = Modifier.testTag("due-$date"),
+            )
+        }
+        if (entry.task.due != null) {
+            DropdownMenuItem(
+                text = { Text("No due date") },
+                onClick = {
+                    onDismiss()
+                    setDue(entry, null)
+                },
+                modifier = Modifier.testTag("due-none"),
             )
         }
     }

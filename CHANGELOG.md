@@ -17,7 +17,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The line that adds a task completes a project, a context or a hashtag while it is typed: Tab takes the first known name offered.
 - An address of the web in the text of a task is a link that opens in the browser; a long address is cut, and the whole one appears when the pointer of the mouse rests on it.
 - The list is divided into groups with headings by priority, project, context, hashtag or due date range, with the switches below the views.
-- A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, the next Monday or the day a week from today.
+- A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next week, in two weeks or in a month, or removes it; the edit dialog offers the same days as chips.
 
 ### Changed
 

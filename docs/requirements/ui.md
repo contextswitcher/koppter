@@ -104,7 +104,8 @@ Needs: dsn
 ### Moving the due date
 `req~move-due-date~1`
 
-The user moves the due date of a task without opening the task: to today, tomorrow, the next Monday or the day a week from today.
+The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next week, in two weeks or in a month.
+In the list, this needs no opening of the task.
 
 Covers:
 
@@ -379,9 +380,24 @@ Needs: impl, utest
 ### Menu of the due date
 `dsn~due-menu~1`
 
-A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, the next Monday and the day a week from today, each day once.
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next week, in two weeks and in a month, each day once.
+A weekend and a week end on their Sunday, as in the dates that are typed in words.
 Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
+For a task with a due date, the menu ends with *No due date*, which removes the tag.
 The cards of the board and of the agenda are the same `TaskCard` and have the menu as well.
+
+Covers:
+
+* `req~move-due-date~1`
+
+Needs: impl, utest
+
+### Days for the due date in the edit dialog
+`dsn~due-chips~1`
+
+Above its date fields, `EditDialog` shows the days of `dueChoices` as chips.
+A click on a chip writes its day into the field of the due date, and a click on the chip of the day that the field holds empties the field.
+A device without a mouse thereby reaches these days also for a task without due date, which has no label that opens the menu.
 
 Covers:
 

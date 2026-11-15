@@ -336,6 +336,7 @@ private fun MainScreen(
             knownProjects = controller.projects,
             knownContexts = controller.contexts,
             knownHashtags = controller.hashtags,
+            today = controller.today(),
             onSave = { task, note ->
                 if (entry == null) controller.add(task, note) else controller.replace(entry, task, note)
                 editing = null

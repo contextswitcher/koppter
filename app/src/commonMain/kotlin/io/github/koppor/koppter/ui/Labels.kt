@@ -68,7 +68,7 @@ val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
 val LocalShowProject = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 /** Sets the due date of a task of the list, as the menu of a task card does. */
-val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate) -> Unit> { { _, _ -> } }
+val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate?) -> Unit> { { _, _ -> } }
 
 // The address ends before a mark that ends a sentence or closes a bracket around it.
 private val WEB_ADDRESS = Regex("https?://\\S*[^\\s.,;:!?)\\]]")

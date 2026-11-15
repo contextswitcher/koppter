@@ -134,17 +134,48 @@ class AppTest {
         onNodeWithTag("due-menu").assertDoesNotExist()
         // The label of the due date opens the menu as well: the first task of the list is the one that is due on 2026-11-20.
         onAllNodesWithTag("label-due", useUnmergedTree = true)[0].performClick()
-        onNodeWithTag("due-2026-11-16").performClick()
-        assertEquals("(A) Thank Mom @phone due:2026-11-16", storage.text.lines()[2])
+        // This weekend ends on Sunday.
+        onNodeWithTag("due-2026-11-15").performClick()
+        assertEquals("(A) Thank Mom @phone due:2026-11-15", storage.text.lines()[2])
+        // The due date is removed with the menu as well; a task without one is not offered that.
+        onAllNodesWithTag("label-due", useUnmergedTree = true)[0].performClick()
+        onNodeWithTag("due-none").performClick()
+        assertEquals("(A) Thank Mom @phone", storage.text.lines()[2])
+        onNodeWithText("Thank Mom").performMouseInput { rightClick() }
+        onNodeWithTag("due-2026-12-12").assertExists()
+        onNodeWithTag("due-none").assertDoesNotExist()
+    }
+
+    // [utest->dsn~due-chips~1]
+    @Test
+    fun theEditDialogOffersTheDaysOfTheMenuForTheDueDate() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-due-2026-11-22").performScrollTo().performClick()
+        onNodeWithTag("edit-due").assertTextContains("2026-11-22")
+        onNodeWithTag("edit-due-2026-11-22").assertIsSelected()
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale due:2026-11-22")
+        // A second click on the chosen day takes the due date away again.
+        onNodeWithTag("edit-due-2026-11-22").performClick()
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale")
+        onNodeWithTag("edit-due-2026-11-26").performClick()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("Post signs +GarageSale due:2026-11-26", storage.text.lines()[1])
     }
 
     // [utest->dsn~due-menu~1]
     @Test
     fun theMenuOffersEachDayOnce() {
         // 2026-11-12 is a Thursday.
-        assertEquals(listOf("2026-11-12", "2026-11-13", "2026-11-16", "2026-11-19"), dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() })
-        assertEquals(listOf("Due today", "Due tomorrow", "Due in a week"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
-        assertEquals(listOf("Due today", "Due tomorrow", "Due next Monday"), dueChoices(LocalDate(2026, 11, 16)).map { it.first })
+        assertEquals(
+            listOf("2026-11-12", "2026-11-13", "2026-11-15", "2026-11-22", "2026-11-26", "2026-12-12"),
+            dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() },
+        )
+        // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
+        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        // The end of January has no day a month later.
+        assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
     }
 
     // [utest->dsn~quick-add~1]
