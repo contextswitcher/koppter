@@ -100,6 +100,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 
 [docs/organizing.md](docs/organizing.md) describes a way to keep hundreds of tasks findable with what the application offers:
 projects for the outline of areas and outcomes, contexts for the kinds of work and the places, threshold dates for what is not due yet, and a rhythm of inbox, agenda and plan.
+It compares this with the other way, in which the areas are the contexts, so that each file can decide.
 It also maps the terms of SkedPal to those of the application.
 
 ## Files

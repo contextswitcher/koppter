@@ -28,7 +28,15 @@ grep -o '+[^ ]*' todo.txt | sort | uniq -c | sort -rn   # projects
 
 Reuse an existing context or project instead of inventing a spelling.
 The context decides when the task is planned and where it shows in the overview, so `@Errands` next to an existing `@errands` creates a second context without a time map.
-The file also shows how the user divides their tasks: follow it where it differs from the table below, such as a file whose contexts name areas in levels (`@work>admin`).
+The file also shows where the user puts the areas of their work and life, such as research or teaching.
+There are two ways, and both are sound:
+
+* Areas as the outermost projects, and contexts for the kind of work or the place: `+research>FirstPaper @writing`.
+* Areas as contexts, and projects for the outcomes within them: `+FirstPaper @research`.
+
+Follow what the file does, and read a `README.md` next to it if there is one.
+If the file has too few tasks to tell, ask the user once and keep to the answer.
+The table below is written for the first way; for the second, the area is the context and the project is the outcome alone.
 
 ## The line
 

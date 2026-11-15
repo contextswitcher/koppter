@@ -21,6 +21,8 @@ It is a suggestion, not a rule of the application: the file is yours.
 
 ## Projects are the outline
 
+This section and the next one describe one of two ways to place the areas of work and life; [Where the areas go](#where-the-areas-go) compares it with the other one.
+
 A project names what a task belongs to, and levels written with `>` form an outline.
 The outermost level holds the areas that stay: `+work`, `+research`, `+home`.
 Below them stands what is reached one day: `+research>FirstPaper`, `+home>GarageSale`, `+home>TaxReturn2026`.
@@ -50,6 +52,41 @@ A task carries both: `Outline the related work +research>FirstPaper @writing`.
 * `@waiting` in addition marks a task that waits for someone else.
 * Five to nine contexts are enough.
   A context may have levels as well, such as `@errands>city`, which is planned in the times of `@errands` unless it has a time map of its own; most files do not need them.
+
+## Where the areas go
+
+An area of work or life, such as research, teaching or an open-source project, stays for years and holds many outcomes.
+The two sections above make it the outermost project.
+It can as well be a context, and which way fits depends on how the week is divided.
+This is a decision for each file, not one of the application: both ways use the same notation.
+
+### Areas as the outermost projects
+
+`Outline the related work +research>FirstPaper @writing`
+
+* Good, because the outline is in one place: area, outcome and its parts are the levels of one project.
+* Good, because the context stays free for the kind of work and the place, and the plan gives reading the quiet hours whatever area it serves.
+* Good, because a task that serves two areas carries both projects.
+* Bad, because an area has no time map: the plan knows a limit and a barrier for a project, but its times go by the context.
+* Bad, because the overview shows the kinds of work and not the areas.
+* Bad, because the lines of the file get long with each level; the labels show the last level only.
+
+### Areas as contexts
+
+`Outline the related work +FirstPaper @research`
+
+* Good, because each area gets its times and its share of the week: a time map for the days of teaching, `@opensource = max 5h/week`.
+* Good, because the overview shows one tile per area with its overdue tasks, and the inbox lists what has no area yet.
+* Good, because the lines stay short: one context, one project, and a level only where a project has parts.
+* Bad, because the kind of work or the place needs a second context, `@research @train`, and the plan takes the time map of the first context that has one, so that their order matters.
+* Bad, because a project does not tell its area: `+website` in two areas is one project for a filter.
+
+### Choosing
+
+* A week that is divided by area, with days or hours that belong to teaching or to one large project, speaks for areas as contexts.
+* A week that is divided by the kind of work, with mornings for writing and afternoons for calls, speaks for areas as projects.
+* One file keeps to one way.
+  Write the choice down next to the file, for example in a `README.md`, so that other devices, other people and agents that add tasks follow it.
 
 ## Priorities are rare
 
