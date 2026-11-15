@@ -309,7 +309,7 @@ Needs: impl, utest
 
 `lint` returns the findings in the open tasks of a `TodoFile`, each with the number of its line and a severity, and uses the functions with which the application reads the tags.
 An error is a value that is not read: a date, recurrence, duration or time in a tag for one, a `p:` without a task of that `id:`, an `id:` of two tasks, and a note that does not exist.
-A warning is what probably has another effect than intended: a tag given twice, a known key without a value, `dueby:` without `due:`, a threshold date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
+A warning is what probably has another effect than intended: a tag given twice, a known key without a value, a project, context or hashtag whose name starts with a known key and a colon, such as `+rec:+1w`, `dueby:` without `due:`, a threshold date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
 The tasks without context are named in one finding of the severity information, as they are in the inbox.
 
 Covers:

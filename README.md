@@ -186,7 +186,7 @@ The option `--output-format` before the file selects another form of the finding
 | Severity | Findings |
 | --- | --- |
 | error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `dueby:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
-| warning | A tag given twice; a tag with a space after its colon; `dueby:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
+| warning | A tag given twice; a tag with a space after its colon; a tag behind a `+`, `@` or `#`, such as `+rec:+1w`, which is a project; `dueby:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
 | info | The open tasks without context, which are in the [inbox](#inbox) |
 
 Only open tasks are checked.

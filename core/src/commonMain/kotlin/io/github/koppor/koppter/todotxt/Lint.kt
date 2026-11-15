@@ -88,6 +88,12 @@ fun lint(file: TodoFile, noteExists: (String) -> Boolean = { true }): List<Findi
         for (key in KEYS) {
             if ("$key:" in task.body.split(' ')) entry.report(Severity.WARNING, "$key: has no value; a tag has no space after the colon")
         }
+        // "+rec:+1w" is a project and no recurrence.
+        for ((sign, names) in listOf("+" to task.projects, "@" to task.contexts, "#" to task.hashtags)) {
+            for (name in names.filter { it.substringBefore(':', "") in KEYS }) {
+                entry.report(Severity.WARNING, "$sign$name is read as a ${if (sign == "+") "project" else if (sign == "@") "context" else "hashtag"}; the tag is $name, without the $sign")
+            }
+        }
         for ((_, parent) in task.tags.filter { it.first == Task.PARENT }) {
             if (parent !in ids) entry.report(Severity.ERROR, "p:$parent names no task: no line has id:$parent")
         }

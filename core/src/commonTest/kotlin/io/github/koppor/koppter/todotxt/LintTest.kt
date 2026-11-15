@@ -76,6 +76,20 @@ class LintTest {
         )
     }
 
+    // [utest->dsn~lint~1]
+    @Test
+    fun aTagBehindTheSignOfAProjectContextOrHashtagIsAWarning() {
+        assertEquals(
+            listOf(
+                "todo.txt:1: warning: +rec:+1w is read as a project; the tag is rec:+1w, without the +",
+                "todo.txt:2: warning: @due:2026-11-20 is read as a context; the tag is due:2026-11-20, without the @",
+                "todo.txt:3: warning: #dur:2h is read as a hashtag; the tag is dur:2h, without the #",
+            ),
+            // A colon alone is no tag: the project of the last line is a name.
+            findings("Prepare the lecture @work +rec:+1w\nCall Mom @phone @due:2026-11-20\nWrite the report @work #dur:2h\nRead the book @home +C++:intro\n"),
+        )
+    }
+
     // [utest->dsn~lint-formats~1]
     @Test
     fun findingsAreWrittenForAnEditorForGitHubActionsOrAsATable() {

@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The check of a `todo.txt` file warns about a tag behind a `+`, `@` or `#`: `+rec:+1w` is a project, not a recurrence.
 - The filter panel hides the tasks of a project, a context or a hashtag: a right click or a long press on its label offers *Hide these tasks*, and the list, the board, the overview and the inbox then leave them out.
 - A link such as `koppter://filter?project=papers>survey`, `koppter://filter?context=phone` or `koppter://filter?hashtag=someday` in another program opens the application with these tasks, on Windows and Android; an open window shows them instead of a second one. A right click on the label of a project, a context or a hashtag offers *Copy link*, as does a long press on the label in the filter panel on a touch screen.
 - While there is no `ice_recur.txt`, the editor of the scheduled tasks suggests a weekly review on every Friday; saving writes the entry to the file.
