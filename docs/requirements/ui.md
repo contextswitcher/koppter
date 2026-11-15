@@ -123,6 +123,17 @@ Covers:
 
 Needs: dsn
 
+### Sharing the log
+`req~share-log~1`
+
+On Android, where the log file is hard to reach on the device, the user passes the log to another application from the settings.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Links in the text of a task
 `req~links~1`
 
@@ -306,6 +317,20 @@ On Android, warnings and errors go to logcat as well.
 Covers:
 
 * `req~failure-log~1`
+
+Needs: impl, utest
+
+### Button that shares the log
+`dsn~share-log~1`
+
+`App` takes a function `shareLog`; if the platform gives one, `SettingsDialog` shows the button *Share log*, which calls it and leaves the dialog open.
+`MainActivity` gives the function: it sends the last 60,000 characters of the newest log file as text to the application that the user chooses, with koppter itself left out of the choice.
+As text, the log is shown by the receiving application before it is sent on, and it fits into what Android passes between applications.
+The desktop application gives no function: its log directory is reached with the file manager.
+
+Covers:
+
+* `req~share-log~1`
 
 Needs: impl, utest
 

@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- On Android, *Share log* in the settings passes the end of the log as text to another application.
 - The Android application writes a log as the desktop application does, to the directory `logs` of the application in the shared storage of the device and to logcat.
 - The desktop application writes a log to the directory `logs` of its data directory, at most three files of one megabyte; it holds what failed, such as a synchronization or the writing of the file, and the messages of the git library.
 - A click on the project label of a task shows the tasks of that project, as a click on a context label does for its context.

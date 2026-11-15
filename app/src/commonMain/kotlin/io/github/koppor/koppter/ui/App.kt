@@ -104,6 +104,7 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
  *   or `null` if the user canceled.
  * @param git offered in the settings on platforms where the application has to bring its own git access
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
+ * @param shareLog passes the log to another application, offered in the settings on platforms where the user does not reach the log file
  */
 @Composable
 fun App(
@@ -112,6 +113,7 @@ fun App(
     chooseFile: (suspend () -> String?)? = null,
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
+    shareLog: (() -> Unit)? = null,
 ) {
     val dark = when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
@@ -140,7 +142,7 @@ fun App(
             LocalPriorityNames provides controller.priorityNames,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, git)
+            MainScreen(controller, defaultTodoFile, chooseFile, git, shareLog)
         }
     }
 }
@@ -165,6 +167,7 @@ private fun MainScreen(
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
     git: GitSetupActions?,
+    shareLog: (() -> Unit)?,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
     var showSettings by remember { mutableStateOf(false) }
@@ -365,6 +368,7 @@ private fun MainScreen(
             defaultTodoFile = defaultTodoFile,
             chooseFile = chooseFile,
             git = git,
+            shareLog = shareLog,
             boardColumns = controller.boardColumnsText,
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,

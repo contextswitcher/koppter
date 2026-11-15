@@ -74,6 +74,8 @@ fun SettingsDialog(
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
     git: GitSetupActions?,
+    /** Passes the log to another application; `null` on a platform where the user reaches the log file. */
+    shareLog: (() -> Unit)?,
     /** The definitions of the board columns; `null` if the storage cannot keep them. */
     boardColumns: String?,
     /** The share actions; `null` if the storage cannot keep them. */
@@ -202,6 +204,10 @@ fun SettingsDialog(
                     GitSection(git)
                 }
                 Row(Modifier.fillMaxWidth()) {
+                    // [impl->dsn~share-log~1]
+                    if (shareLog != null) {
+                        TextButton(onClick = shareLog, modifier = Modifier.testTag("settings-share-log")) { Text("Share log") }
+                    }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     fun save(file: String) = onSave(

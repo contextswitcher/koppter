@@ -32,6 +32,9 @@ import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runComposeUiTest
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
@@ -1112,6 +1115,22 @@ class AppTest {
         assertEquals(ColorTheme.EVERFOREST to Appearance.DARK, saved.theme to saved.appearance)
         onNodeWithTag("settings-theme-Everforest").assertIsSelected()
         assertEquals(saved, Settings.fromProperties(saved.toProperties()))
+    }
+
+    // [utest->dsn~share-log~1]
+    @Test
+    fun theSettingsShareTheLogWhereThePlatformOffersIt() = runComposeUiTest {
+        var shared = 0
+        var offered by mutableStateOf(false)
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", shareLog = if (offered) ({ shared++ }) else null) }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-log").assertDoesNotExist()
+        offered = true
+        onNodeWithTag("settings-share-log").performScrollTo().performClick()
+        assertEquals(1, shared)
+        // The dialog stays open: sharing changes no setting.
+        onNodeWithTag("settings-dialog").assertExists()
     }
 
     // [utest->dsn~failure-log~1]
