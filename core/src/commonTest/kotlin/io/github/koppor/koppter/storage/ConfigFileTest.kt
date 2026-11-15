@@ -1,6 +1,9 @@
 package io.github.koppor.koppter.storage
 
 import io.github.koppor.koppter.todotxt.BoardColumn
+import io.github.koppor.koppter.todotxt.Query
+import io.github.koppor.koppter.todotxt.Task
+import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -80,6 +83,9 @@ class ConfigFileTest {
     @Test
     fun aConfigurationWithoutTheKeyHasTheDefaultColumnsAndOneWithTheKeyAloneHasNone() {
         assertEquals(ConfigFile.DEFAULT_BOARD_COLUMNS, ConfigFile.boardColumns(""))
+        assertEquals(listOf("Today", "Next", "Waiting", "Someday"), ConfigFile.DEFAULT_BOARD_COLUMNS.map { it.title })
+        // A task dropped on a default column changes sides: it loses what the filter excludes.
+        assertEquals("Look into a new bike", Query.parse(ConfigFile.DEFAULT_BOARD_COLUMNS[1].expression).applyTo(Task.parse("Look into a new bike @waiting #someday"), LocalDate(2026, 11, 12))?.toLine())
         assertEquals(ConfigFile.DEFAULT_BOARD_COLUMNS, ConfigFile.boardColumns("other: value\n"))
         assertEquals(ConfigFile.DEFAULT_SHARE_ACTIONS, ConfigFile.shareActions("other: value\n"))
 

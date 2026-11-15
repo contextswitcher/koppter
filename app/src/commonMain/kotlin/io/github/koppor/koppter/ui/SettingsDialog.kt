@@ -168,7 +168,7 @@ fun SettingsDialog(
                 )
                 columns?.let { text ->
                     ConfigField(
-                        "Board columns by filter", text, { columns = it }, "Today = due:<=today -@waiting\nWaiting = @waiting",
+                        "Board columns by filter", text, { columns = it }, "Next = -@waiting -#someday\nWaiting = @waiting",
                         "One column per line as title = filter.", "settings-board-columns",
                     )
                 }

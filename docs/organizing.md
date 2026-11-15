@@ -51,6 +51,7 @@ A task carries both: `Outline the related work +research>FirstPaper @writing`.
 * A task that can be done in two ways carries two contexts: `@writing @train`.
   It shows under both, and the plan takes the time map of the first context that has one.
 * `@waiting` in addition marks a task that waits for someone else.
+* `#someday` marks a task that is not decided yet: the board keeps it apart from the next actions, as [Getting Things Done](../README.md#getting-things-done) does.
 * Five to nine contexts are enough.
   A context may have levels as well, such as `@errands>city`, which is planned in the times of `@errands` unless it has a time map of its own; most files do not need them.
 

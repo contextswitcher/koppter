@@ -103,6 +103,34 @@ projects for the outline of areas and outcomes, contexts for the kinds of work a
 It compares this with the other way, in which the areas are the contexts, so that each file can decide.
 It also maps the terms of SkedPal to those of the application.
 
+## Getting Things Done
+
+The application covers the lists and steps of Getting Things Done (GTD), the method of David Allen, with the todo.txt format and its extensions.
+
+| In the method | In the application |
+| --- | --- |
+| Capture | The line that adds a task, and [sharing](#sharing-to-koppter-on-android) on Android: a task needs nothing but its text |
+| Clarify the inbox | The [inbox](#inbox) lists the open tasks without context; a few keys give each its context |
+| Next actions by context | Contexts as `@phone`; the list in [groups](#groups-in-the-list) by context, the [overview](#overview-of-the-contexts) and the board column *Next* |
+| Projects | Projects as `+Thesis`, with levels as `+papers>survey`; the list in groups by project |
+| Waiting for | The context `@waiting` and the board column *Waiting* |
+| Someday/maybe | The hashtag `#someday` and the board column *Someday* |
+| Calendar | The dates `due:` and `deadline:` and the time `at:`; the [agenda and the week](#agenda-and-week) |
+| Tickler file | The threshold date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
+| Reference material | The note of a task, a Markdown file next to the `todo.txt` file |
+| Weekly review | A task by the calendar, such as `weekly ; day Friday - Weekly review @review` in `ice_recur.txt`; the overview and the [plan](#planning) tell what needs a decision |
+
+The [board](#board) by filter starts with the lists of the method, until other columns are entered in the settings:
+
+```text
+Today = due:<=today -@waiting
+Next = -@waiting -#someday
+Waiting = @waiting
+Someday = #someday
+```
+
+Dragging a task to *Someday* adds `#someday`, and dragging it to *Next* removes `#someday` and `@waiting`.
+
 ## Files
 
 | File | Content |
@@ -599,7 +627,7 @@ This week = due:<1w
 Important = (>C)
 ```
 
-Until columns are entered, there are the two columns `Today = due:<=today -@waiting` and `Waiting = @waiting`; an emptied field in the settings means no columns by filter.
+Until columns are entered, there are the four columns of [Getting Things Done](#getting-things-done); an emptied field in the settings means no columns by filter.
 
 | Term | Matches a task |
 | --- | --- |

@@ -1581,10 +1581,12 @@ class AppTest {
         // Without columns in the configuration, the default ones are there, and the settings show them.
         onNodeWithTag("group-FILTER").performClick()
         onNodeWithText("Today (0)").assertExists()
+        onNodeWithText("Next (3)").assertExists()
         onNodeWithText("Waiting (0)").assertExists()
+        onNodeWithText("Someday (0)").assertExists()
 
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-board-columns").assertTextContains("Today = due:<=today -@waiting\nWaiting = @waiting")
+        onNodeWithTag("settings-board-columns").assertTextContains("Today = due:<=today -@waiting\nNext = -@waiting -#someday\nWaiting = @waiting\nSomeday = #someday")
         onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nSoon = due:<2w\nNothing = +Nowhere")
         onNodeWithTag("settings-save").performScrollTo().performClick()
         assertEquals(

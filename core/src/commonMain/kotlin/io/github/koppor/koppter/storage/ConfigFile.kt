@@ -36,8 +36,16 @@ object ConfigFile {
     const val PRIORITIES = "priorities:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
-    /** The columns of a configuration that does not have the key, so that a new user sees what columns by filter are. */
-    val DEFAULT_BOARD_COLUMNS = listOf(BoardColumn("Today", "due:<=today -@waiting"), BoardColumn("Waiting", "@waiting"))
+    /**
+     * The columns of a configuration that does not have the key, so that a new user sees what columns by filter are:
+     * the lists of Getting Things Done, as far as a filter tells them.
+     */
+    val DEFAULT_BOARD_COLUMNS = listOf(
+        BoardColumn("Today", "due:<=today -@waiting"),
+        BoardColumn("Next", "-@waiting -#someday"),
+        BoardColumn("Waiting", "@waiting"),
+        BoardColumn("Someday", "#someday"),
+    )
 
     /**
      * The share actions of a configuration that does not have the key: the shared text alone, which the entry of the application
