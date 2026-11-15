@@ -99,7 +99,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 ## Organizing many tasks
 
 [docs/organizing.md](docs/organizing.md) describes a way to keep hundreds of tasks findable with what the application offers:
-contexts for the areas that stay, projects for what ends, threshold dates for what is not due yet, and a rhythm of inbox, agenda and plan.
+projects for the outline of areas and outcomes, contexts for the kinds of work and the places, threshold dates for what is not due yet, and a rhythm of inbox, agenda and plan.
 It also maps the terms of SkedPal to those of the application.
 
 ## Files
@@ -393,7 +393,7 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
   | `+Thesis = block 2h` | The shortest part its tasks are cut into; of several, the longest counts. |
   | `default = block 30m, max 6h/day` | For the tasks without a block of their own, and a budget for all tasks together. |
 
-  A paper that is finished one day is a project in a context that stays, `+FirstPaper @paper`: the limits of `@paper` then hold for every paper, and `+FirstPaper` gets its barrier.
+  A paper that is finished one day is a project below a project that stays, `+papers>FirstPaper`: a limit of `+papers` then holds for every paper, and `+papers>FirstPaper` gets its barrier.
 
 After the first plan, each open task carries a calendar icon: green if its plan ends before its due date or it has none, yellow if it ends on the due date, red if it ends later or the task is not planned.
 For a task that is due at a time of the day, such as `due:2026-11-16 by:14:00`, red also tells that the plan ends on that day after that time.
