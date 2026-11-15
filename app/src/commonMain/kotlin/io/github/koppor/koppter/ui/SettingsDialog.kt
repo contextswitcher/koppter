@@ -56,7 +56,7 @@ interface GitSetupActions {
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
 internal fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
 
-private const val OPENED = "Opened. The fields below show the configuration of this file."
+private const val OPENED = "Opened. The fields below show the configuration of this file. Cancel returns to the file from before."
 
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
 private val PRIORITY_PRESETS = listOf(
@@ -108,8 +108,10 @@ fun SettingsDialog(
 
     val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities)
     val initial = remember(openFile) { state }
+    val fileBefore = remember { openFile }
 
-    GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
+    // Another file that was opened is a change as well: leaving the dialog without Save returns to the file from before.
+    GuardedDialog(changed = state != initial || openFile != fileBefore, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)

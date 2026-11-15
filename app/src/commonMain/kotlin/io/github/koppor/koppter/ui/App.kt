@@ -351,6 +351,7 @@ private fun MainScreen(
         )
     }
     if (showSettings) {
+        val fileBefore = remember { controller.settings.todoFile }
         SettingsDialog(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
@@ -371,7 +372,11 @@ private fun MainScreen(
                 controller.updateSettings(settings)
                 showSettings = false
             },
-            onDismiss = { showSettings = false },
+            onDismiss = {
+                // A file opened from the dialog was a look at it: without Save, the file from before is open again.
+                controller.updateSettings(controller.settings.copy(todoFile = fileBefore))
+                showSettings = false
+            },
         )
     }
 }

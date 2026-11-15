@@ -14,7 +14,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
-- The settings open a chosen file and a cloned repository at once and then show the configuration that comes with it, so that it is not overwritten by the one of the file that was open before; the button reads *Clone* while the field holds an address.
+- The settings open a chosen file and a cloned repository at once and then show the configuration that comes with it, so that it is not overwritten by the one of the file that was open before; the button reads *Clone* while the field holds an address, and *Cancel* returns to the file from before.
 - Without columns by filter and share actions of the user, the columns *Today* and *Waiting* and the share actions *inbox*, which takes the shared text as it is, and *reading* are in effect, and the settings show them; an emptied field means none.
 - The settings tell below the field for the file what holds for a file in a git repository.
 - Synchronization through git merges `ice_recur.txt` line by line as it does `todo.txt`, and of two plans made on two devices it takes the one made last, instead of stopping at a conflict.

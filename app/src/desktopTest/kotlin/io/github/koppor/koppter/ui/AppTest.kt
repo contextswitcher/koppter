@@ -1073,6 +1073,12 @@ class AppTest {
         onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
         assertEquals("/data/other/todo.txt", controller.settings.todoFile)
         onNodeWithTag("settings-file-message").assertExists()
+        // Without Save, the file from before is open again.
+        onNodeWithText("Cancel").performScrollTo().performClick()
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
+        assertEquals("", controller.settings.todoFile)
+        onNodeWithText("Thank Mom").assertExists()
+        onNodeWithText("Read the paper").assertDoesNotExist()
     }
 
     // [utest->dsn~git-setup-dialog~1]
