@@ -591,6 +591,7 @@ Needs: impl, utest
 
 On the desktop, the settings file is `settings.properties` in `%APPDATA%\koppter` on Windows and in `$XDG_CONFIG_HOME/koppter` or `~/.config/koppter` on Linux.
 The files that the application creates are in its data directory: `%APPDATA%\koppter` on Windows and `$XDG_DATA_HOME/koppter` or `~/.local/share/koppter` on Linux.
+Its directory `logs` holds the log files `koppter-0.log` and following, the highest number being the newest; a file is closed at one megabyte, and three files are kept.
 Without a configured location, the todo.txt file is `todo.txt` in the home directory if that file exists, as earlier versions kept it there, and `todo.txt` in the data directory otherwise.
 
 Covers:

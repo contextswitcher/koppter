@@ -603,6 +603,8 @@ The Gradle wrapper downloads everything else, including that JDK and the Android
 starts the desktop application.
 It reads the file that is set in the settings, which may also be given as the address of a git repository, see [Files](#files).
 Without one, it reads `todo.txt` in the home directory if that file exists, and otherwise `todo.txt` in its data directory: `%APPDATA%\koppter` on Windows, `~/.local/share/koppter` on Linux ([decision 0025](docs/decisions/0025-locations-on-the-desktop-from-appdirs.md)).
+The directory `logs` in the data directory holds the log of the application, which so far consists of the messages of the git library: `koppter-0.log` and following, the highest number being the newest, at most three files of one megabyte.
+A log can name the address of the git repository: look at it before passing it on.
 
 ```shell
 ./gradlew :android:assembleDebug

@@ -25,15 +25,17 @@ What takes the log messages of the libraries in the desktop application?
 
 ## Decision Outcome
 
-Chosen option: "tinylog", because it takes the messages of SLF4J with two small libraries, is configured by a short properties file, and can write to a file later without another library.
+Chosen option: "tinylog", because it takes the messages of SLF4J with two small libraries, is configured by a short properties file, and writes to a file without another library.
 
 The desktop application writes messages from the level of a warning on to the console.
+It writes messages from the level of an information on to a file in the directory `logs` of its data directory, which is kept to three files of one megabyte.
 The application itself does not log yet; if it does, it uses the interface of tinylog.
 
 ### Consequences
 
 * Good, because the start is free of the complaint of SLF4J, and a warning of JGit is no longer lost.
-* Good, because a file with rolling can be added in the configuration if a user is to send a log.
+* Good, because a user who reports a problem of the synchronization can send a log file.
+* Bad, because the log file can name the address of the git repository of the user, who has to look at it before sending it.
 * Bad, because the desktop packages carry two more libraries.
 * Bad, because the Android application is not covered: its messages of SLF4J are still dropped.
 
