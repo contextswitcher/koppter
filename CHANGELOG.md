@@ -18,6 +18,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The week shows all its hours without scrolling, also on a phone that is held upright.
 - A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
 - A click on the public SSH key in the settings copies it.
+- A clone that fails is reported in red, the settings scroll to the message, and on a device with a key of its own it asks whether the key is registered with the server.
 - The address of a page of a repository of GitHub that is pasted into the settings becomes the address for SSH of that repository.
 
 ### Fixed

@@ -1400,7 +1400,9 @@ class AppTest {
         // With an address in the field of the file, the button clones.
         onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
         onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
-        onNodeWithTag("settings-file-message").assertTextEquals("Not cloned: no such repository")
+        // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
+        onNodeWithTag("settings-file-message").assertIsDisplayed()
+            .assertTextEquals("Not cloned: no such repository\nIs the public SSH key of this device, shown below, registered with the server?")
         assertEquals("", controller.settings.todoFile)
 
         // [utest->dsn~settings-open-file~1]

@@ -19,6 +19,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
@@ -124,6 +125,8 @@ fun SettingsDialog(
     var links by remember(openFile) { mutableStateOf(labelLinks) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
+    var fileFailed by remember { mutableStateOf(false) }
+    val scroll = rememberScrollState()
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
@@ -134,7 +137,7 @@ fun SettingsDialog(
     // Another file that was opened is a change as well: leaving the dialog without Save returns to the file from before.
     GuardedDialog(changed = state != initial || openFile != fileBefore, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.verticalScroll(scroll).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)
                 OutlinedTextField(
                     value = todoFile,
@@ -154,7 +157,12 @@ fun SettingsDialog(
                     modifier = Modifier.fillMaxWidth().testTag("settings-file"),
                 )
                 if (fileMessage.isNotEmpty()) {
-                    Text(fileMessage, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-file-message"))
+                    Text(
+                        fileMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (fileFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
+                        modifier = Modifier.testTag("settings-file-message"),
+                    )
                 }
                 if (chooseFile != null) {
                     OutlinedButton(
@@ -252,15 +260,22 @@ fun SettingsDialog(
                             val file = todoFile.trim().let { if (git != null) sshAddress(it) else it }
                             if (git != null && address) {
                                 cloning = true
+                                fileFailed = false
                                 fileMessage = "Cloning"
                                 scope.launch {
                                     try {
                                         onOpenFile(git.clone(file))
                                         fileMessage = OPENED
                                     } catch (e: Exception) {
-                                        fileMessage = "Not cloned: ${e.message ?: e}"
+                                        fileFailed = true
+                                        // A server that does not know the key ends the connection without saying why.
+                                        val ownKey = runCatching(git::publicKey).getOrNull() != null
+                                        fileMessage = "Not cloned: ${e.message ?: e}" +
+                                            if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
                                     }
                                     cloning = false
+                                    // The message stands at the file, far above the button that was clicked.
+                                    scroll.animateScrollTo(0)
                                 }
                             } else {
                                 save(file)
