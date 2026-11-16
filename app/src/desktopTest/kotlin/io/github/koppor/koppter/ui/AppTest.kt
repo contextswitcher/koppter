@@ -1523,7 +1523,7 @@ class AppTest {
     // [utest->dsn~back~1]
     // [utest->dsn~filter-panel~1]
     @Test
-    fun backClosesTheFilterPanelThenReturnsToTheListAndAsksBeforeItLeaves() = runDesktopComposeUiTest(width = 412, height = 760) {
+    fun backClosesTheFilterPanelThenReturnsToTheListAndWarnsBeforeItLeaves() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         // What the platform calls for its back gesture.
         var back: (() -> Unit)? = null
@@ -1539,23 +1539,31 @@ class AppTest {
         onNodeWithTag("filter-close").assertIsDisplayed()
         back!!()
         onNodeWithTag("filter-close").assertIsNotDisplayed()
-        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
 
         controller.view = View.WEEK
         onNodeWithTag("week").assertExists()
         back!!()
         assertEquals(View.LIST, controller.view)
         onNodeWithTag("week").assertDoesNotExist()
-        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
 
-        // From the list with nothing above it, back asks.
+        // From the list with nothing above it, back warns, and leaves when it follows while the warning is shown.
+        mainClock.autoAdvance = false
         back!!()
-        onNodeWithTag("leave-stay").performClick()
-        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        mainClock.advanceTimeBy(500)
+        onNodeWithText(LEAVE_WARNING).assertExists()
         assertEquals(0, left)
         back!!()
-        onNodeWithTag("leave-confirm").performClick()
-        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        assertEquals(1, left)
+        mainClock.advanceTimeBy(500)
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+
+        // A warning that went away counts no longer.
+        back!!()
+        mainClock.advanceTimeBy(60_000)
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+        back!!()
         assertEquals(1, left)
     }
 

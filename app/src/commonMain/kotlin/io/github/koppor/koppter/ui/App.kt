@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -50,7 +49,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -108,7 +106,7 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
  * @param git offered in the settings on platforms where the application has to bring its own git access
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
  * @param backHandler takes what the back gesture of the platform does; a platform without such a gesture takes nothing
- * @param leave leaves the application, after the user confirmed a back gesture that has nothing left to close
+ * @param leave leaves the application, after a second back gesture that has nothing left to close
  * @param chooseFileNote what the user has to know about a file chosen with [chooseFile], shown below its button
  * @param shareLog passes the log to another application, offered in the settings on platforms where the user does not reach the log file
  */
@@ -156,6 +154,8 @@ fun App(
         }
     }
 }
+
+internal const val LEAVE_WARNING = "Back again leaves koppter."
 
 /** The task whose edit dialog is open; `entry` is null for a task that is not in the file yet. */
 /**
@@ -270,31 +270,24 @@ private fun MainScreen(
     }
 
     // [impl->dsn~back~1]
-    // Back first closes the filter panel and then returns to the list; from the list, it asks before it leaves the application.
+    // Back first closes the filter panel and then returns to the list; from the list, it warns, and leaves the application while the warning is shown.
     var leaving by remember { mutableStateOf(false) }
     backHandler {
         when {
             drawer.isOpen -> scope.launch { drawer.close() }
             controller.view != View.LIST -> controller.view = View.LIST
+            leaving -> {
+                leaving = false
+                leave()
+            }
             else -> leaving = true
         }
     }
-    if (leaving) {
-        AlertDialog(
-            onDismissRequest = { leaving = false },
-            title = { Text("Leave koppter?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        leaving = false
-                        leave()
-                    },
-                    modifier = Modifier.testTag("leave-confirm"),
-                ) { Text("Leave") }
-            },
-            dismissButton = { TextButton(onClick = { leaving = false }, modifier = Modifier.testTag("leave-stay")) { Text("Stay") } },
-            modifier = Modifier.testTag("leave-dialog"),
-        )
+    LaunchedEffect(leaving) {
+        if (leaving) {
+            snackbar.showSnackbar(LEAVE_WARNING)
+            leaving = false
+        }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {

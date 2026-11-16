@@ -57,7 +57,7 @@ Needs: dsn
 ### Back gesture
 `req~back~1`
 
-The back gesture of Android first closes what lies above the list and then returns to the list; from the list, it leaves the application after the user confirmed that.
+The back gesture of Android first closes what lies above the list and then returns to the list; from the list, it warns, as other applications do, and leaves the application when it follows at once.
 
 Covers:
 
@@ -129,7 +129,7 @@ Needs: impl
 `dsn~back~1`
 
 `App` takes a `backHandler` from the platform: back closes the navigation drawer with the filter panel if it is open, and otherwise shows the list.
-From the list, back asks *Leave koppter?*, and *Leave* calls the `leave` of the platform.
+From the list, back shows the short message *Back again leaves koppter.*; another back while the message is shown calls the `leave` of the platform.
 The Android application passes the `BackHandler` of its activity and moves its task to the background to leave, as back does it for the first activity of an application since Android 12; the desktop application passes none.
 A dialog closes on back by itself, with the question about changes that are not saved.
 

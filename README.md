@@ -66,7 +66,7 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 ![Editor of the scheduled tasks](docs/screenshots/schedule.png)
 
 In a narrow window, as on a phone, the filter panel is a drawer.
-On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list asks before it leaves the application.
+On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list warns first: a second back leaves the application.
 A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
