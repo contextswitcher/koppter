@@ -256,8 +256,8 @@ Needs: impl, utest
 ### Recurrence on completion
 `dsn~recurrence-on-completion~1`
 
-`Task.nextOccurrence` returns the open copy of a recurring task with its dates moved: the due date to the next date of the recurrence, the threshold date by the same distance.
-A task with only a threshold date gets a new threshold date; a task without dates gets a due date.
+`Task.nextOccurrence` returns the open copy of a recurring task with its dates moved: the due date to the next date of the recurrence, the start date by the same distance.
+A task with only a start date gets a new start date; a task without dates gets a due date.
 `TodoController.toggle` appends the next occurrence in the same write as the completion, so that both are one commit.
 
 Covers:
@@ -528,7 +528,7 @@ Needs: impl, utest
 ### Overview
 `dsn~overview~1`
 
-`Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the threshold date, else the creation date, else two weeks before the due date.
+`Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the start date, else the creation date, else two weeks before the due date.
 `overviewStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
 It groups by the projects of the outermost level or by the hashtags in the same way.
 The state of a group is that of its most urgent task: overdue, due today, or neither.
@@ -670,10 +670,10 @@ Needs: impl, utest
 ### Next actions
 `dsn~next-actions~1`
 
-`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose threshold date has come, and that wait for no other open task through `id:` and `p:`.
+`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose start date has come, and that wait for no other open task through `id:` and `p:`.
 With the option *Only the next action of each project* of the filter panel on, `TodoController.visible` is cut by `nextActions` to these tasks, and of each project to the first one in list order among the filtered tasks; a task without project stays.
 *Clear all filters* turns the option off.
-`projectsWithoutNextAction` gives the projects that have an open task whose threshold date has come, but none that can be worked on, in the projects below them neither.
+`projectsWithoutNextAction` gives the projects that have an open task whose start date has come, but none that can be worked on, in the projects below them neither.
 `overviewStates` adds them to the tiles by project from all tasks of the file, whatever the filter shows, and `Overview` names them on the tile.
 
 Covers:

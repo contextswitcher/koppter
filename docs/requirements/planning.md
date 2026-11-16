@@ -10,7 +10,7 @@ The decision on where the plan is kept is [decision 0019](../decisions/0019-the-
 
 On request, the application gives each open task times in which it is to be worked on.
 A task with a higher priority gets earlier times, and every task gets the earliest times that are free.
-A task takes its duration and is not planned before its threshold date.
+A task takes its duration and is not planned before its start date.
 The todo.txt file is not changed by planning.
 
 Covers:
@@ -212,13 +212,13 @@ Needs: impl, utest
 ### Planner
 `dsn~planner~1`
 
-`plan` goes through the open tasks in the order of the task list and gives each the earliest free times of its time map, from now or from its threshold date on.
+`plan` goes through the open tasks in the order of the task list and gives each the earliest free times of its time map, from now or from its start date on.
 A task takes its duration, half an hour without one.
 A free time that is too short for the task takes a part of it; no part is shorter than the block of the task, so that a task shorter than two blocks is not cut.
 Times that are passed in as busy and the blocks of the tasks planned before are not free.
 After a busy time, a block starts on a quarter of an hour; after another block, it starts at once.
 A task whose duration does not fit up to its barrier gets no block and is returned as not planned.
-A task whose threshold date lies behind its barrier is not due for planning: it and the tasks that wait for it are left out and not returned.
+A task whose start date lies behind its barrier is not due for planning: it and the tasks that wait for it are left out and not returned.
 
 Covers:
 
@@ -262,7 +262,7 @@ Needs: impl, utest
 `dsn~fixed-time~1`
 
 The tag `at:` holds a time of the day as `H:MM` or `HH:MM`; `Task.at` reads it, and the edit dialog has a field for it that rejects what is no time.
-The planner gives an open task with that tag one block before it plans the others: on the due date, else on the threshold date, else today, from that time on for the duration of the task.
+The planner gives an open task with that tag one block before it plans the others: on the due date, else on the start date, else today, from that time on for the duration of the task.
 The block ignores the time maps, the busy times, the barrier and the limits, but counts for the budgets of its project and contexts; a block whose end has passed is left out, and the task is not reported as not planned.
 `iceRecurOccurrences` gives the tasks that the entries of `ice_recur.txt` add on the days of a year after today; those with the tag get their block on their day, unless the list has a task with that text at that time already.
 The plan holds these blocks up to the last day on which a task is planned, and for four weeks at least.
@@ -400,7 +400,7 @@ Needs: impl, utest
 
 `TodoController.planOf` looks a task up in the blocks of `calendar.txt` by the text of its block.
 `TaskLabels` shows a calendar icon in front of the labels of an open task once that file exists: green, yellow or red by the state, with the start of the plan or "Not planned" as a tooltip.
-A task without a block whose threshold date lies after today shows no icon.
+A task without a block whose start date lies after today shows no icon.
 Green is the green of the palette, which `Theme.kt` provides beside the Material color scheme.
 
 Covers:

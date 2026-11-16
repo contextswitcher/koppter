@@ -79,7 +79,7 @@ fun FilterPanel(
             modifier = textModifier.fillMaxWidth().testTag("filter-text"),
         )
 
-        Option("Show tasks before their threshold date", !filter.hideFuture, "filter-future") {
+        Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
             onChange(filter.copy(hideFuture = !it))
         }
         // [impl->dsn~top-tasks~1]

@@ -42,7 +42,7 @@ Needs: dsn
 `req~quick-add-dates~1`
 
 A typed line may name its dates in words at the end of its text, such as `tomorrow`, `next week`, `by Wed` or `tomorrow 3pm`.
-The task gets the due date, the threshold date and the times that the words name.
+The task gets the due date, the start date and the times that the words name.
 The application shows the resulting line before the task is added.
 The description of the edit dialog reads the same words.
 
@@ -67,7 +67,7 @@ Needs: dsn
 `req~edit-dialog~1`
 
 The edit dialog shows the description without metadata in its first field.
-Below it, the dialog has fields for priority, due date, threshold date, recurrence, duration, the task of ContextSwitcher, projects, contexts and hashtags.
+Below it, the dialog has fields for priority, due date, start date, recurrence, duration, the task of ContextSwitcher, projects, contexts and hashtags.
 Below these fields, the dialog shows the line as it will be written to the todo.txt file, in a monospaced font.
 
 Covers:
@@ -519,6 +519,19 @@ Covers:
 
 Needs: impl, utest
 
+### Help at the fields of the edit dialog
+`dsn~edit-help~1`
+
+The fields of `EditDialog` for the dates, the times and the recurrence show a sentence on what they mean, with their tag, while the pointer rests on them for half a second (`WithHelp`).
+The help is bound to the pointer alone: on a touch screen, a long press on a field belongs to its text.
+The field for the tag `t:` is named *Start date*, as topydo names that date; Simpletask calls it the threshold date.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Edit dialog
 `dsn~edit-dialog~1`
 
@@ -572,7 +585,7 @@ Needs: impl, utest
 ### Filter panel
 `dsn~filter-panel~1`
 
-`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the threshold date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
 From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
@@ -636,7 +649,7 @@ Needs: impl
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
 With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, and 1 to 6 show the list and the views in the order of their switches.
-The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
+The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
@@ -765,7 +778,7 @@ Needs: impl
 `dsn~app-links~1`
 
 A link has the form `koppter://filter?project=papers>survey&context=phone&hashtag=someday`: each of the keys `project`, `context` and `hashtag` may be given, also several times.
-The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their threshold date.
+The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their start date.
 `filterOfLink` reads it into a filter; it decodes characters that a program wrote as `%3E`, takes a name with or without its sign, and accepts the forms `koppter:filter?` and `koppter://filter/?`, which programs make of the link.
 `TodoController.openLink` replaces the filter by that of the link, turns off the options of the first tasks and of the next actions, and shows the list; a text that is no such link changes nothing.
 

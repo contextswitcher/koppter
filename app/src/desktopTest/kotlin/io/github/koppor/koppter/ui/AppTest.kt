@@ -591,6 +591,24 @@ class AppTest {
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
+    // [utest->dsn~edit-help~1]
+    @Test
+    fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {
+        start()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-threshold").assertTextContains("Start date")
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithTag("edit-threshold").performMouseInput { moveTo(center) }
+        // Not at once: the pointer may be on its way to another field.
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        mainClock.advanceTimeBy(1_000)
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertExists()
+        onNodeWithTag("edit-duration").performMouseInput { moveTo(center) }
+        mainClock.advanceTimeBy(1_000)
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("How long the task takes, such as 30m or 2h (dur:).").assertExists()
+    }
+
     // [utest->dsn~edit-dates~1]
     @Test
     fun theDescriptionOfTheDialogReadsDatesInWordsOnceItIsChanged() = runComposeUiTest {

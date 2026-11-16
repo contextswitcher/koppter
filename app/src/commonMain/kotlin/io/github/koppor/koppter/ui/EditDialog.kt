@@ -11,6 +11,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.border
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -46,11 +49,16 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +79,7 @@ import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
 import io.github.koppor.koppter.todotxt.Task
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 
 /**
@@ -218,69 +227,86 @@ fun EditDialog(
                 // A flow row: three fields side by side on the desktop, wrapped on a phone.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val field = Modifier.width(165.dp)
-                    DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due"))
+                    WithHelp("The day by which the task is to be done (due:).") { DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due")) }
                     // [impl->dsn~due-time~1]
-                    OutlinedTextField(
-                        value = by,
-                        onValueChange = { by = it },
-                        label = { Text("Due time") },
-                        placeholder = { Text("14:00") },
-                        isError = !byValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-by"),
-                    )
+                    WithHelp("The time of the due date by which the task is to be done (dueby:).") {
+                        OutlinedTextField(
+                            value = by,
+                            onValueChange = { by = it },
+                            label = { Text("Due time") },
+                            placeholder = { Text("14:00") },
+                            isError = !byValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-by"),
+                        )
+                    }
                     // [impl->dsn~deadline~1]
-                    DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
-                    DateField("Threshold", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
-                    OutlinedTextField(
-                        value = recurrence,
-                        onValueChange = { recurrence = it },
-                        label = { Text("Recurrence") },
-                        placeholder = { Text("w, 2w, +1m") },
-                        isError = !recurrenceValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-recurrence"),
-                    )
+                    WithHelp("The day that others set for the task, after which it is late (deadline:).") {
+                        DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
+                    }
+                    // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
+                    WithHelp("The task is hidden and not planned before this day (t:).") {
+                        DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
+                    }
+                    WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
+                        OutlinedTextField(
+                            value = recurrence,
+                            onValueChange = { recurrence = it },
+                            label = { Text("Recurrence") },
+                            placeholder = { Text("w, 2w, +1m") },
+                            isError = !recurrenceValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-recurrence"),
+                        )
+                    }
                     // [impl->dsn~fixed-time~1]
-                    OutlinedTextField(
-                        value = at,
-                        onValueChange = { at = it },
-                        label = { Text("Fixed time") },
-                        placeholder = { Text("12:00") },
-                        isError = !atValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-at"),
-                    )
+                    WithHelp("The time at which the task takes place (at:).") {
+                        OutlinedTextField(
+                            value = at,
+                            onValueChange = { at = it },
+                            label = { Text("Fixed time") },
+                            placeholder = { Text("12:00") },
+                            isError = !atValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-at"),
+                        )
+                    }
                     // [impl->dsn~duration~1]
-                    OutlinedTextField(
-                        value = duration,
-                        onValueChange = { duration = it },
-                        label = { Text("Duration") },
-                        placeholder = { Text("45m, 1h30m") },
-                        isError = !durationValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-duration"),
-                    )
+                    WithHelp("How long the task takes, such as 30m or 2h (dur:).") {
+                        OutlinedTextField(
+                            value = duration,
+                            onValueChange = { duration = it },
+                            label = { Text("Duration") },
+                            placeholder = { Text("45m, 1h30m") },
+                            isError = !durationValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-duration"),
+                        )
+                    }
                     // [impl->dsn~travel-time~1]
-                    OutlinedTextField(
-                        value = travel,
-                        onValueChange = { travel = it },
-                        label = { Text("Travel time") },
-                        placeholder = { Text("30m") },
-                        isError = !travelValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-travel"),
-                    )
+                    WithHelp("The way to the task, kept free before and after it (tt:).") {
+                        OutlinedTextField(
+                            value = travel,
+                            onValueChange = { travel = it },
+                            label = { Text("Travel time") },
+                            placeholder = { Text("30m") },
+                            isError = !travelValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-travel"),
+                        )
+                    }
                     // [impl->dsn~time-spent~1]
-                    OutlinedTextField(
-                        value = spent,
-                        onValueChange = { spent = it },
-                        label = { Text("Time spent") },
-                        placeholder = { Text("1h30m") },
-                        isError = !spentValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-spent"),
-                    )
+                    WithHelp("The time that was worked on the task already (spent:).") {
+                        OutlinedTextField(
+                            value = spent,
+                            onValueChange = { spent = it },
+                            label = { Text("Time spent") },
+                            placeholder = { Text("1h30m") },
+                            isError = !spentValid,
+                            singleLine = true,
+                            modifier = field.testTag("edit-spent"),
+                        )
+                    }
                 }
 
                 // [impl->dsn~context-switcher-tag~1]
@@ -346,6 +372,39 @@ fun EditDialog(
                 }
             }
         }
+    }
+}
+
+/** How long the pointer rests on a field before its help is shown, in milliseconds. */
+private const val HELP_DELAY = 500L
+
+/**
+ * Shows the help while the pointer rests on the field.
+ * A touch screen has no pointer that rests, and a long press there belongs to the text of the field.
+ */
+// [impl->dsn~edit-help~1]
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WithHelp(help: String, field: @Composable () -> Unit) {
+    val tooltip = rememberTooltipState(isPersistent = true)
+    val interactions = remember { MutableInteractionSource() }
+    val hovered by interactions.collectIsHoveredAsState()
+    LaunchedEffect(hovered) {
+        if (hovered) {
+            delay(HELP_DELAY)
+            tooltip.show()
+        } else {
+            tooltip.dismiss()
+        }
+    }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(help) } },
+        state = tooltip,
+        focusable = false,
+        enableUserInput = false,
+    ) {
+        Box(Modifier.hoverable(interactions)) { field() }
     }
 }
 

@@ -59,7 +59,7 @@ Needs: req
 ## todo.txt extensions
 `feat~extensions~1`
 
-The application supports recurring tasks (`rec:`, `ice_recur`), threshold dates (`t:`), notes attached to tasks (`note:`), hashtags (`#tag`) and a view of the top tasks.
+The application supports recurring tasks (`rec:`, `ice_recur`), start dates (`t:`), notes attached to tasks (`note:`), hashtags (`#tag`) and a view of the top tasks.
 
 Needs: req
 

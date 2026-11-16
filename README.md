@@ -103,7 +103,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 ## Organizing many tasks
 
 [docs/organizing.md](docs/organizing.md) describes a way to keep hundreds of tasks findable with what the application offers:
-projects for the outline of areas and outcomes, contexts for the kinds of work and the places, threshold dates for what is not due yet, and a rhythm of inbox, agenda and plan.
+projects for the outline of areas and outcomes, contexts for the kinds of work and the places, start dates for what is not due yet, and a rhythm of inbox, agenda and plan.
 It compares this with the other way, in which the areas are the contexts, so that each file can decide.
 It also maps the terms of SkedPal to those of the application.
 
@@ -120,7 +120,7 @@ The application covers the lists and steps of Getting Things Done (GTD), the met
 | Waiting for | The context `@waiting` and the board column *Waiting* |
 | Someday/maybe | The hashtag `#someday` and the board column *Someday* |
 | Calendar | The dates `due:` and `deadline:` and the time `at:`; the [agenda and the week](#agenda-and-week) |
-| Tickler file | The threshold date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
+| Tickler file | The start date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
 | Reference material | The note of a task, a Markdown file next to the `todo.txt` file |
 | Weekly review | A task on every Friday, which the editor of the [schedule](#by-the-calendar-the-file-ice_recurtxt) suggests for a new `ice_recur.txt`; the overview by project names the projects without next action, and the [plan](#planning) lists what does not fit |
 
@@ -136,7 +136,7 @@ Someday = #someday
 Dragging a task to *Someday* adds `#someday`, and dragging it to *Next* removes `#someday` and `@waiting`.
 
 The next action of a project is its first task in the [order of the list](#order-of-the-list) that can be worked on ([decision 0032](docs/decisions/0032-next-actions-derived-from-the-tasks.md)).
-A task cannot be worked on if it has the context `@waiting`, the hashtag `#someday` or a threshold date in the future, or if it waits for another open task through `id:` and `p:`.
+A task cannot be worked on if it has the context `@waiting`, the hashtag `#someday` or a start date in the future, or if it waits for another open task through `id:` and `p:`.
 
 * *Only the next action of each project* in the filter panel shows one task per project, and each task without project.
   Together with a context in the filter, it shows what is next at the phone or at home.
@@ -194,7 +194,7 @@ The option `--output-format` before the file selects another form of the finding
 | Severity | Findings |
 | --- | --- |
 | error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `dueby:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
-| warning | A tag given twice; a tag with a space after its colon; a tag behind a `+`, `@` or `#`, such as `+rec:+1w`, which is a project; `dueby:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
+| warning | A tag given twice; a tag with a space after its colon; a tag behind a `+`, `@` or `#`, such as `+rec:+1w`, which is a project; `dueby:` without `due:`; a start date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
 | info | The open tasks without context, which are in the [inbox](#inbox) |
 
 Only open tasks are checked.
@@ -208,7 +208,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | Notation | Meaning | Source | How to use it |
 | --- | --- | --- | --- |
 | `due:2026-12-24` | Due date | [todo.txt format](https://github.com/todotxt/todo.txt#additional-file-format-definitions), which names it as the example of a tag | *Due date* in the edit dialog. The label is highlighted on the day and marked when the date has passed; the list orders tasks of equal priority by due date. |
-| `t:2026-12-01` | Threshold date: the task is not relevant before that day | [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | *Threshold* in the edit dialog. The task is hidden until that day; *Show tasks before their threshold date* in the filter panel shows it. |
+| `t:2026-12-01` | Start date, which Simpletask calls the threshold date: the task is not relevant before that day | [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | *Start date* in the edit dialog. The task is hidden until that day; *Show tasks before their start date* in the filter panel shows it. |
 | `rec:1w` | Recurrence: completing the task adds its next occurrence | [topydo](https://github.com/topydo/topydo/wiki/Recurrence), with the business days of [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | See [recurring tasks](#recurring-tasks). |
 | `ice_recur.txt` | Schedules that add tasks on certain days | [ice_recur](https://github.com/rlpowell/todo-text-stuff/blob/master/ice_recur), an [add-on](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#ice_recur-another-recurring-task-action-but-with-much-more-flexibility) of the todo.txt command line | See [recurring tasks](#recurring-tasks). |
 | `note:k3f.md` | A note for the task, kept in the file `notes/k3f.md` | [note](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#note--take-notes-related-to-tasks), an add-on of the todo.txt command line | *Note* in the edit dialog; the application names the file. New notes are Markdown files, which the dialog edits as text; a note named otherwise, such as `note:k3f.txt`, keeps its file. As in the [note add-on](https://github.com/mgarrido/todo.txt-cli/tree/note/todo.actions.d), which reads these notes with `TODO_NOTE_EXT=.md` in its configuration. |
@@ -263,8 +263,8 @@ With a `+` in front of the interval, it counts from the previous due date, howev
 | `Water the plants due:2026-11-12 rec:1w` | 2026-11-14 | `Water the plants due:2026-11-21 rec:1w` |
 | `Pay the rent due:2026-11-01 rec:+1m` | 2026-11-03 | `Pay the rent due:2026-12-01 rec:+1m` |
 
-A threshold date moves along with the due date and keeps its distance to it.
-A task with a threshold date only gets the next threshold date, and a task with neither date gets a due date.
+A start date moves along with the due date and keeps its distance to it.
+A task with a start date only gets the next start date, and a task with neither date gets a due date.
 The next task keeps the priority.
 
 #### By the calendar: the file `ice_recur.txt`
@@ -451,7 +451,7 @@ A tile of a project tells if the project, or one below it, has [no next action](
 The filter panel applies to the overview as it does to the list.
 
 A click on a tile lists the tasks of the context, the most urgent first and those without due date last.
-The bar of a task shows how much of its time has passed: from its threshold date (`t:`) to its due date, else from its creation date, else over the two weeks before the due date.
+The bar of a task shows how much of its time has passed: from its start date (`t:`) to its due date, else from its creation date, else over the two weeks before the due date.
 
 ## Inbox
 
@@ -471,7 +471,7 @@ The arrow keys up and down mark another task, to leave one where it is.
 The `todo.txt` file leads: the plan is computed from it, and planning does not change it.
 
 * A task with a higher priority is planned first, and every task gets the earliest free times, so that tasks without dates are planned soon as well.
-* A task takes its duration (`dur:`), half an hour without one, and is not planned before its threshold date (`t:`).
+* A task takes its duration (`dur:`), half an hour without one, and is not planned before its start date (`t:`).
   A free time that is too short takes a part of the task, but no part is shorter than an hour, the **block**; a task that is shorter is not cut.
 * A task follows the task before it without a gap; after an event of a calendar, it starts on a quarter of an hour.
 * A task that waits for others is planned after them: `Send the paper id:1` waits for `Write the paper p:1`.
@@ -485,7 +485,7 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
   It is set in general (`default = year`), for a project (`+Thesis = 2027-03-31`) or for a context (`@research = year`); the earliest barrier of a task counts.
   A barrier for a project or a context holds for those below it, such as `+Thesis>chapter1`.
   A task that does not fit before its barrier is listed after planning instead of being planned later.
-  A task whose threshold date lies behind its barrier is not due yet: it is neither planned nor listed.
+  A task whose start date lies behind its barrier is not due yet: it is neither planned nor listed.
 * A **limit** states how much is planned for a project or a context, the contexts below it included, as rules separated by commas:
 
   | Rule | Effect |
@@ -524,7 +524,7 @@ Use it for what has its time, such as lunch, a training or an appointment, so th
 | `weekly ; day Monday, Tuesday, Wednesday, Thursday, Friday - Lunch at:12:00 dur:45m` | `ice_recur.txt` | on every working day from 12:00 to 12:45 |
 | `weekly ; day Tuesday - Training @sport at:18:30 dur:1h30m` | `ice_recur.txt` | on every Tuesday from 18:30 to 20:00 |
 
-* The day is the due date, else the threshold date, else today.
+* The day is the due date, else the start date, else today.
 * The time holds whatever the time maps and the calendars say: a training in the evening needs no time map for the evening.
 * For an entry of `ice_recur.txt`, the plan has the time on the later days as well, before the task of the day is added: for as long as tasks are planned, and for four weeks at least.
 * The task of the day is completed like any other task, which takes its block from the next plan.
@@ -620,7 +620,7 @@ The application only reads the calendars and writes nothing to them.
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+Shift+A | Go to the line that adds a task |
-| Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their threshold date, go to the text of the filter |
+| Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
 | Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
 | Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
@@ -664,7 +664,7 @@ koppter://filter?project=Fair&context=phone
   On a touch screen, a long press on the label in the filter panel does.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
-* A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their threshold date.
+* A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their start date.
   A project or a context includes those below it.
 * If the application is open, its window shows the tasks and comes to the front; no second window opens.
 * On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
