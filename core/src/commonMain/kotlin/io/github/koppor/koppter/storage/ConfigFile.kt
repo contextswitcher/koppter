@@ -4,6 +4,7 @@ import io.github.koppor.koppter.plan.PlanConfig
 import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.ShareAction
+import io.github.koppor.koppter.todotxt.withAncestors
 
 /**
  * The configuration that is kept next to the todo.txt file and synchronized with it.
@@ -19,6 +20,7 @@ import io.github.koppor.koppter.todotxt.ShareAction
  * The key `share-actions` maps the title of each share action to its template in the same way,
  * and so do the keys `time-maps`, `context-time-maps` and `barriers` for planning.
  * The key `priorities` maps the letter of a priority to the name it is shown with.
+ * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
  */
 // ponytail: reads the subset of YAML that it writes (one line per column, plain or quoted scalars, the escapes \" and \\);
 // a YAML library when the file gets nested content.
@@ -34,6 +36,7 @@ object ConfigFile {
     const val BARRIERS = "barriers:"
     const val LIMITS = "limits:"
     const val PRIORITIES = "priorities:"
+    const val LINKS = "links:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
     /**
@@ -83,6 +86,15 @@ object ConfigFile {
     fun entries(config: String, key: String): List<Pair<String, String>> = block(config, key).orEmpty()
 
     fun withEntries(config: String, key: String, entries: List<Pair<String, String>>): String = withBlock(config, key, entries)
+
+    /**
+     * The link of a label, which is written with its sign, such as `+Fair` or `@phone`: its own, or that of the nearest level above it.
+     *
+     * @param links the entries of the key `links`
+     */
+    // [impl->dsn~label-links~1]
+    fun link(links: Map<String, String>, label: String): String? =
+        label.drop(1).withAncestors().asReversed().firstNotNullOfOrNull { links[label.take(1) + it]?.ifBlank { null } }
 
     /** Reads entries as the dialogs show them: one per line as `name = value`; lines without a name are skipped. */
     fun parseLines(text: String): List<Pair<String, String>> = text.lines().mapNotNull { line ->

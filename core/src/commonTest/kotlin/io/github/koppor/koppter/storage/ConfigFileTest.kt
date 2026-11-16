@@ -79,6 +79,27 @@ class ConfigFileTest {
         )
     }
 
+    // [utest->dsn~label-links~1]
+    @Test
+    fun aLabelHasItsOwnLinkOrThatOfTheNearestLevelAboveIt() {
+        val config = ConfigFile.withEntries(
+            "",
+            ConfigFile.LINKS,
+            ConfigFile.parseLines("+Fair = contextswitcher://switch-category/fair\n+Fair>Booth>Print = https://example.org/print?a=1&b=2\n@phone = onenote:https://example.org/Numbers.one#Calls\n#quick ="),
+        )
+        assertEquals(true, config.contains("links:\n  \"+Fair\": \"contextswitcher://switch-category/fair\""))
+        val links = ConfigFile.entries(config, ConfigFile.LINKS).toMap()
+
+        assertEquals("contextswitcher://switch-category/fair", ConfigFile.link(links, "+Fair"))
+        assertEquals("contextswitcher://switch-category/fair", ConfigFile.link(links, "+Fair>Booth"))
+        assertEquals("https://example.org/print?a=1&b=2", ConfigFile.link(links, "+Fair>Booth>Print"))
+        assertEquals("onenote:https://example.org/Numbers.one#Calls", ConfigFile.link(links, "@phone"))
+        // The sign belongs to the name: the context "Fair" is not the project, and a project that starts alike is not below it.
+        assertEquals(null, ConfigFile.link(links, "@Fair"))
+        assertEquals(null, ConfigFile.link(links, "+Fairness"))
+        assertEquals(null, ConfigFile.link(links, "#quick"))
+    }
+
     // [utest->dsn~config-defaults~1]
     @Test
     fun aConfigurationWithoutTheKeyHasTheDefaultColumnsAndOneWithTheKeyAloneHasNone() {

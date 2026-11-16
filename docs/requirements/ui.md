@@ -264,6 +264,19 @@ Covers:
 
 Needs: dsn
 
+### Links of projects and contexts
+`req~label-links~1`
+
+The user gives a project, a context or a hashtag a link, such as one to the section of a notebook or to a category of ContextSwitcher, and opens it from the label.
+The links are the same on every device that synchronizes the file.
+
+Covers:
+
+* `feat~task-list~1`
+* `feat~filtering~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -365,11 +378,26 @@ Covers:
 
 Needs: impl, utest
 
+### Links of projects and contexts
+`dsn~label-links~1`
+
+The key `links` of `koppter.yml` maps a project, a context or a hashtag, written with its sign as `+Fair`, `@phone` or `#quick`, to a link; the settings dialog edits it, one per line as `label = link`.
+`ConfigFile.link` gives the link of a label: its own, or that of the nearest project or context above it.
+The menu of a label (`WithLinkMenu`), at a task and in the filter panel, has *Open link* for a label with a link, which opens the link through the `UriHandler` of the application.
+The link is not checked: what the platform cannot open is reported as for a link in a task.
+
+Covers:
+
+* `req~label-links~1`
+* `adr~label-links~1`
+
+Needs: impl, utest
+
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
 A file that the user chooses with *Choose file*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
-The fields for the board columns, the names of the priorities and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
+The fields for the board columns, the names of the priorities, the links of the labels and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
 The configuration of the dialog is thus written to the file it was read from, never to another one.
 A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
 Leaving the dialog without *Save* opens the file again that was open when the dialog was opened; a clone stays in the data directory.
@@ -684,7 +712,7 @@ Needs: impl
 ### Settings dialog
 `dsn~settings-dialog~1`
 
-`SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities and the colors.
+`SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities, the links of projects and contexts and the colors.
 A changed location makes the controller load the other file.
 The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
 A field for a block of the configuration file shows an example in a pale color while it is empty.

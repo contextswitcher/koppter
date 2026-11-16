@@ -314,6 +314,19 @@ class TodoController(
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.PRIORITIES, names), "Edit names of priorities")
     }
 
+    /** The links of projects, contexts and hashtags, each under its name with its sign. */
+    // [impl->dsn~label-links~1]
+    val labelLinks: Map<String, String> get() = ConfigFile.entries(config.orEmpty(), ConfigFile.LINKS).toMap()
+
+    /** The links, one per line as `label = link`; `null` if the storage keeps no configuration file. */
+    val labelLinksText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.entries(it, ConfigFile.LINKS)) }
+
+    fun updateLabelLinks(text: String) {
+        val links = ConfigFile.parseLines(text)
+        if (links == ConfigFile.entries(config.orEmpty(), ConfigFile.LINKS)) return
+        writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.LINKS, links), "Edit links of projects and contexts")
+    }
+
     /** The state of the plan of an open task and a text that tells its start; `null` if nothing was planned yet. */
     // [impl->dsn~plan-state~1]
     fun planOf(task: Task): Pair<PlanState, String>? {

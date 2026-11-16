@@ -684,6 +684,44 @@ class AppTest {
         onNodeWithText("Not opened: contextswitcher://switch/missing").assertExists()
     }
 
+    // [utest->dsn~label-links~1]
+    @Test
+    fun theMenuOfALabelOpensTheLinkThatTheSettingsGiveIt() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
+
+        // Without a link, the menu does not offer to open one.
+        onNodeWithTag("filter-project-GarageSale").performMouseInput { rightClick() }
+        onNodeWithTag("copy-link").assertExists()
+        onNodeWithTag("open-link").assertDoesNotExist()
+        onNodeWithTag("copy-link").performClick()
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-links").performScrollTo().performTextReplacement("+GarageSale = contextswitcher://switch-category/garage-sale\n@phone = https://example.org/numbers")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals(true, storage.companions.getValue("koppter.yml").contains("links:\n  \"+GarageSale\": \"contextswitcher://switch-category/garage-sale\""))
+
+        // In the filter panel and at a task.
+        onNodeWithTag("filter-project-GarageSale").performMouseInput { rightClick() }
+        onNodeWithTag("open-link").assertTextEquals("Open link").performClick()
+        onNodeWithTag("link-menu").assertDoesNotExist()
+        onAllNodesWithTag("label-context-phone", useUnmergedTree = true)[0].performMouseInput { rightClick() }
+        onNodeWithTag("open-link").performClick()
+        assertEquals(listOf("contextswitcher://switch-category/garage-sale", "https://example.org/numbers"), opened)
+        // Opening the link selects nothing.
+        onNodeWithTag("filter-clear").assertIsNotEnabled()
+
+        // The settings show what was entered.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-links").performScrollTo().assertTextContains("+GarageSale = contextswitcher://switch-category/garage-sale\n@phone = https://example.org/numbers")
+    }
+
     // [utest->dsn~links~1]
     @Test
     fun anAddressOfTheWebInATaskOpensInTheBrowser() = runComposeUiTest {

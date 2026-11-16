@@ -82,6 +82,8 @@ fun SettingsDialog(
     shareActions: String?,
     /** The names of the priorities; `null` if the storage cannot keep them. */
     priorityNames: String?,
+    /** The links of projects, contexts and hashtags; `null` if the storage cannot keep them. */
+    labelLinks: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
     /**
@@ -89,7 +91,7 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
-    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?) -> Unit,
+    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -103,12 +105,13 @@ fun SettingsDialog(
     var columns by remember(openFile) { mutableStateOf(boardColumns) }
     var actions by remember(openFile) { mutableStateOf(shareActions) }
     var priorities by remember(openFile) { mutableStateOf(priorityNames) }
+    var links by remember(openFile) { mutableStateOf(labelLinks) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities)
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -189,6 +192,14 @@ fun SettingsDialog(
                         }
                     }
                 }
+                // [impl->dsn~label-links~1]
+                links?.let { text ->
+                    ConfigField(
+                        "Links of projects and contexts", text, { links = it }, "+Fair = https://example.org/fair\n@phone = https://example.org/numbers",
+                        "One link per line as label = link, the label with its sign: + for a project, @ for a context, # for a hashtag. The menu of the label opens the link.",
+                        "settings-links",
+                    )
+                }
                 // [impl->dsn~share-actions~1]
                 actions?.let { text ->
                     ConfigField(
@@ -215,6 +226,7 @@ fun SettingsDialog(
                         columns?.trim(),
                         actions?.trim(),
                         priorities?.trim(),
+                        links?.trim(),
                     )
                     Button(
                         onClick = {

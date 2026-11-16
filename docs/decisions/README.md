@@ -39,6 +39,7 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0032](0032-next-actions-derived-from-the-tasks.md) | Next actions are derived from the tasks |
 | [0033](0033-links-to-the-application-with-a-query.md) | Links to the application name a filter in a query |
 | [0034](0034-tag-for-the-time-spent-on-a-task.md) | The time spent on a task is a tag |
+| [0035](0035-links-of-projects-and-contexts-in-the-configuration-file.md) | Links of projects and contexts are kept in the configuration file |
 
 ## Conventions
 

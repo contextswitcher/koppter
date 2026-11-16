@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.PlanState
+import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import io.github.koppor.koppter.todotxt.LINK_CONTEXT
@@ -76,6 +77,9 @@ val LocalPlanOf = staticCompositionLocalOf<(Task) -> Pair<PlanState, String>?> {
 /** What a click on the context label of a task does with the context. */
 /** The names under which the priorities are shown. */
 val LocalPriorityNames = staticCompositionLocalOf { PriorityNames() }
+
+/** The links of projects, contexts and hashtags, each under its name with its sign; see [ConfigFile.link]. */
+val LocalLabelLinks = staticCompositionLocalOf { emptyMap<String, String>() }
 
 val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
 
@@ -331,7 +335,8 @@ private fun WithTooltip(text: String, label: @Composable () -> Unit) {
 }
 
 /**
- * Offers the link to the tasks of a project, a context or a hashtag in a menu that a click with the secondary button on the label opens.
+ * Offers the link to the tasks of a project, a context or a hashtag in a menu that a click with the secondary button on the label opens,
+ * and the link that the configuration gives the label.
  *
  * @param key the key of the link, such as [LINK_PROJECT]
  * @param onExclude hides the tasks of the label; `null` where the menu does not offer that
@@ -344,6 +349,13 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclud
     // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
+    val uriHandler = LocalUriHandler.current
+    val sign = when (key) {
+        LINK_PROJECT -> "+"
+        LINK_CONTEXT -> "@"
+        else -> "#"
+    }
+    val link = ConfigFile.link(LocalLabelLinks.current, sign + name)
     Box(
         Modifier.pointerInput(Unit) {
             awaitPointerEventScope {
@@ -385,6 +397,17 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclud
                 },
                 modifier = Modifier.testTag("copy-link"),
             )
+            // [impl->dsn~label-links~1]
+            if (link != null) {
+                DropdownMenuItem(
+                    text = { Text("Open link") },
+                    onClick = {
+                        uriHandler.openUri(link)
+                        open = false
+                    },
+                    modifier = Modifier.testTag("open-link"),
+                )
+            }
             // [impl->dsn~filter-exclusion~1]
             if (onExclude != null) {
                 DropdownMenuItem(

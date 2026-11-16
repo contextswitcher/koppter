@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- A project, a context or a hashtag gets a link in the settings, such as one to the section of a notebook or to a category of ContextSwitcher; the menu of its label offers *Open link*.
 - A task states the time that was worked on it in the tag `spent:`, and the plan gives it the rest of its duration; the edit dialog has a field for it, and a block of today in the agenda adds its length with one click.
 - The check of a `todo.txt` file warns about a tag behind a `+`, `@` or `#`: `+rec:+1w` is a project, not a recurrence.
 - The filter panel hides the tasks of a project, a context or a hashtag: a right click or a long press on its label offers *Hide these tasks*, and the list, the board, the overview and the inbox then leave them out.

@@ -148,7 +148,7 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | --- | --- |
 | `todo.txt` | The tasks |
 | `notes/<name>.md` | The note of the task with the tag `note:<name>.md`, as Markdown |
-| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), and the time maps and barriers for [planning](#planning) |
+| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
@@ -220,7 +220,7 @@ The column *Source* names the tool or document that defines each of them; those 
 The option *Only the first 10 tasks* of the filter panel restricts the list to the first tasks, whose number is a setting, as the add-on [top](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#top-see-the-top-tasks) of the todo.txt command line does.
 There is no notation for a most important task as the add-ons [mit](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mit-most-important-task) and [mitf](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mitf-most-important-task-in-the-future) have it: priority `(A)` together with a due date serves that purpose ([decision 0009](docs/decisions/0009-no-notation-for-most-important-tasks.md)).
 
-Notes, `ice_recur.txt`, the board columns by filter and the names of the priorities need a `todo.txt` file in a folder or a git repository.
+Notes, `ice_recur.txt`, the board columns by filter, the names of the priorities and the links of projects and contexts need a `todo.txt` file in a folder or a git repository.
 They are not available for a file chosen through the document picker of Android, as the application then has access to that one file only.
 
 ### Recurring tasks
@@ -662,6 +662,25 @@ koppter://filter?project=Fair&context=phone
 * On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
 * On Android, the installed application opens the links.
 * The packages for Linux and macOS do not register the links yet.
+
+## Links of projects and contexts
+
+A project, a context or a hashtag has a link of its own, for example to the section of a notebook that holds its material.
+*Links of projects and contexts* in the settings takes one link per line as `label = link`, the label with its sign:
+
+```text
++Fair = contextswitcher://switch-category/fair
+@phone = onenote:https://example.org/Notebook/Numbers.one
+#someday = https://example.org/ideas
+```
+
+* A right click on the label, at a task or in the filter panel, offers *Open link*.
+  On a touch screen, a long press on the label in the filter panel does.
+* The link is of any kind that the device opens: an address of the web, a link of OneNote, or a link of ContextSwitcher.
+  `contextswitcher://switch-category/<name>` switches to a category there and opens its note, as the tag `cs:` does for a single task.
+* A project or a context below another one, such as `+Fair>Booth`, has the link of that one unless it has its own.
+* The links are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file ([decision 0035](docs/decisions/0035-links-of-projects-and-contexts-in-the-configuration-file.md)).
+  A link to a program that a device does not have is reported as not opened there.
 
 ## Board
 
