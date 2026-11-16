@@ -66,6 +66,8 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 ![Editor of the scheduled tasks](docs/screenshots/schedule.png)
 
 In a narrow window, as on a phone, the filter panel is a drawer.
+On Android, the back gesture closes the drawer, then returns from another view to the list, and leaves the application only from the list.
+A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
 
@@ -161,6 +163,9 @@ A repository that is not cloned yet is given by its address, such as `git@github
 A cloned repository and a file chosen with *Choose file* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
+A click on that key copies it.
+The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it.
 
 A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
 

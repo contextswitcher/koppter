@@ -142,7 +142,8 @@ fun EditDialog(
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current
-    LaunchedEffect(Unit) { if (keyboard) descriptionFocus.requestFocus() }
+    // Without a keyboard, the focus brings up the keyboard of the screen, which hides half of an existing task; a new task is typed first.
+    LaunchedEffect(Unit) { if (keyboard || isNew) descriptionFocus.requestFocus() }
 
     val state = result.toLine() to note
     val initial = remember { state }

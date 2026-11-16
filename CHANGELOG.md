@@ -7,6 +7,19 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- The filter panel of a narrow window, as on a phone, has a button that closes it.
+- The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
+
+### Changed
+
+- On Android, the back gesture closes the filter panel and returns from another view to the list; only from the list, it leaves the application.
+- The week shows all its hours without scrolling, also on a phone that is held upright.
+- A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
+- A click on the public SSH key in the settings copies it.
+- The address of a page of a repository of GitHub that is pasted into the settings becomes the address for SSH of that repository.
+
 ### Fixed
 
 - On Windows, *Choose file* in the settings no longer ends with two error messages while the file dialog is open.

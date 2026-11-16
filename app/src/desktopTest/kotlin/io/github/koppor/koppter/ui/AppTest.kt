@@ -3,6 +3,10 @@ package io.github.koppor.koppter.ui
 import androidx.compose.ui.test.withKeysDown
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -1434,6 +1438,113 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
         onNodeWithText("Thank Mom").assertExists()
         onNodeWithText("Read the paper").assertDoesNotExist()
+    }
+
+    // [utest->dsn~git-setup-dialog~1]
+    @Test
+    fun aClickOnThePublicKeyCopiesItAndAPastedPageOfGitHubBecomesTheAddressForSsh() = runComposeUiTest {
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val git = object : GitSetupActions {
+            override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
+            override suspend fun clone(url: String) = error("not cloned in this test")
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", git = git) } }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-public-key").performScrollTo().performClick()
+        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        onNodeWithTag("settings-public-key-help").assertTextContains("Copied to the clipboard.", substring = true)
+
+        // Pasted text arrives at once.
+        onNodeWithTag("settings-file").performScrollTo().performTextInput("https://github.com/demo-user/todo/tree/main")
+        onNodeWithTag("settings-file").assertTextContains("git@github.com:demo-user/todo.git")
+        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone")
+
+        assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo"))
+        assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo.git"))
+        assertEquals("git@github.com:demo-user/my.todo.git", sshAddress("http://www.github.com/demo-user/my.todo/pull/10?diff=split"))
+        // Another server may offer no SSH, and an address for SSH stays as it is.
+        for (other in listOf("https://example.org/demo-user/todo.git", "git@github.com:demo-user/todo.git", "https://github.com/demo-user", "/home/user/todo.txt")) assertEquals(other, sshAddress(other))
+    }
+
+    // [utest->dsn~settings-dialog~1]
+    @Test
+    fun theSettingsTellThatTheFilesNextToTheFileBelongToItAndWhatThePlatformSaysAboutAChosenFile() = runComposeUiTest {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", chooseFile = { null }, chooseFileNote = "A chosen file is opened alone.") }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithText("The files next to the todo.txt file belong to it", substring = true).assertExists()
+        onNodeWithTag("settings-choose-file-note").assertTextEquals("A chosen file is opened alone.")
+    }
+
+    // [utest->dsn~keyboard-shortcuts~1]
+    @Test
+    fun withoutAKeyboardThereIsNoLineForANewTaskAndTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", keyboard = false) }
+
+        onNodeWithTag("quick-add").assertDoesNotExist()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").assertIsFocused()
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        // An existing task is read first: the keyboard of the screen would hide half of it.
+        openTask("Post signs")
+        onNodeWithTag("edit-description").assertIsNotFocused()
+    }
+
+    // [utest->dsn~back~1]
+    // [utest->dsn~filter-panel~1]
+    @Test
+    fun backClosesTheFilterPanelAndThenReturnsToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        // What the platform would call for its back gesture; `null` while the application leaves the gesture to the platform.
+        var back: (() -> Unit)? = null
+        setContent { App(controller, "todo.txt", backHandler = { enabled, onBack -> back = onBack.takeIf { enabled } }) }
+
+        // From the list with nothing above it, back leaves the application.
+        assertEquals(null, back)
+
+        // The panel above the list has a button that closes it.
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-close").assertIsDisplayed().performClick()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-close").assertIsDisplayed()
+        back!!()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+        assertEquals(null, back)
+
+        controller.view = View.WEEK
+        onNodeWithTag("week").assertExists()
+        back!!()
+        assertEquals(View.LIST, controller.view)
+        onNodeWithTag("week").assertDoesNotExist()
+        assertEquals(null, back)
+    }
+
+    // [utest->dsn~agenda~1]
+    @Test
+    fun theWeekShowsAWholeDayWithoutScrollingInAWindowOfAPhone() = runDesktopComposeUiTest(width = 412, height = 760) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  06:00-06:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  22:00-23:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", keyboard = false) }
+        controller.view = View.WEEK
+
+        onNodeWithText("06:00").assertExists()
+        val window = onNodeWithTag("main-screen").fetchSemanticsNode().boundsInRoot.bottom
+        assertTrue(onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom <= window)
     }
 
     // [utest->dsn~git-setup-dialog~1]

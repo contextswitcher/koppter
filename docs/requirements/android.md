@@ -54,6 +54,17 @@ Needs: dsn
 
 ## Design
 
+### Back gesture
+`req~back~1`
+
+The back gesture of Android first closes what lies above the list and then returns to the list; only from the list, it leaves the application.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Shared UI as an Android library
 `dsn~android-shell~1`
 
@@ -102,6 +113,8 @@ The settings dialog has a button that opens the file dialog of the platform and 
 On Android, this is the document picker; the application takes the persistable read and write permission for the chosen document.
 On the desktop, this is the file dialog of the operating system.
 It is shown from a thread of its own, so that the user interface keeps running as usual while the dialog is open.
+The help of the field tells that the files next to the todo.txt file belong to it.
+Below the button, the dialog shows what the platform passes as `chooseFileNote`: on Android, that the document picker gives access to the chosen file alone.
 
 Covers:
 
@@ -111,6 +124,19 @@ Covers:
 * `adr~onedrive-through-platform~1`
 
 Needs: impl
+
+### Back gesture
+`dsn~back~1`
+
+`App` takes a `backHandler` from the platform and enables it while the navigation drawer with the filter panel is open or another view than the list is shown: back closes the drawer, and otherwise shows the list.
+The Android application passes the `BackHandler` of its activity; the desktop application passes none.
+A dialog closes on back by itself, with the question about changes that are not saved.
+
+Covers:
+
+* `req~back~1`
+
+Needs: impl, utest
 
 ### Share actions
 `dsn~share-actions~1`

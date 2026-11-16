@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -57,9 +61,16 @@ fun FilterPanel(
     modifier: Modifier = Modifier,
     /** For the field of the text, so that a shortcut can give it the focus. */
     textModifier: Modifier = Modifier,
+    /** Closes the panel where it lies above the list; `null` where it stands beside the list. */
+    onClose: (() -> Unit)? = null,
 ) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp).testTag("filter-panel")) {
-        Text("Filter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp).testTag("filter-heading"))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+            Text("Filter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).testTag("filter-heading"))
+            if (onClose != null) {
+                IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
+            }
+        }
         OutlinedTextField(
             value = filter.text,
             onValueChange = { onChange(filter.copy(text = it)) },

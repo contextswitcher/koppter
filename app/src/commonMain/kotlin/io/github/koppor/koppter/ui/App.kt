@@ -105,6 +105,8 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
  *   or `null` if the user canceled.
  * @param git offered in the settings on platforms where the application has to bring its own git access
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
+ * @param backHandler takes what the back gesture of the platform does while it is enabled; a platform without such a gesture takes nothing
+ * @param chooseFileNote what the user has to know about a file chosen with [chooseFile], shown below its button
  * @param shareLog passes the log to another application, offered in the settings on platforms where the user does not reach the log file
  */
 @Composable
@@ -115,6 +117,8 @@ fun App(
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
+    chooseFileNote: String? = null,
+    backHandler: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit = { _, _ -> },
 ) {
     val dark = when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
@@ -144,7 +148,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, git, shareLog)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFileNote, git, shareLog, backHandler)
         }
     }
 }
@@ -168,8 +172,10 @@ private fun MainScreen(
     controller: TodoController,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
+    chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    backHandler: @Composable (enabled: Boolean, onBack: () -> Unit) -> Unit,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
     var showSettings by remember { mutableStateOf(false) }
@@ -239,7 +245,7 @@ private fun MainScreen(
         }
     }
 
-    val filterPanel: @Composable (Modifier) -> Unit = { modifier ->
+    val filterPanel: @Composable (Modifier, (() -> Unit)?) -> Unit = { modifier, onClose ->
         FilterPanel(
             filter = controller.filter,
             onChange = { controller.filter = it },
@@ -254,7 +260,14 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             textModifier = Modifier.focusRequester(filterFocus),
+            onClose = onClose,
         )
+    }
+
+    // [impl->dsn~back~1]
+    // Back first closes the filter panel and then returns to the list; only from the list, it leaves the application.
+    backHandler(drawer.isOpen || controller.view != View.LIST) {
+        if (drawer.isOpen) scope.launch { drawer.close() } else controller.view = View.LIST
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {
@@ -262,7 +275,7 @@ private fun MainScreen(
         ModalNavigationDrawer(
             drawerState = drawer,
             gesturesEnabled = !wide,
-            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) } },
+            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
             Scaffold(
                 topBar = {
@@ -295,13 +308,14 @@ private fun MainScreen(
             ) { padding ->
                 Row(Modifier.padding(padding).fillMaxSize()) {
                     if (wide) {
-                        filterPanel(Modifier.width(280.dp).fillMaxHeight())
+                        filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
                         // The views stand above the field for a new task: a task is looked up more often than added.
                         ViewOptions(controller)
-                        QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
+                        // A line to type into is for a keyboard; without one, the button for a new task opens the dialog.
+                        if (LocalKeyboard.current) QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -377,6 +391,7 @@ private fun MainScreen(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
             chooseFile = chooseFile,
+            chooseFileNote = chooseFileNote,
             git = git,
             shareLog = shareLog,
             boardColumns = controller.boardColumnsText,

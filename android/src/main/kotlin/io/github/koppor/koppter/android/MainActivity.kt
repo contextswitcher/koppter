@@ -5,6 +5,7 @@ import android.content.res.Configuration
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -77,7 +78,16 @@ class MainActivity : ComponentActivity() {
         // Not after a change of the configuration, such as a rotation: the link would undo what the user filtered since.
         if (savedInstanceState == null) intent?.dataString?.let(controller::openLink)
         val keyboard = resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
-        setContent { App(controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, git = gitActions, keyboard = keyboard, shareLog = ::shareLog) }
+        setContent {
+            App(
+                controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, git = gitActions, keyboard = keyboard, shareLog = ::shareLog,
+                // [impl->dsn~choose-file~1]
+                chooseFileNote = "Android gives access to the chosen file alone, not to the files next to it: " +
+                    "notes, scheduled tasks, board columns and the plan need the todo.txt file of a git repository.",
+                // [impl->dsn~back~1]
+                backHandler = { enabled, onBack -> BackHandler(enabled, onBack) },
+            )
+        }
     }
 
     // A link that is clicked while the application is open.

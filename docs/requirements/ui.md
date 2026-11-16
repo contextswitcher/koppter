@@ -558,7 +558,7 @@ Needs: impl, utest
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the threshold date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
-From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer.
+From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
 
 Covers:
 
@@ -603,6 +603,7 @@ The main screen consists of the top bar, the filter panel, the switches for the 
 The switches stand above the field, as a task is looked up more often than added.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
+The quick add field is a line to type into and is left out on a device without a keyboard (`LocalKeyboard`), where the button for a new task opens the dialog.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
@@ -623,6 +624,7 @@ The agenda and the week, which the filter does not apply to, give way to the lis
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
 `LocalKeyboard` tells whether the device has a keyboard; with one, the description of the edit dialog and the field of the inbox get the focus when they appear.
+Without one, the description gets the focus in the dialog of a new task only, as the keyboard of the screen hides half of an existing task.
 On Android, it is the keyboard of the configuration of the device.
 
 Covers:
@@ -717,6 +719,7 @@ Needs: impl
 A changed location makes the controller load the other file.
 The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
 A field for a block of the configuration file shows an example in a pale color while it is empty.
+The help of the field for the file tells that the files next to the todo.txt file belong to it, and a note that the platform passes stands below the button that chooses a file (`dsn~choose-file~1`).
 Below the field for the file stands what holds for a file in a git repository.
 
 Covers:
