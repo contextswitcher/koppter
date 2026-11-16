@@ -52,7 +52,17 @@ Covers:
 
 Needs: dsn
 
-## Design
+### Folder of a document provider
+`req~document-provider-folder~1`
+
+On Android, the user chooses a folder with the document picker of the system instead of a single file.
+The application then uses the file `todo.txt` of that folder together with the files next to it.
+
+Covers:
+
+* `feat~sync-local-folder~1`
+
+Needs: dsn
 
 ### Back gesture
 `req~back~1`
@@ -64,6 +74,8 @@ Covers:
 * `feat~platforms~1`
 
 Needs: dsn
+
+## Design
 
 ### Shared UI as an Android library
 `dsn~android-shell~1`
@@ -82,7 +94,7 @@ Needs: impl
 
 The settings file is `settings.properties` in the private files directory of the application.
 Without a configured location, the todo.txt file is `todo.txt` in the same directory.
-A configured location that starts with `content:` is opened as a document, any other as a file.
+A configured location that starts with `content:` is opened as a document, or as a folder if it is the root of a tree of documents; any other is opened as a file.
 
 Covers:
 
@@ -94,7 +106,7 @@ Needs: impl
 ### Document storage
 `dsn~document-storage~1`
 
-`DocumentStorage` reads and writes the document behind a `content:` URI through the content resolver.
+`DocumentStorage` reads and writes the document behind a `content:` URI through the `PlatformFile` of FileKit.
 The version is the modification time together with the size, as reported by the document provider.
 
 Covers:
@@ -106,15 +118,44 @@ Covers:
 
 Needs: impl
 
+### Folder storage
+`dsn~folder-storage~1`
+
+`FolderStorage` reads and writes the file `todo.txt` of a folder behind a `content:` URI and, as `CompanionFiles`, the files next to it by their path below the folder.
+It finds a document by its name at every access: with some document providers, the address of a document does not contain its name, so that the address of a document that was created since is not known in advance.
+It creates the directory of a file before it writes the file.
+A folder without the file `todo.txt` reads as an empty list, a folder that is not accessible as a failure.
+
+Covers:
+
+* `req~document-provider-folder~1`
+* `req~external-changes~1`
+
+Needs: impl
+
+### Choose the folder
+`dsn~choose-folder~1`
+
+Next to the button for a file, the settings dialog has a button that opens the dialog of the platform for a folder, through FileKit.
+On Android, the application bookmarks the chosen folder, which takes the persistable read and write permission for it, and the location is the URI of the tree of the folder.
+On the desktop, the location is the path of the file `todo.txt` in the chosen folder, which need not exist yet; a folder of a git repository is thus used as `dsn~git-detection~1` says.
+
+Covers:
+
+* `req~document-provider-folder~1`
+* `req~choose-file~1`
+
+Needs: impl
+
 ### Choose the file
 `dsn~choose-file~1`
 
 The settings dialog has a button that opens the file dialog of the platform and puts the chosen location into the field.
-On Android, this is the document picker; the application takes the persistable read and write permission for the chosen document.
-On the desktop, this is the file dialog of the operating system.
-It is shown from a thread of its own, so that the user interface keeps running as usual while the dialog is open.
+Both platforms open the dialog through FileKit ([decision 0036](../decisions/0036-file-dialogs-and-document-access-through-filekit.md)).
+On Android, this is the document picker; the application bookmarks the chosen document, which takes the persistable read and write permission for it.
+On the desktop, this is the file dialog of the operating system, which is shown from a thread of its own, so that the user interface keeps running as usual while the dialog is open.
 The help of the field tells that the files next to the todo.txt file belong to it.
-Below the button, the dialog shows what the platform passes as `chooseFileNote`: on Android, that the document picker gives access to the chosen file alone.
+Below the button, the dialog shows what the platform passes as `chooseFileNote`: on Android, that the document picker gives access to a chosen file alone and that a chosen folder has the files next to the todo.txt file.
 
 Covers:
 

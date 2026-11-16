@@ -93,6 +93,8 @@ fun SettingsDialog(
     settings: Settings,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
+    /** Lets the user pick a folder whose todo.txt file is opened. */
+    chooseFolder: (suspend () -> String?)?,
     /** What the user has to know about a file chosen with [chooseFile]; `null` if there is nothing. */
     chooseFileNote: String?,
     git: GitSetupActions?,
@@ -175,18 +177,32 @@ fun SettingsDialog(
                     )
                 }
                 if (chooseFile != null) {
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                chooseFile()?.let {
-                                    onOpenFile(it)
-                                    fileMessage = OPENED
-                                }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for ((title, tag, choose) in listOfNotNull(
+                            Triple("Choose file", "settings-choose-file", chooseFile),
+                            chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
+                        )) {
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            choose()?.let {
+                                                onOpenFile(it)
+                                                fileFailed = false
+                                                fileMessage = OPENED
+                                            }
+                                        } catch (e: Exception) {
+                                            // A platform without a program that shows the dialog, or one that refuses it.
+                                            fileFailed = true
+                                            fileMessage = "Not chosen: ${e.message ?: e}"
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.testTag(tag),
+                            ) {
+                                Text(title)
                             }
-                        },
-                        modifier = Modifier.testTag("settings-choose-file"),
-                    ) {
-                        Text("Choose file")
+                        }
                     }
                     if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
                 }

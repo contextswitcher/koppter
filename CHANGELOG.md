@@ -10,6 +10,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Added
 
 - The filter panel of a narrow window, as on a phone, has a button that closes it.
+- *Choose folder* in the settings opens the `todo.txt` file of a folder. On Android, such a folder has the notes, the scheduled tasks, the configuration and the plan next to the file, which a single chosen file has not. On the desktop, the file need not exist yet.
 - For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
 - The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
 
@@ -17,6 +18,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - On Android, the back gesture closes the filter panel and returns from another view to the list; from the list, it warns, and a second back leaves the application.
 - The week shows all its hours without scrolling, also on a phone that is held upright.
+- The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.
 - A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
 - A click on the public SSH key in the settings copies it.
 - A clone that fails is reported in red, the settings scroll to the message, and on a device with a key of its own it asks whether the key is registered with the server.

@@ -1442,6 +1442,25 @@ class AppTest {
         onNodeWithText("Read the paper").assertDoesNotExist()
     }
 
+    // [utest->dsn~settings-open-file~1]
+    @Test
+    fun aChosenFolderIsOpenedAtOnceAndAChooserThatFailsIsReported() = runComposeUiTest {
+        val chosen = MemoryStorage("Read the paper\n")
+        val controller = TodoController(Settings(), { if (it.todoFile == "content://documents/tree/todo") chosen else storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", chooseFile = { error("No program shows the dialog") }, chooseFolder = { "content://documents/tree/todo" }) }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-choose-file").performScrollTo().performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals("Not chosen: No program shows the dialog")
+        assertEquals("", controller.settings.todoFile)
+
+        onNodeWithTag("settings-choose-folder").performScrollTo().performClick()
+        onNodeWithTag("settings-file-message").assertTextContains("Opened.", substring = true)
+        assertEquals("content://documents/tree/todo", controller.settings.todoFile)
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithText("Read the paper").assertExists()
+    }
+
     // [utest->dsn~git-setup-dialog~1]
     @Test
     fun aClickOnThePublicKeyCopiesItAndAPastedPageOfGitHubBecomesTheAddressForSsh() = runComposeUiTest {

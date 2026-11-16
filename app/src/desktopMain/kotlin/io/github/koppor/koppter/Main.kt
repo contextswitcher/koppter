@@ -18,6 +18,12 @@ import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.ui.TodoController
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.dialogs.FileKitDialogParent
+import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.channels.Channel
 import kotlinx.datetime.LocalDate
 import net.harawata.appdirs.AppDirsFactory
@@ -37,18 +43,16 @@ private fun configDirectory(): Path = Path(directories.getUserConfigDir("koppter
 /** The directory for files that the application creates: `%APPDATA%\koppter` on Windows, `$XDG_DATA_HOME/koppter` or `~/.local/share/koppter` on Linux. */
 private fun dataDirectory(): Path = Path(directories.getUserDataDir("koppter", null, null, true))
 
-/**
- * Shows the file dialog of the operating system; a name typed there may be that of a file that does not exist yet.
- *
- * The dialog is shown from another thread than that of the user interface: shown from there, it handles the events of the window
- * itself until it closes, and a frame drawn meanwhile continues the coroutine that waits for the dialog a second time, which ends it with a failure.
- */
+/** Shows the file dialog of the operating system, which FileKit opens from a thread of its own. */
 // [impl->dsn~choose-file~1]
-private suspend fun chooseFile(owner: java.awt.Frame): String? = withContext(Dispatchers.IO) {
-    val dialog = java.awt.FileDialog(owner, "todo.txt file", java.awt.FileDialog.LOAD)
-    dialog.isVisible = true
-    dialog.file?.let { Path(dialog.directory, it).toString() }
-}
+private suspend fun chooseFile(owner: java.awt.Window): String? =
+    FileKit.openFilePicker(dialogSettings = FileKitDialogSettings(title = "todo.txt file", parent = FileKitDialogParent.awt(owner)))?.absolutePath()
+
+/** The todo.txt file of a folder that the user picks, such as the clone of a git repository; the file need not exist yet. */
+// [impl->dsn~choose-folder~1]
+private suspend fun chooseFolder(owner: java.awt.Window): String? =
+    FileKit.openDirectoryPicker(dialogSettings = FileKitDialogSettings(title = "Folder of the todo.txt file", parent = FileKitDialogParent.awt(owner)))
+        ?.let { Path(it.absolutePath(), "todo.txt").toString() }
 
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
@@ -90,7 +94,7 @@ fun main(args: Array<String>) {
             icon = icon,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
-            App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, git = git)
+            App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, chooseFolder = { chooseFolder(window) }, git = git)
             // [impl->dsn~link-single-instance~1]
             LaunchedEffect(Unit) {
                 for (received in links) {

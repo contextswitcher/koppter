@@ -37,6 +37,8 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.appdirs)
+                // [impl->adr~file-dialogs-of-filekit~1]
+                implementation(libs.filekit.dialogs)
                 // [impl->adr~log-messages-through-tinylog~1]
                 // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
                 implementation(libs.tinylog.api)
@@ -70,9 +72,9 @@ compose.desktop {
             // A build that is not a release is below every release.
             packageVersion = desktopVersion ?: "0.1.0"
             description = "Tasks in a todo.txt file"
-            // What `suggestRuntimeModules` finds for JGit, its SSH client and JNA, plus naming for Kerberos and the bridge for screen readers.
+            // What `suggestRuntimeModules` finds for JGit, its SSH client, JNA and the D-Bus client of FileKit, plus naming for Kerberos and the bridge for screen readers.
             // All modules cannot be included: that list contains jlink itself, which a JDK without packaged modules cannot link.
-            modules("java.instrument", "java.management", "java.naming", "java.rmi", "java.security.jgss", "java.sql", "jdk.accessibility", "jdk.unsupported")
+            modules("java.instrument", "java.management", "java.naming", "java.rmi", "java.security.jgss", "java.sql", "jdk.accessibility", "jdk.security.auth", "jdk.unsupported")
             linux {
                 iconFile = project.file("src/desktopMain/resources/koppter.png")
             }

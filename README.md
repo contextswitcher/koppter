@@ -160,15 +160,17 @@ Changes of two devices are merged without a conflict to resolve: `todo.txt` and 
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
-A cloned repository and a file chosen with *Choose file* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
+A cloned repository, a file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
 With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
 The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
-On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it.
+On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it; a folder chosen with *Choose folder* has them.
+On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also where there is none yet: a folder that is the clone of a git repository is committed and synchronized.
+The dialogs are those of the platform, shown through [FileKit](https://github.com/vinceglb/FileKit) ([decision 0036](docs/decisions/0036-file-dialogs-and-document-access-through-filekit.md)).
 
-A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
+A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file*, or its folder with *Choose folder*, in the settings; on the desktop, choose it in the synchronized folder.
 
 ## Checking a file
 
@@ -227,7 +229,7 @@ The option *Only the first 10 tasks* of the filter panel restricts the list to t
 There is no notation for a most important task as the add-ons [mit](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mit-most-important-task) and [mitf](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mitf-most-important-task-in-the-future) have it: priority `(A)` together with a due date serves that purpose ([decision 0009](docs/decisions/0009-no-notation-for-most-important-tasks.md)).
 
 Notes, `ice_recur.txt`, the board columns by filter, the names of the priorities and the links of projects and contexts need a `todo.txt` file in a folder or a git repository.
-They are not available for a file chosen through the document picker of Android, as the application then has access to that one file only.
+They are not available for a single file chosen through the document picker of Android, as the application then has access to that one file only; a folder chosen there has them.
 
 ### Recurring tasks
 

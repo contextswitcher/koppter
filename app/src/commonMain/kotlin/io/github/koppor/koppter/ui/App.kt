@@ -107,6 +107,7 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
  * @param backHandler takes what the back gesture of the platform does; a platform without such a gesture takes nothing
  * @param leave leaves the application, after a second back gesture that has nothing left to close
+ * @param chooseFolder lets the user pick a folder and returns the location that stands for its todo.txt file, which need not exist yet
  * @param chooseFileNote what the user has to know about a file chosen with [chooseFile], shown below its button
  * @param shareLog passes the log to another application, offered in the settings on platforms where the user does not reach the log file
  */
@@ -115,6 +116,7 @@ fun App(
     controller: TodoController,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)? = null,
+    chooseFolder: (suspend () -> String?)? = null,
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
@@ -150,7 +152,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFileNote, git, shareLog, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, backHandler, leave)
         }
     }
 }
@@ -176,6 +178,7 @@ private fun MainScreen(
     controller: TodoController,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
+    chooseFolder: (suspend () -> String?)?,
     chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
@@ -411,6 +414,7 @@ private fun MainScreen(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
             chooseFile = chooseFile,
+            chooseFolder = chooseFolder,
             chooseFileNote = chooseFileNote,
             git = git,
             shareLog = shareLog,

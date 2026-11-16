@@ -7,6 +7,7 @@ import android.content.pm.ShortcutInfo
 import android.content.pm.ShortcutManager
 import android.graphics.drawable.Icon
 import android.net.Uri
+import android.provider.DocumentsContract
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -19,6 +20,7 @@ import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.ui.TodoController
+import io.github.vinceglb.filekit.PlatformFile
 import kotlinx.datetime.LocalDate
 import org.tinylog.Logger
 
@@ -55,7 +57,9 @@ class ShareActivity : Activity() {
 // [impl->dsn~android-locations~1]
 internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
     settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"))
-    settings.todoFile.startsWith("content:") -> DocumentStorage(contentResolver, Uri.parse(settings.todoFile))
+    // A folder comes from the picker as the root of a tree of documents.
+    settings.todoFile.startsWith("content:") ->
+        PlatformFile(settings.todoFile).let { if (DocumentsContract.isTreeUri(Uri.parse(settings.todoFile))) FolderStorage(it) else DocumentStorage(it) }
     else -> gitSetup.storageFor(java.nio.file.Paths.get(settings.todoFile))
 }
 
