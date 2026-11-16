@@ -12,6 +12,30 @@ It is an application for Android and for Windows and Linux desktops.
 This line is a task of priority A with the context *phone*, the project *Health* and a due date.
 The notation is the [todo.txt format](https://github.com/todotxt/todo.txt): the file is read and changed with any text editor, and other tools for the format work on the same file.
 
+## Goals
+
+* The `todo.txt` file is the only data store, and it stays a file that other todo.txt tools can read and write.
+* One code base for phone and desktop: Kotlin Multiplatform with Compose Multiplatform ([decision 0001](docs/decisions/0001-kotlin-multiplatform-with-compose-multiplatform.md)).
+* Synchronization through git, with one commit per added and per completed task.
+  The dates a task was added and completed are then read from the history instead of being written into the file.
+* Synchronization through a local folder and through OneDrive.
+* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task, divided into groups by one of them if wanted.
+* An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
+* A filter panel for completion state, text, priorities, projects, contexts and hashtags.
+* A Kanban board.
+* Support for the [extensions](#extensions-of-the-todotxt-format) `note`, `top` and `ice_recur`, for the `rec:` and `t:` tags, and for hashtags.
+
+The planned scope is tracked as requirements in [docs/requirements](docs/requirements/README.md).
+
+## Skills for agents
+
+[skills/koppter-tasks](skills/koppter-tasks/SKILL.md) is a skill for Claude and other agents that read skills: it tells how to write a task into the `todo.txt` file so that it fits what the application does with it, and how to choose between `rec:` and `ice_recur.txt` for a recurring task.
+To use it in Claude Code, link the directory into the skills of the user:
+
+```sh
+ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
+```
+
 ## Overview
 
 The task list with the filter panel.
@@ -75,30 +99,6 @@ The colors are those of the palette [Nord](https://www.nordtheme.com/) or [Everf
 The screenshots above show Nord in its light variant.
 
 ![Task list in the dark variant of Nord](docs/screenshots/nord-dark.png)
-
-## Goals
-
-* The `todo.txt` file is the only data store, and it stays a file that other todo.txt tools can read and write.
-* One code base for phone and desktop: Kotlin Multiplatform with Compose Multiplatform ([decision 0001](docs/decisions/0001-kotlin-multiplatform-with-compose-multiplatform.md)).
-* Synchronization through git, with one commit per added and per completed task.
-  The dates a task was added and completed are then read from the history instead of being written into the file.
-* Synchronization through a local folder and through OneDrive.
-* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task, divided into groups by one of them if wanted.
-* An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
-* A filter panel for completion state, text, priorities, projects, contexts and hashtags.
-* A Kanban board.
-* Support for the [extensions](#extensions-of-the-todotxt-format) `note`, `top` and `ice_recur`, for the `rec:` and `t:` tags, and for hashtags.
-
-The planned scope is tracked as requirements in [docs/requirements](docs/requirements/README.md).
-
-## Skills for agents
-
-[skills/koppter-tasks](skills/koppter-tasks/SKILL.md) is a skill for Claude and other agents that read skills: it tells how to write a task into the `todo.txt` file so that it fits what the application does with it, and how to choose between `rec:` and `ice_recur.txt` for a recurring task.
-To use it in Claude Code, link the directory into the skills of the user:
-
-```sh
-ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
-```
 
 ## Organizing many tasks
 
