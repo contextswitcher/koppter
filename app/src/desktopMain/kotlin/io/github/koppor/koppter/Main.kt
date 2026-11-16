@@ -37,12 +37,17 @@ private fun configDirectory(): Path = Path(directories.getUserConfigDir("koppter
 /** The directory for files that the application creates: `%APPDATA%\koppter` on Windows, `$XDG_DATA_HOME/koppter` or `~/.local/share/koppter` on Linux. */
 private fun dataDirectory(): Path = Path(directories.getUserDataDir("koppter", null, null, true))
 
-/** Shows the file dialog of the operating system; a name typed there may be that of a file that does not exist yet. */
+/**
+ * Shows the file dialog of the operating system; a name typed there may be that of a file that does not exist yet.
+ *
+ * The dialog is shown from another thread than that of the user interface: shown from there, it handles the events of the window
+ * itself until it closes, and a frame drawn meanwhile continues the coroutine that waits for the dialog a second time, which ends it with a failure.
+ */
 // [impl->dsn~choose-file~1]
-private fun chooseFile(owner: java.awt.Frame): String? {
+private suspend fun chooseFile(owner: java.awt.Frame): String? = withContext(Dispatchers.IO) {
     val dialog = java.awt.FileDialog(owner, "todo.txt file", java.awt.FileDialog.LOAD)
     dialog.isVisible = true
-    return dialog.file?.let { Path(dialog.directory, it).toString() }
+    dialog.file?.let { Path(dialog.directory, it).toString() }
 }
 
 fun main(args: Array<String>) {

@@ -101,6 +101,7 @@ Needs: impl
 The settings dialog has a button that opens the file dialog of the platform and puts the chosen location into the field.
 On Android, this is the document picker; the application takes the persistable read and write permission for the chosen document.
 On the desktop, this is the file dialog of the operating system.
+It is shown from a thread of its own, so that the user interface keeps running as usual while the dialog is open.
 
 Covers:
 
