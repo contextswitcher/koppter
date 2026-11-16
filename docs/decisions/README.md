@@ -30,6 +30,16 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0023](0023-tag-for-the-travel-time-of-a-task.md) | A tag states the travel time of a task |
 | [0024](0024-names-for-priorities-kept-in-the-configuration-file.md) | Priorities keep their letters in the file and get names for display |
 | [0025](0025-locations-on-the-desktop-from-appdirs.md) | Locations on the desktop from the appdirs library |
+| [0026](0026-levels-of-a-project-written-like-those-of-a-context.md) | The levels of a project are written like those of a context |
+| [0027](0027-log-messages-of-libraries-through-tinylog.md) | Log messages of libraries go through tinylog |
+| [0028](0028-tag-for-the-deadline-next-to-the-due-date.md) | A tag states the deadline next to the due date |
+| [0029](0029-time-of-a-deadline-as-part-of-its-date.md) | The time of a deadline is part of its date |
+| [0030](0030-tag-for-the-time-of-the-due-date-named-dueby.md) | The tag for the time of the due date is named `dueby:` |
+| [0031](0031-offset-from-utc-in-the-time-of-a-deadline.md) | The time of a deadline may state its offset from UTC |
+| [0032](0032-next-actions-derived-from-the-tasks.md) | Next actions are derived from the tasks |
+| [0033](0033-links-to-the-application-with-a-query.md) | Links to the application name a filter in a query |
+| [0034](0034-tag-for-the-time-spent-on-a-task.md) | The time spent on a task is a tag |
+| [0035](0035-links-of-projects-and-contexts-in-the-configuration-file.md) | Links of projects and contexts are kept in the configuration file |
 
 ## Conventions
 

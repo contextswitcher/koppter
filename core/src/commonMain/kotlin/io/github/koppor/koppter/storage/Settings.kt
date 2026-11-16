@@ -22,6 +22,8 @@ data class Settings(
      * Such an address is a secret, which is why it is a setting of the device and not kept next to the todo.txt file.
      */
     val calendars: String = "",
+    /** The filter of the task list as the link that names it, so that it is there again after a restart; blank for the filter that restricts nothing. */
+    val filter: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -32,6 +34,7 @@ data class Settings(
         THEME to theme.name,
         APPEARANCE to appearance.name,
         CALENDARS to calendars,
+        FILTER to filter,
     )
 
     companion object {
@@ -42,6 +45,7 @@ data class Settings(
         private const val THEME = "theme"
         private const val APPEARANCE = "appearance"
         private const val CALENDARS = "calendars"
+        private const val FILTER = "filter"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -52,6 +56,7 @@ data class Settings(
             theme = ColorTheme.entries.firstOrNull { it.name == properties[THEME] } ?: ColorTheme.NORD,
             appearance = Appearance.entries.firstOrNull { it.name == properties[APPEARANCE] } ?: Appearance.SYSTEM,
             calendars = properties[CALENDARS].orEmpty(),
+            filter = properties[FILTER].orEmpty(),
         )
     }
 }

@@ -27,6 +27,17 @@ Covers:
 
 Needs: dsn
 
+### Completion when adding a task
+`req~quick-add-completion~1`
+
+While the user types a project, a context or a hashtag into the line that adds a task, the application offers the known ones that fit.
+
+Covers:
+
+* `feat~task-editing~1`
+
+Needs: dsn
+
 ### Dates in words when adding a task
 `req~quick-add-dates~1`
 
@@ -87,6 +98,63 @@ The line that the edit dialog shows can be edited as text, and the fields of the
 Covers:
 
 * `feat~task-editing~1`
+
+Needs: dsn
+
+### Moving the due date
+`req~move-due-date~1`
+
+The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next week, in two weeks or in a month.
+In the list, this needs no opening of the task.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
+### Failures in the log
+`req~failure-log~1`
+
+The application records what failed in its log, so that a problem can be looked up after the fact.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
+### Sharing the log
+`req~share-log~1`
+
+On Android, where the log file is hard to reach on the device, the user passes the log to another application from the settings.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
+### Links in the text of a task
+`req~links~1`
+
+An address of the web in the text of a task opens in the browser with a click.
+A long address takes little room, and the user sees the whole one on request.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
+### Groups in the list
+`req~list-groups~1`
+
+The user divides the list into groups with headings: by priority, project, context, hashtag or due date range.
+
+Covers:
+
+* `feat~task-list~1`
 
 Needs: dsn
 
@@ -182,6 +250,33 @@ Covers:
 
 Needs: dsn
 
+### Links to the application
+`req~app-links~1`
+
+A link in another program, such as a page of a notebook, opens the application with the tasks of a project, a context or a hashtag.
+If the application is open already, its window shows the tasks; no second window opens.
+The user copies the link of a project, a context or a hashtag from its label.
+
+Covers:
+
+* `feat~filtering~1`
+* `feat~platforms~1`
+
+Needs: dsn
+
+### Links of projects and contexts
+`req~label-links~1`
+
+The user gives a project, a context or a hashtag a link, such as one to the section of a notebook or to a category of ContextSwitcher, and opens it from the label.
+The links are the same on every device that synchronizes the file.
+
+Covers:
+
+* `feat~task-list~1`
+* `feat~filtering~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -224,6 +319,134 @@ Covers:
 
 Needs: impl, utest
 
+### Groups of the list
+`dsn~list-groups~1`
+
+`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns; without an attribute, the list is one group.
+`TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
+A task with several values of the attribute stands in each of their groups.
+A step and a drag stay within a group; a task is given another value on the board or in the edit dialog.
+
+Covers:
+
+* `req~list-groups~1`
+
+Needs: impl, utest
+
+### Log of failures
+`dsn~failure-log~1`
+
+`TodoController` passes what failed to the function `log` that the platform gives it: an operation whose failure it shows to the user, with the exception, and a synchronization that failed, with the cause that `SyncStatus` carries.
+For a calendar that was not read, it passes the host of the address and the kind of the exception only, as the address is a secret.
+The desktop application and the Android application write these as errors to tinylog, and they do the same for an exception that no code caught.
+`logToFile` names the log file for tinylog before anything logs: the desktop application passes the directory `logs` of its data directory, and `KoppterApplication` passes the directory `logs` of the application in the shared storage of the device, or in its private storage if there is none.
+On Android, warnings and errors go to logcat as well.
+
+Covers:
+
+* `req~failure-log~1`
+
+Needs: impl, utest
+
+### Button that shares the log
+`dsn~share-log~1`
+
+`App` takes a function `shareLog`; if the platform gives one, `SettingsDialog` shows the button *Share log*, which calls it and leaves the dialog open.
+`MainActivity` gives the function: it sends the last 60,000 characters of the newest log file as text to the application that the user chooses, with koppter itself left out of the choice.
+As text, the log is shown by the receiving application before it is sent on, and it fits into what Android passes between applications.
+The desktop application gives no function: its log directory is reached with the file manager.
+
+Covers:
+
+* `req~share-log~1`
+
+Needs: impl, utest
+
+### Links
+`dsn~links~1`
+
+`LinkedText` shows the parts of a description that start with `http://` or `https://` (`webAddresses`) as links, which the task card and the tasks of a context in the overview show in the primary color and underlined.
+An address ends at a blank, and before a mark that ends a sentence or closes a bracket.
+An address of more than 50 characters is shown with its first 49 characters and an ellipsis (`shortened`); the link and the file keep the whole address.
+While the pointer of the mouse rests on a cut address, a tooltip shows the whole one.
+The tooltip does not react to a long press, which starts the drag of a card.
+A click on a link opens it through the `UriHandler` of the application and does not open the task.
+
+Covers:
+
+* `req~links~1`
+
+Needs: impl, utest
+
+### Links of projects and contexts
+`dsn~label-links~1`
+
+The key `links` of `koppter.yml` maps a project, a context or a hashtag, written with its sign as `+Fair`, `@phone` or `#quick`, to a link; the settings dialog edits it, one per line as `label = link`.
+`ConfigFile.link` gives the link of a label: its own, or that of the nearest project or context above it.
+The menu of a label (`WithLinkMenu`), at a task and in the filter panel, has *Open link* for a label with a link, which opens the link through the `UriHandler` of the application.
+The link is not checked: what the platform cannot open is reported as for a link in a task.
+
+Covers:
+
+* `req~label-links~1`
+* `adr~label-links~1`
+
+Needs: impl, utest
+
+### A file opened from the settings
+`dsn~settings-open-file~1`
+
+A file that the user chooses with *Choose file*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
+The fields for the board columns, the names of the priorities, the links of the labels and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
+The configuration of the dialog is thus written to the file it was read from, never to another one.
+A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
+Leaving the dialog without *Save* opens the file again that was open when the dialog was opened; a clone stays in the data directory.
+
+Covers:
+
+* `req~choose-file~1`
+
+Needs: impl, utest
+
+### Line below the overdue tasks
+`dsn~overdue-separator~1`
+
+`TaskList` draws a line between the last overdue task and the first task that is not overdue, in each group that has tasks of both kinds.
+
+Covers:
+
+* `req~list-order~1`
+
+Needs: impl, utest
+
+### Menu of the due date
+`dsn~due-menu~1`
+
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next week, in two weeks and in a month, each day once.
+A weekend and a week end on their Sunday, as in the dates that are typed in words.
+Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
+For a task with a due date, the menu ends with *No due date*, which removes the tag.
+The cards of the board and of the agenda are the same `TaskCard` and have the menu as well.
+
+Covers:
+
+* `req~move-due-date~1`
+
+Needs: impl, utest
+
+### Days for the due date in the edit dialog
+`dsn~due-chips~1`
+
+Above its date fields, `EditDialog` shows the days of `dueChoices` as chips.
+A click on a chip writes its day into the field of the due date, and a click on the chip of the day that the field holds empties the field.
+A device without a mouse thereby reaches these days also for a task without due date, which has no label that opens the menu.
+
+Covers:
+
+* `req~move-due-date~1`
+
+Needs: impl, utest
+
 ### Task labels
 `dsn~task-labels~1`
 
@@ -248,13 +471,28 @@ Covers:
 
 Needs: impl, utest
 
+### Completion in the quick add line
+`dsn~quick-add-completion~1`
+
+`TodoController.completions` takes the word at the end of the typed line.
+If it starts with `+`, `@` or `#`, it returns at most eight known projects, contexts or hashtags that contain the rest of the word, in any case of the letters, so that a name below another one is found by its last level.
+The line shows them in a menu below the field, which does not take the focus.
+Tab takes the first one, a click any of them: the word is replaced by the name, followed by a blank.
+Esc closes the menu until the text changes.
+
+Covers:
+
+* `req~quick-add-completion~1`
+
+Needs: impl, utest
+
 ### Dates in words in the quick add line
 `dsn~quick-add-dates~1`
 
 `TodoController.add` applies `Task.withDates` to the typed line, which `DatePhrase` implements.
 The phrases are those that SkedPal reads in the title of a task, in English and in any case of the letters; the README lists them.
 A phrase is read at the end of the text only, where projects, contexts, hashtags and tags may follow it; the same words elsewhere stay text.
-It is removed from the text and becomes the tags `t:`, `due:`, `at:` and `by:`.
+It is removed from the text and becomes the tags `t:`, `due:`, `at:` and `dueby:`.
 A tag that the line already has stays.
 A weekday or a day of a month names the first such day from today on, and a week runs from Monday to Sunday.
 The quick add field shows the line that `TodoController.datesPreview` returns below the typed one, as there is no other sign that words become a date.
@@ -271,6 +509,8 @@ Needs: impl, utest
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
 Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
+Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
+A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
 *Save* is disabled while a date, the recurrence or the duration is invalid or the task is empty.
 The dialog also serves for a new task.
 
@@ -326,12 +566,45 @@ Covers:
 
 Needs: impl, utest
 
+### Excluding in the filter panel
+`dsn~filter-exclusion~1`
+
+`Filter` holds excluded projects, contexts and hashtags: `Filter.matches` leaves out a task that has one of them, a project or a context with those below it, whatever is selected.
+The menu of a label of the filter panel, which a click with the secondary button or a long press opens, has the entry *Hide these tasks*; it excludes the value and ends its selection.
+An excluded value stands beside the title of its criterion after the word *not*, and a click on it ends the exclusion; *Clear all filters* ends all of them.
+The exclusion is part of the filter, so that the list, the board, the overview and the inbox follow it.
+
+Covers:
+
+* `req~filter-panel~1`
+* `req~filter-criteria~1`
+
+Needs: impl, utest
+
+### Filter after a restart
+`dsn~filter-remembered~1`
+
+`Filter.toLink` writes the whole filter as a link to the application, and `filterOfLink` reads it back.
+`TodoController` keeps that link in the settings of the device with every change of the filter and starts with the filter it names; the filter that restricts nothing is kept as an empty value.
+A change of the todo.txt file in the settings ends the filter, as it names projects and contexts of the former file.
+The options of the first tasks and of the next actions are not kept.
+
+Covers:
+
+* `req~persistent-settings~1`
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the quick add field, the task list and a button for a new task.
+The main screen consists of the top bar, the filter panel, the switches for the view, the quick add field below them, the task list and a button for a new task.
+The switches stand above the field, as a task is looked up more often than added.
+A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
-The texts use the type scale of Material reduced by a tenth (`compactTypography`), which suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
+The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
+That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
 Covers:
 
@@ -345,7 +618,7 @@ Needs: impl
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
 With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, and 1 to 6 show the list and the views in the order of their switches.
-The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter and the *Top* switch and gives the focus to the text of the filter.
+The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
@@ -440,9 +713,11 @@ Needs: impl
 ### Settings dialog
 `dsn~settings-dialog~1`
 
-`SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities and the colors.
+`SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities, the links of projects and contexts and the colors.
 A changed location makes the controller load the other file.
-The fields for the blocks of the configuration file show an example in a pale color while they are empty.
+The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
+A field for a block of the configuration file shows an example in a pale color while it is empty.
+Below the field for the file stands what holds for a file in a git repository.
 
 Covers:
 
@@ -456,6 +731,7 @@ Needs: impl, utest
 
 On the desktop, the settings file is `settings.properties` in `%APPDATA%\koppter` on Windows and in `$XDG_CONFIG_HOME/koppter` or `~/.config/koppter` on Linux.
 The files that the application creates are in its data directory: `%APPDATA%\koppter` on Windows and `$XDG_DATA_HOME/koppter` or `~/.local/share/koppter` on Linux.
+Its directory `logs` holds the log files `koppter-0.log` and following, the highest number being the newest; a file is closed at one megabyte, and three files are kept.
 Without a configured location, the todo.txt file is `todo.txt` in the home directory if that file exists, as earlier versions kept it there, and `todo.txt` in the data directory otherwise.
 
 Covers:
@@ -464,3 +740,60 @@ Covers:
 * `req~choose-file~1`
 
 Needs: impl
+
+### Links to the application
+`dsn~app-links~1`
+
+A link has the form `koppter://filter?project=papers>survey&context=phone&hashtag=someday`: each of the keys `project`, `context` and `hashtag` may be given, also several times.
+The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their threshold date.
+`filterOfLink` reads it into a filter; it decodes characters that a program wrote as `%3E`, takes a name with or without its sign, and accepts the forms `koppter:filter?` and `koppter://filter/?`, which programs make of the link.
+`TodoController.openLink` replaces the filter by that of the link, turns off the options of the first tasks and of the next actions, and shows the list; a text that is no such link changes nothing.
+
+Covers:
+
+* `req~app-links~1`
+* `adr~links-with-query~1`
+
+Needs: impl, utest
+
+### One window for links on the desktop
+`dsn~link-single-instance~1`
+
+The desktop application takes a link as its argument.
+The running application listens on a port of the computer itself and writes its number to the file `link.port` in the data directory.
+A start with a link sends it to that port and ends if the answer is that of the application; otherwise it starts as usual and opens the link itself.
+The running application opens a received link and brings its window to the front.
+A start without a link opens a window of its own, as before.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest
+
+### Scheme of the links on Windows
+`dsn~link-scheme-windows~1`
+
+On Windows, the installed program writes at each start to the registry of the current user that links of the scheme `koppter` are opened with it: the key `Software\Classes\koppter` with the value `URL Protocol`, and the command of the program with the link as its argument.
+Writing at each start keeps the entry right after an update, and needs neither the installer nor rights of an administrator.
+A start from the build registers nothing.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest
+
+### Copying a link
+`dsn~app-link-copy~1`
+
+`linkTo` writes the link to a project, a context or a hashtag and encodes every character of the name that is not a letter, a digit or one of `-._~`, so that a program that finds links in a text takes the whole link.
+`WithLinkMenu` wraps the labels of projects, contexts and hashtags of a task and of the filter panel: a click with the secondary button opens a menu whose entry *Copy link* puts the link on the clipboard.
+The click is taken before the card of the task sees it, so that the card does not open its menu of due dates.
+In the filter panel, a finger that stays on a label opens the menu as well, and lifting it does not select the label; the label of a task has no such menu, as a long press there picks up the card.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest

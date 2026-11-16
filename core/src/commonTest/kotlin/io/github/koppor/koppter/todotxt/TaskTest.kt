@@ -1,5 +1,7 @@
 package io.github.koppor.koppter.todotxt
 
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.hours
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -234,5 +236,89 @@ class TaskTest {
         assertEquals(null, Task.parse("Review cs: https://example.org/x").withContextSwitcherTags().tag(Task.CONTEXT_SWITCHER))
         assertEquals("jabref/fix-npe", Task.contextSwitcherId(" contextswitcher://switch/jabref/fix-npe "))
         assertEquals("My%20Category/task", Task.contextSwitcherId("My Category/task"))
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aTaskWithoutDueDateIsDueOnItsDeadline() {
+        val official = Task.parse("File the tax return deadline:2026-11-30")
+        assertEquals(LocalDate(2026, 11, 30), official.due)
+        assertEquals(LocalDate(2026, 11, 30), official.deadline)
+        val buffered = Task.parse("File the tax return due:2026-11-20 deadline:2026-11-30")
+        assertEquals(LocalDate(2026, 11, 20), buffered.due)
+        assertEquals(false, buffered.isOverdue(today))
+        // The days between the two dates are a buffer.
+        assertEquals(false, Task.parse("File the tax return due:2026-11-10 deadline:2026-11-30").isOverdue(today))
+        // A deadline that has passed keeps the task overdue, wherever the due date was moved to.
+        assertTrue(Task.parse("File the tax return due:2026-11-20 deadline:2026-07-31").isOverdue(today))
+        assertEquals(false, Task.parse("x File the tax return deadline:2026-07-31").isOverdue(today))
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun theNextOccurrenceMovesTheDeadlineWithTheDueDate() {
+        assertEquals(
+            "Pay rent due:2026-12-01 rec:+1m deadline:2026-12-04",
+            Task.parse("Pay rent due:2026-11-01 rec:+1m deadline:2026-11-04").nextOccurrence(today)!!.toLine(),
+        )
+        // A deadline that was the due date itself stays that.
+        assertEquals("Pay rent rec:+1m deadline:2026-12-01", Task.parse("Pay rent rec:+1m deadline:2026-11-01").nextOccurrence(today)!!.toLine())
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aDeadlineMayStateATime() {
+        val task = Task.parse("Submit the paper deadline:2026-11-30T12:00")
+        assertEquals(LocalDate(2026, 11, 30), task.deadline)
+        assertEquals(12 * 60, task.deadlineTime)
+        // The task is due on its deadline, and by that time.
+        assertEquals(LocalDate(2026, 11, 30), task.due)
+        assertEquals(12 * 60, task.by)
+        // With a due date of its own, the task is due by the time of that date only.
+        assertNull(Task.parse("Submit the paper due:2026-11-20 deadline:2026-11-30T12:00").by)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30").deadlineTime)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30T25:00").deadline)
+        assertNull(Task.parse("Submit the paper deadline:2026-11-30T").deadline)
+        assertEquals(
+            "Send the report rec:+1m deadline:2026-12-30T12:00",
+            Task.parse("Send the report rec:+1m deadline:2026-11-30T12:00").nextOccurrence(today)!!.toLine(),
+        )
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aDeadlineWithAnOffsetCountsAsTheDayAndTimeOfTheZone() {
+        val berlin = kotlinx.datetime.TimeZone.of("Europe/Berlin")
+        // Anywhere on Earth: the end of 30 November there is noon of 1 December in Berlin.
+        assertEquals(LocalDate(2026, 12, 1) to 12 * 60 + 59, Task.parseDeadline("2026-11-30T23:59-12:00", berlin))
+        assertEquals("2026-12-01 12:59", Task.localDeadline("2026-11-30T23:59-12:00", berlin))
+        assertEquals(LocalDate(2026, 11, 30) to 13 * 60, Task.parseDeadline("2026-11-30T12:00Z", berlin))
+        // In summer, Berlin is two hours ahead of UTC; seconds are read and not used.
+        assertEquals(LocalDate(2026, 7, 1) to 60 + 59, Task.parseDeadline("2026-06-30T23:59:59Z", berlin))
+        assertEquals(LocalDate(2026, 11, 30) to 12 * 60, Task.parseDeadline("2026-11-30T12:00+01:00", berlin))
+        // Without an offset, the time is the one of the zone, and nothing is shown in another way.
+        assertEquals(LocalDate(2026, 11, 30) to 12 * 60, Task.parseDeadline("2026-11-30T12:00", berlin))
+        assertNull(Task.localDeadline("2026-11-30T12:00", berlin))
+        assertNull(Task.localDeadline("2026-11-30", berlin))
+        assertNull(Task.parseDeadline("2026-11-30T12:00+1", berlin))
+        assertNull(Task.parseDeadline("2026-11-30T12:00 Europe/Berlin", berlin))
+        // The next occurrence moves the day as it is written.
+        assertEquals(
+            "Send the report rec:+1w deadline:2026-12-07T23:59-12:00",
+            Task.parse("Send the report rec:+1w deadline:2026-11-30T23:59-12:00").nextOccurrence(today)!!.toLine(),
+        )
+    }
+
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun theTimeSpentIsATagThatGrowsAndThatTheNextOccurrenceDoesNotKeep() {
+        val task = Task.parse("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h")
+        assertEquals(null, task.spent)
+        assertEquals("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h spent:45m", task.withSpent(45.minutes).toLine())
+        val worked = task.withSpent(45.minutes).withSpent(90.minutes)
+        assertEquals("Prepare the lecture @work due:2026-11-16 rec:+1w dur:4h spent:2h15m", worked.toLine())
+        assertEquals(135.minutes, worked.spent)
+        assertEquals("spent:2h", Task.parse("Call Mom spent:1h").withSpent(1.hours).toLine().substringAfter("Mom "))
+        assertEquals("Prepare the lecture @work due:2026-11-23 rec:+1w dur:4h", worked.nextOccurrence(today)?.toLine())
     }
 }

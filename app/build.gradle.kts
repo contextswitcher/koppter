@@ -37,6 +37,11 @@ kotlin {
                 implementation(compose.desktop.currentOs)
                 implementation(libs.kotlinx.coroutines.swing)
                 implementation(libs.appdirs)
+                // [impl->adr~log-messages-through-tinylog~1]
+                // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
+                implementation(libs.tinylog.api)
+                runtimeOnly(libs.tinylog.slf4j)
+                runtimeOnly(libs.tinylog.impl)
             }
         }
         named("desktopTest") {
@@ -56,6 +61,9 @@ val desktopVersion = releaseDay?.destructured?.let { (year, month, day) -> "$yea
 compose.desktop {
     application {
         mainClass = "io.github.koppor.koppter.MainKt"
+        // Skia and JNA load native libraries, for which Java warns at the start and announces to refuse it one day
+        // unless the application states that it wants this (JEP 472).
+        jvmArgs += "--enable-native-access=ALL-UNNAMED"
         nativeDistributions {
             targetFormats(TargetFormat.Deb, TargetFormat.Msi, TargetFormat.Dmg)
             packageName = "koppter"

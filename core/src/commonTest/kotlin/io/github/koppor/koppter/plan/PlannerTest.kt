@@ -138,6 +138,8 @@ class PlannerTest {
 
         assertEquals(LocalDate(2026, 11, 13), config.barrierOf(Task.parse("Write +Thesis @errands"), today))
         assertEquals(LocalDate(2026, 11, 15), config.barrierOf(Task.parse("Buy paint @errands>city"), today))
+        // [utest->dsn~project-hierarchy~1]
+        assertEquals(LocalDate(2026, 11, 13), config.barrierOf(Task.parse("Write the introduction +Thesis>chapter1"), today))
         assertEquals(LocalDate(2026, 12, 31), config.barrierOf(Task.parse("Anything"), today))
         // Without a default, the barrier is the end of the quarter.
         assertEquals(LocalDate(2026, 12, 31), PlanConfig().barrierOf(Task.parse("Anything"), today))
@@ -417,9 +419,9 @@ class PlannerTest {
         assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("New task"), planned["New task"]))
         // [utest->dsn~due-time~1]
         // The call is planned from 08:00 to 08:30: in time for 08:30, too late for 08:15.
-        assertEquals(PlanState.TIGHT, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 by:8:30"), planned[CalendarTxt.text(landlord)]))
-        assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 by:08:15"), planned[CalendarTxt.text(landlord)]))
-        assertEquals(PlanState.FITS, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-13 by:08:15"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.TIGHT, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 dueby:8:30"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.LATE, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-12 dueby:08:15"), planned[CalendarTxt.text(landlord)]))
+        assertEquals(PlanState.FITS, CalendarTxt.state(Task.parse("Call the landlord @phone due:2026-11-13 dueby:08:15"), planned[CalendarTxt.text(landlord)]))
 
         assertEquals(53, CalendarTxt.week(LocalDate(2027, 1, 1)))
         assertEquals(1, CalendarTxt.week(LocalDate(2024, 12, 30)))
@@ -453,5 +455,88 @@ class PlannerTest {
         )
         // The same plan gives the same file.
         assertEquals(ics, Ics.write(blocks, today))
+    }
+
+    // [utest->dsn~deadline~1]
+    @Test
+    fun aPlanThatEndsBetweenDueDateAndDeadlineIsTight() {
+        val friday = LocalDate(2026, 11, 13)
+        val planned = Planned(friday, 8 * 60, friday, 9 * 60)
+        fun state(tags: String) = CalendarTxt.state(Task.parse("File the tax return $tags"), planned)
+        assertEquals(PlanState.FITS, state("due:2026-11-16 deadline:2026-11-20"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-20"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-13"))
+        assertEquals(PlanState.LATE, state("due:2026-11-11 deadline:2026-11-12"))
+        // The deadline has passed, wherever the due date was moved to.
+        assertEquals(PlanState.LATE, state("due:2026-11-20 deadline:2026-11-10"))
+        // Without a due date, the deadline is the due date.
+        assertEquals(PlanState.TIGHT, state("deadline:2026-11-13"))
+        assertEquals(PlanState.LATE, state("deadline:2026-11-12"))
+        // The plan ends at 9:00 on the day of the deadline.
+        assertEquals(PlanState.TIGHT, state("deadline:2026-11-13T09:00"))
+        assertEquals(PlanState.LATE, state("deadline:2026-11-13T08:30"))
+        assertEquals(PlanState.LATE, state("due:2026-11-12 deadline:2026-11-13T08:30"))
+        assertEquals(PlanState.TIGHT, state("due:2026-11-12 deadline:2026-11-13T12:00"))
+    }
+
+    // [utest->dsn~plan-names~1]
+    @Test
+    fun tasksWithTheSameTextAreToldApartInThePlan() {
+        val todo = """
+            Prepare the lecture +Course @home due:2026-11-16 rec:+1w dur:1h
+            Prepare the lecture +Course @home due:2026-11-20 rec:+1w dur:1h
+            Water the plants @home
+            Water the plants @home
+            Review the paper
+        """.trimIndent()
+        val entries = TodoFile.parse(todo).entries
+        val names = CalendarTxt.names(entries)
+        assertEquals(
+            listOf(
+                "Prepare the lecture +Course @home (due 2026-11-16)",
+                "Prepare the lecture +Course @home (due 2026-11-20)",
+                "Water the plants @home",
+                "Water the plants @home (2)",
+                "Review the paper",
+            ),
+            entries.map { names[it] },
+        )
+
+        // Each of the five tasks has its own blocks in the file, and so its own state.
+        val plan = plan(todo)
+        val planned = CalendarTxt.planned(CalendarTxt.write("", plan.blocks, today), today)
+        assertEquals(names.values.toSet(), planned.keys)
+        // A task that stands alone is called by its text.
+        assertEquals(null, plan.blocks.single { it.entry.task.description == "Review the paper" }.name)
+
+        // The lecture of Monday is completed and has its next occurrence: the one of Friday is still found by the name it was planned with.
+        val later = TodoFile.parse(todo.replace("due:2026-11-16", "due:2026-11-23")).entries
+        assertEquals("Prepare the lecture +Course @home (due 2026-11-20)", CalendarTxt.names(later)[later[1]])
+        // Completed tasks have no name in a plan and do not count as the same.
+        val done = TodoFile.parse("x Water the plants @home\nWater the plants @home\n").entries
+        assertEquals(mapOf(done[1] to "Water the plants @home"), CalendarTxt.names(done))
+    }
+
+    // [utest->dsn~time-spent~1]
+    @Test
+    fun aTaskGetsWhatIsLeftOfItsDurationAfterTheTimeSpentOnIt() {
+        val plan = plan(
+            """
+            (A) Write the report dur:4h spent:2h30m
+            (B) Review the paper dur:1h spent:1h15m
+            (C) Answer the mail spent:10m
+            (D) Call the landlord dur:45m
+            """,
+        )
+        assertEquals(
+            listOf(
+                "2026-11-12 8:00 90 Write the report",
+                // The time is used up and the task is open: it gets the half hour of a task without duration.
+                "2026-11-12 9:30 30 Review the paper",
+                "2026-11-12 10:00 20 Answer the mail",
+                "2026-11-12 10:20 45 Call the landlord",
+            ),
+            plan.lines(),
+        )
     }
 }

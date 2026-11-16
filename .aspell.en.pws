@@ -1,4 +1,6 @@
-personal_ws-1.1 en 107 utf-8
+personal_ws-1.1 en 115 utf-8
+OneNote
+GTD
 APIs
 APK
 appdirs
@@ -106,3 +108,9 @@ YAML
 Dependabot
 dmg
 msi
+SLF
+Logback
+NOP
+tinylog
+logcat
+JabRef

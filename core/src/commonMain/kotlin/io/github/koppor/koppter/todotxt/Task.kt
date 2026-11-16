@@ -2,8 +2,15 @@ package io.github.koppor.koppter.todotxt
 
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.UtcOffset
 import kotlinx.datetime.daysUntil
 import kotlinx.datetime.minus
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
 
 /**
@@ -46,11 +53,17 @@ data class Task(
     /** The value of the first tag with the given key. */
     fun tag(key: String): String? = tags.firstOrNull { it.first == key }?.second
 
+    /** Whether the task is open and its deadline has passed, or its due date if it has no deadline: the days between the two are a buffer. */
+    // [impl->dsn~deadline~1]
+    fun isOverdue(today: LocalDate): Boolean = !completed && (deadline ?: due).let { it != null && it < today }
+
     /**
      * Whether this task can step over the other one, its neighbor in the list.
      * Within a priority, the due date orders the tasks, so only a task with the same due date and time can be passed.
+     * The overdue tasks stand before the others whatever their priority is, so no step leads across that border.
      */
-    fun canStepOver(other: Task): Boolean = !completed && !other.completed && (priority != other.priority || (due == other.due && by == other.by))
+    fun canStepOver(other: Task, today: LocalDate): Boolean = !completed && !other.completed && isOverdue(today) == other.isOverdue(today) &&
+        (priority != other.priority || (due == other.due && by == other.by))
 
     /** The task with a date typed as words at the end of its text, such as `next week` or `by Wed`, replaced by tags: see [DatePhrase]. */
     fun withDates(today: LocalDate): Task = DatePhrase.apply(this, today)
@@ -63,7 +76,16 @@ data class Task(
         return copy(body = (tokens.filterNot(CONTEXT_SWITCHER_LINK::matches) + ids.map { "$CONTEXT_SWITCHER:$it" }).joinToString(" "))
     }
 
-    val due: LocalDate? get() = tag(DUE)?.let(::parseDate)
+    /** The day to have the task done by; a task without that tag is due on its deadline. */
+    // [impl->dsn~deadline~1]
+    val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline
+
+    /** The day that others set for the task, which the application does not move. */
+    val deadline: LocalDate? get() = tag(DEADLINE)?.let(::parseDeadline)?.first
+
+    /** The time of the deadline in minutes of the day, for a tag that states one, as `deadline:2026-11-30T12:00`. */
+    // [impl->dsn~deadline~1]
+    val deadlineTime: Int? get() = tag(DEADLINE)?.let(::parseDeadline)?.second
 
     /** The threshold date: the task is not relevant before it. */
     val threshold: LocalDate? get() = tag(THRESHOLD)?.let(::parseDate)
@@ -72,6 +94,13 @@ data class Task(
 
     /** The time the task is expected to take. */
     val duration: Duration? get() = tag(DURATION)?.let(::parseDuration)
+
+    /** The time that was worked on the task so far; the plan gives the task what is left of its duration. */
+    // [impl->dsn~time-spent~1]
+    val spent: Duration? get() = tag(SPENT)?.let(::parseDuration)
+
+    /** This task with [worked] added to the time spent on it. */
+    fun withSpent(worked: Duration): Task = withTag(SPENT, durationText((spent ?: Duration.ZERO) + worked))
 
     /** The minutes of the day at which the task takes place, for a task with a fixed time. */
     // [impl->dsn~fixed-time~1]
@@ -83,7 +112,8 @@ data class Task(
 
     /** The minutes of the due date by which the task is due, for a task that is due at a time of that day. */
     // [impl->dsn~due-time~1]
-    val by: Int? get() = tag(BY)?.let(::parseTime)
+    // A task that is due on its deadline is due by the time of the deadline.
+    val by: Int? get() = tag(BY)?.let(::parseTime) ?: deadlineTime.takeIf { tag(DUE) == null }
 
     // [impl->dsn~task-serializer~1]
     fun toLine(): String = buildString {
@@ -179,12 +209,22 @@ data class Task(
         val threshold = threshold
         val from = if (recurrence.strict) due ?: threshold ?: today else today
         val next = recurrence.next(from)
-        val open = if (completed) reopen() else this
+        // The next occurrence starts anew: nothing was worked on it.
+        val open = (if (completed) reopen() else this).withTag(SPENT, null)
         return when {
             due != null && threshold != null ->
                 open.withTag(DUE, next.toString()).withTag(THRESHOLD, next.minus(threshold.daysUntil(due), DateTimeUnit.DAY).toString())
             due == null && threshold != null -> open.withTag(THRESHOLD, next.toString())
             else -> open.withTag(DUE, next.toString())
+        }.let { moved ->
+            // [impl->dsn~deadline~1]
+            // The deadline keeps its distance to the due date; where it was the due date itself, it stays that.
+            val deadline = deadline ?: return@let moved
+            // The day as it is written moves, as with an offset it can be another one than the day in the zone of the device.
+            val written = tag(DEADLINE)!!
+            val day = parseDate(written.substringBefore('T'))!!.plus(due!!.daysUntil(next), DateTimeUnit.DAY)
+            moved.withTag(DEADLINE, day.toString() + written.substringAfter('T', "").let { if (it.isEmpty()) "" else "T$it" })
+                .withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
         }.copy(creationDate = null, completionDate = null)
     }
 
@@ -195,6 +235,7 @@ data class Task(
 
     companion object {
         const val DUE = "due"
+        const val DEADLINE = "deadline"
         const val THRESHOLD = "t"
         const val RECURRENCE = "rec"
         const val PRIORITY = "pri"
@@ -202,8 +243,9 @@ data class Task(
         const val CONTEXT_SWITCHER = "cs"
         const val DURATION = "dur"
         const val AT = "at"
-        const val BY = "by"
+        const val BY = "dueby"
         const val TRAVEL = "tt"
+        const val SPENT = "spent"
 
         /** As topydo writes dependencies: a task with [ID] waits for the tasks whose [PARENT] has the same value. */
         const val ID = "id"
@@ -217,6 +259,10 @@ data class Task(
         /** Reads a duration such as `45m`, `2h` or `1h30m`; `null` if the text is none or not positive. */
         // [impl->dsn~duration~1]
         fun parseDuration(text: String): Duration? = Duration.parseOrNull(text)?.takeIf { it.isPositive() && it.isFinite() }
+
+        /** Writes a duration as [parseDuration] reads it, in hours and minutes: `1h30m`; empty for less than a minute. */
+        fun durationText(duration: Duration): String =
+            duration.inWholeMinutes.let { (if (it >= 60) "${it / 60}h" else "") + (if (it % 60 > 0) "${it % 60}m" else "") }
 
         /**
          * The link that makes ContextSwitcher switch to the task that a tag `cs:` names.
@@ -264,6 +310,32 @@ data class Task(
                 creationDate = if (completed) dates.getOrNull(1) else dates.getOrNull(0),
                 body = rest,
             )
+        }
+
+        // Hours, minutes, seconds that are not used, and the offset from UTC, as ISO 8601 and RFC 3339 write them.
+        private val DEADLINE_TIME = Regex("^([01]?\\d|2[0-3]):([0-5]\\d)(?::[0-5]\\d)?(Z|[+-](?:[01]\\d|2[0-3]):[0-5]\\d)?$")
+
+        /**
+         * The day of a deadline, and its time in minutes of the day if the text states one: `2026-11-30` or `2026-11-30T12:00`.
+         * A time with an offset from UTC, as `2026-11-30T23:59-12:00`, is given as the day and the time of the zone.
+         */
+        // ponytail: the zone of the device is read here, not passed in as today is; pass it down from the callers if tasks are ever read for another place.
+        // [impl->dsn~deadline~1]
+        fun parseDeadline(text: String, zone: TimeZone = TimeZone.currentSystemDefault()): Pair<LocalDate, Int?>? {
+            val date = parseDate(text.substringBefore('T')) ?: return null
+            if ('T' !in text) return date to null
+            val (hours, minutes, offset) = DEADLINE_TIME.matchEntire(text.substringAfter('T'))?.destructured ?: return null
+            val written = LocalDateTime(date, LocalTime(hours.toInt(), minutes.toInt()))
+            val local = if (offset.isEmpty()) written else written.toInstant(UtcOffset.parse(offset)).toLocalDateTime(zone)
+            return local.date to local.hour * 60 + local.minute
+        }
+
+        /** The day and the time of a deadline with an offset from UTC as they are in the zone; `null` for a deadline without offset, which is written as it counts. */
+        // [impl->dsn~deadline~1]
+        fun localDeadline(text: String, zone: TimeZone = TimeZone.currentSystemDefault()): String? {
+            if (text.substringAfter('T', "").none { it == 'Z' || it == '+' || it == '-' }) return null
+            val (date, minutes) = parseDeadline(text, zone) ?: return null
+            return "$date ${(minutes!! / 60).toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}"
         }
 
         fun parseDate(text: String): LocalDate? = try {

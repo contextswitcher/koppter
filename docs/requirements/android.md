@@ -138,3 +138,15 @@ Covers:
 * `req~share-actions~1`
 
 Needs: impl
+
+### Links on Android
+`dsn~android-links~1`
+
+The manifest declares that `MainActivity` views links of the scheme `koppter`, and starts it as a single task, so that a link reaches the open application.
+The activity passes the link of the intent that started it, and of each later intent, to `TodoController.openLink`; after a change of the configuration it does not pass the first one again.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl

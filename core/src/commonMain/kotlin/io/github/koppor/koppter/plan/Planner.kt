@@ -10,6 +10,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -25,9 +26,10 @@ class Limit(val key: String, val block: Int? = null, val maxDay: Int? = null, va
     fun names(task: Task): Boolean = key == PlanConfig.DEFAULT || key.names(task)
 }
 
-/** Whether the key, `+project` or `@context`, names a project of the task or a context that a context of the task is within. */
+/** Whether the key, `+project` or `@context`, names a project or a context that one of the task is within. */
 private fun String.names(task: Task): Boolean = when {
-    startsWith("+") -> substring(1) in task.projects
+    // [impl->dsn~project-hierarchy~1]
+    startsWith("+") -> task.projects.any { it.isWithin(substring(1)) }
     startsWith("@") -> task.contexts.any { it.isWithin(substring(1)) }
     else -> false
 }
@@ -123,10 +125,11 @@ class PlanConfig(
  * A time in which a task is to be worked on.
  *
  * @param travel whether the time is the way to the task or back from it
+ * @param name what the plan calls the task, if another open task has the same text; see [CalendarTxt.names]
  */
-data class Block(val date: LocalDate, val span: Span, val entry: Entry, val travel: Boolean = false) {
+data class Block(val date: LocalDate, val span: Span, val entry: Entry, val travel: Boolean = false, val name: String? = null) {
     /** What the plan shows for the block. */
-    val text: String get() = (if (travel) "Travel: " else "") + CalendarTxt.text(entry.task)
+    val text: String get() = (if (travel) "Travel: " else "") + (name ?: CalendarTxt.text(entry.task))
 }
 
 /**
@@ -138,6 +141,16 @@ data class Plan(val blocks: List<Block>, val unplaced: List<Entry>, val problems
 /** The duration of a task that states none. */
 // ponytail: a constant; a setting when half an hour does not fit the tasks without duration.
 val DEFAULT_DURATION = 30.minutes
+
+/**
+ * The minutes that the plan gives a task: its duration without the time spent on it.
+ * A task that took its duration and is still open is not done, so that it gets the default duration again.
+ */
+// [impl->dsn~time-spent~1]
+internal fun minutesLeft(task: Task): Int {
+    val left = (task.duration ?: DEFAULT_DURATION) - (task.spent ?: Duration.ZERO)
+    return (if (left.inWholeMinutes > 0) left else DEFAULT_DURATION).inWholeMinutes.toInt()
+}
 
 /** A block does not start between these minutes after a time that is taken by something else than a task. */
 private const val GRID = 15
@@ -183,7 +196,7 @@ private val MOMENTS = compareBy<Pair<LocalDate, Int>>({ it.first }, { it.second 
  * As topydo writes it, a task with the tag `id:` waits for the tasks whose tag `p:` has the same value.
  */
 // [impl->dsn~dependencies~1]
-private class Dependencies(open: List<Entry>) {
+private class Dependencies(open: List<Entry>, today: LocalDate) {
     val problems = mutableListOf<String>()
 
     /** The open tasks a task waits for. */
@@ -191,7 +204,7 @@ private class Dependencies(open: List<Entry>) {
     val order: List<Entry>
 
     init {
-        val sorted = open.sortedWith(listOrder)
+        val sorted = open.sortedWith(listOrder(today))
         val parts = sorted.flatMap { entry -> entry.task.tags.filter { it.first == Task.PARENT }.map { it.second to entry } }.groupBy({ it.first }, { it.second })
         val result = LinkedHashSet<Entry>()
         val visiting = mutableSetOf<Entry>()
@@ -227,7 +240,7 @@ private class Planning(
     private val busy = busy + (today to busy[today].orEmpty() + Span(0, now))
     private val taken = mutableMapOf<LocalDate, MutableList<Span>>()
     private val blocks = mutableMapOf<Entry, MutableList<Block>>()
-    private val left = dependencies.order.associateWithTo(mutableMapOf()) { (it.task.duration ?: DEFAULT_DURATION).inWholeMinutes.toInt() }
+    private val left = dependencies.order.associateWithTo(mutableMapOf()) { minutesLeft(it.task) }
     private val unplaced = mutableListOf<Entry>()
 
     /** The tasks that are not to be planned yet: their threshold date lies behind their barrier, or they wait for such a task. */
@@ -382,7 +395,7 @@ fun plan(
     now: Int,
     upcoming: List<Pair<LocalDate, Task>> = emptyList(),
 ): Plan {
-    val dependencies = Dependencies(entries.filterNot { it.task.completed })
+    val dependencies = Dependencies(entries.filterNot { it.task.completed }, today)
     val fixed = fixedBlocks(dependencies.order, upcoming, today, now)
     val plain = Planning(config, busy, today, now, dependencies, fixed).run(emptyMap())
     val reserveUntil = config.minimums.mapNotNull { limit ->
@@ -390,5 +403,8 @@ fun plan(
             plain.unplaced.filter { limit.names(it.task) }.map { config.barrierOf(it.task, today) }
         days.maxOrNull()?.let { limit.key to it }
     }.toMap()
-    return if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed).run(reserveUntil)
+    val plan = if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed).run(reserveUntil)
+    // [impl->dsn~plan-names~1]
+    val names = CalendarTxt.names(entries)
+    return plan.copy(blocks = plan.blocks.map { block -> names[block.entry]?.takeIf { it != CalendarTxt.text(block.entry.task) }?.let { block.copy(name = it) } ?: block })
 }

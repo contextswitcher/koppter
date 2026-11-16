@@ -10,12 +10,15 @@ import kotlinx.datetime.minus
  *
  * @param daysLeft the days until the due date; negative if it has passed
  * @param elapsed the part of the time from the start of the task to its due date that has passed, from 0 to 1
+ * @param deadlineLeft the days until the deadline of a task that has one apart from its due date; negative if it has passed
  */
-data class Urgency(val daysLeft: Int, val elapsed: Float) {
+data class Urgency(val daysLeft: Int, val elapsed: Float, val deadlineLeft: Int? = null) {
+    /** A due date that has passed is no failure while the deadline lies ahead: the task is then due, as on its due date. */
+    // [impl->dsn~deadline~1]
     val state: UrgencyState
         get() = when {
-            daysLeft < 0 -> UrgencyState.OVERDUE
-            daysLeft == 0 -> UrgencyState.DUE
+            (deadlineLeft ?: daysLeft) < 0 -> UrgencyState.OVERDUE
+            daysLeft <= 0 -> UrgencyState.DUE
             else -> UrgencyState.FINE
         }
 
@@ -26,10 +29,16 @@ data class Urgency(val daysLeft: Int, val elapsed: Float) {
             daysLeft == 0 -> "Due today"
             daysLeft == 1 -> "Due tomorrow"
             else -> "Due in $daysLeft days"
+        } + when (deadlineLeft) {
+            null -> ""
+            -1 -> ", deadline yesterday"
+            0 -> ", deadline today"
+            1 -> ", deadline tomorrow"
+            else -> if (deadlineLeft < 0) ", deadline ${-deadlineLeft} days ago" else ", deadline in $deadlineLeft days"
         }
 }
 
-/** Ordered from the best to the worst state. */
+/** Ordered from the best to the worst state; [DUE] is due today, or due earlier with the deadline still ahead. */
 enum class UrgencyState { FINE, DUE, OVERDUE }
 
 /**
@@ -41,16 +50,18 @@ enum class UrgencyState { FINE, DUE, OVERDUE }
 fun Task.urgency(today: LocalDate): Urgency? {
     val due = due?.takeIf { !completed } ?: return null
     val start = (threshold ?: creationDate)?.takeIf { it < due } ?: due.minus(DatePeriod(days = 14))
-    return Urgency(today.daysUntil(due), (start.daysUntil(today).toFloat() / start.daysUntil(due)).coerceIn(0f, 1f))
+    return Urgency(today.daysUntil(due), (start.daysUntil(today).toFloat() / start.daysUntil(due)).coerceIn(0f, 1f), deadline?.takeIf { it != due }?.let(today::daysUntil))
 }
 
 /**
- * The state of a context of the outermost level, with the contexts below it.
+ * The state of a tile of the overview: a context or a project of the outermost level with those below it, or a hashtag.
  *
- * @param context `null` for the tasks without context
+ * @param name `null` for the tasks that have none
+ * @param title the name with its sign, as the tile shows it
  * @param entries the open tasks, the most urgent first and those without due date last
+ * @param stuck the projects of the tile that have no next action
  */
-data class ContextState(val context: String?, val entries: List<Entry>, val dueToday: Int, val overdue: Int) {
+data class OverviewState(val name: String?, val title: String, val entries: List<Entry>, val dueToday: Int, val overdue: Int, val stuck: List<String> = emptyList()) {
     val state: UrgencyState
         get() = when {
             overdue > 0 -> UrgencyState.OVERDUE
@@ -59,17 +70,33 @@ data class ContextState(val context: String?, val entries: List<Entry>, val dueT
         }
 }
 
-/** The contexts of the outermost level that have open tasks, sorted by name; the tasks without context last. */
+/** The attributes that the overview has tiles for. */
+val OVERVIEW_KEYS = listOf(GroupKey.CONTEXT, GroupKey.PROJECT, GroupKey.HASHTAG)
+
+/**
+ * The contexts, projects or hashtags that have open tasks, sorted by name; the tasks that have none last.
+ * Contexts and projects are those of the outermost level, each with what lies below it.
+ *
+ * @param all the tasks of the file, which tell the projects without next action whatever the filter shows
+ */
 // [impl->dsn~overview~1]
-fun contextStates(entries: List<Entry>, today: LocalDate): List<ContextState> {
+fun overviewStates(entries: List<Entry>, today: LocalDate, key: GroupKey = GroupKey.CONTEXT, all: List<Entry> = entries): List<OverviewState> {
+    val (sign, values) = when (key) {
+        GroupKey.PROJECT -> "+" to Task::projects
+        GroupKey.HASHTAG -> "#" to Task::hashtags
+        else -> "@" to Task::contexts
+    }
     val open = entries.filterNot { it.task.completed }
-    val contexts = open.flatMap { it.task.contexts }.map { it.substringBefore(LEVEL_SEPARATOR) }.distinct().sorted()
-    return (contexts + null).mapNotNull { context ->
+    // [impl->dsn~next-actions~1]
+    val stuck = if (key == GroupKey.PROJECT) projectsWithoutNextAction(all, today) else emptyList()
+    val names = open.flatMap { values(it.task) }.map { it.substringBefore(LEVEL_SEPARATOR) }.distinct().sorted()
+    return (names + null).mapNotNull { name ->
         val own = open.filter { entry ->
-            if (context == null) entry.task.contexts.isEmpty() else entry.task.contexts.any { it.isWithin(context) }
-        }.sortedWith(compareBy<Entry> { it.task.urgency(today)?.daysLeft ?: Int.MAX_VALUE }.then(listOrder))
+            if (name == null) values(entry.task).isEmpty() else values(entry.task).any { it.isWithin(name) }
+        }.sortedWith(compareBy<Entry> { it.task.urgency(today)?.daysLeft ?: Int.MAX_VALUE }.then(listOrder(today)))
         if (own.isEmpty()) return@mapNotNull null
         val states = own.mapNotNull { it.task.urgency(today)?.state }
-        ContextState(context, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE })
+        val title = name?.let { sign + it } ?: "No ${key.label.lowercase()}"
+        OverviewState(name, title, own, states.count { it == UrgencyState.DUE }, states.count { it == UrgencyState.OVERDUE }, stuck.filter { name != null && it.isWithin(name) })
     }
 }

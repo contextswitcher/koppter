@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
@@ -89,7 +90,7 @@ class ScreenshotTest {
             (B) Schedule Goodwill pickup +GarageSale @phone due:2026-11-14
             (B) Prepare the slides for the team meeting +Work @computer #meeting due:2026-11-17 dur:2h cs:work/team-meeting note:k3f.md
             (C) Post signs around the neighborhood +GarageSale @errands
-            (C) Renew the library card @errands>city #someday due:2026-11-20
+            (C) Renew the library card @errands>city #someday due:2026-11-20 deadline:2026-11-27
             Water the plants @home due:2026-11-12 rec:1w
             Book the train to Hamburg +Vacation @computer @waiting
             Compare prices for a new bike +Vacation #money #someday
@@ -190,6 +191,20 @@ class ScreenshotTest {
     fun rendersNordDark() = runDesktopComposeUiTest(width = 1100, height = 620) {
         start(Settings(appearance = Appearance.DARK))
         save("nord-dark.png")
+    }
+
+    @Test
+    fun rendersListInGroups() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        start()
+        onNodeWithTag("group-PROJECT").performClick()
+        save("list-project.png")
+    }
+
+    @Test
+    fun rendersDueMenu() = runDesktopComposeUiTest(width = 1100, height = 520) {
+        start()
+        onNodeWithText("Submit the travel expense report").performMouseInput { rightClick() }
+        save("due-menu.png")
     }
 
     @Test

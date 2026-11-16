@@ -87,7 +87,7 @@ class DatePhraseTest {
             "on Wed at 9:30am" to "due:2026-11-18 at:9:30",
             "today 12 pm" to "due:2026-11-13 at:12:00",
             "at 9:30" to "at:9:30",
-            "by Mon 14:00" to "due:2026-11-16 by:14:00",
+            "by Mon 14:00" to "due:2026-11-16 dueby:14:00",
         ).forEach { (phrase, tags) -> assertEquals("Dentist $tags", typed("Dentist $phrase"), phrase) }
     }
 

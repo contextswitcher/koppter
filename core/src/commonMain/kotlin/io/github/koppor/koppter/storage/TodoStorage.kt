@@ -20,6 +20,9 @@ interface TodoStorage {
     fun version(): Any?
 }
 
+/** The directory of the notes of tasks, next to the todo.txt file. */
+const val NOTES_DIRECTORY = "notes"
+
 /**
  * A storage that keeps further files next to the todo.txt file: the notes of tasks and the schedule of recurring tasks.
  * Paths are relative to the directory of the todo.txt file and use `/`.
@@ -34,7 +37,8 @@ interface CompanionFiles {
 
 enum class SyncState { IDLE, RUNNING, FAILED }
 
-data class SyncStatus(val state: SyncState, val message: String = "")
+/** @param cause what made the synchronization fail, for the log */
+data class SyncStatus(val state: SyncState, val message: String = "", val cause: Throwable? = null)
 
 /** A storage that exchanges the file with a remote copy. */
 interface SyncingStorage : TodoStorage {

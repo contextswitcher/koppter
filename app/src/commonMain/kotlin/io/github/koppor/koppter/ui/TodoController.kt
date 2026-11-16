@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -13,6 +14,7 @@ import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.plan.busyTimes
 import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
+import io.github.koppor.koppter.storage.NOTES_DIRECTORY
 import io.github.koppor.koppter.storage.Settings
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
@@ -25,6 +27,8 @@ import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.PriorityNames
+import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
+import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.todotxt.groupByColumns
@@ -36,13 +40,17 @@ import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
 import io.github.koppor.koppter.todotxt.TodoFile
+import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.todotxt.listOrder
+import io.github.koppor.koppter.todotxt.nextActions
+import io.github.koppor.koppter.todotxt.toLink
 import io.github.koppor.koppter.todotxt.moveToGroup
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * The state of the application and the operations on it.
@@ -62,12 +70,24 @@ class TodoController(
     private val minuteOfDay: () -> Int = { 0 },
     /** Reads the file at an address of the web; `null` if the platform cannot. */
     private val fetch: (suspend (String) -> String)? = null,
+    /** Takes what failed, with its cause if there is one, for the log of the platform. */
+    private val log: (message: String, cause: Throwable?) -> Unit = { _, _ -> },
 ) {
     var settings by mutableStateOf(settings)
         private set
     var file by mutableStateOf(TodoFile())
         private set
-    var filter by mutableStateOf(Filter())
+    private var shownFilter by mutableStateOf(filterOfLink(settings.filter) ?: Filter())
+
+    /** The filter of the task list, which the settings keep so that it is there again after a restart. */
+    // ponytail: the settings are saved with every change of the filter, also with every typed character of its text; delay the saving if that is felt.
+    // [impl->dsn~filter-remembered~1]
+    var filter: Filter
+        get() = shownFilter
+        set(value) {
+            shownFilter = value
+            updateSettings(settings.copy(filter = if (value.isDefault) "" else value.toLink()))
+        }
     var error by mutableStateOf<String?>(null)
 
     /**
@@ -77,6 +97,22 @@ class TodoController(
     // [impl->dsn~most-important-tasks~1]
     var topOnly by mutableStateOf(false)
 
+    /** Restricts the list to the next actions: of each project, the first task that can be worked on. */
+    // [impl->dsn~next-actions~1]
+    var nextOnly by mutableStateOf(false)
+
+    /**
+     * Shows the tasks that a link to the application names, in the list; a text that is no such link changes nothing.
+     * The link replaces the filter, so that it shows the same tasks whatever was filtered before.
+     */
+    // [impl->dsn~app-links~1]
+    fun openLink(link: String) {
+        filter = filterOfLink(link) ?: return
+        topOnly = false
+        nextOnly = false
+        view = View.LIST
+    }
+
     /** Shows the tasks as a board instead of as a list. */
     var view by mutableStateOf(View.LIST)
 
@@ -84,6 +120,12 @@ class TodoController(
 
     /** The attribute whose values are the columns of the board; `null` for the columns the user defined. */
     var groupKey by mutableStateOf<GroupKey?>(GroupKey.PRIORITY)
+
+    /** The attribute by whose values the list is divided into groups; `null` for a list without groups. */
+    var listGroupKey by mutableStateOf<GroupKey?>(null)
+
+    /** What the overview has its tiles for: one of [OVERVIEW_KEYS]. */
+    var overviewKey by mutableStateOf(GroupKey.CONTEXT)
 
     /** The configuration file next to the todo.txt file; `null` if the storage keeps no files next to the todo.txt file. */
     private var config by mutableStateOf<String?>(null)
@@ -95,8 +137,15 @@ class TodoController(
     /** When the tasks are planned from today on, by the text of their blocks. */
     private val planned: Map<String, Planned>? get() = planBlocks?.let { CalendarTxt.planned(it, today()) }
 
+    /** What the plan calls the open tasks: tasks with the same text are told apart there. */
+    // [impl->dsn~plan-names~1]
+    private val planNames: Map<Entry, String> by derivedStateOf { CalendarTxt.names(file.entries) }
+
     /** The open task that a block of the plan is for; `null` if the task was completed, deleted or edited since. */
-    fun entryOf(block: TextBlock): Entry? = file.entries.firstOrNull { !it.task.completed && CalendarTxt.text(it.task) == block.text }
+    fun entryOf(block: TextBlock): Entry? = planNames.entries.firstOrNull { it.value == block.text }?.key
+
+    /** What the plan adds to the text of the task to tell it from another task with the same text; empty for most tasks. */
+    fun planSuffix(entry: Entry): String = planNames[entry]?.removePrefix(CalendarTxt.text(entry.task)).orEmpty()
 
     /** The open tasks that are due today or earlier and have no block today. */
     // [impl->dsn~agenda~1]
@@ -105,8 +154,8 @@ class TodoController(
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
             return file.entries.filter { entry ->
-                !entry.task.completed && entry.task.due.let { it != null && it <= today } && CalendarTxt.text(entry.task) !in plannedToday
-            }.sortedWith(listOrder)
+                !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
+            }.sortedWith(listOrder(today))
         }
 
     /** The visible open tasks without context, which wait for one. */
@@ -116,8 +165,8 @@ class TodoController(
     /** Gives a task of the inbox its context. */
     fun assignContext(entry: Entry, context: String) = replace(entry, entry.task.edit(contexts = listOf(context)))
 
-    /** The columns the user defined, as the configuration states them. */
-    private val definedColumns: List<BoardColumn> get() = ConfigFile.boardColumns(config.orEmpty())
+    /** The columns the user defined, as the configuration states them; none if the storage keeps no configuration file. */
+    private val definedColumns: List<BoardColumn> get() = config?.let(ConfigFile::boardColumns).orEmpty()
 
     /** The columns the user defined; their filters name a priority by its letter, also where the configuration uses its name. */
     // [impl->dsn~priority-names~1]
@@ -144,6 +193,8 @@ class TodoController(
         val syncing = storage as? SyncingStorage
         syncStatus = syncing?.let { SyncStatus(SyncState.IDLE) }
         syncing?.onStatus = { status ->
+            // [impl->dsn~failure-log~1]
+            if (status.state == SyncState.FAILED) log("Synchronization failed: ${status.message}", status.cause)
             // A storage that was replaced in the settings may still report.
             if (storage === syncing) syncStatus = status
         }
@@ -162,7 +213,9 @@ class TodoController(
     /** The tasks to show, filtered and in list order. */
     // [impl->dsn~visible-tasks~1]
     val visible: List<Entry>
-        get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder)
+        get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
+            // [impl->dsn~next-actions~1]
+            .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
             .let { if (topOnly) it.take(settings.topCount) else it }
 
@@ -170,17 +223,42 @@ class TodoController(
     // [impl->dsn~board~1]
     // [impl->dsn~board-defined-columns~1]
     val groups: List<Group>
-        get() = groupKey?.let { key ->
-            val groups = groupEntries(visible, key, today())
-            if (key != GroupKey.PRIORITY) groups
-            else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
-        } ?: groupByColumns(visible, boardColumns, today())
+        get() = groupKey?.let(::groupsBy) ?: groupByColumns(visible, boardColumns, today())
 
-    val projects: List<String> get() = file.entries.flatMap { it.task.projects }.distinct().sorted()
+    /** The visible tasks as the groups of the list: one group without title if the list is not divided. */
+    // [impl->dsn~list-groups~1]
+    val listGroups: List<Group>
+        get() = listGroupKey?.let(::groupsBy) ?: listOf(Group("", visible))
+
+    private fun groupsBy(key: GroupKey): List<Group> {
+        val groups = groupEntries(visible, key, today())
+        return if (key != GroupKey.PRIORITY) groups
+        else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
+    }
+
+    /** The projects of the file and the projects above them, a project directly before those below it. */
+    val projects: List<String> get() = file.entries.flatMap { it.task.projects }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     /** The contexts of the file and the contexts above them, a context directly before those below it. */
     val contexts: List<String> get() = file.entries.flatMap { it.task.contexts }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     val hashtags: List<String> get() = file.entries.flatMap { it.task.hashtags }.distinct().sorted()
     val priorities: List<Char> get() = file.entries.mapNotNull { it.task.priority }.distinct().sorted()
+
+    /**
+     * What the word at the end of a typed line can be completed to, if it starts a project, a context or a hashtag:
+     * the known names that contain what follows the sign, so that a context below another one is found by its last level.
+     */
+    // [impl->dsn~quick-add-completion~1]
+    fun completions(line: String): List<String> {
+        val word = line.substringAfterLast(' ')
+        val known = when (word.firstOrNull()) {
+            '+' -> projects
+            '@' -> contexts
+            '#' -> hashtags
+            else -> return emptyList()
+        }
+        val typed = word.drop(1)
+        return known.filter { it != typed && it.contains(typed, ignoreCase = true) }.take(8).map { word.first() + it }
+    }
 
     fun load() {
         guarded {
@@ -236,11 +314,25 @@ class TodoController(
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.PRIORITIES, names), "Edit names of priorities")
     }
 
+    /** The links of projects, contexts and hashtags, each under its name with its sign. */
+    // [impl->dsn~label-links~1]
+    val labelLinks: Map<String, String> get() = ConfigFile.entries(config.orEmpty(), ConfigFile.LINKS).toMap()
+
+    /** The links, one per line as `label = link`; `null` if the storage keeps no configuration file. */
+    val labelLinksText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.entries(it, ConfigFile.LINKS)) }
+
+    fun updateLabelLinks(text: String) {
+        val links = ConfigFile.parseLines(text)
+        if (links == ConfigFile.entries(config.orEmpty(), ConfigFile.LINKS)) return
+        writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.LINKS, links), "Edit links of projects and contexts")
+    }
+
     /** The state of the plan of an open task and a text that tells its start; `null` if nothing was planned yet. */
     // [impl->dsn~plan-state~1]
     fun planOf(task: Task): Pair<PlanState, String>? {
         val plan = planned?.takeIf { !task.completed } ?: return null
-        val own = plan[CalendarTxt.text(task)]
+        // ponytail: by the task, as the labels know no line; of two lines that are the same, both show the plan of the first.
+        val own = plan[planNames.entries.firstOrNull { it.key.task == task }?.value]
         // A task that is not due for work yet is not late for not being planned.
         if (own == null && task.threshold.let { it != null && it > today() }) return null
         return CalendarTxt.state(task, own) to (own?.let { "Planned for ${CalendarTxt.startText(it)}" } ?: "Not planned")
@@ -277,7 +369,10 @@ class TodoController(
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 // The address is a secret: only its host is shown.
-                problems += "Calendar of ${address.substringAfter("://").substringBefore('/')} was not read: ${e.message ?: e}"
+                val host = address.substringAfter("://").substringBefore('/')
+                problems += "Calendar of $host was not read: ${e.message ?: e}"
+                // The message of the exception may name the address, and a log is passed on.
+                log("Calendar of $host was not read: ${e::class.simpleName}", null)
             }
         }
         return plan(settings, busy, problems)
@@ -327,7 +422,8 @@ class TodoController(
     }
 
     // [impl->dsn~share-actions~1]
-    val shareActions: List<ShareAction> get() = ConfigFile.shareActions(config.orEmpty())
+    // Without a configuration file, the user could not change the default actions, so there are none.
+    val shareActions: List<ShareAction> get() = config?.let(ConfigFile::shareActions).orEmpty()
 
     /** The share actions as the settings show them; `null` if the storage keeps no configuration file. */
     val shareActionsText: String? get() = config?.let { shareActions.joinToString("\n") { "${it.title} = ${it.template}" } }
@@ -394,7 +490,15 @@ class TodoController(
     fun schedule(): String? = try {
         (storage as? CompanionFiles)?.let { it.readCompanion(ICE_RECUR_FILE).orEmpty().replace("\r\n", "\n") }
     } catch (e: Exception) {
-        error = e.message ?: e.toString()
+        failed(e)
+        null
+    }
+
+    /** What the editor offers in place of an empty schedule: an entry to start with, as long as the file does not exist. */
+    // [impl->dsn~ice-recur-suggestion~1]
+    fun scheduleSuggestion(): String? = try {
+        SUGGESTED_ICE_RECUR.takeIf { (storage as? CompanionFiles)?.readCompanion(ICE_RECUR_FILE) == null }
+    } catch (_: Exception) {
         null
     }
 
@@ -499,16 +603,20 @@ class TodoController(
         val index = locate(entry) ?: return
         var new = task?.let { file.replace(index, it) } ?: file
         // A move to another column changes what the column stands for and nothing else: the task gets its place only among tasks of its priority.
-        if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before)?.let { new = it } }
+        if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before, today())?.let { new = it } }
         write(new, if (task == null) "Move task: ${entry.task.description}" else "Move task to ${to.title}: ${task.description}")
     }
+
+    /** Moves the due date of the task to the given day; without a day, the task has no due date anymore. */
+    // [impl->dsn~due-menu~1]
+    fun setDue(entry: Entry, date: LocalDate?) = replace(entry, entry.task.withTag(Task.DUE, date?.toString()))
 
     /** Puts the task before or behind another one of the list: see [TodoFile.moveTo]. */
     // [impl->dsn~list-drag~1]
     fun drop(entry: Entry, target: Entry, before: Boolean) {
         val index = locate(entry) ?: return
         val other = locate(target) ?: return
-        write(file.moveTo(index, other, before) ?: return, "Move task: ${entry.task.description}")
+        write(file.moveTo(index, other, before, today()) ?: return, "Move task: ${entry.task.description}")
     }
 
     /** Lets the task step over its neighbor in the list: see [TodoFile.step]. */
@@ -516,12 +624,19 @@ class TodoController(
     fun step(entry: Entry, neighbor: Entry, up: Boolean) {
         val index = locate(entry) ?: return
         val other = locate(neighbor) ?: return
-        write(file.step(index, other, up) ?: return, "Move task ${if (up) "up" else "down"}: ${entry.task.description}")
+        write(file.step(index, other, up, today()) ?: return, "Move task ${if (up) "up" else "down"}: ${entry.task.description}")
     }
 
     fun delete(entry: Entry) {
         val index = locate(entry) ?: return
         write(file.remove(index), "Delete task: ${entry.task.description}")
+    }
+
+    /** Adds the minutes of a block of the plan to the time spent on its task. */
+    // [impl->dsn~time-spent~1]
+    fun worked(entry: Entry, minutes: Int) {
+        val index = locate(entry) ?: return
+        write(file.replace(index, entry.task.withSpent(minutes.minutes)), "Note the time spent: ${entry.task.description}")
     }
 
     fun updateSettings(new: Settings) {
@@ -530,6 +645,8 @@ class TodoController(
         settings = new
         guarded { saveSettings(new) }
         if (fileChanged) {
+            // The filter names projects and contexts of the file that was open.
+            filter = Filter()
             storage = storageFor(new)
             open()
         }
@@ -556,15 +673,21 @@ class TodoController(
     }
 
     private companion object {
-        const val ICE_RECUR_FILE = "ice_recur.txt"
-        const val NOTES_DIRECTORY = "notes"
     }
 
     private fun guarded(action: () -> Unit) {
         try {
             action()
         } catch (e: Exception) {
-            error = e.message ?: e.toString()
+            failed(e)
         }
+    }
+
+    /** Shows the user what failed and passes it to the log. */
+    // [impl->dsn~failure-log~1]
+    private fun failed(e: Exception) {
+        val message = e.message ?: e.toString()
+        error = message
+        log(message, e)
     }
 }

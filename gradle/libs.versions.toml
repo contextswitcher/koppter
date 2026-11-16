@@ -9,6 +9,7 @@ agp = "9.5.1"
 androidx-activity = "1.13.0"
 jgit = "7.8.1.202611041320-r"
 appdirs = "1.5.0"
+tinylog = "2.8.1"
 openfasttrace = "3.5.0"
 
 [libraries]
@@ -26,6 +27,9 @@ androidx-activity-compose = { module = "androidx.activity:activity-compose", ver
 jgit = { module = "org.eclipse.jgit:org.eclipse.jgit", version.ref = "jgit" }
 jgit-ssh = { module = "org.eclipse.jgit:org.eclipse.jgit.ssh.apache", version.ref = "jgit" }
 appdirs = { module = "net.harawata:appdirs", version.ref = "appdirs" }
+tinylog-api = { module = "org.tinylog:tinylog-api", version.ref = "tinylog" }
+tinylog-impl = { module = "org.tinylog:tinylog-impl", version.ref = "tinylog" }
+tinylog-slf4j = { module = "org.tinylog:slf4j-tinylog", version.ref = "tinylog" }
 jgit-junit-ssh = { module = "org.eclipse.jgit:org.eclipse.jgit.junit.ssh", version.ref = "jgit" }
 
 [plugins]

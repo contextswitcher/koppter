@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -42,6 +43,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SuggestionChip
@@ -84,6 +86,7 @@ fun EditDialog(
     knownProjects: List<String>,
     knownContexts: List<String>,
     knownHashtags: List<String>,
+    today: LocalDate,
     onSave: (Task, note: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -96,11 +99,13 @@ fun EditDialog(
     var description by remember(base) { mutableStateOf(base.description) }
     var priority by remember(base) { mutableStateOf(base.priority) }
     var due by remember(base) { mutableStateOf(base.tag(Task.DUE).orEmpty()) }
+    var deadline by remember(base) { mutableStateOf(base.tag(Task.DEADLINE).orEmpty()) }
     var threshold by remember(base) { mutableStateOf(base.tag(Task.THRESHOLD).orEmpty()) }
     var recurrence by remember(base) { mutableStateOf(base.tag(Task.RECURRENCE).orEmpty()) }
     var duration by remember(base) { mutableStateOf(base.tag(Task.DURATION).orEmpty()) }
     var at by remember(base) { mutableStateOf(base.tag(Task.AT).orEmpty()) }
     var travel by remember(base) { mutableStateOf(base.tag(Task.TRAVEL).orEmpty()) }
+    var spent by remember(base) { mutableStateOf(base.tag(Task.SPENT).orEmpty()) }
     var by by remember(base) { mutableStateOf(base.tag(Task.BY).orEmpty()) }
     var contextSwitcher by remember(base) { mutableStateOf(base.tag(Task.CONTEXT_SWITCHER).orEmpty()) }
     var projects by remember(base) { mutableStateOf(base.projects) }
@@ -109,27 +114,31 @@ fun EditDialog(
     var note by remember { mutableStateOf(originalNote.orEmpty()) }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
+    val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
     val thresholdValid = threshold.isBlank() || Task.parseDate(threshold.trim()) != null
     val recurrenceValid = recurrence.isBlank() || Recurrence.parse(recurrence.trim()) != null
     val durationValid = duration.isBlank() || Task.parseDuration(duration.trim()) != null
     val atValid = at.isBlank() || Task.parseTime(at.trim()) != null
     val travelValid = travel.isBlank() || Task.parseDuration(travel.trim()) != null
+    val spentValid = spent.isBlank() || Task.parseDuration(spent.trim()) != null
     val byValid = by.isBlank() || Task.parseTime(by.trim()) != null
     val result = base
         .edit(description = description, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
         .withTag(Task.DUE, due.trim())
         .withTag(Task.BY, by.trim())
+        .withTag(Task.DEADLINE, deadline.trim())
         .withTag(Task.THRESHOLD, threshold.trim())
         .withTag(Task.RECURRENCE, recurrence.trim())
         .withTag(Task.DURATION, duration.trim())
         .withTag(Task.AT, at.trim())
         .withTag(Task.TRAVEL, travel.trim())
+        .withTag(Task.SPENT, spent.trim())
         // A link pasted into the description counts only while the field is empty.
         .withTag(Task.CONTEXT_SWITCHER, Task.contextSwitcherId(contextSwitcher))
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
-    val valid = dueValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && result.body.isNotBlank()
+    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank()
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current
@@ -175,6 +184,19 @@ fun EditDialog(
                     }
                 }
 
+                // [impl->dsn~due-chips~1]
+                // The days of the menu of a task card, which a device without a mouse does not open for a task without due date.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Due", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+                    for ((title, date) in dueChoices(today)) {
+                        FilterChip(
+                            selected = due.trim() == date.toString(),
+                            onClick = { due = if (due.trim() == date.toString()) "" else date.toString() },
+                            label = { Text(title) },
+                            modifier = Modifier.testTag("edit-due-$date"),
+                        )
+                    }
+                }
                 // A flow row: three fields side by side on the desktop, wrapped on a phone.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val field = Modifier.width(165.dp)
@@ -189,6 +211,8 @@ fun EditDialog(
                         singleLine = true,
                         modifier = field.testTag("edit-by"),
                     )
+                    // [impl->dsn~deadline~1]
+                    DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
                     DateField("Threshold", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
                     OutlinedTextField(
                         value = recurrence,
@@ -229,6 +253,16 @@ fun EditDialog(
                         singleLine = true,
                         modifier = field.testTag("edit-travel"),
                     )
+                    // [impl->dsn~time-spent~1]
+                    OutlinedTextField(
+                        value = spent,
+                        onValueChange = { spent = it },
+                        label = { Text("Time spent") },
+                        placeholder = { Text("1h30m") },
+                        isError = !spentValid,
+                        singleLine = true,
+                        modifier = field.testTag("edit-spent"),
+                    )
                 }
 
                 // [impl->dsn~context-switcher-tag~1]
@@ -241,11 +275,11 @@ fun EditDialog(
                     modifier = Modifier.fillMaxWidth().testTag("edit-cs"),
                 )
 
-                NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project")
-                NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context")
+                NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project", projectColors())
+                NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
                 // [impl->dsn~hashtags-in-ui~1]
                 // "#123" in a line is a word of the description, not a hashtag.
-                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag") { it.first().isLetter() }
+                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true) { it.first().isLetter() }
 
                 if (originalNote != null) {
                     OutlinedTextField(
@@ -317,7 +351,7 @@ private fun DateField(label: String, value: String, onChange: (String) -> Unit, 
     )
     if (picking) {
         val state = rememberDatePickerState(
-            initialSelectedDateMillis = Task.parseDate(value.trim())?.let { it.toEpochDays() * MILLIS_PER_DAY },
+            initialSelectedDateMillis = Task.parseDate(value.trim().substringBefore('T'))?.let { it.toEpochDays() * MILLIS_PER_DAY },
         )
         DatePickerDialog(
             onDismissRequest = { picking = false },
@@ -346,6 +380,9 @@ private fun NameList(
     known: List<String>,
     onChange: (List<String>) -> Unit,
     tag: String,
+    /** Container and content color of a name of the task: those of its label in the list. */
+    chipColors: Pair<Color, Color>,
+    outlined: Boolean = false,
     /** Whether the name is one that the todo.txt line keeps as this kind of metadata. */
     valid: (String) -> Boolean = { true },
 ) {
@@ -356,7 +393,8 @@ private fun NameList(
         input = ""
     }
     // The names of the task first, then the known names that can be added with one click.
-    val suggestions = known.filter { it !in names && it.startsWith(input.trim().removePrefix(sign), ignoreCase = true) }.take(8)
+    // Any part of the name counts, so that a name below another one is found by its last level: `rea` finds `research>reading`.
+    val suggestions = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }.take(8)
     val colors = MaterialTheme.colorScheme
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (name in names) {
@@ -365,6 +403,12 @@ private fun NameList(
                 onClick = { onChange(names - name) },
                 label = { Text("$sign$name") },
                 trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $kind $name") },
+                colors = InputChipDefaults.inputChipColors(
+                    selectedContainerColor = chipColors.first,
+                    selectedLabelColor = chipColors.second,
+                    selectedTrailingIconColor = chipColors.second,
+                ),
+                border = if (outlined) InputChipDefaults.inputChipBorder(true, selected = true, selectedBorderColor = colors.outline, selectedBorderWidth = 1.dp) else null,
                 modifier = Modifier.testTag("$tag-$name"),
             )
         }

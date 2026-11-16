@@ -3,7 +3,8 @@
 ## Session protocol
 
 * Session history lives in git commit messages: subject line plus a short paragraph on what and why.
-* `PLAN.md` in the worktree root is the working plan (untracked).
+* `PLAN.md` in the root of the long-lived `experimental` worktree is the working plan (untracked).
+  A per-task worktree has no copy of its own; read and tick it there.
   Read it first, continue at the first unchecked item, tick items as they are completed.
 
 ## Conventions

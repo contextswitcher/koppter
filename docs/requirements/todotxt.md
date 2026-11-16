@@ -78,7 +78,7 @@ Needs: dsn
 ### List order
 `req~list-order~1`
 
-The list shows the tasks that need attention first: open before completed, higher priority first, earlier due date first.
+The list shows the tasks that need attention first: open before completed, overdue before the others, higher priority first, earlier due date first.
 
 Covers:
 
@@ -107,6 +107,18 @@ Without an amount, the interval is one unit: `rec:w` is `rec:1w`.
 Covers:
 
 * `feat~extensions~1`
+
+Needs: dsn
+
+### Check of a file
+`req~lint~1`
+
+The user checks a todo.txt file, and the files of the application next to it, for what the application does not read the way it was probably meant.
+The check runs on the command line without the application, so that it also serves a file that is edited by hand or by an agent and a repository that checks its files on every change.
+
+Covers:
+
+* `feat~todo-txt-file~1`
 
 Needs: dsn
 
@@ -212,7 +224,8 @@ Needs: impl, utest
 ### Sort order
 `dsn~sort-order~1`
 
-`listOrder` compares by completion, priority (none last), due date (none last), the time by which the task is due on that day (none last) and line index.
+`listOrder` compares by completion, by whether the task is overdue, by priority (none last), due date (none last), the time by which the task is due on that day (none last) and line index.
+A task is overdue if it is open and its due date is before today (`Task.isOverdue`).
 
 Covers:
 
@@ -228,7 +241,9 @@ The order of the list stays as `listOrder` defines it; a step changes what that 
 If the neighbor has the same priority, due date and due time, the line of the task is moved directly before the line of the neighbor, or behind it on the way down, and is written as it was.
 If the neighbor has another priority, the task takes that priority and its line is moved so that it stays on its side of the neighbor: one step crosses the border, the next one passes the neighbor.
 If the due date or due time differs as well, only the priority changes, as the due date then orders the two tasks.
-A neighbor with the same priority and another due date or due time cannot be passed, and neither can a completed task; `Task.canStepOver` tells that, and the button is disabled.
+A neighbor with the same priority and another due date or due time cannot be passed, and neither can a completed task.
+An overdue task and one that is not overdue do not pass each other either, as the due date decides which of them stands first.
+`Task.canStepOver` tells that, and the button is disabled.
 
 Covers:
 
@@ -245,7 +260,7 @@ Dropping it calls `TodoController.drop`, which applies `TodoFile.moveTo`.
 The task takes the priority of the task it is put next to.
 If both have the same due date and due time, its line is moved directly before or behind the line of that task; a line whose priority stays is written as it was.
 If they differ in that, only the priority changes, as the due date then orders the two tasks.
-There is no line, and no drop, at a task of the same priority and another due date or due time, or at a completed task.
+There is no line, and no drop, at a task of the same priority and another due date or due time, at a completed task, or between an overdue task and one that is not overdue.
 
 Covers:
 
@@ -286,5 +301,61 @@ Needs: impl, utest
 Covers:
 
 * `req~no-dates-by-default~1`
+
+Needs: impl, utest
+
+### Findings in the tasks
+`dsn~lint~1`
+
+`lint` returns the findings in the open tasks of a `TodoFile`, each with the number of its line and a severity, and uses the functions with which the application reads the tags.
+An error is a value that is not read: a date, recurrence, duration or time in a tag for one, a `p:` without a task of that `id:`, an `id:` of two tasks, and a note that does not exist.
+A warning is what probably has another effect than intended: a tag given twice, a known key without a value, a project, context or hashtag whose name starts with a known key and a colon, such as `+rec:+1w`, `dueby:` without `due:`, a threshold date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
+The tasks without context are named in one finding of the severity information, as they are in the inbox.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Findings in the files
+`dsn~lint-files~1`
+
+`lintFiles` reads the todo.txt file at a path and adds what the files next to it have: a note is looked up in the directory `notes`, a line of `ice_recur.txt` that `iceRecurLines` does not understand is an error, and so is each problem of the plan configuration in `koppter.yml`.
+The findings name each file by the path that the path of the todo.txt file gives it.
+`lintMain` prints the findings, writes their count to the error stream, and ends with 1 if an error is among the findings and with 2 if the arguments are not understood or the path is no file.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Formats of the findings
+`dsn~lint-formats~1`
+
+The option `--output-format` of the command line, read by `lintOptions`, selects how `written` writes the findings; the names are those of the check of JabRef.
+`errorformat`, the default, writes `file:line: severity: message`, which editors and compilers share.
+`github-actions` writes the workflow commands `::error`, `::warning` and `::notice` with file and line, which GitHub shows as annotations at the lines of a pull request.
+`csv` writes a table with the columns file, line, severity and message.
+A finding that belongs to no single line has no line.
+
+Covers:
+
+* `req~lint~1`
+
+Needs: impl, utest
+
+### Check started by jbang
+`dsn~lint-jbang~1`
+
+`.jbang/KoppterLint.kt` is a script for [jbang](https://www.jbang.dev/) that compiles the common sources of the module `core` and `lintFiles` and calls `lintMain`; `jbang-catalog.json` names it `lint`.
+The check thereby needs no released file and is the one of the sources at hand.
+The script lists the sources one by one, as jbang reads no pattern from a web address, and names the JVM variant of the library for dates, as the common one leads jbang to a file that does not exist.
+A test compares the list with the sources and the versions with those of the build.
+
+Covers:
+
+* `req~lint~1`
 
 Needs: impl, utest

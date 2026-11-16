@@ -105,11 +105,35 @@ Covers:
 
 Needs: dsn
 
+### Time spent
+`req~time-spent~1`
+
+A task can state the time that was worked on it.
+Planning gives the task the rest of its duration, and the estimate stays on the task.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan as a file
 `req~plan-file~1`
 
 The plan is a text file next to the todo.txt file, so that the history of a git repository tells what a new plan changed.
 The plan is also written as an iCalendar file that calendar programs import; its events are tentative.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Tasks with the same text in the plan
+`req~plan-names~1`
+
+Open tasks with the same text, such as the two occurrences of a recurring task in a week, each have their own times and their own state in the plan.
+What tells them apart is part of the plan only: the todo.txt file is not changed for it.
 
 Covers:
 
@@ -253,7 +277,7 @@ Needs: impl, utest
 ### Time by which a task is due
 `dsn~due-time~1`
 
-The tag `by:` holds a time of the day as `H:MM` or `HH:MM`; `Task.by` reads it, and the edit dialog has a field for it that rejects what is no time.
+The tag `dueby:` holds a time of the day as `H:MM` or `HH:MM`; `Task.by` reads it, and the edit dialog has a field for it that rejects what is no time.
 `listOrder` puts, among the tasks of a due date, the one with the earlier time first and those without a time last, which is the order in which the planner gives the tasks their times.
 `CalendarTxt.state` counts a task as late if its last block lies on the due date and ends after that time.
 
@@ -261,6 +285,7 @@ Covers:
 
 * `req~due-time~1`
 * `adr~due-time-tag~1`
+* `adr~due-time-tag-name~1`
 
 Needs: impl, utest
 
@@ -279,11 +304,27 @@ Covers:
 
 Needs: impl, utest
 
+### Time spent
+`dsn~time-spent~1`
+
+The tag `spent:` holds a time in the form of the tag `dur:`; `Task.spent` reads it, and the edit dialog has a field for it that rejects what is no time.
+The planner gives a task its duration without that time, and the default duration if nothing is left, as an open task is not done.
+A task with a fixed time keeps its length.
+In the agenda, a block of today has a button that adds the length of the block to the tag through `Task.withSpent`, once per block.
+The next occurrence of a recurring task has no time spent, and the check of a todo.txt file reads the tag as it reads `dur:`.
+
+Covers:
+
+* `req~time-spent~1`
+* `adr~time-spent-tag~1`
+
+Needs: impl, utest
+
 ### calendar.txt
 `dsn~calendar-txt~1`
 
 `CalendarTxt.write` writes the plan in the format of calendar.txt: one line per day from today to the last planned day, with the date, the ISO week, the weekday and, after two blanks, the blocks of the day as `HH:MM-HH:MM text`, separated by a full stop and a blank.
-The text of a block is the description of the task with its projects and contexts.
+The text of a block is the description of the task with its projects and contexts, or the name of `CalendarTxt.names` for a task that shares that text with another one.
 Lines of days before today and lines that are no day stay as they are.
 `CalendarTxt.planned` reads the blocks from today on; `CalendarTxt.state` compares the day of the last block of a task with its due date.
 
@@ -326,7 +367,7 @@ Needs: impl, utest
 ### Plan dialog
 `dsn~plan-dialog~1`
 
-`PlanDialog` edits the time maps, the time maps of contexts, the barriers and the limits as lines of the form `name = value`.
+`PlanDialog`, opened with the button *Plan* of the top bar, edits the time maps, the time maps of contexts, the barriers and the limits as lines of the form `name = value`.
 Each field shows what the configuration holds; all of them may stay empty, which their labels say, in the small style so that the label of an empty field does not read as its content.
 *Save and plan* makes `TodoController.plan` save them, plan from the current time rounded up to a quarter of an hour, and write `calendar.txt` and `calendar.ics` as one change of the storage.
 The dialog then tells how many tasks were planned and until when, what of the configuration and of the dependencies was not understood, and the tasks that do not fit before their barrier.
@@ -365,5 +406,20 @@ Green is the green of the palette, which `Theme.kt` provides beside the Material
 Covers:
 
 * `req~plan-state~1`
+
+Needs: impl, utest
+
+### Names of tasks in the plan
+`dsn~plan-names~1`
+
+The plan file holds texts, not lines of the todo.txt file, so that a task is found again by its text.
+`CalendarTxt.names` gives each open task its name in the plan: the text, and for tasks that share the text also ` (due 2026-11-16)` with their due date, and a number as ` (2)` from the second of those on that share the due date as well.
+The due date, unlike a number alone, stays with its task when another one of that text is completed while the plan still holds the blocks of both.
+`plan` sets the name of the blocks of such tasks, which `CalendarTxt.write` and `Ics.write` use as the text.
+`TodoController` finds the task of a block, the state of the plan of a task and the tasks without a block today by these names, and the week shows the addition after the description.
+
+Covers:
+
+* `req~plan-names~1`
 
 Needs: impl, utest

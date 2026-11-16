@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [2026-11-15] - 2026-11-15
+
+### Added
+
+- A project, a context or a hashtag gets a link in the settings, such as one to the section of a notebook or to a category of ContextSwitcher; the menu of its label offers *Open link*.
+- A task states the time that was worked on it in the tag `spent:`, and the plan gives it the rest of its duration; the edit dialog has a field for it, and a block of today in the agenda adds its length with one click.
+- The check of a `todo.txt` file warns about a tag behind a `+`, `@` or `#`: `+rec:+1w` is a project, not a recurrence.
+- The filter panel hides the tasks of a project, a context or a hashtag: a right click or a long press on its label offers *Hide these tasks*, and the list, the board, the overview and the inbox then leave them out.
+- A link such as `koppter://filter?project=papers>survey`, `koppter://filter?context=phone` or `koppter://filter?hashtag=someday` in another program opens the application with these tasks, on Windows and Android; an open window shows them instead of a second one. A right click on the label of a project, a context or a hashtag offers *Copy link*, as does a long press on the label in the filter panel on a touch screen.
+- While there is no `ice_recur.txt`, the editor of the scheduled tasks suggests a weekly review on every Friday; saving writes the entry to the file.
+- *Only the next action of each project* in the filter panel shows of each project the first task that can be worked on: one that neither has `@waiting` or `#someday` nor a threshold date in the future nor waits for another task. The overview by project names the projects without such a task.
+- The tag `deadline:` states the day that others set for a task next to its due date: the task is overdue, and its plan late, only after the deadline, and a task without a due date is due on its deadline. A deadline may state a time, as `deadline:2026-11-30T12:00`, and its offset from UTC, as `deadline:2026-11-30T23:59-12:00`, which is shown as the day and the time of the device.
+- `jbang lint@koppor/koppter todo.txt` checks a todo.txt file, and the notes, schedules and configuration next to it, for what the application does not read as it was probably meant; `--output-format` writes the findings for an editor, for GitHub Actions or as a table of comma-separated values.
+- The overview shows its tiles by project or by hashtag as well as by context.
+- On Android, *Share log* in the settings passes the end of the log as text to another application.
+- The Android application writes a log as the desktop application does, to the directory `logs` of the application in the shared storage of the device and to logcat.
+- The desktop application writes a log to the directory `logs` of its data directory, at most three files of one megabyte; it holds what failed, such as a synchronization or the writing of the file, and the messages of the git library.
+- A click on the project label of a task shows the tasks of that project, as a click on a context label does for its context.
+- A project lies below another project, written as `+papers>survey`: the label shows the last level, a filter, a barrier and a limit for `+papers` include the projects below it, and the filter panel shows the projects as a tree.
+- The line that adds a task completes a project, a context or a hashtag while it is typed: Tab takes the first known name offered.
+- An address of the web in the text of a task is a link that opens in the browser; a long address is cut, and the whole one appears when the pointer of the mouse rests on it.
+- The list is divided into groups with headings by priority, project, context, hashtag or due date range, with the switches below the views.
+- A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next week, in two weeks or in a month, or removes it; the edit dialog offers the same days as chips.
+
+### Changed
+
+- The texts have two sizes instead of nine: one for texts, fields, buttons and titles, and a smaller one for labels and remarks; a title is told apart by its weight.
+- The filter of the task list is kept on the device and is there again after a restart; another `todo.txt` file starts without it.
+- The time by which a task is due on its due date is written `dueby:14:00`; the former `by:14:00` is not read anymore and has to be renamed in a file that has it.
+- The guide to organizing many tasks and the skill for agents describe projects as the outline of areas and outcomes, and contexts as the kinds of work and the places; the guide compares this with areas as contexts, and the skill follows the way that the file uses.
+- The edit dialog suggests a known project, context or hashtag by any part of its name, so that `rea` finds `research>reading`.
+- The settings open a chosen file and a cloned repository at once and then show the configuration that comes with it, so that it is not overwritten by the one of the file that was open before; the button reads *Clone* while the field holds an address, and *Cancel* returns to the file from before.
+- Without columns by filter and share actions of the user, the columns *Today*, *Next*, *Waiting* and *Someday*, which are lists of Getting Things Done, and the share actions *inbox*, which takes the shared text as it is, and *reading*, which adds `+research @reading`, are in effect, and the settings show them; an emptied field means none.
+- The settings tell below the field for the file what holds for a file in a git repository.
+- Synchronization through git merges `ice_recur.txt` line by line as it does `todo.txt`, and of two plans made on two devices it takes the one made last, instead of stopping at a conflict.
+- The views are one row of switches of which one is always selected, the list among them, and they stand above the field that adds a task.
+- *Top* is the option *Only the first 10 tasks* of the filter panel, and *Clear all filters* turns it off.
+- *Plan* is a button of the top bar, and the buttons of the top bar show what they do while the pointer rests on them.
+- The projects, contexts and hashtags of a task have the same colors in the edit dialog as in the list.
+- Overdue tasks stand first in the list whatever their priority is, above a line that separates them from the other tasks, and they are planned first.
+
+### Fixed
+
+- Open tasks with the same text, such as two occurrences of a recurring task, have their own times and their own state in the plan: the plan names them with their due date, or with a number.
+- The desktop application no longer starts with warnings of Java about the loading of native libraries.
+- The desktop application no longer starts with a complaint of SLF4J, and warnings of the git library appear on the console.
+- An order of the tasks changed on one device is no longer lost in the synchronization through git when another device changed another file meanwhile.
+
 ## [2026-11-14] - 2026-11-14
 
 ### Added
@@ -86,6 +134,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[2026-11-15]: https://github.com/koppor/koppter/compare/v2026-11-14...v2026-11-15
 [2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
 [2026-11-13]: https://github.com/koppor/koppter/compare/v2026-11-12...v2026-11-13
 [2026-11-12]: https://github.com/koppor/koppter/releases/tag/v2026-11-12

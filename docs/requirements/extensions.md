@@ -65,6 +65,20 @@ Covers:
 
 Needs: dsn
 
+### Projects below projects
+`req~project-hierarchy~1`
+
+A project lies below another project, over any number of levels.
+A task shows the last level of its project and, on request, the whole path.
+From the project of a task, the user gets to the tasks of that project.
+Restricting the list to a project includes the projects below it, and so does what the plan states for a project.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Duration of a task
 `req~duration~1`
 
@@ -91,7 +105,8 @@ Needs: dsn
 `req~overview~1`
 
 The user sees for each context how it is doing: whether tasks are overdue or due today.
-For a context, the user sees its tasks ordered by urgency, each with the days until or since its due date and with the part of its time that has passed.
+The user sees the same for each project or for each hashtag instead.
+For a context, a project or a hashtag, the user sees its tasks ordered by urgency, each with the days until or since its due date and with the part of its time that has passed.
 
 Covers:
 
@@ -183,6 +198,32 @@ Covers:
 
 Needs: dsn
 
+### Deadline next to the due date
+`req~deadline~1`
+
+A task can state the day that others set for it next to the day by which the user wants to have it done.
+The days between the two are a buffer: the task is overdue, and its plan late, only after the deadline.
+A task that states the deadline only is due on it.
+The deadline can state a time of its day, and for a deadline that is given for another place, the offset of that time from UTC.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
+### Next actions
+`req~next-actions~1`
+
+One click restricts the list to the next actions as Getting Things Done has them: of each project, the first task that can be worked on now.
+The user sees which projects have open tasks but no next action.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ## Design
 
 ### Hashtags of a task
@@ -228,7 +269,8 @@ Needs: impl, utest
 ### Top tasks
 `dsn~top-tasks~1`
 
-With the *Top* switch on, `TodoController.visible` is cut to the first `topCount` entries of the filtered list in list order.
+With the option *Only the first n tasks* of the filter panel on, `TodoController.visible` is cut to the first `topCount` entries of the filtered list in list order.
+*Clear all filters* turns the option off.
 
 Covers:
 
@@ -240,7 +282,7 @@ Needs: impl, utest
 `dsn~most-important-tasks~1`
 
 There is no separate notation for most important tasks.
-Such a task has priority `A` and a due date; the list order shows it first, and the *Top* view restricts the list to these tasks.
+Such a task has priority `A` and a due date; the list order shows it first, and the option for the first tasks restricts the list to these tasks.
 
 Covers:
 
@@ -305,6 +347,22 @@ Covers:
 
 * `req~board-defined-columns~1`
 * `adr~board-columns-by-filter~1`
+
+Needs: impl, utest
+
+### Defaults of the configuration
+`dsn~config-defaults~1`
+
+A configuration without the key `board-columns` has the columns `ConfigFile.DEFAULT_BOARD_COLUMNS`, which are lists of Getting Things Done: *Today*, *Next* for what neither waits nor is for someday, *Waiting* for `@waiting` and *Someday* for `#someday`.
+A configuration without the key `share-actions` has the actions `ConfigFile.DEFAULT_SHARE_ACTIONS`: *inbox*, which takes the shared text as it is, and *reading*, which adds a project, a context, a due date and a duration.
+The board and the settings thereby show what such a definition looks like, and the share sheet offers a choice.
+A user who removes all columns or actions wants none: the key is then written without entries, which is read as none.
+A storage that keeps no configuration file has neither columns nor actions, as the user could not change them.
+
+Covers:
+
+* `req~board-defined-columns~1`
+* `req~share-actions~1`
 
 Needs: impl, utest
 
@@ -393,12 +451,16 @@ Needs: impl, utest
 ### View options
 `dsn~view-options~1`
 
-A row of switches above the tasks turns the *Top* view on and off, shows one of the views that replace the list (board, overview, agenda, week, inbox) and, for the board, selects the attribute of the columns or the columns defined by filters.
+A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
+One of them is always selected.
+For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
+For the overview, the second row selects what the tiles stand for: contexts, projects or hashtags.
+Each row is one line that scrolls sideways in a window that is too narrow for it.
 
 Covers:
 
 * `req~board~1`
-* `req~top-tasks~1`
+* `req~list-groups~1`
 
 Needs: impl, utest
 
@@ -432,6 +494,23 @@ Covers:
 
 Needs: impl, utest
 
+### Hierarchy of projects
+`dsn~project-hierarchy~1`
+
+`>` separates the levels of a project as it separates those of a context: `papers>survey` lies below `papers`.
+`Filter` and the project term of `Query` match a project and the projects below it (`isWithin`); removing a project term from a task removes the projects below it as well.
+A barrier or a limit of the plan for a project holds for the projects below it.
+`TaskLabels` shows the last level of a project and the path in a tooltip; a click on the label sets the filter to this project.
+`FilterPanel` offers the projects of the file and the projects above them as a tree, one project per line and indented by its level, as soon as one project has levels.
+A group of the list or the board stands for one project with its whole path, without those below it.
+
+Covers:
+
+* `req~project-hierarchy~1`
+* `adr~project-hierarchy~1`
+
+Needs: impl, utest
+
 ### Tag for the duration
 `dsn~duration~1`
 
@@ -450,9 +529,11 @@ Needs: impl, utest
 `dsn~overview~1`
 
 `Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the threshold date, else the creation date, else two weeks before the due date.
-`contextStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
-The state of a context is that of its most urgent task: overdue, due today, or neither.
-`Overview` shows the contexts of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that context with a progress bar and the text of their urgency.
+`overviewStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
+It groups by the projects of the outermost level or by the hashtags in the same way.
+The state of a group is that of its most urgent task: overdue, due today, or neither.
+`Overview` shows the groups of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that group with a progress bar and the text of their urgency.
+The second row of the view options selects contexts, projects or hashtags; contexts are selected at the start, and another choice shows the tiles again.
 A switch above the tasks turns the overview on; it and the other views that replace the list exclude each other.
 
 Covers:
@@ -547,5 +628,57 @@ Such a line does not prevent saving, as the run skips it.
 Covers:
 
 * `req~scheduled-tasks-editor~1`
+
+Needs: impl, utest
+
+### Suggested schedule
+`dsn~ice-recur-suggestion~1`
+
+While the file `ice_recur.txt` does not exist, `ScheduleDialog` shows the entry `SUGGESTED_ICE_RECUR` in place of an empty text, the weekly review of Getting Things Done on every Friday, and tells that it is a suggestion.
+The suggestion is a text of the editor only: the run and the plan read the file, so that nothing is scheduled until the user saves.
+A file without entries gets no suggestion.
+
+Covers:
+
+* `req~scheduled-tasks-editor~1`
+
+Needs: impl, utest
+
+### Deadline
+`dsn~deadline~1`
+
+The tag `deadline:` holds a date, or a date and a time as `2026-11-30T12:00`; `Task.parseDeadline` reads both, `Task.deadline` is the date and `Task.deadlineTime` the time.
+After the time, the tag may hold seconds, which are not used, and an offset from UTC as `Z`, `+hh:mm` or `-hh:mm`: `Task.parseDeadline` then returns the date and the time in the time zone of the device, and the label shows them, as `Task.localDeadline` writes them, with the value of the tag when the pointer rests on it.
+`Task.due` returns the deadline for a task without the tag `due:`, and `Task.by` the time of the deadline, so that the list order, the groups, the filters and the planner need no change.
+`Task.isOverdue` compares today with the deadline, and with the due date only for a task without deadline.
+`Urgency.state` is due for a task whose due date has passed and whose deadline has not, and `Urgency.text` names the deadline after the due date.
+`CalendarTxt.state` is tight for a plan that ends after the due date and not after the deadline, and late for one that ends after the deadline, or on its day after its time.
+The label of each of the two dates is highlighted by its own date: the deadline as overdue once it has passed, the due date as on its day while the deadline lies ahead.
+The edit dialog has a date field for the tag, and the menu that moves the due date offers to remove the due date only for a task that has the tag `due:`.
+`Task.nextOccurrence` moves the day that the tag holds as far as the due date; a deadline that stood in for the due date stays the only date.
+`lint` and the dates of a share action read the tag as they read `due:`.
+
+Covers:
+
+* `req~deadline~1`
+* `adr~deadline-tag~1`
+* `adr~deadline-time~1`
+* `adr~deadline-offset~1`
+
+Needs: impl, utest
+
+### Next actions
+`dsn~next-actions~1`
+
+`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose threshold date has come, and that wait for no other open task through `id:` and `p:`.
+With the option *Only the next action of each project* of the filter panel on, `TodoController.visible` is cut by `nextActions` to these tasks, and of each project to the first one in list order among the filtered tasks; a task without project stays.
+*Clear all filters* turns the option off.
+`projectsWithoutNextAction` gives the projects that have an open task whose threshold date has come, but none that can be worked on, in the projects below them neither.
+`overviewStates` adds them to the tiles by project from all tasks of the file, whatever the filter shows, and `Overview` names them on the tile.
+
+Covers:
+
+* `req~next-actions~1`
+* `adr~next-actions-derived~1`
 
 Needs: impl, utest

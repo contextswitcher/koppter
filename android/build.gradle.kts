@@ -58,4 +58,8 @@ dependencies {
     implementation(project(":core"))
     implementation(libs.compose.runtime)
     implementation(libs.androidx.activity.compose)
+    // [impl->adr~log-messages-through-tinylog~1]
+    implementation(libs.tinylog.api)
+    runtimeOnly(libs.tinylog.slf4j)
+    runtimeOnly(libs.tinylog.impl)
 }

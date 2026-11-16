@@ -1,5 +1,8 @@
 package io.github.koppor.koppter.ui
 
+import kotlin.time.Duration.Companion.minutes
+import io.github.koppor.koppter.todotxt.Task
+import androidx.compose.runtime.mutableStateListOf
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
@@ -78,7 +81,10 @@ fun Agenda(
     today: LocalDate,
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
+    onWorked: (Entry, Int) -> Unit,
 ) {
+    // A block is counted once, also when the button is hit twice.
+    val counted = remember { mutableStateListOf<TextBlock>() }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
         for (offset in 0..6) {
@@ -103,6 +109,16 @@ fun Agenda(
                             Text(block.text, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
+                    // [impl->dsn~time-spent~1]
+                    if (entry != null && offset == 0 && block !in counted) {
+                        TextButton(
+                            onClick = {
+                                counted += block
+                                onWorked(entry, block.span.length)
+                            },
+                            modifier = Modifier.testTag("agenda-worked"),
+                        ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
+                    }
                 }
             }
             if (offset == 0 && dueUnplanned.isNotEmpty()) {
@@ -123,7 +139,7 @@ private val MIN_HOUR_HEIGHT = 48.dp
 /** The blocks of the plan of one week as a calendar: one column per day, the time running down. */
 // [impl->dsn~agenda~1]
 @Composable
-fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, today: LocalDate, onOpen: (Entry) -> Unit) {
+fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (Entry) -> String, today: LocalDate, onOpen: (Entry) -> Unit) {
     val thisWeek = today.minus(DatePeriod(days = today.dayOfWeek.isoDayNumber - 1))
     var monday by remember { mutableStateOf(thisWeek) }
     val days = (0..6).map { monday.plus(DatePeriod(days = it)) }
@@ -181,7 +197,7 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, today: LocalD
                                         .testTag("week-block"),
                                 ) {
                                     Text(
-                                        "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.task?.description ?: block.text}",
+                                        "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
                                         style = MaterialTheme.typography.labelSmall,
                                         overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),

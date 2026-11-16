@@ -10,6 +10,16 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.number
 import kotlinx.datetime.plus
 
+/** The file of the schedule, next to the todo.txt file. */
+const val ICE_RECUR_FILE = "ice_recur.txt"
+
+/**
+ * The entry that the editor suggests while there is no schedule file: the weekly review of Getting Things Done.
+ * It is only a text in the editor until the user saves it.
+ */
+// [impl->dsn~ice-recur-suggestion~1]
+const val SUGGESTED_ICE_RECUR = "weekly ; day Friday - Weekly review @review dur:1h\n"
+
 /**
  * One entry of an `ice_recur.txt` file: a schedule and the task it adds on the days of the schedule.
  *

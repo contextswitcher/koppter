@@ -4,6 +4,7 @@ import io.github.koppor.koppter.plan.PlanConfig
 import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.ShareAction
+import io.github.koppor.koppter.todotxt.withAncestors
 
 /**
  * The configuration that is kept next to the todo.txt file and synchronized with it.
@@ -19,6 +20,7 @@ import io.github.koppor.koppter.todotxt.ShareAction
  * The key `share-actions` maps the title of each share action to its template in the same way,
  * and so do the keys `time-maps`, `context-time-maps` and `barriers` for planning.
  * The key `priorities` maps the letter of a priority to the name it is shown with.
+ * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
  */
 // ponytail: reads the subset of YAML that it writes (one line per column, plain or quoted scalars, the escapes \" and \\);
 // a YAML library when the file gets nested content.
@@ -34,21 +36,46 @@ object ConfigFile {
     const val BARRIERS = "barriers:"
     const val LIMITS = "limits:"
     const val PRIORITIES = "priorities:"
+    const val LINKS = "links:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
-    /** The columns in the order of the file. */
-    fun boardColumns(config: String): List<BoardColumn> = block(config, BOARD_COLUMNS).map { (title, expression) -> BoardColumn(title, expression) }
+    /**
+     * The columns of a configuration that does not have the key, so that a new user sees what columns by filter are:
+     * the lists of Getting Things Done, as far as a filter tells them.
+     */
+    val DEFAULT_BOARD_COLUMNS = listOf(
+        BoardColumn("Today", "due:<=today -@waiting"),
+        BoardColumn("Next", "-@waiting -#someday"),
+        BoardColumn("Waiting", "@waiting"),
+        BoardColumn("Someday", "#someday"),
+    )
 
-    /** The configuration with the columns replaced; everything else in it stays, except comments between the columns. */
+    /**
+     * The share actions of a configuration that does not have the key: the shared text alone, which the entry of the application
+     * in the share sheet applies as the first action, and an example of an action that adds something, for the user to choose.
+     */
+    val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("inbox", "{}"), ShareAction("reading", "{} +research @reading due:2w dur:1h"))
+
+    /** The columns in the order of the file; the default ones if the file does not have the key. */
+    // [impl->dsn~config-defaults~1]
+    fun boardColumns(config: String): List<BoardColumn> =
+        block(config, BOARD_COLUMNS)?.map { (title, expression) -> BoardColumn(title, expression) } ?: DEFAULT_BOARD_COLUMNS
+
+    /**
+     * The configuration with the columns replaced; everything else in it stays, except comments between the columns.
+     * Without columns, the key stays without entries, which tells that the user wants none instead of the default ones.
+     */
     fun withBoardColumns(config: String, columns: List<BoardColumn>): String =
-        withBlock(config, BOARD_COLUMNS, columns.map { it.title to it.expression })
+        withBlock(config, BOARD_COLUMNS, columns.map { it.title to it.expression }, keepEmpty = true)
 
-    /** The share actions in the order of the file. */
+    /** The share actions in the order of the file; the default ones if the file does not have the key. */
     // [impl->dsn~share-actions~1]
-    fun shareActions(config: String): List<ShareAction> = block(config, SHARE_ACTIONS).map { (title, template) -> ShareAction(title, template) }
+    // [impl->dsn~config-defaults~1]
+    fun shareActions(config: String): List<ShareAction> =
+        block(config, SHARE_ACTIONS)?.map { (title, template) -> ShareAction(title, template) } ?: DEFAULT_SHARE_ACTIONS
 
     fun withShareActions(config: String, actions: List<ShareAction>): String =
-        withBlock(config, SHARE_ACTIONS, actions.map { it.title to it.template })
+        withBlock(config, SHARE_ACTIONS, actions.map { it.title to it.template }, keepEmpty = true)
 
     /** The time maps, the time maps of the contexts and the barriers; see [PlanConfig]. */
     // [impl->dsn~plan-configuration~1]
@@ -56,9 +83,18 @@ object ConfigFile {
         PlanConfig(TimeMaps(entries(config, TIME_MAPS)), entries(config, CONTEXT_TIME_MAPS).toMap(), entries(config, BARRIERS), entries(config, LIMITS))
 
     /** The entries below the key, in the order of the file. */
-    fun entries(config: String, key: String): List<Pair<String, String>> = block(config, key)
+    fun entries(config: String, key: String): List<Pair<String, String>> = block(config, key).orEmpty()
 
     fun withEntries(config: String, key: String, entries: List<Pair<String, String>>): String = withBlock(config, key, entries)
+
+    /**
+     * The link of a label, which is written with its sign, such as `+Fair` or `@phone`: its own, or that of the nearest level above it.
+     *
+     * @param links the entries of the key `links`
+     */
+    // [impl->dsn~label-links~1]
+    fun link(links: Map<String, String>, label: String): String? =
+        label.drop(1).withAncestors().asReversed().firstNotNullOfOrNull { links[label.take(1) + it]?.ifBlank { null } }
 
     /** Reads entries as the dialogs show them: one per line as `name = value`; lines without a name are skipped. */
     fun parseLines(text: String): List<Pair<String, String>> = text.lines().mapNotNull { line ->
@@ -68,17 +104,19 @@ object ConfigFile {
 
     fun toLines(entries: List<Pair<String, String>>): String = entries.joinToString("\n") { "${it.first} = ${it.second}" }
 
-    private fun block(config: String, key: String): List<Pair<String, String>> {
+    /** The entries below the key; `null` if the configuration does not have the key. */
+    private fun block(config: String, key: String): List<Pair<String, String>>? {
         val lines = config.lines()
         val start = lines.indexOfFirst { it.trimEnd() == key }
-        if (start < 0) return emptyList()
+        if (start < 0) return null
         return lines.drop(start + 1).takeWhile(::inBlock).mapNotNull(::entry)
     }
 
-    private fun withBlock(config: String, key: String, entries: List<Pair<String, String>>): String {
+    /** @param keepEmpty keeps the key if there are no entries, instead of removing it */
+    private fun withBlock(config: String, key: String, entries: List<Pair<String, String>>, keepEmpty: Boolean = false): String {
         // A title is a key and therefore unique.
         val block = entries.distinctBy { it.first }.map { "  ${quoted(it.first)}: ${quoted(it.second)}" }
-            .let { if (it.isEmpty()) it else listOf(key) + it }
+            .let { if (it.isEmpty() && !keepEmpty) it else listOf(key) + it }
         val lines = config.lines()
         val start = lines.indexOfFirst { it.trimEnd() == key }
         if (start < 0) {
