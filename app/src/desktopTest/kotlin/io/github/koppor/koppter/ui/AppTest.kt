@@ -1457,17 +1457,35 @@ class AppTest {
             override suspend fun clone(url: String) = error("not cloned in this test")
         }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", git = git) } }
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        setContent {
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard, LocalUriHandler provides links) { App(controller, "todo.txt", git = git) }
+        }
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").performScrollTo().performClick()
         assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
         onNodeWithTag("settings-public-key-help").assertTextContains("Copied to the clipboard.", substring = true)
+        // Without the address of a repository of GitHub, there is no page to open.
+        onNodeWithTag("settings-add-key").assertDoesNotExist()
 
         // Pasted text arrives at once.
         onNodeWithTag("settings-file").performScrollTo().performTextInput("https://github.com/demo-user/todo/tree/main")
         onNodeWithTag("settings-file").assertTextContains("git@github.com:demo-user/todo.git")
         onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone")
+
+        // The page for a deploy key of that repository, with the key in the clipboard.
+        copied = null
+        onNodeWithTag("settings-add-key").performScrollTo().performClick()
+        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        assertEquals(listOf("https://github.com/demo-user/todo/settings/keys/new"), opened)
+        assertEquals("https://github.com/demo-user/my.todo/settings/keys/new", deployKeyPage(" ssh://git@github.com/demo-user/my.todo.git "))
+        for (other in listOf("git@example.org:demo-user/todo.git", "/home/user/todo.txt", "")) assertEquals(null, deployKeyPage(other))
 
         assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo"))
         assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo.git"))
@@ -1505,14 +1523,12 @@ class AppTest {
     // [utest->dsn~back~1]
     // [utest->dsn~filter-panel~1]
     @Test
-    fun backClosesTheFilterPanelAndThenReturnsToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+    fun backClosesTheFilterPanelThenReturnsToTheListAndAsksBeforeItLeaves() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        // What the platform would call for its back gesture; `null` while the application leaves the gesture to the platform.
+        // What the platform calls for its back gesture.
         var back: (() -> Unit)? = null
-        setContent { App(controller, "todo.txt", backHandler = { enabled, onBack -> back = onBack.takeIf { enabled } }) }
-
-        // From the list with nothing above it, back leaves the application.
-        assertEquals(null, back)
+        var left = 0
+        setContent { App(controller, "todo.txt", backHandler = { back = it }, leave = { left++ }) }
 
         // The panel above the list has a button that closes it.
         onNodeWithTag("open-filter").performClick()
@@ -1523,14 +1539,24 @@ class AppTest {
         onNodeWithTag("filter-close").assertIsDisplayed()
         back!!()
         onNodeWithTag("filter-close").assertIsNotDisplayed()
-        assertEquals(null, back)
+        onNodeWithTag("leave-dialog").assertDoesNotExist()
 
         controller.view = View.WEEK
         onNodeWithTag("week").assertExists()
         back!!()
         assertEquals(View.LIST, controller.view)
         onNodeWithTag("week").assertDoesNotExist()
-        assertEquals(null, back)
+        onNodeWithTag("leave-dialog").assertDoesNotExist()
+
+        // From the list with nothing above it, back asks.
+        back!!()
+        onNodeWithTag("leave-stay").performClick()
+        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        assertEquals(0, left)
+        back!!()
+        onNodeWithTag("leave-confirm").performClick()
+        onNodeWithTag("leave-dialog").assertDoesNotExist()
+        assertEquals(1, left)
     }
 
     // [utest->dsn~agenda~1]

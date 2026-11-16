@@ -85,7 +85,9 @@ class MainActivity : ComponentActivity() {
                 chooseFileNote = "Android gives access to the chosen file alone, not to the files next to it: " +
                     "notes, scheduled tasks, board columns and the plan need the todo.txt file of a git repository.",
                 // [impl->dsn~back~1]
-                backHandler = { enabled, onBack -> BackHandler(enabled, onBack) },
+                backHandler = { onBack -> BackHandler(onBack = onBack) },
+                // To the background, as back does it for the first activity of an application since Android 12: the application keeps what it shows.
+                leave = { moveTaskToBack(true) },
             )
         }
     }

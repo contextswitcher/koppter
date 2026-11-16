@@ -10,11 +10,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Added
 
 - The filter panel of a narrow window, as on a phone, has a button that closes it.
+- For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
 - The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
 
 ### Changed
 
-- On Android, the back gesture closes the filter panel and returns from another view to the list; only from the list, it leaves the application.
+- On Android, the back gesture closes the filter panel and returns from another view to the list; from the list, it asks before it leaves the application.
 - The week shows all its hours without scrolling, also on a phone that is held upright.
 - A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
 - A click on the public SSH key in the settings copies it.

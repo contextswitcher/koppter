@@ -22,6 +22,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -68,6 +70,12 @@ internal fun sshAddress(text: String): String =
     Regex("https?://(?:www\\.)?github\\.com/([\\w.-]+)/([\\w.-]+?)(?:\\.git)?(?:[/?#].*)?").matchEntire(text)
         ?.let { "git@github.com:${it.groupValues[1]}/${it.groupValues[2]}.git" } ?: text
 
+/** The page of GitHub that adds a deploy key to the repository of the address; `null` for an address of another server. */
+// [impl->dsn~git-setup-dialog~1]
+internal fun deployKeyPage(address: String): String? =
+    Regex("(?:ssh://)?git@github\\.com[:/]([\\w.-]+)/([\\w.-]+?)(?:\\.git)?/?").matchEntire(sshAddress(address.trim()))
+        ?.let { "https://github.com/${it.groupValues[1]}/${it.groupValues[2]}/settings/keys/new" }
+
 private const val OPENED = "Opened. The fields below show the configuration of this file. Cancel returns to the file from before."
 
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
@@ -112,6 +120,8 @@ fun SettingsDialog(
     // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
+    // That of the application, which reports a link that is not opened; taken outside the dialog as the clipboard is.
+    val uriHandler = LocalUriHandler.current
     // [impl->dsn~settings-open-file~1]
     // What depends on the file starts anew when another file is opened from the dialog.
     val openFile = settings.todoFile
@@ -239,7 +249,7 @@ fun SettingsDialog(
                 RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
                 RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
                 if (git != null) {
-                    GitSection(git, clipboard)
+                    GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
                 }
                 Row(Modifier.fillMaxWidth()) {
                     // [impl->dsn~share-log~1]
@@ -316,7 +326,7 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
-private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager) {
+private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: String?) {
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
     Text("Git repository", style = MaterialTheme.typography.titleMedium)
@@ -338,5 +348,17 @@ private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager) {
         modifier = Modifier.fillMaxWidth().testTag("settings-public-key"),
     ) {
         Text(publicKey, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+    }
+    // The API of GitHub for deploy keys needs a login with the rights of an administrator; the page in the browser has that login already.
+    if (deployKeyPage != null) {
+        OutlinedButton(
+            onClick = {
+                clipboard.setText(AnnotatedString(publicKey))
+                copied = true
+                uriHandler.openUri(deployKeyPage)
+            },
+            modifier = Modifier.testTag("settings-add-key"),
+        ) { Text("Copy the key and open GitHub to add it") }
+        Text("On the page of GitHub, paste the key, tick \"Allow write access\" and add the key.", style = MaterialTheme.typography.bodySmall)
     }
 }

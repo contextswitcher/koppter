@@ -66,7 +66,7 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 ![Editor of the scheduled tasks](docs/screenshots/schedule.png)
 
 In a narrow window, as on a phone, the filter panel is a drawer.
-On Android, the back gesture closes the drawer, then returns from another view to the list, and leaves the application only from the list.
+On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list asks before it leaves the application.
 A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
@@ -164,6 +164,7 @@ A cloned repository and a file chosen with *Choose file* are opened at once, and
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
+With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
 The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
 On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it.
 
