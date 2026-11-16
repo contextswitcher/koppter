@@ -21,6 +21,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -591,6 +592,74 @@ class AppTest {
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
+    // [utest->dsn~view-remembered~1]
+    // [utest->dsn~settings-file~1]
+    @Test
+    fun theViewAndItsGroupsAreThereAgainAfterARestart() = runComposeUiTest {
+        var saved = Settings(view = "BOARD", boardGroup = "PROJECT", listGroup = "CONTEXT")
+        val controller = TodoController(saved, { storage }, saveSettings = { saved = it }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("board-switch").assertIsSelected()
+        onNodeWithTag("group-PROJECT").assertIsSelected()
+
+        onNodeWithTag("list-switch").performClick()
+        onNodeWithTag("group-CONTEXT").assertIsSelected().performClick()
+        onNodeWithTag("overview-switch").performClick()
+        onNodeWithTag("group-HASHTAG").performClick()
+        assertEquals(Settings(view = "OVERVIEW", boardGroup = "PROJECT", listGroup = "", overviewGroup = "HASHTAG"), saved)
+        assertEquals(saved, Settings.fromProperties(saved.toProperties()))
+        // A settings file of an earlier version, or one with a name that this version does not know, gives the list.
+        assertEquals(Settings(), Settings.fromProperties(emptyMap()))
+        assertEquals(View.LIST, TodoController(Settings(view = "TIMELINE"), { storage }, today = { LocalDate(2026, 11, 12) }).view)
+    }
+
+    // [utest->dsn~view-options~1]
+    @Test
+    fun aListWithoutGroupsSaysHowItIsOrdered() = runComposeUiTest {
+        start()
+        onNodeWithTag("group-none").assertTextEquals(NO_GROUPS)
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("group-none").assertDoesNotExist()
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("group-none").assertExists()
+        // The board always has columns.
+        onNodeWithTag("board-switch").performClick()
+        onNodeWithTag("group-none").assertDoesNotExist()
+    }
+
+    // [utest->dsn~edit-pickers~1]
+    @Test
+    fun aTimeAndADurationOfTheDialogAreChosenInADialogOfTheirOwn() = runComposeUiTest {
+        start()
+        onNodeWithTag("new-task").performClick()
+
+        // The clock face starts at noon and is left with the time it shows.
+        onNodeWithContentDescription("Choose Due time").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-by").assertTextContains("12:00")
+        onNodeWithTag("edit-at").performTextInput("9:30")
+        onNodeWithContentDescription("Choose Fixed time").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-at").assertTextContains("09:30")
+        onNodeWithContentDescription("Choose Fixed time").performClick()
+        onNodeWithText("No time").performClick()
+        onNodeWithTag("edit-at").assertTextEquals("Fixed time", "")
+
+        // The wheels start at half an hour, as planning does for a task without duration, or at the duration of the field.
+        onNodeWithContentDescription("Choose Duration").performClick()
+        onNodeWithTag("duration-picker").assertExists()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-duration").assertTextContains("30m")
+        onNodeWithTag("edit-travel").performTextInput("1h17m")
+        onNodeWithContentDescription("Choose Travel time").performClick()
+        onNodeWithText("OK").performClick()
+        // The wheels have steps of five minutes.
+        onNodeWithTag("edit-travel").assertTextContains("1h15m")
+        onNodeWithContentDescription("Choose Travel time").performClick()
+        onNodeWithText("No duration").performClick()
+        onNodeWithTag("edit-travel").assertTextEquals("Travel time", "")
+    }
+
     // [utest->dsn~edit-help~1]
     @Test
     fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {
@@ -1156,7 +1225,7 @@ class AppTest {
     fun theInboxGivesATaskItsContextWithOneClickOrByTyping() = runComposeUiTest {
         storage.text += "Sweep the floor\nMow the lawn\nRead the survey @research>reading\n"
         start()
-        onNodeWithTag("inbox-switch").assertTextEquals("Inbox 3").performClick()
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (3)").performClick()
         onAllNodesWithTag("inbox-task").assertCountEquals(2)
         onNodeWithTag("inbox-marked").assertExists()
 
@@ -1164,7 +1233,7 @@ class AppTest {
         onAllNodesWithTag("inbox-context-phone")[0].performClick()
         assertEquals(1, storage.text.lines().count { it.endsWith(" @phone") && "Mom" !in it && "pickup" !in it })
         assertEquals(true, storage.changes.last().startsWith("Edit task: "))
-        onNodeWithTag("inbox-switch").assertTextEquals("Inbox 2")
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (2)")
 
         // With the keyboard: the field has the focus, typing narrows the contexts of the marked task, Enter gives the first.
         onNodeWithTag("inbox-typed").assertIsFocused().performTextInput("rea")
@@ -1786,7 +1855,7 @@ class AppTest {
         onNodeWithTag("filter-hashtag-import").assertDoesNotExist()
         onNodeWithTag("filter-hashtag-import-excluded").assertExists()
         // The inbox and the overview follow the filter.
-        onNodeWithText("Inbox 1").assertExists()
+        onNodeWithText("Inbox (1)").assertExists()
 
         // A click on the excluded label shows its tasks again.
         onNodeWithTag("filter-hashtag-import-excluded").performClick()

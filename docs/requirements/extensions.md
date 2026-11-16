@@ -454,6 +454,7 @@ Needs: impl, utest
 A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
 One of them is always selected.
 For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
+While the list has no groups, a text at the end of that row tells its order: by priority, then by due date.
 For the overview, the second row selects what the tiles stand for: contexts, projects or hashtags.
 Each row is one line that scrolls sideways in a window that is too narrow for it.
 
@@ -550,7 +551,7 @@ Needs: impl, utest
 One task is marked, at first the first one.
 A field takes typed text: the marked task then shows the contexts that contain the text, those first of which a level starts with it.
 Enter gives the marked task the first of them, or the typed text as a new context if no context contains it; the arrow keys up and down move the mark.
-The switch of the inbox above the tasks shows the number of its tasks.
+The switch of the inbox above the tasks shows the number of its tasks in parentheses, as the headings of groups show their counts.
 
 Covers:
 

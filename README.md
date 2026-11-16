@@ -47,7 +47,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
-The filter is kept on the device: after a restart, the list shows what it showed before.
+The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
 ![Task list filtered by two projects and a context](docs/screenshots/filter.png)
@@ -80,6 +80,12 @@ The edit dialog: the description without metadata at the top, the metadata below
 The line can be edited as text as well: the fields follow what is typed there.
 
 ![Edit dialog of a task](docs/screenshots/edit.png)
+
+A date, a time and a duration are typed or chosen: the button of a field opens a calendar, a clock face, or two wheels for hours and minutes.
+
+![Clock face that chooses the due time](docs/screenshots/time-picker.png)
+
+![Wheels that choose the duration](docs/screenshots/duration-picker.png)
 
 The settings, with the board columns by filter and the public SSH key for the git repository.
 
@@ -408,6 +414,7 @@ The list and the columns of the board scroll while a task is held at their upper
 
 The switches below the views divide the list into groups: by priority, project, context, hashtag or due date range.
 Each group stands below a heading with its title and the number of its tasks, a priority with its colored label, and a second click on the switch shows the list without groups again.
+Without groups, a text next to the switches names the [order of the list](#order-of-the-list).
 A task with two projects stands in the groups of both.
 
 ![Task list divided into groups by project](docs/screenshots/list-project.png)
@@ -455,7 +462,7 @@ The bar of a task shows how much of its time has passed: from its start date (`t
 
 ## Inbox
 
-*Inbox* above the tasks lists the open tasks without context, and the switch tells how many there are.
+*Inbox* above the tasks lists the open tasks without context, and the switch tells in parentheses how many there are.
 Each task shows the contexts of the file; a click on one gives it to the task, which then leaves the inbox.
 
 With the keyboard, one task is marked.

@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -158,6 +159,9 @@ fun App(
 }
 
 internal const val LEAVE_WARNING = "Back again leaves koppter."
+
+/** What the list is without groups. */
+internal const val NO_GROUPS = "no groups: by priority, then due date"
 
 /** The task whose edit dialog is open; `entry` is null for a task that is not in the file yet. */
 /**
@@ -460,7 +464,7 @@ private fun ViewOptions(controller: TodoController) {
                 FilterChip(
                     selected = controller.view == view,
                     onClick = { controller.view = view },
-                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} ${controller.inbox.size}" else view.title) },
+                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} (${controller.inbox.size})" else view.title) },
                     modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
                 )
             }
@@ -468,7 +472,11 @@ private fun ViewOptions(controller: TodoController) {
         val list = controller.view == View.LIST
         val overview = controller.view == View.OVERVIEW
         if (!list && !overview && !controller.board) return
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             for (key in if (overview) OVERVIEW_KEYS else GroupKey.entries) {
                 FilterChip(
                     selected = when {
@@ -486,6 +494,15 @@ private fun ViewOptions(controller: TodoController) {
                     },
                     label = { Text("by ${key.label.lowercase()}") },
                     modifier = Modifier.testTag("group-${key.name}"),
+                )
+            }
+            if (list && controller.listGroupKey == null) {
+                // No switch is selected then, which alone does not tell how the tasks are ordered.
+                Text(
+                    NO_GROUPS,
+                    Modifier.testTag("group-none"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (controller.board && controller.boardColumns.isNotEmpty()) {

@@ -532,6 +532,20 @@ Covers:
 
 Needs: impl, utest
 
+### Choosing times and durations in the edit dialog
+`dsn~edit-pickers~1`
+
+The fields of `EditDialog` for the due time and the fixed time have a button that opens the clock face of Material with 24 hours (`TimeField`); without a time, it starts at noon.
+The fields for the duration, the travel time and the time spent have a button that opens two wheels for hours and minutes, the minutes in steps of five (`DurationField`, [decision 0037](../decisions/0037-wheels-for-durations-from-compose-pickers.md)); without a duration, they start at half an hour.
+*OK* writes what was chosen into the field as text, and the other button of each dialog empties the field.
+The fields still take typed text.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Edit dialog
 `dsn~edit-dialog~1`
 
@@ -623,6 +637,19 @@ Covers:
 
 * `req~persistent-settings~1`
 * `req~filter-panel~1`
+
+Needs: impl, utest
+
+### View after a restart
+`dsn~view-remembered~1`
+
+`TodoController` reads the view, the attribute of the groups of the list, that of the columns of the board and that of the tiles of the overview from the settings of the device and writes them there with every change.
+The application therefore starts with the view that was shown last.
+A name that this version does not know gives the list, the list without groups, the board by priority and the overview of the contexts.
+
+Covers:
+
+* `req~persistent-settings~1`
 
 Needs: impl, utest
 

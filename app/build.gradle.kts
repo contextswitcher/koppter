@@ -30,6 +30,8 @@ kotlin {
             implementation(libs.compose.ui)
             implementation(libs.compose.material3)
             implementation(libs.compose.material.icons)
+            // [impl->adr~wheel-for-durations-of-compose-pickers~1]
+            implementation(libs.compose.pickers)
             implementation(libs.kotlinx.coroutines.core)
         }
         named("desktopMain") {
