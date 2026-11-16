@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import io.github.koppor.koppter.storage.ColorTheme
 
 /** The colors of the light or the dark variant of a published palette, named by their use in the application. */
@@ -163,18 +164,24 @@ fun colorScheme(theme: ColorTheme, dark: Boolean): ColorScheme {
 }
 
 /**
- * The type scale of Material, a tenth smaller: its sizes are made for phones and look coarse in a window on a desktop.
- * The smaller size also keeps a field of one line at its minimum height.
+ * The type scale of Material with two sizes instead of its nine: the medium body size for texts, fields, buttons and titles,
+ * and the small body size for labels and remarks. A title differs from a text by its weight.
+ * The many sizes of the scale are made for phones and look restless and coarse in a window on a desktop.
+ * The medium size also keeps a field of one line at its minimum height.
  * Compose measures an empty line higher than a filled one, so a field of the default size shrinks with the first character typed.
  */
 // [impl->dsn~main-screen~1]
 val compactTypography: Typography = Typography().run {
-    fun TextStyle.compact() = copy(fontSize = fontSize * 0.9f, lineHeight = lineHeight * 0.9f)
+    // The spacing of the letters belongs to the size: with that of its own, a style would still look like another size.
+    fun TextStyle.sizedAs(other: TextStyle) = copy(fontSize = other.fontSize, lineHeight = other.lineHeight, letterSpacing = other.letterSpacing)
+    fun TextStyle.text() = sizedAs(bodyMedium)
+    fun TextStyle.small() = sizedAs(bodySmall)
     Typography(
-        displayLarge.compact(), displayMedium.compact(), displaySmall.compact(),
-        headlineLarge.compact(), headlineMedium.compact(), headlineSmall.compact(),
-        titleLarge.compact(), titleMedium.compact(), titleSmall.compact(),
-        bodyLarge.compact(), bodyMedium.compact(), bodySmall.compact(),
-        labelLarge.compact(), labelMedium.compact(), labelSmall.compact(),
+        displayLarge.text(), displayMedium.text(), displaySmall.text(),
+        headlineLarge.text(), headlineMedium.text(), headlineSmall.text(),
+        // The large title has the weight of a text in the scale, which only its size told apart.
+        titleLarge.text().copy(fontWeight = FontWeight.Bold), titleMedium.text(), titleSmall.text(),
+        bodyLarge.text(), bodyMedium, bodySmall,
+        labelLarge.text(), labelMedium.small(), labelSmall.small(),
     )
 }

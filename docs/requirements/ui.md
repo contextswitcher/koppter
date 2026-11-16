@@ -603,7 +603,8 @@ The main screen consists of the top bar, the filter panel, the switches for the 
 The switches stand above the field, as a task is looked up more often than added.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
-The texts use the type scale of Material reduced by a tenth (`compactTypography`), which suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
+The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
+That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
 Covers:
 
