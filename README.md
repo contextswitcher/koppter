@@ -19,7 +19,7 @@ The notation is the [todo.txt format](https://github.com/todotxt/todo.txt): the 
 * Synchronization through git, with one commit per added and per completed task.
   The dates a task was added and completed are then read from the history instead of being written into the file.
 * Synchronization through a local folder and through OneDrive.
-* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task, divided into groups by one of them if wanted.
+* A task list that shows projects, contexts, hashtags, due date and priority as labels at the right of each task, divided into groups by one of them if wanted.
 * An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
 * A filter panel for completion state, text, priorities, projects, contexts and hashtags.
 * A Kanban board.
@@ -39,7 +39,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 ## Overview
 
 The task list with the filter panel.
-Projects, contexts, tags and the priority are labels at the top right of each task.
+Projects, contexts, tags and the priority are labels at the right of each task: in the line of its description where both fit, above it otherwise.
 An address of the web in the text of a task is a link that opens in the browser.
 A long address is cut after 50 characters; the whole one appears when the pointer of the mouse rests on it, and the edit dialog shows it as well.
 

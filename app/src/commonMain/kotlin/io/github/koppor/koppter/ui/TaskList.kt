@@ -70,6 +70,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.max
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
@@ -300,23 +303,44 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
     Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().then(secondaryClick).testTag("task")) {
         Row(Modifier.padding(end = 10.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("task-done"))
-            Column(Modifier.weight(1f)) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().testTag("task-labels"),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    TaskLabels(task, today, onDue = { dueMenu = true })
+            // [impl->dsn~task-card~1]
+            // In one line where the description and the labels fit next to each other, so that the description stands
+            // at the height of the checkbox; otherwise the labels above the description, each with the whole width.
+            Layout(
+                content = {
+                    FlowRow(
+                        modifier = Modifier.testTag("task-labels"),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        TaskLabels(task, today, onDue = { dueMenu = true })
+                    }
+                    // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
+                    Box { DueMenu(dueMenu, entry, today) { dueMenu = false } }
+                    LinkedText(
+                        task.description,
+                        modifier = Modifier.padding(vertical = 3.dp).testTag("task-description"),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (task.completed) TextDecoration.LineThrough else null,
+                        color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                modifier = Modifier.weight(1f),
+            ) { (labels, menu, description), constraints ->
+                val width = constraints.maxWidth
+                val loose = constraints.copy(minWidth = 0, minHeight = 0)
+                val gap = 8.dp.roundToPx()
+                val placedLabels = labels.measure(loose)
+                val oneLine = placedLabels.width + gap + description.maxIntrinsicWidth(Constraints.Infinity) <= width
+                val placedDescription = description.measure(if (oneLine) loose.copy(maxWidth = width - placedLabels.width - gap) else loose)
+                val placedMenu = menu.measure(loose)
+                val height = if (oneLine) max(placedLabels.height, placedDescription.height) else placedLabels.height + placedDescription.height
+                layout(width, height) {
+                    val labelsTop = if (oneLine) (height - placedLabels.height) / 2 else 0
+                    placedLabels.placeRelative(width - placedLabels.width, labelsTop)
+                    placedMenu.placeRelative(width, labelsTop + placedLabels.height)
+                    placedDescription.placeRelative(0, if (oneLine) (height - placedDescription.height) / 2 else placedLabels.height)
                 }
-                // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
-                Box(Modifier.align(Alignment.End)) { DueMenu(dueMenu, entry, today) { dueMenu = false } }
-                LinkedText(
-                    task.description,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp).testTag("task-description"),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (task.completed) TextDecoration.LineThrough else null,
-                    color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                )
             }
             trailing()
         }

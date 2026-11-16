@@ -98,7 +98,8 @@ class AppTest {
     }
 
     private fun ComposeUiTest.openTask(description: String) {
-        onNodeWithText(description).performClick()
+        // On the description itself: the middle of the card may be a label, which has a click of its own.
+        onNodeWithText(description, useUnmergedTree = true).performClick()
         onNodeWithTag("edit-dialog").assertExists()
     }
 

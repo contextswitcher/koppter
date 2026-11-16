@@ -7,7 +7,7 @@ Requirements and design for the screens shared by all platforms.
 ### Labels at the top right of a task
 `req~labels-top-right~1`
 
-Each task in the list shows its description and, in a row at the top right, its projects, contexts, hashtags, tags such as the due date, and its priority as labels.
+Each task in the list shows its description and, in a row at the right, in the line of the description or above it, its projects, contexts, hashtags, tags such as the due date, and its priority as labels.
 The description contains no metadata.
 
 Covers:
@@ -310,7 +310,8 @@ Needs: impl, utest
 ### Task card
 `dsn~task-card~1`
 
-`TaskCard` shows a checkbox for the completion state and, to its right, a column with the labels in a right-aligned flow row and the description below it.
+`TaskCard` shows a checkbox for the completion state and, to its right, the description and the labels in a right-aligned flow row.
+Where both fit next to each other, they share one line, so that the description stands at the height of the checkbox; otherwise the labels stand above the description, each with the whole width.
 A click on the card opens the edit dialog.
 
 Covers:
