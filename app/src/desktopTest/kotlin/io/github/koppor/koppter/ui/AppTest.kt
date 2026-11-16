@@ -211,8 +211,8 @@ class AppTest {
             dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() },
         )
         // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
-        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
-        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
         // The end of January has no day a month later.
         assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
     }

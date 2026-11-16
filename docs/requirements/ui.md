@@ -105,7 +105,7 @@ Needs: dsn
 ### Moving the due date
 `req~move-due-date~1`
 
-The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next week, in two weeks or in a month.
+The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next weekend, in two weeks or in a month.
 In the list, this needs no opening of the task.
 
 Covers:
@@ -425,7 +425,7 @@ Needs: impl, utest
 ### Menu of the due date
 `dsn~due-menu~1`
 
-A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next week, in two weeks and in a month, each day once.
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next weekend, in two weeks and in a month, each day once; a weekend stands for its Sunday.
 A weekend and a week end on their Sunday, as in the dates that are typed in words.
 Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
 For a task with a due date, the menu ends with *No due date*, which removes the tag.

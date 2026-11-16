@@ -21,6 +21,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The week shows all its hours without scrolling, also on a phone that is held upright.
 - The heading of a group of a priority shows the colored label of the priority, so that a priority named by a number is not read as a count.
 - The dialog of a task is wider, and its description starts with the cursor at the end.
+- The day that the menu of the due date and the dialog of a task called *next week* is called *next weekend*, as it is the Sunday of the next week.
 - The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.
 - A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
 - A click on the public SSH key in the settings copies it.

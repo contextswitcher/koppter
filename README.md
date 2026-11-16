@@ -393,7 +393,7 @@ A line shows where a dragged task would be put.
 * If the task and the one it is put next to are due on different days, it takes the priority and the due date decides its place.
 * No task crosses the line below the overdue tasks: the due date decides on which side a task stands.
 
-A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next week, in two weeks or in a month, or removes it.
+A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next weekend, in two weeks or in a month, or removes it; a weekend stands for its Sunday.
 The edit dialog offers the same days as chips above the due date, which is the way to them on a phone for a task without a due date.
 A weekend and a week end on their Sunday.
 An overdue task that is moved this way leaves the upper part of the list.

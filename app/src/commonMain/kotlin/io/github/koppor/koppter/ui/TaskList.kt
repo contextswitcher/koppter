@@ -353,7 +353,8 @@ internal fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listO
     "today" to today,
     "tomorrow" to today.plus(DatePeriod(days = 1)),
     "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
-    "next week" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
+    // Named after the day it sets, the Sunday: as "next week", it read like a day a week from now.
+    "next weekend" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
     "in two weeks" to today.plus(DatePeriod(days = 14)),
     "in a month" to today.plus(DatePeriod(months = 1)),
     // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
