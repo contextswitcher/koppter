@@ -72,6 +72,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.todotxt.Entry
@@ -99,6 +100,7 @@ fun TaskList(
     onDrop: (entry: Entry, target: Entry, before: Boolean) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    priorities: Boolean = false,
 ) {
     if (groups.all { it.entries.isEmpty() }) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -131,10 +133,9 @@ fun TaskList(
                 val entries = group.entries
                 if (headings) {
                     item(key = "group/${group.title}") {
-                        Text(
-                            "${group.title} (${entries.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                        GroupHeading(
+                            group, priorities,
+                            Modifier.fillMaxWidth().padding(top = 10.dp)
                                 .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
                                 .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
                         )
@@ -325,6 +326,26 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
 }
 
 /**
+ * The title of a group and the number of its tasks.
+ * A priority is drawn as at the tasks: its name may be a number, which next to the count reads as a second count.
+ *
+ * @param priorities whether the groups are those of the priorities
+ */
+// [impl->dsn~list-groups~1]
+@Composable
+private fun GroupHeading(group: Group, priorities: Boolean, modifier: Modifier) {
+    val priority = group.value?.singleOrNull()?.takeIf { priorities }
+    if (priority == null) {
+        Text("${group.title} (${group.entries.size})", style = MaterialTheme.typography.titleSmall, modifier = modifier)
+    } else {
+        Row(modifier.semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PriorityLabel(priority)
+            Text("(${group.entries.size})", style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
+
+/**
  * The days that are offered for a due date, each with what it is called; each day once, under its first name.
  * A weekend and a week end on their Sunday, as in the dates that are typed in words.
  */
@@ -400,6 +421,7 @@ fun Board(
     onMove: (Entry, from: Group, to: Group, at: Entry?, before: Boolean) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    priorities: Boolean = false,
 ) {
     if (groups.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -457,11 +479,7 @@ fun Board(
                             )
                             .testTag("board-column"),
                     ) {
-                        Text(
-                            "${group.title} (${group.entries.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp).testTag("board-column-title"),
-                        )
+                        GroupHeading(group, priorities, Modifier.padding(horizontal = 4.dp, vertical = 6.dp).testTag("board-column-title"))
                         val list = rememberLazyListState()
                         DragScroll(drag, list) { columnBounds[index] }
                         LazyColumn(

@@ -44,6 +44,7 @@ Needs: dsn
 A typed line may name its dates in words at the end of its text, such as `tomorrow`, `next week`, `by Wed` or `tomorrow 3pm`.
 The task gets the due date, the threshold date and the times that the words name.
 The application shows the resulting line before the task is added.
+The description of the edit dialog reads the same words.
 
 Covers:
 
@@ -324,6 +325,7 @@ Needs: impl, utest
 
 `TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns; without an attribute, the list is one group.
 `TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
+The heading of a priority, there and above a column of the board, shows the label of the priority as the tasks have it: a priority may be named by a number, which next to the number of the tasks reads as a second count.
 A task with several values of the attribute stands in each of their groups.
 A step and a drag stay within a group; a task is given another value on the board or in the edit dialog.
 
@@ -504,11 +506,25 @@ Covers:
 
 Needs: impl, utest
 
+### Dates in words in the edit dialog
+`dsn~edit-dates~1`
+
+`EditDialog` applies `Task.withDates` to the task that its fields give, once the description differs from that of the task: words that a task was written with stay words.
+The dialog marks the words that become dates with a background and says below the field what the mark means; the resulting line shows the tags.
+A date in a field of the dialog wins over the words, as a tag of a typed line does.
+
+Covers:
+
+* `req~quick-add-dates~1`
+
+Needs: impl, utest
+
 ### Edit dialog
 `dsn~edit-dialog~1`
 
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
+The description starts with the cursor at its end, and the dialog is wide enough for the priorities and the days of the due date in one row each where the window allows that.
 Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
 Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).

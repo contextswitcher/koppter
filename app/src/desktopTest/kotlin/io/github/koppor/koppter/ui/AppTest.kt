@@ -591,6 +591,29 @@ class AppTest {
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
+    // [utest->dsn~edit-dates~1]
+    @Test
+    fun theDescriptionOfTheDialogReadsDatesInWordsOnceItIsChanged() = runComposeUiTest {
+        storage.text += "Plan next week\n"
+        start()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Water plants tomorrow")
+        onNodeWithTag("edit-dates-hint", useUnmergedTree = true).assertExists()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Water plants due:2026-11-13")
+        // A date of the fields stays.
+        onNodeWithTag("edit-due-2026-11-12").performScrollTo().performClick()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Water plants due:2026-11-12")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("Water plants due:2026-11-12", storage.text.trim().lines().last())
+
+        // The words of a task that exists stay until its description is typed in, which starts at its end.
+        openTask("Plan next week")
+        onNodeWithTag("edit-dates-hint", useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Plan next week")
+        onNodeWithTag("edit-description").performTextInput(" by Fri")
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Plan next week due:2026-11-13")
+    }
+
     @Test
     fun aFieldOfOneLineKeepsItsHeightWhenTextIsTyped() = runComposeUiTest {
         start()
@@ -1155,11 +1178,11 @@ class AppTest {
 
         // With a change, the user may go back to the dialog, which still holds the change.
         openTask("Post signs")
-        onNodeWithTag("edit-description").performTextInput("Not wanted ")
+        onNodeWithTag("edit-description").performTextInput(" not wanted")
         esc("edit-description")
         onNodeWithTag("discard-dialog").assertExists()
         onNodeWithTag("discard-keep").performClick()
-        onNodeWithTag("edit-description").assertTextContains("Not wanted Post signs")
+        onNodeWithTag("edit-description").assertTextContains("Post signs not wanted")
 
         esc("edit-description")
         onNodeWithTag("discard-confirm").performClick()
@@ -1849,7 +1872,8 @@ class AppTest {
         start()
         onNodeWithTag("board-switch").performClick()
         onAllNodesWithTag("board-column").assertCountEquals(3)
-        onNodeWithText("A (1)").assertExists()
+        // A priority is drawn as at the tasks, next to the number of its tasks.
+        onAllNodesWithTag("board-column-title")[0].assertTextEquals("A", "(1)")
         onNodeWithText("No priority (1)").assertExists()
 
         onNodeWithTag("group-PROJECT").performClick()
@@ -1991,7 +2015,7 @@ class AppTest {
 
         assertEquals("(A) Schedule pickup +GarageSale @phone", storage.text.lines()[0])
         assertEquals("Move task to A: Schedule pickup", storage.changes.last())
-        onNodeWithText("A (2)").assertExists()
+        onAllNodesWithTag("board-column-title")[0].assertTextEquals("A", "(2)")
         onNodeWithTag("task-dragged").assertDoesNotExist()
         onNodeWithTag("edit-dialog").assertDoesNotExist()
     }

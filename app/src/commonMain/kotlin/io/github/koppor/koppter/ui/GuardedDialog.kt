@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -16,7 +17,9 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
 /**
  * A dialog that asks before it closes with changes that are not saved: on Esc, on a click beside it and on the back button.
@@ -28,9 +31,10 @@ fun GuardedDialog(changed: Boolean, onDismiss: () -> Unit, content: @Composable 
     var asking by remember { mutableStateOf(false) }
     val dismiss = { if (changed) asking = true else onDismiss() }
 
-    Dialog(onDismissRequest = dismiss) {
+    // The content states its own width, which may be more than what the platform gives a dialog; the padding keeps it off the edges of a narrow window.
+    Dialog(onDismissRequest = dismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(
-            Modifier.onPreviewKeyEvent {
+            Modifier.padding(horizontal = 16.dp).onPreviewKeyEvent {
                 // On the release: the question that the key opens would get the release of the key otherwise and close again.
                 if (it.key == Key.Escape && it.type == KeyEventType.KeyUp) dismiss()
                 it.key == Key.Escape

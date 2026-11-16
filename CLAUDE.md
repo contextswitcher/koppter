@@ -51,7 +51,8 @@
   Android library target: compiled from the same `commonMain`.
   The icon is drawn in `docs/logo.svg`; after a change, export it with `inkscape docs/logo.svg -w 256 -o app/src/desktopMain/resources/koppter.png` repeat the paths in `android/src/main/res/drawable/ic_launcher_foreground.xml`, and run `app/packaging/icons.sh` for the icons of the desktop packages.
   `./gradlew :app:packageDistributionForCurrentOS` builds the package of the system it runs on (deb, msi or dmg) into `app/build/compose/binaries/`.
-* `:android` — the Android application: `MainActivity`, `DocumentStorage` (file behind a `content:` URI).
+* `:android` — the Android application: `MainActivity`, `DocumentStorage` (file behind a `content:` URI), `FolderStorage` (folder behind one, with the files next to todo.txt).
+  The dialogs for a file and a folder come from FileKit, on the desktop as well (decision 0036).
   Not run on a device or emulator in development sessions; say so when reporting Android changes.
   CI signs the release APK with the key from the secrets `SIGNING_KEYSTORE_BASE64` and `SIGNING_KEYSTORE_PASSWORD` (decision 0010); the key store itself is never committed.
 * Files next to todo.txt (`notes/`, `ice_recur.txt`, `koppter.yml`, `calendar.txt`, `calendar.ics`) go through `CompanionFiles`; `GitStorage` commits them with the next todo.txt change.

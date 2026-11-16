@@ -58,8 +58,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
@@ -96,7 +103,8 @@ fun EditDialog(
     var base by remember { mutableStateOf(original) }
     /** The line while it is typed: what was typed stays, where the fields would write it in another form. */
     var line by remember { mutableStateOf<String?>(null) }
-    var description by remember(base) { mutableStateOf(base.description) }
+    // With the cursor at the end, where the user goes on typing.
+    var description by remember(base) { mutableStateOf(TextFieldValue(base.description, TextRange(base.description.length))) }
     var priority by remember(base) { mutableStateOf(base.priority) }
     var due by remember(base) { mutableStateOf(base.tag(Task.DUE).orEmpty()) }
     var deadline by remember(base) { mutableStateOf(base.tag(Task.DEADLINE).orEmpty()) }
@@ -122,8 +130,8 @@ fun EditDialog(
     val travelValid = travel.isBlank() || Task.parseDuration(travel.trim()) != null
     val spentValid = spent.isBlank() || Task.parseDuration(spent.trim()) != null
     val byValid = by.isBlank() || Task.parseTime(by.trim()) != null
-    val result = base
-        .edit(description = description, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
+    val fields = base
+        .edit(description = description.text, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
         .withTag(Task.DUE, due.trim())
         .withTag(Task.BY, by.trim())
         .withTag(Task.DEADLINE, deadline.trim())
@@ -138,6 +146,11 @@ fun EditDialog(
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
+    // [impl->dsn~edit-dates~1]
+    // Words of a description that was not touched stay words: they were there when the task was written.
+    val result = if (description.text == base.description) fields else fields.withDates(today)
+    /** Where the words that became dates start in the description; `null` if there are none. */
+    val phraseStart = result.description.length.takeIf { result != fields && description.text.startsWith(result.description) }
     val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank()
 
     val descriptionFocus = remember { FocusRequester() }
@@ -152,7 +165,8 @@ fun EditDialog(
         Surface(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 6.dp,
-            modifier = Modifier.widthIn(max = 560.dp).testTag("edit-dialog")
+            // Wide enough for the priorities and the days of the due date in one row each.
+            modifier = Modifier.widthIn(max = 760.dp).testTag("edit-dialog")
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
@@ -166,8 +180,11 @@ fun EditDialog(
             ) {
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it.replace('\n', ' ') },
+                    onValueChange = { description = it.copy(text = it.text.replace('\n', ' ')) },
                     label = { Text("Description") },
+                    // Marked, as the words leave the description when the task is saved.
+                    visualTransformation = phraseColor(phraseStart, MaterialTheme.colorScheme.tertiaryContainer),
+                    supportingText = phraseStart?.let { { Text("The marked words become the dates of the task.", Modifier.testTag("edit-dates-hint")) } },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocus).testTag("edit-description"),
                 )
@@ -330,6 +347,12 @@ fun EditDialog(
             }
         }
     }
+}
+
+/** Gives the text from [start] on a background; nothing for `null`. */
+private fun phraseColor(start: Int?, color: Color) = VisualTransformation { text ->
+    val marked = if (start == null || start >= text.length) text else AnnotatedString.Builder(text).apply { addStyle(SpanStyle(background = color), start, text.length) }.toAnnotatedString()
+    TransformedText(marked, OffsetMapping.Identity)
 }
 
 private const val MILLIS_PER_DAY = 86_400_000L

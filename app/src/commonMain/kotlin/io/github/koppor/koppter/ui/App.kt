@@ -358,11 +358,13 @@ private fun MainScreen(
                                 moved = controller::moved,
                                 onMove = controller::move,
                                 emptyText = emptyText,
+                                priorities = controller.groupKey == GroupKey.PRIORITY,
                             )
                         } else {
                             TaskList(
                                 controller.listGroups, controller.listGroupKey != null, controller.today(),
                                 controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
+                                priorities = controller.listGroupKey == GroupKey.PRIORITY,
                             )
                         }
                     }

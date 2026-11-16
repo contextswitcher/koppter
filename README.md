@@ -340,7 +340,7 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 
 ## Dates in words
 
-A line typed above the list may name its dates in words instead of tags.
+A line typed above the list may name its dates in words instead of tags, and so may the description in the dialog of a task, which marks these words.
 `Write the report next week` is written as `Write the report t:2026-11-16 due:2026-11-22`.
 The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a-plan-for-a-task) reads in the title of a task; the examples are typed on Friday, 13 November 2026.
 
@@ -407,7 +407,7 @@ The list and the columns of the board scroll while a task is held at their upper
 ## Groups in the list
 
 The switches below the views divide the list into groups: by priority, project, context, hashtag or due date range.
-Each group stands below a heading with its title and the number of its tasks, and a second click on the switch shows the list without groups again.
+Each group stands below a heading with its title and the number of its tasks, a priority with its colored label, and a second click on the switch shows the list without groups again.
 A task with two projects stands in the groups of both.
 
 ![Task list divided into groups by project](docs/screenshots/list-project.png)
