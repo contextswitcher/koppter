@@ -229,7 +229,7 @@ Needs: dsn
 ### Hashtags of a task
 `dsn~hashtags~1`
 
-`Task.hashtags` are the words of the body that start with `#` followed by a letter, without the `#`.
+`Task.hashtags` are the words of the body that start with `#` followed by a letter or a currency sign, without the `#` (`Task.isHashtagName`): `#money` and `#$$$` are hashtags.
 A number sign followed by another character, such as `#123`, and a number sign inside a word stay words of the description.
 Hashtags are not part of the description, and `Task.edit` writes them between the contexts and the tags.
 
@@ -244,7 +244,7 @@ Needs: impl, utest
 `dsn~hashtags-in-ui~1`
 
 A hashtag is an outlined label on the task, after the contexts.
-The filter panel and the edit dialog have a section for hashtags that works like those for projects and contexts; the edit dialog accepts only names that start with a letter.
+The filter panel and the edit dialog have a section for hashtags that works like those for projects and contexts; the edit dialog accepts only names that start with a letter or a currency sign, typed with or without the `#`.
 The board offers the hashtags as columns.
 
 Covers:
@@ -296,13 +296,28 @@ Needs: impl
 
 `groupEntries` distributes entries over groups by priority, project, context, hashtag or due date.
 A task with several projects or contexts appears in each of their groups.
-The due date groups are overdue, today, later and no due date.
+The due date groups are described in `dsn~due-groups~1`.
 Tasks without a value form the last group; empty groups are left out.
 
 Covers:
 
 * `req~board~1`
 * `adr~board-columns-by-attribute~1`
+
+Needs: impl, utest
+
+### Groups by due date
+`dsn~due-groups~1`
+
+The groups by due date are *Overdue*, then one group for each day of `dueChoices`, then *Later* and *No due date*.
+The days of `dueChoices` are those that the menu of the due date and the edit dialog offer: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month.
+The group of a day has the tasks that are due after the day of the group before it, up to its own day; *Later* has those after the last day.
+Moving a task to the group of a day sets that day as its due date, and moving it to *Later* the day after the last one.
+
+Covers:
+
+* `req~board~1`
+* `req~list-groups~1`
 
 Needs: impl, utest
 
@@ -390,7 +405,7 @@ Needs: impl, utest
 `moveToGroup` returns the task as it is after a move from one group to another.
 For priorities, the task gets the priority of the target group, or none.
 For projects, contexts and hashtags, the value of the source group is replaced by that of the target group; the other projects, contexts and hashtags of the task stay.
-For due dates, the group *today* sets today, the group *later* tomorrow, and the group without due date removes the date.
+For due dates, a group sets its day (`dsn~due-groups~1`), and the group without due date removes the date.
 A move within a group or into the group of overdue tasks changes nothing.
 
 Covers:

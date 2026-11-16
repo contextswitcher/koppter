@@ -218,7 +218,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `rec:1w` | Recurrence: completing the task adds its next occurrence | [topydo](https://github.com/topydo/topydo/wiki/Recurrence), with the business days of [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | See [recurring tasks](#recurring-tasks). |
 | `ice_recur.txt` | Schedules that add tasks on certain days | [ice_recur](https://github.com/rlpowell/todo-text-stuff/blob/master/ice_recur), an [add-on](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#ice_recur-another-recurring-task-action-but-with-much-more-flexibility) of the todo.txt command line | See [recurring tasks](#recurring-tasks). |
 | `note:k3f.md` | A note for the task, kept in the file `notes/k3f.md` | [note](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#note--take-notes-related-to-tasks), an add-on of the todo.txt command line | *Note* in the edit dialog; the application names the file. New notes are Markdown files, which the dialog edits as text; a note named otherwise, such as `note:k3f.txt`, keeps its file. As in the [note add-on](https://github.com/mgarrido/todo.txt-cli/tree/note/todo.actions.d), which reads these notes with `TODO_NOTE_EXT=.md` in its configuration. |
-| `#urgent` | Hashtag: a third kind of label next to `+project` and `@context`, without a fixed meaning | This application | *Add hashtag* in the edit dialog, or typed into the task. A hashtag starts with a letter: `#123` and `C#` stay words of the description ([decision 0014](docs/decisions/0014-hashtags-as-a-third-kind-of-label.md)). |
+| `#urgent` | Hashtag: a third kind of label next to `+project` and `@context`, without a fixed meaning | This application | *Add hashtag* in the edit dialog, or typed into the task. A hashtag starts with a letter or a currency sign, as `#$$$` does: `#123` and `C#` stay words of the description ([decision 0014](docs/decisions/0014-hashtags-as-a-third-kind-of-label.md)). |
 | `@research>reading` | A context below another context, over any number of levels | This application | Typed as the context. The label shows `@reading`, and the path when the pointer rests on it; a click on it shows the tasks of the context. A filter for `@research` includes the contexts below it, and the filter panel shows the contexts as a tree ([decision 0017](docs/decisions/0017-levels-of-a-context-separated-by-a-greater-than-sign.md)). |
 | `+papers>survey` | A project below another project, over any number of levels | This application | Typed as the project. The label shows `+survey`, and the path when the pointer rests on it; a click on it shows the tasks of the project. A filter for `+papers` includes the projects below it, as do a barrier and a limit of the [plan](#planning), and the filter panel shows the projects as a tree ([decision 0026](docs/decisions/0026-levels-of-a-project-written-like-those-of-a-context.md)). |
 | `dur:1h30m` | The time the task is expected to take, in hours and minutes | This application | Field *Duration* in the edit dialog, or typed into the task. [Planning](#planning) gives the task that much time ([decision 0018](docs/decisions/0018-tag-for-the-duration-of-a-task.md)). |
@@ -399,7 +399,7 @@ A line shows where a dragged task would be put.
 * If the task and the one it is put next to are due on different days, it takes the priority and the due date decides its place.
 * No task crosses the line below the overdue tasks: the due date decides on which side a task stands.
 
-A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next weekend, in two weeks or in a month, or removes it; a weekend stands for its Sunday.
+A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, in three days, next weekend, in two weeks or in a month, or removes it; a weekend stands for its Sunday.
 The edit dialog offers the same days as chips above the due date, which is the way to them on a phone for a task without a due date.
 A weekend and a week end on their Sunday.
 An overdue task that is moved this way leaves the upper part of the list.
@@ -413,6 +413,7 @@ The list and the columns of the board scroll while a task is held at their upper
 ## Groups in the list
 
 The switches below the views divide the list into groups: by priority, project, context, hashtag or due date range.
+The ranges of the due date are those of its menu: overdue, today, tomorrow, this weekend, in three days, next weekend, in two weeks, in a month and later.
 Each group stands below a heading with its title and the number of its tasks, a priority with its colored label, and a second click on the switch shows the list without groups again.
 Without groups, a text next to the switches names the [order of the list](#order-of-the-list).
 A task with two projects stands in the groups of both.
@@ -628,7 +629,7 @@ The application only reads the calendars and writes nothing to them.
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+Shift+A | Go to the line that adds a task |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
-| Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
+| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
 | Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
@@ -700,7 +701,7 @@ A project, a context or a hashtag has a link of its own, for example to the sect
 ## Board
 
 The board shows one column per priority, project, context, hashtag or due date range.
-Dragging a task to another column changes that attribute of the task.
+Dragging a task to another column changes that attribute of the task; the column of a due date range sets its day, such as the Sunday for *This weekend*.
 
 Columns can also be defined by filters, one per line as `title = filter`.
 They are entered in the settings and kept in `koppter.yml` next to the `todo.txt` file, so that they are synchronized with the tasks ([decision 0012](docs/decisions/0012-board-columns-by-filter-in-a-file.md)):

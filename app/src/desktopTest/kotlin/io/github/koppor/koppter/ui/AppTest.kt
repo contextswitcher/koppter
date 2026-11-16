@@ -56,6 +56,7 @@ import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -211,9 +212,14 @@ class AppTest {
             listOf("2026-11-12", "2026-11-13", "2026-11-15", "2026-11-22", "2026-11-26", "2026-12-12"),
             dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() },
         )
+        // On that Thursday, three days from now are this weekend.
+        assertEquals(listOf("today", "tomorrow", "this weekend", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 12)).map { it.first })
         // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
-        assertEquals(listOf("today", "tomorrow", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
-        assertEquals(listOf("today", "tomorrow", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "in three days", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "in three days", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        // The choices stand in the order of their days: on a Friday, the weekend comes before the third day, on a Monday after it.
+        assertEquals(listOf("today", "tomorrow", "this weekend", "in three days"), dueChoices(LocalDate(2026, 11, 13)).map { it.first }.take(4))
+        assertEquals(listOf("today", "tomorrow", "in three days", "this weekend"), dueChoices(LocalDate(2026, 11, 16)).map { it.first }.take(4))
         // The end of January has no day a month later.
         assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
     }
@@ -1308,6 +1314,17 @@ class AppTest {
         onNodeWithTag("filter-text").assertIsFocused()
         ctrl(Key.A, shift = true)
         onNodeWithTag("quick-add").assertIsFocused()
+        // The key of browsers and editors for their search; the field offers to empty it once it has a text.
+        ctrl(Key.F)
+        onNodeWithTag("filter-text-clear").assertDoesNotExist()
+        val all = onAllNodesWithTag("task").fetchSemanticsNodes().size
+        onNodeWithTag("filter-text").assertIsFocused().performTextInput("mom")
+        onAllNodesWithTag("task").assertCountEquals(1)
+        onNodeWithTag("filter-text-clear").performClick()
+        onAllNodesWithTag("task").assertCountEquals(all)
+        onNodeWithTag("filter-text-clear").assertDoesNotExist()
+        ctrl(Key.A, shift = true)
+        onNodeWithTag("quick-add").assertIsFocused()
         ctrl(Key.L, shift = true)
         onNodeWithTag("plan-dialog").assertExists()
         onNodeWithTag("plan-close").performScrollTo().performClick()
@@ -2199,11 +2216,13 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-hashtag-add").performTextInput("123 ")
         onNodeWithTag("edit-hashtag-add").performTextInput("#urgent ")
-        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale #urgent")
+        // A name is taken with or without its sign, and a currency sign starts a name as a letter does.
+        onNodeWithTag("edit-hashtag-add").performTextInput("$$$ ")
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale #urgent #$$$")
         // The dialog is higher than the window of the test.
         onNodeWithTag("edit-save").performScrollTo().performClick()
 
-        assertEquals("Post signs +GarageSale #urgent", storage.text.lines()[1])
+        assertEquals("Post signs +GarageSale #urgent #$$$", storage.text.lines()[1])
         // On the card and in the filter panel.
         onAllNodesWithText("#urgent", useUnmergedTree = true).assertCountEquals(2)
         onNodeWithTag("filter-hashtag-urgent").performClick()

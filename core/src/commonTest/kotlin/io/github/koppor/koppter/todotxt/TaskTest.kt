@@ -199,6 +199,9 @@ class TaskTest {
         val task = Task.parse("Fix #123 in C# for #release +App #Release #release #2go # x#y")
 
         assertEquals(listOf("release", "Release"), task.hashtags)
+        // A currency sign starts a hashtag as a letter does.
+        assertEquals(listOf("$$$", "€"), Task.parse("(A) Label the box #$$$ #€ due:2026-11-15 dur:3h").hashtags)
+        assertEquals(Task.parse("Label the box #$$$").hashtags, filterOfLink(Filter(hashtags = setOf("$$$")).toLink())?.hashtags?.toList())
         assertEquals("Fix #123 in C# for #2go # x#y", task.description)
     }
 

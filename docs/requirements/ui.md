@@ -425,7 +425,7 @@ Needs: impl, utest
 ### Menu of the due date
 `dsn~due-menu~1`
 
-A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next weekend, in two weeks and in a month, each day once; a weekend stands for its Sunday.
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month, each day once and in the order of the days; a weekend stands for its Sunday.
 A weekend and a week end on their Sunday, as in the dates that are typed in words.
 Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
 For a task with a due date, the menu ends with *No due date*, which removes the tag.
@@ -600,6 +600,7 @@ Needs: impl, utest
 `dsn~filter-panel~1`
 
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+While the text field has a text, a button at its end empties it.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
 From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
@@ -675,7 +676,7 @@ Needs: impl
 `dsn~keyboard-shortcuts~1`
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
-With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, and 1 to 6 show the list and the views in the order of their switches.
+With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.

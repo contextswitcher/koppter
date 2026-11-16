@@ -14,6 +14,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The application starts with the view that was shown last, and with the groups of the list, the columns of the board and the tiles of the overview that were chosen.
 - In the dialog of a task, the due time and the fixed time are chosen on a clock face, and the duration, the travel time and the time spent on two wheels for hours and minutes; the fields still take typed text.
 - A list without groups tells next to the switches of the groups how it is ordered: by priority, then by due date.
+- Ctrl+F goes to the search text of the filter, and the field has a button that empties it.
+- The menu of the due date and the dialog of a task offer *in three days*.
+- A hashtag may start with a currency sign: `#$$$`.
 - The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.
 - *Choose folder* in the settings opens the `todo.txt` file of a folder. On Android, such a folder has the notes, the scheduled tasks, the configuration and the plan next to the file, which a single chosen file has not. On the desktop, the file need not exist yet.
 - For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
@@ -26,6 +29,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The heading of a group of a priority shows the colored label of the priority, so that a priority named by a number is not read as a count.
 - The dialog of a task is wider, and its description starts with the cursor at the end.
 - The switch of the inbox shows the number of its tasks in parentheses: *Inbox (4)*.
+- The groups by due date are those of the menu of the due date, from *Today* to *In a month*, with *Overdue* before them and *Later* after them; a column of the board sets its day.
 - The date of the tag `t:` is called the start date instead of the threshold date: the field of the dialog of a task is *Start date*, and the option of the filter panel *Show tasks before their start date*. The tag stays `t:`.
 - The day that the menu of the due date and the dialog of a task called *next week* is called *next weekend*, as it is the Sunday of the next week.
 - The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.

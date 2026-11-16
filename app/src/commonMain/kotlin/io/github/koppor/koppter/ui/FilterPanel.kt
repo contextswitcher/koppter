@@ -76,6 +76,13 @@ fun FilterPanel(
             onValueChange = { onChange(filter.copy(text = it)) },
             placeholder = { Text("Search text") },
             singleLine = true,
+            trailingIcon = {
+                if (filter.text.isNotEmpty()) {
+                    IconButton(onClick = { onChange(filter.copy(text = "")) }, modifier = Modifier.testTag("filter-text-clear")) {
+                        Icon(Icons.Default.Close, contentDescription = "Clear the search text")
+                    }
+                }
+            },
             modifier = textModifier.fillMaxWidth().testTag("filter-text"),
         )
 

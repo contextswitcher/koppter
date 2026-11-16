@@ -230,10 +230,11 @@ private fun MainScreen(
             !event.isShiftPressed && event.key == Key.N -> editing = Editing(null)
             // The key of OneNote for its search.
             !event.isShiftPressed && event.key == Key.E -> search(all = true)
+            // The key of browsers and editors for their search; with Shift, it is the key of SkedPal.
+            event.key == Key.F -> search(all = false)
             !event.isShiftPressed && view >= 0 -> controller.view = View.entries[view]
             !event.isShiftPressed -> return false
             event.key == Key.A -> quickAddFocus.requestFocus()
-            event.key == Key.F -> search(all = false)
             // The keys of SkedPal for its outline, today list, calendar and plan.
             event.key == Key.O -> controller.view = View.LIST
             event.key == Key.Y -> controller.view = View.AGENDA

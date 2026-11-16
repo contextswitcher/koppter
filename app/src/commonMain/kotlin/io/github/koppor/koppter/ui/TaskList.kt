@@ -76,13 +76,11 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.todotxt.Entry
+import io.github.koppor.koppter.todotxt.dueChoices
 import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.Task
 import kotlinx.coroutines.delay
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.plus
 
 /**
  * The tasks as a list, in the groups they are given in: one after the other, each below its title if [headings] is set.
@@ -344,21 +342,6 @@ private fun GroupHeading(group: Group, priorities: Boolean, modifier: Modifier) 
         }
     }
 }
-
-/**
- * The days that are offered for a due date, each with what it is called; each day once, under its first name.
- * A weekend and a week end on their Sunday, as in the dates that are typed in words.
- */
-internal fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
-    "today" to today,
-    "tomorrow" to today.plus(DatePeriod(days = 1)),
-    "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
-    // Named after the day it sets, the Sunday: as "next week", it read like a day a week from now.
-    "next weekend" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
-    "in two weeks" to today.plus(DatePeriod(days = 14)),
-    "in a month" to today.plus(DatePeriod(months = 1)),
-    // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
-).distinctBy { it.second }
 
 /** The menu that moves the due date of a task. */
 // [impl->dsn~due-menu~1]

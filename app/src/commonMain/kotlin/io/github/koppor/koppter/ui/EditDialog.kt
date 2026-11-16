@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.dueChoices
 import com.kez.picker.PickerDefaults
 import com.kez.picker.duration.DurationPicker
 import com.kez.picker.duration.rememberDurationPickerState
@@ -294,7 +295,7 @@ fun EditDialog(
                 NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
                 // [impl->dsn~hashtags-in-ui~1]
                 // "#123" in a line is a word of the description, not a hashtag.
-                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true) { it.first().isLetter() }
+                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
 
                 if (originalNote != null) {
                     OutlinedTextField(
