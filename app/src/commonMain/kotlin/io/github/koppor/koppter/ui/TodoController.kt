@@ -326,6 +326,20 @@ class TodoController(
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.LINKS, links), "Edit links of projects and contexts")
     }
 
+    /** The contexts that a task takes with the project. */
+    // [impl->dsn~project-contexts~1]
+    fun contextsOf(project: String): List<String> =
+        ConfigFile.contextsOf(ConfigFile.entries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS).toMap(), project)
+
+    /** The contexts of the projects, one project per line as `+project = @context`; `null` if the storage keeps no configuration file. */
+    val projectContextsText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.entries(it, ConfigFile.PROJECT_CONTEXTS)) }
+
+    fun updateProjectContexts(text: String) {
+        val contexts = ConfigFile.parseLines(text)
+        if (contexts == ConfigFile.entries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS)) return
+        writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS, contexts), "Edit contexts of projects")
+    }
+
     /** The state of the plan of an open task and a text that tells its start; `null` if nothing was planned yet. */
     // [impl->dsn~plan-state~1]
     fun planOf(task: Task): Pair<PlanState, String>? {
@@ -606,7 +620,7 @@ class TodoController(
      * the old name back, and in the filter.
      */
     // [impl->dsn~label-rename~1]
-    // ponytail: the links, limits and board columns of koppter.yml keep the old name; rename them there when that is missed.
+    // ponytail: the links, limits, contexts of projects and board columns of koppter.yml keep the old name; rename them there when that is missed.
     fun rename(sign: Char, from: String, to: String) {
         guarded {
             val files = storage as? CompanionFiles ?: return@guarded

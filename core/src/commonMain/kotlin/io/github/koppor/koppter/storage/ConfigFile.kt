@@ -21,6 +21,7 @@ import io.github.koppor.koppter.todotxt.withAncestors
  * and so do the keys `time-maps`, `context-time-maps` and `barriers` for planning.
  * The key `priorities` maps the letter of a priority to the name it is shown with.
  * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
+ * The key `project-contexts` maps a project, written with its sign, to the contexts that a task takes with it.
  */
 // ponytail: reads the subset of YAML that it writes (one line per column, plain or quoted scalars, the escapes \" and \\);
 // a YAML library when the file gets nested content.
@@ -37,6 +38,7 @@ object ConfigFile {
     const val LIMITS = "limits:"
     const val PRIORITIES = "priorities:"
     const val LINKS = "links:"
+    const val PROJECT_CONTEXTS = "project-contexts:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
     /**
@@ -95,6 +97,15 @@ object ConfigFile {
     // [impl->dsn~label-links~1]
     fun link(links: Map<String, String>, label: String): String? =
         label.drop(1).withAncestors().asReversed().firstNotNullOfOrNull { links[label.take(1) + it]?.ifBlank { null } }
+
+    /**
+     * The contexts that a task takes with the project: those of the project and of each level above it, without their sign.
+     *
+     * @param entries the entries of the key `project-contexts`
+     */
+    // [impl->dsn~project-contexts~1]
+    fun contextsOf(entries: Map<String, String>, project: String): List<String> =
+        project.withAncestors().flatMap { entries["+$it"].orEmpty().split(' ', ',') }.map { it.removePrefix("@") }.filter { it.isNotEmpty() }.distinct()
 
     /** Reads entries as the dialogs show them: one per line as `name = value`; lines without a name are skipped. */
     fun parseLines(text: String): List<Pair<String, String>> = text.lines().mapNotNull { line ->

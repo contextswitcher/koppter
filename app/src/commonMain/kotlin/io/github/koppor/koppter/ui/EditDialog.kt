@@ -129,6 +129,8 @@ fun EditDialog(
     knownContexts: List<String>,
     knownHashtags: List<String>,
     today: LocalDate,
+    /** The contexts that a task takes with a project. */
+    contextsOf: (String) -> List<String> = { emptyList() },
     onSave: (Task, note: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
@@ -309,7 +311,12 @@ fun EditDialog(
                         modifier = Modifier.fillMaxWidth().testTag("edit-cs"),
                     )
 
-                    NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project", projectColors())
+                    // [impl->dsn~project-contexts~1]
+                    // Only when the project is added, so that a context that the user removes stays removed.
+                    NameList("Project", "+", projects, knownProjects, { chosen ->
+                        contexts = (contexts + (chosen - projects).flatMap(contextsOf)).distinct()
+                        projects = chosen
+                    }, "edit-project", projectColors())
                     NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
                     // [impl->dsn~hashtags-in-ui~1]
                     // "#123" in a line is a word of the description, not a hashtag.

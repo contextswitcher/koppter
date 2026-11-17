@@ -377,6 +377,7 @@ private fun MainScreen(
             knownProjects = controller.projects,
             knownContexts = controller.contexts,
             knownHashtags = controller.hashtags,
+            contextsOf = controller::contextsOf,
             today = controller.today(),
             width = controller.settings.editWidth,
             onWidth = { controller.updateSettings(controller.settings.copy(editWidth = it)) },
@@ -420,16 +421,18 @@ private fun MainScreen(
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,
             labelLinks = controller.labelLinksText,
+            projectContexts = controller.projectContextsText,
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             // [impl->dsn~settings-open-file~1]
             onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
-            onSave = { settings, boardColumns, shareActions, priorityNames, labelLinks ->
+            onSave = { settings, boardColumns, shareActions, priorityNames, labelLinks, projectContexts ->
                 // The columns, share actions, names and links belong to the file that is open, not to one whose path was typed into the field.
                 boardColumns?.let(controller::updateBoardColumns)
                 shareActions?.let(controller::updateShareActions)
                 priorityNames?.let(controller::updatePriorityNames)
                 labelLinks?.let(controller::updateLabelLinks)
+                projectContexts?.let(controller::updateProjectContexts)
                 controller.updateSettings(settings)
                 showSettings = false
             },

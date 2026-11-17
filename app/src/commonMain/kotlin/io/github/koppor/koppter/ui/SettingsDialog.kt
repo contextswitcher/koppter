@@ -108,6 +108,8 @@ fun SettingsDialog(
     priorityNames: String?,
     /** The links of projects, contexts and hashtags; `null` if the storage cannot keep them. */
     labelLinks: String?,
+    /** The contexts of the projects; `null` if the storage cannot keep them. */
+    projectContexts: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
     /**
@@ -115,7 +117,7 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
-    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?) -> Unit,
+    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -135,6 +137,7 @@ fun SettingsDialog(
     var actions by remember(openFile) { mutableStateOf(shareActions) }
     var priorities by remember(openFile) { mutableStateOf(priorityNames) }
     var links by remember(openFile) { mutableStateOf(labelLinks) }
+    var contexts by remember(openFile) { mutableStateOf(projectContexts) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
@@ -142,7 +145,7 @@ fun SettingsDialog(
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links)
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -253,6 +256,14 @@ fun SettingsDialog(
                         "settings-links",
                     )
                 }
+                // [impl->dsn~project-contexts~1]
+                contexts?.let { text ->
+                    ConfigField(
+                        "Contexts of projects", text, { contexts = it }, "+Fair = @errands\n+Garden = @home @weekend",
+                        "One project per line as +project = @context. A project that is added to a task in its dialog brings these contexts along.",
+                        "settings-project-contexts",
+                    )
+                }
                 // [impl->dsn~share-actions~1]
                 actions?.let { text ->
                     ConfigField(
@@ -280,6 +291,7 @@ fun SettingsDialog(
                         actions?.trim(),
                         priorities?.trim(),
                         links?.trim(),
+                        contexts?.trim(),
                     )
                     Button(
                         onClick = {

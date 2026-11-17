@@ -79,6 +79,18 @@ class ConfigFileTest {
         )
     }
 
+    // [utest->dsn~project-contexts~1]
+    @Test
+    fun aProjectBringsItsContextsAndThoseOfTheLevelsAboveIt() {
+        val config = ConfigFile.withEntries("", ConfigFile.PROJECT_CONTEXTS, ConfigFile.parseLines("+Fair = @errands\n+Fair>Booth = @weekend, tools @errands"))
+        assertEquals(true, config.contains("project-contexts:\n  \"+Fair\": \"@errands\""))
+        val entries = ConfigFile.entries(config, ConfigFile.PROJECT_CONTEXTS).toMap()
+
+        assertEquals(listOf("errands"), ConfigFile.contextsOf(entries, "Fair"))
+        assertEquals(listOf("errands", "weekend", "tools"), ConfigFile.contextsOf(entries, "Fair>Booth>Print"))
+        assertEquals(emptyList(), ConfigFile.contextsOf(entries, "Fairness"))
+    }
+
     // [utest->dsn~label-links~1]
     @Test
     fun aLabelHasItsOwnLinkOrThatOfTheNearestLevelAboveIt() {

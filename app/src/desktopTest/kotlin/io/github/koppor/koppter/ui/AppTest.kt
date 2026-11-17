@@ -701,6 +701,35 @@ class AppTest {
         assertEquals(narrow, width())
     }
 
+    // [utest->dsn~project-contexts~1]
+    @Test
+    fun aProjectThatIsAddedInTheDialogBringsTheContextsOfTheSettings() = runComposeUiTest {
+        storage.text += "Order the tables +Fair\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-project-contexts").performScrollTo().performTextReplacement("+Fair = @errands")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals(true, storage.companions.getValue("koppter.yml").contains("project-contexts:\n  \"+Fair\": \"@errands\""))
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-context-errands").assertDoesNotExist()
+        onNodeWithTag("edit-project-suggest-Fair").performScrollTo().performClick()
+        onNodeWithTag("edit-context-errands").assertExists()
+        // A context that is removed stays removed, and comes back with the project.
+        onNodeWithTag("edit-context-errands").performClick()
+        onNodeWithTag("edit-context-errands").assertDoesNotExist()
+        onNodeWithTag("edit-project-Fair").performClick()
+        onNodeWithTag("edit-project-suggest-Fair").performClick()
+        onNodeWithTag("edit-description").performTextInput("Rent a van")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(true, storage.text.contains("Rent a van +Fair @errands"))
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-project-contexts").performScrollTo().assertTextContains("+Fair = @errands")
+    }
+
     // [utest->dsn~edit-help~1]
     @Test
     fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {

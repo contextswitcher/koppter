@@ -49,7 +49,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
-*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and the links, limits and board columns of `koppter.yml` are changed by hand.
+*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and the links, limits, contexts of projects and board columns of `koppter.yml` are changed by hand.
 The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
@@ -165,7 +165,7 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | --- | --- |
 | `todo.txt` | The tasks |
 | `notes/<name>.md` | The note of the task with the tag `note:<name>.md`, as Markdown |
-| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), and the time maps and barriers for [planning](#planning) |
+| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
@@ -701,6 +701,21 @@ A project, a context or a hashtag has a link of its own, for example to the sect
 * A project or a context below another one, such as `+Fair>Booth`, has the link of that one unless it has its own.
 * The links are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file ([decision 0035](docs/decisions/0035-links-of-projects-and-contexts-in-the-configuration-file.md)).
   A link to a program that a device does not have is reported as not opened there.
+
+## Contexts of projects
+
+*Contexts of projects* in the settings takes one project per line as `+project = @context`:
+
+```text
++Fair = @errands
++Garden = @home @weekend
+```
+
+* A project that is added to a task in its dialog, with a click on its name or typed into the field next to the names, adds these contexts to the task.
+  A context added this way is removed like any other; it comes back only when the project is added again.
+* A project below another one, such as `+Fair>Booth`, brings the contexts of that one as well.
+* A project typed into the description brings no contexts.
+* The contexts are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file.
 
 ## Board
 
