@@ -91,6 +91,26 @@ class ConfigFileTest {
         assertEquals(emptyList(), ConfigFile.contextsOf(entries, "Fairness"))
     }
 
+    // [utest->dsn~label-rename~1]
+    @Test
+    fun aRenamedLabelIsRenamedInTheLinksAndInTheContextsOfProjects() {
+        val config = ConfigFile.withEntries(
+            ConfigFile.withEntries("", ConfigFile.LINKS, ConfigFile.parseLines("+Fair>Booth = https://example.org/booth\n@Fair = https://example.org/place")),
+            ConfigFile.PROJECT_CONTEXTS,
+            ConfigFile.parseLines("+Fair = @errands, town\n+Fairness = @errands2"),
+        )
+
+        val project = ConfigFile.renamed(config, '+', "Fair", "Market")
+        assertEquals(listOf("+Market>Booth" to "https://example.org/booth", "@Fair" to "https://example.org/place"), ConfigFile.entries(project, ConfigFile.LINKS))
+        assertEquals(listOf("+Market" to "@errands, town", "+Fairness" to "@errands2"), ConfigFile.entries(project, ConfigFile.PROJECT_CONTEXTS))
+
+        val context = ConfigFile.renamed(config, '@', "errands", "shopping")
+        assertEquals(listOf("+Fair" to "@shopping @town", "+Fairness" to "@errands2"), ConfigFile.entries(context, ConfigFile.PROJECT_CONTEXTS))
+        // A configuration without the label is not written anew.
+        assertEquals(config, ConfigFile.renamed(config, '#', "Fair", "Market"))
+        assertEquals("links:\n  +Fair: a # kept", ConfigFile.renamed("links:\n  +Fair: a # kept", '@', "Fair", "Market"))
+    }
+
     // [utest->dsn~label-links~1]
     @Test
     fun aLabelHasItsOwnLinkOrThatOfTheNearestLevelAboveIt() {

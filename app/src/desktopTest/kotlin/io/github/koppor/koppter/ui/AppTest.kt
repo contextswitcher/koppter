@@ -1966,6 +1966,7 @@ class AppTest {
     fun aLabelOfTheFilterPanelIsRenamedInAllTasks() = runComposeUiTest {
         storage.text = "Read the survey +papers>survey @desk\nx Write the paper +papers\nSort the shelf +papers2\n"
         storage.companions["ice_recur.txt"] = "weekly ; day Friday - Review the notes +papers\n"
+        storage.companions["koppter.yml"] = "project-contexts:\n  \"+papers\": \"@desk\"\n"
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
 
@@ -1983,6 +1984,9 @@ class AppTest {
         assertEquals("Read the survey +articles>survey @desk\nx Write the paper +articles\nSort the shelf +papers2\n", storage.text)
         assertEquals("weekly ; day Friday - Review the notes +articles\n", storage.companions["ice_recur.txt"])
         assertEquals("Rename +papers to +articles", storage.changes.last())
+        // The contexts of the project are those of its new name.
+        assertEquals(listOf("desk"), controller.contextsOf("articles"))
+        assertEquals(emptyList(), controller.contextsOf("papers"))
         assertEquals(setOf("articles"), controller.filter.projects)
         onNodeWithTag("filter-project-articles").assertIsOn()
         onNodeWithTag("filter-project-papers").assertDoesNotExist()

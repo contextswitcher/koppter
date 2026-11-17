@@ -620,14 +620,16 @@ class TodoController(
      * the old name back, and in the filter.
      */
     // [impl->dsn~label-rename~1]
-    // ponytail: the links, limits, contexts of projects and board columns of koppter.yml keep the old name; rename them there when that is missed.
+    // ponytail: the limits and board columns of koppter.yml keep the old name; rename them there when that is missed.
     fun rename(sign: Char, from: String, to: String) {
         guarded {
             val files = storage as? CompanionFiles ?: return@guarded
+            config?.let { before -> ConfigFile.renamed(before, sign, from, to).takeIf { it != before }?.let { files.writeCompanion(ConfigFile.NAME, it) } }
             val schedule = files.readCompanion(ICE_RECUR_FILE) ?: return@guarded
             renameLabel(schedule, sign, from, to).takeIf { it != schedule }?.let { files.writeCompanion(ICE_RECUR_FILE, it) }
         }
         write(file.rename(sign, from, to), "Rename $sign$from to $sign$to")
+        loadConfig()
         fun Set<String>.renamed() = map { if (it.isWithin(from)) to + it.substring(from.length) else it }.toSet()
         filter = when (sign) {
             '+' -> filter.copy(projects = filter.projects.renamed(), excludedProjects = filter.excludedProjects.renamed())

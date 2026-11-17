@@ -4,6 +4,7 @@ import io.github.koppor.koppter.plan.PlanConfig
 import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.ShareAction
+import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.withAncestors
 
 /**
@@ -106,6 +107,22 @@ object ConfigFile {
     // [impl->dsn~project-contexts~1]
     fun contextsOf(entries: Map<String, String>, project: String): List<String> =
         project.withAncestors().flatMap { entries["+$it"].orEmpty().split(' ', ',') }.map { it.removePrefix("@") }.filter { it.isNotEmpty() }.distinct()
+
+    /**
+     * The configuration with the label renamed in the links and in the contexts of projects, as [renameLabel] renames it in a task;
+     * the configuration itself if it has the label in neither.
+     */
+    // [impl->dsn~label-rename~1]
+    fun renamed(config: String, sign: Char, from: String, to: String): String {
+        fun String.renamed() = renameLabel(this, sign, from, to)
+        fun String.with(key: String, rename: (Pair<String, String>) -> Pair<String, String>) =
+            entries(this, key).let { before -> before.map(rename).let { if (it == before) this else withEntries(this, key, it) } }
+        return config.with(LINKS) { (label, link) -> label.renamed() to link }.with(PROJECT_CONTEXTS) { (project, contexts) ->
+            // The contexts with their sign and separated by blanks, which is how a task has them; as they were typed if none is renamed.
+            val written = contexts.split(' ', ',').filter { it.isNotEmpty() }.joinToString(" ") { "@" + it.removePrefix("@") }
+            project.renamed() to written.renamed().let { if (it == written) contexts else it }
+        }
+    }
 
     /** Reads entries as the dialogs show them: one per line as `name = value`; lines without a name are skipped. */
     fun parseLines(text: String): List<Pair<String, String>> = text.lines().mapNotNull { line ->

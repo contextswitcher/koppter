@@ -49,7 +49,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
-*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and the links, limits, contexts of projects and board columns of `koppter.yml` are changed by hand.
+*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and so do the [links](#links-of-projects-and-contexts) and the [contexts of projects](#contexts-of-projects); the limits and board columns of `koppter.yml` are changed by hand.
 The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 

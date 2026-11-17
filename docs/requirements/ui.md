@@ -654,7 +654,8 @@ The menu of a project, a context or a hashtag of the filter panel has the entry 
 `TodoController.rename` writes the name with `TodoFile.rename` into every line that has the label, completed tasks included, and leaves the other lines as they are.
 `renameLabel` replaces the label where it is a word of its own, and the start of each label below it, so that renaming `+papers` makes `+papers>survey` a project below the new name and leaves `+papers2` alone.
 The scheduled tasks of `ice_recur.txt` are renamed in the same way, as they would bring the old name back, and the filter follows.
-The links, the limits, the contexts of projects and the board columns of `koppter.yml` keep the old name.
+`ConfigFile.renamed` renames the label in the links and in the contexts of projects of `koppter.yml`, where the contexts of a project with a renamed context are then written with their signs and separated by blanks.
+The limits and the board columns of `koppter.yml` keep the old name.
 
 Covers:
 
