@@ -2066,6 +2066,20 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
+    // [utest->dsn~onenote-links~1]
+    @Test
+    fun aLinkOfOneNotePastedIntoTheNoteBecomesTwoMarkdownLinks() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-note").performScrollTo().performTextInput("https://example.org/view?page=7\nonenote:https://example.org/Notes.one#Signs&end")
+        // The cursor stands behind the links.
+        onNodeWithTag("edit-note").performTextInput("\nAsk there")
+        val links = "- [OneNote Desktop](onenote:https://example.org/Notes.one#Signs&end)\n- [OneNote Web](https://example.org/view?page=7)\nAsk there"
+        onNodeWithTag("edit-note").assertTextEquals("Note (Markdown)", links)
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(links, storage.companions.entries.single { it.key.startsWith("notes/") }.value)
+    }
+
     // [utest->dsn~notes~1]
     @Test
     fun aNoteIsKeptInAFileNamedByATag() = runComposeUiTest {

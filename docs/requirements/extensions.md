@@ -604,6 +604,19 @@ Covers:
 
 Needs: impl, utest
 
+### Links of OneNote in a note
+`dsn~onenote-links~1`
+
+OneNote copies the link to a page as two lines: the address of the page on the web and, starting with `onenote:`, the address that opens the page in the program.
+`oneNoteLinks` turns the two into a Markdown list of the links *OneNote Desktop* and *OneNote Web*, on lines of their own; an address with a parenthesis stands in angle brackets.
+The field of the note applies it with every change to the text before the cursor, so that a link pasted there is converted and the cursor stays behind it.
+
+Covers:
+
+* `req~notes~1`
+
+Needs: impl, utest
+
 ### Schedule of ice_recur
 `dsn~ice-recur-schedule~1`
 

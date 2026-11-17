@@ -79,6 +79,7 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 The edit dialog: the description without metadata at the top, the metadata below, then the note, the resulting line of the `todo.txt` file, and the date the task was added according to the git history.
 The line can be edited as text as well: the fields follow what is typed there.
+The link to a page that OneNote copies, pasted into the note, becomes a list of two Markdown links: *OneNote Desktop* and *OneNote Web*.
 
 ![Edit dialog of a task](docs/screenshots/edit.png)
 

@@ -31,3 +31,19 @@ data class ShareAction(val title: String, val template: String) {
         }
     }
 }
+
+private val ONENOTE_LINKS = Regex("(?<!onenote:)(https?://\\S+)\\s+(onenote:\\S+)")
+
+/**
+ * The text with each link to a page as OneNote copies it, the address for the web and the one for the program on two lines,
+ * turned into a Markdown list of two links.
+ */
+// [impl->dsn~onenote-links~1]
+fun oneNoteLinks(text: String): String = ONENOTE_LINKS.replace(text) { match ->
+    val (web, desktop) = match.destructured
+    // A parenthesis would end the link, so such an address stands in angle brackets.
+    fun destination(address: String) = if ('(' in address || ')' in address) "<$address>" else address
+    // A list starts on a line of its own.
+    val lead = if (match.range.first == 0 || text[match.range.first - 1] == '\n') "" else "\n"
+    "$lead- [OneNote Desktop](${destination(desktop)})\n- [OneNote Web](${destination(web)})"
+}

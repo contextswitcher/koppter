@@ -86,6 +86,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
+import io.github.koppor.koppter.todotxt.oneNoteLinks
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
 import com.kez.picker.Picker
@@ -142,7 +143,7 @@ fun EditDialog(
     var projects by remember(base) { mutableStateOf(base.projects) }
     var contexts by remember(base) { mutableStateOf(base.contexts) }
     var hashtags by remember(base) { mutableStateOf(base.hashtags) }
-    var note by remember { mutableStateOf(originalNote.orEmpty()) }
+    var note by remember { mutableStateOf(TextFieldValue(originalNote.orEmpty())) }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
     val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
@@ -168,7 +169,7 @@ fun EditDialog(
         .withTag(Task.CONTEXT_SWITCHER, Task.contextSwitcherId(contextSwitcher))
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
-        .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
+        .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.text.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
     // [impl->dsn~edit-dates~1]
     // Words of a description that was not touched stay words: they were there when the task was written.
     val result = if (description.text == base.description) fields else fields.withDates(today)
@@ -181,7 +182,7 @@ fun EditDialog(
     // Without a keyboard, the focus brings up the keyboard of the screen, which hides half of an existing task; a new task is typed first.
     LaunchedEffect(Unit) { if (keyboard || isNew) descriptionFocus.requestFocus() }
 
-    val state = result.toLine() to note
+    val state = result.toLine() to note.text
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -193,7 +194,7 @@ fun EditDialog(
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
-                    if (save && valid) onSave(result, if (originalNote == null) null else note)
+                    if (save && valid) onSave(result, if (originalNote == null) null else note.text)
                     save
                 },
         ) {
@@ -294,7 +295,13 @@ fun EditDialog(
                 if (originalNote != null) {
                     OutlinedTextField(
                         value = note,
-                        onValueChange = { note = it },
+                        // [impl->dsn~onenote-links~1]
+                        onValueChange = { typed ->
+                            // Only what stands before the cursor, where a pasted text ends, so that the cursor stays behind it.
+                            val cursor = typed.selection.end
+                            val before = oneNoteLinks(typed.text.substring(0, cursor))
+                            note = if (before.length == cursor) typed else TextFieldValue(before + typed.text.substring(cursor), TextRange(before.length))
+                        },
                         label = { Text("Note (Markdown)") },
                         minLines = 2,
                         maxLines = 8,
@@ -334,7 +341,7 @@ fun EditDialog(
                     }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
-                    Button(onClick = { onSave(result, if (originalNote == null) null else note) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+                    Button(onClick = { onSave(result, if (originalNote == null) null else note.text) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                 }
             }
         }

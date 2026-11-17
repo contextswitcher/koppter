@@ -17,6 +17,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - Ctrl+F goes to the search text of the filter, and the field has a button that empties it.
 - In the dialog of a task, the recurrence is chosen on two wheels for the amount and the unit, with the choice whether it counts from the completion or from the due date; the field still takes typed text.
 - The filter panel has the field *Search labels*, which narrows the projects, contexts and hashtags that it offers to those that contain the typed text.
+- The link to a page that OneNote copies, pasted into the note of a task, becomes a list of the two Markdown links *OneNote Desktop* and *OneNote Web*.
 - The menu of the due date and the dialog of a task offer *in three days*.
 - A hashtag may start with a currency sign: `#$$$`.
 - The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.
