@@ -27,6 +27,7 @@ import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
+import io.github.koppor.koppter.todotxt.listParts
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -238,10 +239,10 @@ class TodoController(
     val groups: List<Group>
         get() = groupKey?.let(::groupsBy) ?: groupByColumns(visible, boardColumns, today())
 
-    /** The visible tasks as the groups of the list: one group without title if the list is not divided. */
+    /** The visible tasks as the groups of the list: the overdue, the next and the completed ones if no attribute divides the list. */
     // [impl->dsn~list-groups~1]
     val listGroups: List<Group>
-        get() = listGroupKey?.let(::groupsBy) ?: listOf(Group("", visible))
+        get() = listGroupKey?.let(::groupsBy) ?: listParts(visible, today())
 
     private fun groupsBy(key: GroupKey): List<Group> {
         val groups = groupEntries(visible, key, today())

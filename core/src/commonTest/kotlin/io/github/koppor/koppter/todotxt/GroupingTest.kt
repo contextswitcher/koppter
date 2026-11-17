@@ -19,6 +19,18 @@ class GroupingTest {
     private fun groups(key: GroupKey) =
         groupEntries(entries, key, today).associate { group -> group.title to group.entries.map { it.task.description } }
 
+    // [utest->dsn~list-groups~1]
+    @Test
+    fun aListWithoutGroupsHasThePartsThatHaveTasks() {
+        fun parts(text: String) = listParts(TodoFile.parse(text).entries, today).associate { part -> part.title to part.entries.map { it.task.description } }
+        assertEquals(
+            mapOf("Overdue" to listOf("Return book"), "Next" to listOf("Pay bill", "Post signs"), "Done" to listOf("Call Mom")),
+            parts("Pay bill due:2026-11-12\nReturn book due:2026-11-01\nx Call Mom due:2026-11-01\nPost signs"),
+        )
+        assertEquals(mapOf("Next" to listOf("Post signs")), parts("Post signs"))
+        assertEquals(emptyMap(), parts(""))
+    }
+
     // [utest->dsn~board-groups~1]
     @Test
     fun groupsByPriorityWithUnprioritizedTasksLast() {

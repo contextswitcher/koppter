@@ -24,6 +24,17 @@ enum class GroupKey(val label: String) {
 data class Group(val title: String, val entries: List<Entry>, val value: String? = null)
 
 /**
+ * The parts of a list without groups, in the order of [listOrder]: the overdue tasks, the other open ones and the completed ones.
+ * A part without tasks is left out.
+ */
+// [impl->dsn~list-groups~1]
+fun listParts(entries: List<Entry>, today: LocalDate): List<Group> = listOf(
+    Group("Overdue", entries.filter { it.task.isOverdue(today) }),
+    Group("Next", entries.filter { !it.task.completed && !it.task.isOverdue(today) }),
+    Group("Done", entries.filter { it.task.completed }),
+).filter { it.entries.isNotEmpty() }
+
+/**
  * Distributes the entries over groups by the given attribute, keeping their order within each group.
  *
  * A task with several projects, contexts or hashtags appears in each of their groups.

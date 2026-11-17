@@ -31,6 +31,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The heading of a group of a priority shows the colored label of the priority, so that a priority named by a number is not read as a count.
 - The dialog of a task is wider, and its description starts with the cursor at the end.
 - The switch of the inbox shows the number of its tasks in parentheses: *Inbox (4)*.
+- A list without groups has the headings *Overdue*, *Next* and *Done* with the number of their tasks, in place of the line below the overdue tasks.
 - The description of a task stands in one line with its labels, at the height of its checkbox, where both fit next to each other.
 - The groups by due date are those of the menu of the due date, from *Today* to *In a month*, with *Overdue* before them and *Later* after them; a column of the board sets its day.
 - The date of the tag `t:` is called the start date instead of the threshold date: the field of the dialog of a task is *Start date*, and the option of the filter panel *Show tasks before their start date*. The tag stays `t:`.

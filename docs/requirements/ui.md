@@ -324,7 +324,8 @@ Needs: impl, utest
 ### Groups of the list
 `dsn~list-groups~1`
 
-`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns; without an attribute, the list is one group.
+`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns.
+Without an attribute, `listParts` divides them into the overdue tasks, the other open tasks and the completed ones, with the titles *Overdue*, *Next* and *Done*; a part without tasks is left out.
 `TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
 The heading of a priority, there and above a column of the board, shows the label of the priority as the tasks have it: a priority may be named by a number, which next to the number of the tasks reads as a second count.
 A task with several values of the attribute stands in each of their groups.
@@ -416,6 +417,7 @@ Needs: impl, utest
 `dsn~overdue-separator~1`
 
 `TaskList` draws a line between the last overdue task and the first task that is not overdue, in each group that has tasks of both kinds.
+The list without groups has none, as its overdue tasks stand below a heading of their own.
 
 Covers:
 

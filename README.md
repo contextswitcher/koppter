@@ -388,8 +388,8 @@ The edit dialog narrows its known names in the same way.
 ## Order of the list
 
 The list shows the open tasks first, and among them the overdue ones: those whose due date has passed.
-A line separates them from the other tasks.
-Each of the two parts is ordered by priority, then by due date and due time, then by the position of the lines in the file.
+Without groups, the overdue tasks stand below the heading *Overdue*, the other open ones below *Next* and the completed ones below *Done*; within a group, a line separates the overdue tasks from the others.
+Each of these parts is ordered by priority, then by due date and due time, then by the position of the lines in the file.
 A task is moved by dragging it with the mouse, or with the finger after a long press, or one step at a time with the two arrows at its right.
 A line shows where a dragged task would be put.
 

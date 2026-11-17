@@ -367,7 +367,7 @@ private fun MainScreen(
                             )
                         } else {
                             TaskList(
-                                controller.listGroups, controller.listGroupKey != null, controller.today(),
+                                controller.listGroups, controller.today(),
                                 controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
                                 priorities = controller.listGroupKey == GroupKey.PRIORITY,
                             )

@@ -55,6 +55,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
+import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
@@ -120,15 +121,31 @@ class AppTest {
     }
 
     // [utest->dsn~overdue-separator~1]
+    // [utest->dsn~list-groups~1]
     // [utest->dsn~list-step~1]
     @Test
-    fun overdueTasksStandFirstAboveALineThatNoStepCrosses() = runComposeUiTest {
-        storage.text = "(A) Write the report\n(C) Return the books due:2026-11-10\n"
-        start()
+    fun overdueTasksStandFirstAboveABorderThatNoStepCrosses() = runComposeUiTest {
+        storage.text = "(A) Write the report +Work\n(C) Return the books +Work due:2026-11-10\nx Sharpen the pencils +Work\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
         fun bounds(text: String) = onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+
+        // Within a group, a line is the border.
+        controller.listGroupKey = GroupKey.PROJECT
         val line = onNodeWithTag("overdue-separator").fetchSemanticsNode().boundsInRoot
         assertTrue(bounds("Return the books").bottom <= line.top)
         assertTrue(line.bottom <= bounds("Write the report").top)
+
+        // Without groups, the two kinds stand below a heading each, and the completed tasks below a third one.
+        controller.listGroupKey = null
+        onNodeWithTag("overdue-separator").assertDoesNotExist()
+        assertTrue(bounds("Overdue (1)").bottom <= bounds("Return the books").top)
+        assertTrue(bounds("Return the books").bottom <= bounds("Next (1)").top)
+        assertTrue(bounds("Next (1)").bottom <= bounds("Write the report").top)
+        onNodeWithText("Done (1)").assertDoesNotExist()
+        onNodeWithTag("filter-done").performScrollTo().performClick()
+        assertTrue(bounds("Write the report").bottom <= bounds("Done (1)").top)
+        assertTrue(bounds("Done (1)").bottom <= bounds("Sharpen the pencils").top)
         // The due date decides on which side of the line a task stands, not its priority.
         onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
         onAllNodesWithTag("task-up")[1].assertIsNotEnabled()
@@ -2011,7 +2028,8 @@ class AppTest {
     fun theListIsDividedIntoGroupsWithHeadings() = runComposeUiTest {
         storage.text += "Order the cake +Family +GarageSale\n"
         start()
-        onNodeWithTag("list-group").assertDoesNotExist()
+        // Without groups, the open tasks that are not overdue are the only part.
+        onNodeWithTag("list-group").assertTextEquals("Next (4)")
         onNodeWithTag("group-PROJECT").performClick()
         onAllNodesWithTag("list-group").assertCountEquals(3)
         onNodeWithText("+Family (1)").assertExists()
@@ -2023,7 +2041,7 @@ class AppTest {
         onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
         // A second click on the attribute shows the list without groups again.
         onNodeWithTag("group-PROJECT").performClick()
-        onNodeWithTag("list-group").assertDoesNotExist()
+        onNodeWithTag("list-group").assertTextEquals("Next (4)")
         onAllNodesWithTag("task").assertCountEquals(4)
     }
 

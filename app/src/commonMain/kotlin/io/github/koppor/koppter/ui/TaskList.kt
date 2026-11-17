@@ -86,14 +86,13 @@ import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 
 /**
- * The tasks as a list, in the groups they are given in: one after the other, each below its title if [headings] is set.
+ * The tasks as a list, in the groups they are given in: one after the other, each below its title.
  * A task is moved by a step or by dragging within its group.
  */
 // [impl->dsn~list-groups~1]
 @Composable
 fun TaskList(
     groups: List<Group>,
-    headings: Boolean,
     today: LocalDate,
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
@@ -132,15 +131,13 @@ fun TaskList(
         ) {
             for (group in groups) {
                 val entries = group.entries
-                if (headings) {
-                    item(key = "group/${group.title}") {
-                        GroupHeading(
-                            group, priorities,
-                            Modifier.fillMaxWidth().padding(top = 10.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
-                                .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
-                        )
-                    }
+                item(key = "group/${group.title}") {
+                    GroupHeading(
+                        group, priorities,
+                        Modifier.fillMaxWidth().padding(top = 10.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+                            .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
+                    )
                 }
                 // The overdue tasks are the first ones of a group: see listOrder.
                 val firstNotOverdue = entries.indexOfFirst { !it.task.isOverdue(today) }
