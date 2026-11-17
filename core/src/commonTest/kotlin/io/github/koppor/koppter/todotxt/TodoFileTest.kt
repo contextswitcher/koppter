@@ -80,4 +80,18 @@ class TodoFileTest {
         // An overdue task stands before the others whatever its priority is, so it is not put next to one of them.
         assertNull(file.moveTo(4, 3, before = true, LocalDate(2026, 11, 16)))
     }
+
+    // [utest->dsn~label-rename~1]
+    @Test
+    fun aLabelIsRenamedWithTheLabelsBelowItAndNothingElse() {
+        val file = TodoFile.parse("+papers Read   the survey +papers>survey a+papers\nx Sort +papers2 @papers #papers\n(A) Pay #$$$ @desk>left\n")
+        assertEquals(
+            "+articles Read   the survey +articles>survey a+papers\nx Sort +papers2 @papers #papers\n(A) Pay #$$$ @desk>left\n",
+            file.rename('+', "papers", "articles").serialize(),
+        )
+        // A level is renamed where it stands, and signs of a name are no pattern.
+        assertEquals("(A) Pay #$$$ @table>left", file.rename('@', "desk", "table").lines[2])
+        assertEquals("(A) Pay #a$1 @desk>left", file.rename('#', "$$$", "a$1").lines[2])
+        assertEquals(file, file.rename('+', "paper", "article"))
+    }
 }

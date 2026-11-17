@@ -30,6 +30,9 @@ data class TodoFile(
         if (Task.parse(lines[index]) == task) this
         else copy(lines = lines.toMutableList().also { it[index] = task.toLine() })
 
+    /** Renames a label in every line that has it and leaves the other lines as they are: see [renameLabel]. */
+    fun rename(sign: Char, from: String, to: String): TodoFile = copy(lines = lines.map { renameLabel(it, sign, from, to) })
+
     fun remove(index: Int): TodoFile = copy(lines = lines.filterIndexed { i, _ -> i != index })
 
     /**

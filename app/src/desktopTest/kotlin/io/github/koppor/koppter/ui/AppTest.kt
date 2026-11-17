@@ -863,7 +863,7 @@ class AppTest {
         setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
 
         // Without a link, the menu does not offer to open one.
-        onNodeWithTag("filter-project-GarageSale").performMouseInput { rightClick() }
+        onAllNodesWithTag("label-project-GarageSale", useUnmergedTree = true)[0].performMouseInput { rightClick() }
         onNodeWithTag("copy-link").assertExists()
         onNodeWithTag("open-link").assertDoesNotExist()
         onNodeWithTag("copy-link").performClick()
@@ -1857,10 +1857,11 @@ class AppTest {
         onNodeWithTag("copy-link").performClick()
         assertEquals("koppter://filter?hashtag=quick", copied)
 
-        // A label of the filter panel, which is not selected by that click.
+        // A label of the filter panel has a menu without the link and is not selected by that click.
         onNodeWithTag("filter-context-errands>city").performMouseInput { rightClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?context=errands%3Ecity", copied)
+        onNodeWithTag("copy-link").assertDoesNotExist()
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-cancel").performClick()
         onNodeWithTag("filter-clear").assertIsNotEnabled()
         // The card still has its menu.
         onNodeWithText("Post signs").performMouseInput { rightClick() }
@@ -1869,27 +1870,16 @@ class AppTest {
 
     // [utest->dsn~app-link-copy~1]
     @Test
-    @Suppress("DEPRECATION")
-    fun aLongPressOnALabelOffersItsLinkOnATouchScreen() = runComposeUiTest {
+    fun aLongPressOnALabelOfTheFilterPanelOpensItsMenuOnATouchScreen() = runComposeUiTest {
         storage.text = "Post signs +GarageSale @errands>city #quick\nCall Mom @phone\n"
-        var copied: String? = null
-        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
-            override fun getText() = copied?.let(::AnnotatedString)
-            override fun setText(annotatedString: AnnotatedString) {
-                copied = annotatedString.text
-            }
-        }
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt") } }
+        start()
 
         // The long press on a label of the filter panel opens the menu and does not select the label.
         onNodeWithTag("filter-context-phone").performTouchInput { longClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?context=phone", copied)
+        onNodeWithTag("exclude-label").assertExists()
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-cancel").performClick()
         onAllNodesWithTag("task").assertCountEquals(2)
-        onNodeWithTag("filter-project-GarageSale").performTouchInput { longClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?project=GarageSale", copied)
 
         // A short touch selects the label as before.
         onNodeWithTag("filter-context-phone").performTouchInput { click() }
@@ -1899,6 +1889,44 @@ class AppTest {
         // The label of a task has no menu for a finger: a long press there picks up the card.
         onNodeWithTag("label-context-phone", useUnmergedTree = true).performTouchInput { longClick() }
         onNodeWithTag("link-menu").assertDoesNotExist()
+    }
+
+    // [utest->dsn~label-rename~1]
+    @Test
+    fun aLabelOfTheFilterPanelIsRenamedInAllTasks() = runComposeUiTest {
+        storage.text = "Read the survey +papers>survey @desk\nx Write the paper +papers\nSort the shelf +papers2\n"
+        storage.companions["ice_recur.txt"] = "weekly ; day Friday - Review the notes +papers\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-project-papers").performClick()
+        onNodeWithTag("filter-project-papers").performMouseInput { rightClick() }
+        onNodeWithTag("rename-label").assertTextEquals("Rename\u2026").performClick()
+        // The same name, two words and nothing are no new name.
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("two words")
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("articles")
+        onNodeWithTag("rename-ok").performClick()
+
+        // The project below it follows, and so do the completed task, the scheduled tasks and the filter.
+        assertEquals("Read the survey +articles>survey @desk\nx Write the paper +articles\nSort the shelf +papers2\n", storage.text)
+        assertEquals("weekly ; day Friday - Review the notes +articles\n", storage.companions["ice_recur.txt"])
+        assertEquals("Rename +papers to +articles", storage.changes.last())
+        assertEquals(setOf("articles"), controller.filter.projects)
+        onNodeWithTag("filter-project-articles").assertIsOn()
+        onNodeWithTag("filter-project-papers").assertDoesNotExist()
+
+        // A hashtag does not start with a digit.
+        storage.text += "Buy paint #home\n"
+        runOnUiThread { controller.load() }
+        onNodeWithTag("filter-hashtag-home").performScrollTo().performMouseInput { rightClick() }
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-name").performTextReplacement("2026")
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("house")
+        onNodeWithTag("rename-ok").performClick()
+        assertEquals("Buy paint #house", storage.text.trim().lines().last())
     }
 
     // [utest->dsn~filter-exclusion~1]

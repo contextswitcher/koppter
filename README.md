@@ -49,6 +49,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
+*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and the links, limits and board columns of `koppter.yml` are changed by hand.
 The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
@@ -669,8 +670,7 @@ koppter://filter?hashtag=someday
 koppter://filter?project=Fair&context=phone
 ```
 
-* A right click on the label of a project, a context or a hashtag, at a task or in the filter panel, offers *Copy link*.
-  On a touch screen, a long press on the label in the filter panel does.
+* A right click on the label of a project, a context or a hashtag at a task offers *Copy link*.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
 * A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their start date.

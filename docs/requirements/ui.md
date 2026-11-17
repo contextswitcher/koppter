@@ -136,6 +136,17 @@ Covers:
 
 Needs: dsn
 
+### Renaming a label
+`req~label-rename~1`
+
+The user gives a project, a context or a hashtag another name in all tasks at once.
+
+Covers:
+
+* `feat~task-editing~1`
+
+Needs: dsn
+
 ### Filter panel
 `req~filter-panel~1`
 
@@ -595,6 +606,21 @@ Covers:
 
 Needs: impl, utest
 
+### Renaming a label in the filter panel
+`dsn~label-rename~1`
+
+The menu of a project, a context or a hashtag of the filter panel has the entry *Rename…*, which asks for the new name: one word, and for a hashtag one that a hashtag can have.
+`TodoController.rename` writes the name with `TodoFile.rename` into every line that has the label, completed tasks included, and leaves the other lines as they are.
+`renameLabel` replaces the label where it is a word of its own, and the start of each label below it, so that renaming `+papers` makes `+papers>survey` a project below the new name and leaves `+papers2` alone.
+The scheduled tasks of `ice_recur.txt` are renamed in the same way, as they would bring the old name back, and the filter follows.
+The links, the limits and the board columns of `koppter.yml` keep the old name.
+
+Covers:
+
+* `req~label-rename~1`
+
+Needs: impl, utest
+
 ### Filter after a restart
 `dsn~filter-remembered~1`
 
@@ -815,7 +841,8 @@ Needs: impl, utest
 `dsn~app-link-copy~1`
 
 `linkTo` writes the link to a project, a context or a hashtag and encodes every character of the name that is not a letter, a digit or one of `-._~`, so that a program that finds links in a text takes the whole link.
-`WithLinkMenu` wraps the labels of projects, contexts and hashtags of a task and of the filter panel: a click with the secondary button opens a menu whose entry *Copy link* puts the link on the clipboard.
+`WithLinkMenu` wraps the labels of projects, contexts and hashtags of a task and of the filter panel: a click with the secondary button opens a menu.
+At the label of a task, its entry *Copy link* puts the link on the clipboard; the menu of the filter panel has no such entry, as it is there to change the labels.
 The click is taken before the card of the task sees it, so that the card does not open its menu of due dates.
 In the filter panel, a finger that stays on a label opens the menu as well, and lifting it does not select the label; the label of a task has no such menu, as a long press there picks up the card.
 

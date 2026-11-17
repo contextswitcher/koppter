@@ -28,6 +28,8 @@ import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
 import io.github.koppor.koppter.todotxt.listParts
+import io.github.koppor.koppter.todotxt.isWithin
+import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -597,6 +599,27 @@ class TodoController(
         // A move to another column changes what the column stands for and nothing else: the task gets its place only among tasks of its priority.
         if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before, today())?.let { new = it } }
         write(new, if (task == null) "Move task: ${entry.task.description}" else "Move task to ${to.title}: ${task.description}")
+    }
+
+    /**
+     * Renames a project, a context or a hashtag, told by its sign, with those below it: in all tasks, in the scheduled tasks, which would bring
+     * the old name back, and in the filter.
+     */
+    // [impl->dsn~label-rename~1]
+    // ponytail: the links, limits and board columns of koppter.yml keep the old name; rename them there when that is missed.
+    fun rename(sign: Char, from: String, to: String) {
+        guarded {
+            val files = storage as? CompanionFiles ?: return@guarded
+            val schedule = files.readCompanion(ICE_RECUR_FILE) ?: return@guarded
+            renameLabel(schedule, sign, from, to).takeIf { it != schedule }?.let { files.writeCompanion(ICE_RECUR_FILE, it) }
+        }
+        write(file.rename(sign, from, to), "Rename $sign$from to $sign$to")
+        fun Set<String>.renamed() = map { if (it.isWithin(from)) to + it.substring(from.length) else it }.toSet()
+        filter = when (sign) {
+            '+' -> filter.copy(projects = filter.projects.renamed(), excludedProjects = filter.excludedProjects.renamed())
+            '@' -> filter.copy(contexts = filter.contexts.renamed(), excludedContexts = filter.excludedContexts.renamed())
+            else -> filter.copy(hashtags = filter.hashtags.renamed(), excludedHashtags = filter.excludedHashtags.renamed())
+        }
     }
 
     /** Moves the due date of the task to the given day; without a day, the task has no due date anymore. */

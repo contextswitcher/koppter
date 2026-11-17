@@ -54,6 +54,8 @@ import io.github.koppor.koppter.todotxt.isWithin
 fun FilterPanel(
     filter: Filter,
     onChange: (Filter) -> Unit,
+    /** Renames a project, a context or a hashtag, told by its sign, in all tasks. */
+    onRename: (sign: Char, from: String, to: String) -> Unit,
     priorities: List<Char>,
     projects: List<String>,
     contexts: List<String>,
@@ -97,7 +99,7 @@ fun FilterPanel(
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(projects = filter.projects - value, excludedProjects = filter.excludedProjects + value)) }
             // A selected project stands outside the tree and shows its path.
-            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }) {
+            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }, copyLink = false, onRename = { onRename('+', value, it) }) {
                 ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
             }
         }
@@ -109,7 +111,7 @@ fun FilterPanel(
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(contexts = filter.contexts - value, excludedContexts = filter.excludedContexts + value)) }
             // A selected context stands outside the tree and shows its path.
-            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }) {
+            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }, copyLink = false, onRename = { onRename('@', value, it) }) {
                 ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty())
             }
         }
@@ -119,7 +121,7 @@ fun FilterPanel(
             excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
-            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }) {
+            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }, copyLink = false, onRename = { onRename('#', value, it) }) {
                 HashtagLabel(value, modifier, suffix)
             }
         }

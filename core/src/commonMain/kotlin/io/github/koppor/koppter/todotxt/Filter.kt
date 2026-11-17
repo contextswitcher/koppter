@@ -63,6 +63,14 @@ data class Filter(
 }
 
 /**
+ * The text with a project, a context or a hashtag, told by its [sign], and the labels below it renamed from [from] to [to].
+ * A label is a word of its own, so that `+papers2` and `a+papers` are not `+papers`.
+ */
+// [impl->dsn~label-rename~1]
+fun renameLabel(text: String, sign: Char, from: String, to: String): String =
+    Regex("(?<![^\\s])" + Regex.escape("$sign$from") + "(?![^\\s$LEVEL_SEPARATOR])").replace(text, Regex.escapeReplacement("$sign$to"))
+
+/**
  * The order of the task list: open before completed, overdue before the others, then by priority (none last),
  * then by due date (none last) and the time by which they are due on that day (none last), then by position in the file.
  */

@@ -244,6 +244,7 @@ private fun MainScreen(
         FilterPanel(
             filter = controller.filter,
             onChange = { controller.filter = it },
+            onRename = controller::rename,
             priorities = controller.priorities,
             projects = controller.projects,
             contexts = controller.contexts,
