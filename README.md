@@ -192,10 +192,10 @@ A file in OneDrive, or in another storage service, is used through the platform 
 A file that is edited by hand, by a script or by an agent is checked on the command line with [jbang](https://www.jbang.dev/), without the application:
 
 ```shell
-jbang lint@koppor/koppter todo.txt
+jbang lint@contextswitcher/koppter todo.txt
 ```
 
-Before its first run from the web, jbang asks whether it trusts the address; `jbang trust add https://github.com/koppor/koppter/` answers that beforehand, which a run without a terminal needs.
+Before its first run from the web, jbang asks whether it trusts the address; `jbang trust add https://github.com/contextswitcher/koppter/` answers that beforehand, which a run without a terminal needs.
 In a clone of this repository, `jbang .jbang/KoppterLint.kt todo.txt` checks with the sources of the clone.
 Each finding is one line, such as `todo.txt:12: error: due:tomorrow is not a date as YYYY-MM-DD`, and the command ends with 1 if an error is among them, so that it serves as a check of a repository of tasks.
 The option `--output-format` before the file selects another form of the findings:
@@ -768,7 +768,7 @@ The application writes all filters quoted.
 
 ## Installing
 
-The [latest release](https://github.com/koppor/koppter/releases/latest) carries the application as files to install:
+The [latest release](https://github.com/contextswitcher/koppter/releases/latest) carries the application as files to install:
 
 | File | System |
 | --- | --- |

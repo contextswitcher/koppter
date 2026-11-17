@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.
 - A new task starts with the priority C and the due date of the next weekend; *New task* in the settings states another priority and day, or none.
 - The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.
 - The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
@@ -197,9 +198,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
-[Unreleased]: https://github.com/koppor/koppter/compare/v2026-11-16...experimental
-[2026-11-16]: https://github.com/koppor/koppter/compare/v2026-11-15...v2026-11-16
-[2026-11-15]: https://github.com/koppor/koppter/compare/v2026-11-14...v2026-11-15
-[2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
-[2026-11-13]: https://github.com/koppor/koppter/compare/v2026-11-12...v2026-11-13
-[2026-11-12]: https://github.com/koppor/koppter/releases/tag/v2026-11-12
+[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-16...experimental
+[2026-11-16]: https://github.com/contextswitcher/koppter/compare/v2026-11-15...v2026-11-16
+[2026-11-15]: https://github.com/contextswitcher/koppter/compare/v2026-11-14...v2026-11-15
+[2026-11-14]: https://github.com/contextswitcher/koppter/compare/v2026-11-13...v2026-11-14
+[2026-11-13]: https://github.com/contextswitcher/koppter/compare/v2026-11-12...v2026-11-13
+[2026-11-12]: https://github.com/contextswitcher/koppter/releases/tag/v2026-11-12
