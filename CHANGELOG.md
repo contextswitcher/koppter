@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - In the dialog of a task, the due time and the fixed time are chosen on a clock face, and the duration, the travel time and the time spent on two wheels for hours and minutes; the fields still take typed text.
 - A list without groups tells next to the switches of the groups how it is ordered: by priority, then by due date.
 - Ctrl+F goes to the search text of the filter, and the field has a button that empties it.
+- The filter panel has the field *Search labels*, which narrows the projects, contexts and hashtags that it offers to those that contain the typed text.
 - The menu of the due date and the dialog of a task offer *in three days*.
 - A hashtag may start with a currency sign: `#$$$`.
 - The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.

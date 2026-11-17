@@ -718,6 +718,46 @@ class AppTest {
         }
     }
 
+    // [utest->dsn~filter-label-search~1]
+    @Test
+    fun theSearchForLabelsNarrowsWhatTheFilterPanelOffers() = runComposeUiTest {
+        val labelled = MemoryStorage("Read the survey +papers>survey @research>reading #someday\nBuy paint +House @errands #money\n")
+        val controller = TodoController(Settings(), { labelled }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-labels-clear").assertDoesNotExist()
+        // A found project keeps the project above it; the case of the letters does not count.
+        onNodeWithTag("filter-labels").performScrollTo().performTextInput("SURV")
+        onNodeWithTag("filter-project-papers").assertExists()
+        onNodeWithTag("filter-project-papers>survey").assertExists()
+        onNodeWithTag("filter-project-House").assertDoesNotExist()
+        onNodeWithTag("filter-context-errands").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+        // The tasks stay as they are.
+        onAllNodesWithTag("task").assertCountEquals(2)
+
+        // The sign of a kind of label restricts the search to that kind.
+        onNodeWithTag("filter-labels").performTextReplacement("@e")
+        onNodeWithTag("filter-context-errands").assertExists()
+        onNodeWithTag("filter-context-research").assertExists()
+        onNodeWithTag("filter-context-research>reading").assertExists()
+        onNodeWithTag("filter-project-House").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+
+        // A selected label stays whatever is searched.
+        onNodeWithTag("filter-context-errands").performClick()
+        onNodeWithTag("filter-labels").performTextReplacement("#some")
+        onNodeWithTag("filter-context-errands").assertIsOn()
+        onNodeWithTag("filter-context-research").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-someday").assertExists()
+
+        onNodeWithTag("filter-labels-clear").performClick()
+        onNodeWithTag("filter-labels").assertTextEquals("Search labels", "")
+        onNodeWithTag("filter-project-House").assertExists()
+        onNodeWithTag("filter-context-research").assertExists()
+        onNodeWithTag("filter-hashtag-money").assertExists()
+    }
+
     // [utest->dsn~filter-panel~1]
     @Test
     fun theFilterPanelRestrictsTheList() = runComposeUiTest {

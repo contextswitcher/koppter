@@ -627,6 +627,21 @@ Covers:
 
 Needs: impl, utest
 
+### Search for labels in the filter panel
+`dsn~filter-label-search~1`
+
+Below *Clear all filters*, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
+A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
+The field does not change the filter and is not kept.
+While it has a text, a button at its end empties it.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Filter after a restart
 `dsn~filter-remembered~1`
 
