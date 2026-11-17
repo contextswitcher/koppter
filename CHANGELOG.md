@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [Unreleased]
+
+### Added
+
+- The dialog of a task has a heading, *New task* or *Edit task*, and a handle at its right edge that makes it wider or narrower with the mouse; the width is kept.
+- The calendar of the deadline in the dialog of a task has the button *Use due date*.
+- *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks.
+
+### Changed
+
+- The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.
+- The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
+- Ctrl+Shift+A opens the dialog of a new task.
+
+### Removed
+
+- *Copy link* in the menu of a label of the filter panel; the label of a task still offers it.
+- The line above the list that added a task as it was typed, with its completion of projects, contexts and hashtags and its names of priorities at the start of a line; a task is added in its dialog, which the button with the plus and Ctrl+N open.
+
 ## [2026-11-16] - 2026-11-16
 
 ### Added
@@ -17,13 +36,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - Ctrl+F goes to the search text of the filter, and the field has a button that empties it.
 - In the dialog of a task, the recurrence is chosen on two wheels for the amount and the unit, with the choice whether it counts from the completion or from the due date; the field still takes typed text.
 - The filter panel has the field *Search labels*, which narrows the projects, contexts and hashtags that it offers to those that contain the typed text.
-- The dialog of a task has a heading, *New task* or *Edit task*, and a handle at its right edge that makes it wider or narrower with the mouse; the width is kept.
-- The calendar of the deadline in the dialog of a task has the button *Use due date*.
-- *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks.
 - The link to a page that OneNote copies, pasted into the note of a task, becomes a list of the two Markdown links *OneNote Desktop* and *OneNote Web*.
 - The menu of the due date and the dialog of a task offer *in three days*.
 - A hashtag may start with a currency sign: `#$$$`.
-- The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, and marks the words that become dates.
+- The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.
 - *Choose folder* in the settings opens the `todo.txt` file of a folder. On Android, such a folder has the notes, the scheduled tasks, the configuration and the plan next to the file, which a single chosen file has not. On the desktop, the file need not exist yet.
 - For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
 - The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
@@ -35,24 +51,16 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The heading of a group of a priority shows the colored label of the priority, so that a priority named by a number is not read as a count.
 - The dialog of a task is wider, and its description starts with the cursor at the end.
 - The switch of the inbox shows the number of its tasks in parentheses: *Inbox (4)*.
-- The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.
 - A list without groups has the headings *Overdue*, *Next* and *Done* with the number of their tasks, in place of the line below the overdue tasks.
 - The description of a task stands in one line with its labels, at the height of its checkbox, where both fit next to each other.
 - The groups by due date are those of the menu of the due date, from *Today* to *In a month*, with *Overdue* before them and *Later* after them; a column of the board sets its day.
 - The date of the tag `t:` is called the start date instead of the threshold date: the field of the dialog of a task is *Start date*, and the option of the filter panel *Show tasks before their start date*. The tag stays `t:`.
 - The day that the menu of the due date and the dialog of a task called *next week* is called *next weekend*, as it is the Sunday of the next week.
 - The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.
-- On a device without a keyboard, the dialog of a new task starts with the cursor in the description.
-- The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
-- Ctrl+Shift+A opens the dialog of a new task.
+- A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
 - A click on the public SSH key in the settings copies it.
 - A clone that fails is reported in red, the settings scroll to the message, and on a device with a key of its own it asks whether the key is registered with the server.
 - The address of a page of a repository of GitHub that is pasted into the settings becomes the address for SSH of that repository.
-
-### Removed
-
-- *Copy link* in the menu of a label of the filter panel; the label of a task still offers it.
-- The line above the list that added a task as it was typed, with its completion of projects, contexts and hashtags and its names of priorities at the start of a line; a task is added in its dialog, which the button with the plus and Ctrl+N open.
 
 ### Fixed
 
@@ -187,6 +195,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[Unreleased]: https://github.com/koppor/koppter/compare/v2026-11-16...experimental
 [2026-11-16]: https://github.com/koppor/koppter/compare/v2026-11-15...v2026-11-16
 [2026-11-15]: https://github.com/koppor/koppter/compare/v2026-11-14...v2026-11-15
 [2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
