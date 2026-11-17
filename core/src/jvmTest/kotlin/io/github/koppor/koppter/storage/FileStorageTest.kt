@@ -11,6 +11,17 @@ import kotlin.test.assertNull
 class FileStorageTest {
     private val directory = Files.createTempDirectory("koppter")
 
+    // [utest->dsn~companion-files~1]
+    @Test
+    fun aFileThatIsNoTextIsKeptByteForByte() {
+        val storage = FileStorage(directory.resolve("todo.txt"))
+        val image = byteArrayOf(-1, -40, -1, 0, 13, 10, 26, 10, -128)
+        assertNull(storage.readCompanionBytes("notes/a1b-1.jpg"))
+
+        storage.writeCompanionBytes("notes/a1b-1.jpg", image)
+        assertEquals(image.toList(), storage.readCompanionBytes("notes/a1b-1.jpg")?.toList())
+    }
+
     // [utest->dsn~file-storage~1]
     @Test
     fun aMissingFileReadsAsEmptyAndIsCreatedOnWrite() {

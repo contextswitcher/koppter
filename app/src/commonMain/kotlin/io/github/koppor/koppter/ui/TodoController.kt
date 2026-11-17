@@ -40,6 +40,8 @@ import io.github.koppor.koppter.todotxt.parseBoardColumns
 import io.github.koppor.koppter.todotxt.groupEntries
 import io.github.koppor.koppter.todotxt.iceRecurOccurrences
 import io.github.koppor.koppter.todotxt.iceRecurTasks
+import io.github.koppor.koppter.todotxt.imageName
+import io.github.koppor.koppter.todotxt.noteImages
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
@@ -468,13 +470,20 @@ class TodoController(
     /**
      * Adds the text that another application shared as a task.
      * [action] is the title of the share action to apply; without it or if there is none with this title, the first one is applied.
+     * A shared [image] becomes the note of the task; without a text, the task is called after it.
      * Returns what to tell the user.
      */
-    fun share(text: String, action: String? = null): String {
+    // [impl->dsn~note-images~1]
+    fun share(text: String, action: String? = null, image: ByteArray? = null): String {
+        if (image != null && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
         val chosen = shareActions.firstOrNull { it.title == action } ?: shareActions.firstOrNull()
-        val task = chosen?.task(text, today()) ?: Task(body = text.trim().replace(Regex("\\s+"), " "))
+        val shared = text.ifBlank { if (image == null) text else "Image" }
+        val plain = chosen?.task(shared, today()) ?: Task(body = shared.trim().replace(Regex("\\s+"), " "))
+        val noteName = newNoteName()
+        val imageFile = imageName(noteName) { false }
+        val task = if (image == null) plain else plain.withTag(Task.NOTE, noteName)
         error = null
-        add(task)
+        if (image == null) add(task) else add(task, "![]($imageFile)\n", mapOf(imageFile to image))
         return error ?: "Added${chosen?.let { " (${it.title})" }.orEmpty()}: ${task.description}"
     }
 
@@ -560,21 +569,36 @@ class TodoController(
         null
     }
 
+    /** The image of a note, by its file name in the directory of the notes; `null` if it is not there or cannot be read. */
+    // [impl->dsn~note-images~1]
+    fun imageOf(name: String): ByteArray? = try {
+        (storage as? CompanionFiles)?.readCompanionBytes("$NOTES_DIRECTORY/$name")
+    } catch (_: Exception) {
+        null
+    }
+
     /** A file name for the note of a task that has none yet; Markdown, so that programs that show the file format it. */
     fun newNoteName(): String = Random.nextInt(36 * 36 * 36).toString(36).padStart(3, '0') + ".md"
 
-    /** Writes the note into the file that the `note:` tag of the task names; returns whether the text changed. */
-    private fun saveNote(task: Task, note: String?): Boolean {
+    /**
+     * Writes the note into the file that the `note:` tag of the task names; returns whether the text changed.
+     * The [images] that the note shows are written next to it, each under its file name.
+     */
+    // [impl->dsn~note-images~1]
+    private fun saveNote(task: Task, note: String?, images: Map<String, ByteArray>): Boolean {
         val name = task.tag(Task.NOTE) ?: return false
         if (note == null || note == noteOf(task)) return false
-        (storage as? CompanionFiles)?.writeCompanion("$NOTES_DIRECTORY/$name", note) ?: return false
+        val files = storage as? CompanionFiles ?: return false
+        // Before the note, so that the note never shows an image that is not there.
+        noteImages(note).forEach { image -> images[image]?.let { files.writeCompanionBytes("$NOTES_DIRECTORY/$image", it) } }
+        files.writeCompanion("$NOTES_DIRECTORY/$name", note)
         return true
     }
 
     // [impl->dsn~task-operations~1]
-    fun add(task: Task, note: String? = null) {
+    fun add(task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
         if (task.body.isBlank()) return
-        guarded { saveNote(task, note) }
+        guarded { saveNote(task, note, images) }
         write(file.add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
     }
 
@@ -590,10 +614,10 @@ class TodoController(
         }
     }
 
-    fun replace(entry: Entry, task: Task, note: String? = null) {
+    fun replace(entry: Entry, task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
         val index = locate(entry) ?: return
         var noteChanged = false
-        guarded { noteChanged = saveNote(task, note) }
+        guarded { noteChanged = saveNote(task, note, images) }
         val new = file.replace(index, task)
         // A changed note alone is a change to record, although the todo.txt file stays the same.
         if (new == file && noteChanged) guarded { storage.write(file.serialize(), "Edit note: ${task.description}") }

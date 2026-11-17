@@ -198,7 +198,7 @@ Needs: impl, utest
 ### Share target on Android
 `dsn~android-share-target~1`
 
-`ShareActivity` receives text that is shared to the application, adds the task through a controller of its own, tells the result in a toast and finishes without showing a screen.
+`ShareActivity` receives text, or an image as `dsn~note-images~1` says, that is shared to the application, adds the task through a controller of its own, tells the result in a toast and finishes without showing a screen.
 `MainActivity` publishes one shortcut per share action; from Android 10 on, the share sheet offers these shortcuts as targets, and the id of the chosen shortcut names the action.
 The entry of the application itself in the share sheet applies the first action.
 

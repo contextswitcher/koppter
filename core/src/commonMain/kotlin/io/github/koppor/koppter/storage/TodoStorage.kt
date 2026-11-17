@@ -33,6 +33,12 @@ interface CompanionFiles {
 
     /** A storage with a history records the file together with the next [TodoStorage.write]. */
     fun writeCompanion(path: String, text: String)
+
+    /** The content of a file that is no text, such as an image of a note, or `null` if it does not exist. */
+    fun readCompanionBytes(path: String): ByteArray?
+
+    /** As [writeCompanion], for a file that is no text. */
+    fun writeCompanionBytes(path: String, bytes: ByteArray)
 }
 
 enum class SyncState { IDLE, RUNNING, FAILED }

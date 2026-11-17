@@ -110,6 +110,10 @@ fun App(
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
     chooseFileNote: String? = null,
+    /** Lets the user choose an image for a note and gives its bytes, scaled down; `null` on a platform without that. */
+    pickImage: (suspend () -> ByteArray?)? = null,
+    /** As [pickImage], with the camera of the device. */
+    takePhoto: (suspend () -> ByteArray?)? = null,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
 ) {
@@ -141,7 +145,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, backHandler, leave)
         }
     }
 }
@@ -160,6 +164,9 @@ val LocalKeyboard = staticCompositionLocalOf { true }
 
 private data class Editing(val entry: Entry?)
 
+/** The longer side of an image of a note in pixels: enough to read a photographed page, and a file of some hundred kilobytes for the repository. */
+const val NOTE_IMAGE_SIZE = 1600
+
 /** Ctrl with the n-th of these keys shows the n-th view. */
 private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six)
 
@@ -174,6 +181,8 @@ private fun MainScreen(
     chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    pickImage: (suspend () -> ByteArray?)?,
+    takePhoto: (suspend () -> ByteArray?)?,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
 ) {
@@ -381,8 +390,11 @@ private fun MainScreen(
             today = controller.today(),
             width = controller.settings.editWidth,
             onWidth = { controller.updateSettings(controller.settings.copy(editWidth = it)) },
-            onSave = { task, note ->
-                if (entry == null) controller.add(task, note) else controller.replace(entry, task, note)
+            pickImage = pickImage,
+            takePhoto = takePhoto,
+            imageOf = controller::imageOf,
+            onSave = { task, note, images ->
+                if (entry == null) controller.add(task, note, images) else controller.replace(entry, task, note, images)
                 editing = null
             },
             onDelete = {

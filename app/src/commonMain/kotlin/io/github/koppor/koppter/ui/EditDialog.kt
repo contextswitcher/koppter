@@ -16,7 +16,12 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
+import androidx.compose.runtime.key
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.decodeToImageBitmap
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import kotlin.math.roundToInt
 import androidx.compose.ui.platform.LocalDensity
@@ -97,6 +102,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
+import io.github.koppor.koppter.todotxt.imageName
+import io.github.koppor.koppter.todotxt.noteImages
 import io.github.koppor.koppter.todotxt.oneNoteLinks
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
@@ -131,12 +138,19 @@ fun EditDialog(
     today: LocalDate,
     /** The contexts that a task takes with a project. */
     contextsOf: (String) -> List<String> = { emptyList() },
-    onSave: (Task, note: String?) -> Unit,
+    /** Called with the task, its note and the images that were added to the note, each under its file name. */
+    onSave: (Task, note: String?, images: Map<String, ByteArray>) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     /** The width of the dialog in dp where the window allows it, and what keeps a width that the user chose. */
     width: Int = 760,
     onWidth: (Int) -> Unit = {},
+    /** Lets the user choose an image and gives its bytes, `null` if none was chosen; `null` on a platform without that. */
+    pickImage: (suspend () -> ByteArray?)? = null,
+    /** As [pickImage], with the camera. */
+    takePhoto: (suspend () -> ByteArray?)? = null,
+    /** The image of a note that the storage has, by its file name. */
+    imageOf: (String) -> ByteArray? = { null },
 ) {
     // The task as the line was last typed; the fields start anew from it.
     // [impl->dsn~edit-line~1]
@@ -160,6 +174,27 @@ fun EditDialog(
     var contexts by remember(base) { mutableStateOf(base.contexts) }
     var hashtags by remember(base) { mutableStateOf(base.hashtags) }
     var note by remember { mutableStateOf(TextFieldValue(originalNote.orEmpty())) }
+    /** The images that were added in this dialog, which are written when the task is saved. */
+    var images by remember { mutableStateOf(mapOf<String, ByteArray>()) }
+    var imageMessage by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
+
+    // [impl->dsn~note-images~1]
+    fun attach(source: suspend () -> ByteArray?) {
+        scope.launch {
+            imageMessage = try {
+                val bytes = source() ?: return@launch
+                val name = imageName(base.tag(Task.NOTE) ?: newNoteName) { it in images || it in noteImages(note.text) || imageOf(it) != null }
+                images = images + (name to bytes)
+                // In a paragraph of its own, which is how Markdown shows an image on its own line.
+                val text = note.text.trimEnd().let { if (it.isEmpty()) "" else "$it\n\n" } + "![]($name)\n"
+                note = TextFieldValue(text, TextRange(text.length))
+                ""
+            } catch (e: Exception) {
+                "Not attached: ${e.message ?: e}"
+            }
+        }
+    }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
     val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
@@ -215,7 +250,7 @@ fun EditDialog(
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
-                    if (save && valid) onSave(result, if (originalNote == null) null else note.text)
+                    if (save && valid) onSave(result, if (originalNote == null) null else note.text, images)
                     save
                 },
         ) {
@@ -339,6 +374,24 @@ fun EditDialog(
                             maxLines = 8,
                             modifier = Modifier.fillMaxWidth().testTag("edit-note"),
                         )
+                        // [impl->dsn~note-images~1]
+                        if (pickImage != null || takePhoto != null) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                pickImage?.let { TextButton(onClick = { attach(it) }, modifier = Modifier.testTag("edit-add-image")) { Text("Add image") } }
+                                takePhoto?.let { TextButton(onClick = { attach(it) }, modifier = Modifier.testTag("edit-take-photo")) { Text("Take photo") } }
+                            }
+                        }
+                        if (imageMessage.isNotEmpty()) {
+                            Text(imageMessage, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("edit-image-message"))
+                        }
+                        val shown = noteImages(note.text)
+                        if (shown.isNotEmpty()) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                for (name in shown) {
+                                    key(name) { NoteImage(name, images[name] ?: remember { imageOf(name) }) }
+                                }
+                            }
+                        }
                     }
 
                     Text("Line in todo.txt", style = MaterialTheme.typography.labelMedium)
@@ -373,7 +426,7 @@ fun EditDialog(
                         }
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
-                        Button(onClick = { onSave(result, if (originalNote == null) null else note.text) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+                        Button(onClick = { onSave(result, if (originalNote == null) null else note.text, images) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                     }
                 }
                 // [impl->dsn~edit-resize~1]
@@ -402,6 +455,20 @@ fun EditDialog(
 
 /** How long the pointer rests on a field before its help is shown, in milliseconds. */
 private const val HELP_DELAY = 500L
+
+/** An image of the note, small; the name of a file that is missing or no image that the platform shows. */
+// [impl->dsn~note-images~1]
+// ponytail: decoded at its full size while the dialog is drawn, which fits the images that the application scales down when they are attached;
+// a smaller copy made on another thread if notes get large images from elsewhere.
+@Composable
+private fun NoteImage(name: String, bytes: ByteArray?) {
+    val bitmap = remember(bytes) { bytes?.let { runCatching { it.decodeToImageBitmap() }.getOrNull() } }
+    if (bitmap != null) {
+        Image(bitmap, contentDescription = "Image $name", modifier = Modifier.height(96.dp).testTag("edit-image-$name"))
+    } else {
+        Text("$name is not shown", style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("edit-image-missing-$name"))
+    }
+}
 
 /**
  * Shows the help while the pointer rests on the field.

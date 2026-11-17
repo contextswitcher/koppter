@@ -125,6 +125,22 @@ class GitStorageTest {
         return phone to desktop
     }
 
+    // [utest->dsn~companion-files~1]
+    @Test
+    fun anImageOfANoteReachesTheOtherDeviceByteForByte() {
+        val (phone, desktop) = twoDevices(emptyMap())
+        // With the bytes of line ends, which a conversion of text would change.
+        val image = byteArrayOf(-1, -40, -1, 0, 13, 10, 26, 10, -128)
+
+        phone.writeCompanionBytes("notes/a1b-1.jpg", image)
+        phone.writeCompanion("notes/a1b.md", "![](a1b-1.jpg)\n")
+        phone.write("Call Mom note:a1b.md\nBuy milk\n", "Edit task: Call Mom")
+        phone.synchronizeNow()
+        desktop.synchronizeNow()
+
+        assertEquals(image.toList(), desktop.readCompanionBytes("notes/a1b-1.jpg")?.toList())
+    }
+
     // [utest->dsn~merge-of-companions~1]
     @Test
     fun theScheduleIsMergedLineByLine() {

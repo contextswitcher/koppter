@@ -20,12 +20,16 @@ import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.ui.TodoController
+import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
+import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.compressImage
+import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import org.tinylog.Logger
 
 /**
- * Receives text that another application shares and adds it as a task, without showing a screen.
+ * Receives text or an image that another application shares and adds it as a task, without showing a screen.
  * A share action chosen in the share sheet arrives as the id of its shortcut; the plain entry of the application applies the first action.
  */
 // [impl->dsn~android-share-target~1]
@@ -38,13 +42,21 @@ class ShareActivity : Activity() {
         val action = intent.getStringExtra(Intent.EXTRA_SHORTCUT_ID)
         // The share sheet ranks the targets by their use.
         action?.let { getSystemService(ShortcutManager::class.java)?.reportShortcutUsed(it) }
-        val message = if (text.isBlank()) {
+        // [impl->dsn~note-images~1]
+        // The variant that names the type exists from Android 13 on.
+        @Suppress("DEPRECATION")
+        val shared = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+        val message = if (text.isBlank() && shared == null) {
             "Nothing to add"
         } else {
             try {
+                val image = shared?.let { uri ->
+                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw java.io.IOException("the image was not read")
+                    runBlocking { noteImage(bytes) }
+                }
                 // ponytail: the push runs on a background thread of a process that the system may stop after this activity;
                 // the commit is made before, and the next start of the application pushes it. A foreground service if that shows.
-                todoController(GitSetup(filesDir.toPath().resolve("git"))).share(text, action)
+                todoController(GitSetup(filesDir.toPath().resolve("git"))).share(text, action, image)
             } catch (e: Exception) {
                 "Not added: ${e.message ?: e}"
             }
@@ -53,6 +65,10 @@ class ShareActivity : Activity() {
         finish()
     }
 }
+
+/** The image as a note keeps it: scaled down, upright and as JPEG. */
+// [impl->dsn~note-images~1]
+internal suspend fun noteImage(bytes: ByteArray): ByteArray = FileKit.compressImage(bytes, maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE)
 
 // [impl->dsn~android-locations~1]
 internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage = when {

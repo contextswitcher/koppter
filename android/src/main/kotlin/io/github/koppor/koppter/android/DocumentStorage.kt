@@ -11,6 +11,7 @@ import io.github.vinceglb.filekit.sink
 import io.github.vinceglb.filekit.size
 import io.github.vinceglb.filekit.source
 import kotlinx.io.buffered
+import kotlinx.io.readByteArray
 import kotlinx.io.readString
 import kotlinx.io.writeString
 import java.io.FileNotFoundException
@@ -61,5 +62,12 @@ class FolderStorage(private val folder: PlatformFile) : TodoStorage, CompanionFi
     override fun writeCompanion(path: String, text: String) {
         path.substringBeforeLast('/', "").ifEmpty { null }?.let { resolve(it).createDirectories() }
         resolve(path).writeText(text)
+    }
+
+    override fun readCompanionBytes(path: String): ByteArray? = resolve(path).takeIf { it.exists() }?.source()?.buffered()?.use { it.readByteArray() }
+
+    override fun writeCompanionBytes(path: String, bytes: ByteArray) {
+        path.substringBeforeLast('/', "").ifEmpty { null }?.let { resolve(it).createDirectories() }
+        resolve(path).sink().buffered().use { it.write(bytes) }
     }
 }

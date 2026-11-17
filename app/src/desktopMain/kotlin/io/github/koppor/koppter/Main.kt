@@ -16,12 +16,16 @@ import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.sync.storageForFile
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
+import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.ui.TodoController
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.compressImage
+import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.dialogs.FileKitDialogParent
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.channels.Channel
@@ -53,6 +57,12 @@ private suspend fun chooseFile(owner: java.awt.Window): String? =
 private suspend fun chooseFolder(owner: java.awt.Window): String? =
     FileKit.openDirectoryPicker(dialogSettings = FileKitDialogSettings(title = "Folder of the todo.txt file", parent = FileKitDialogParent.awt(owner)))
         ?.let { Path(it.absolutePath(), "todo.txt").toString() }
+
+/** An image that the user picks for a note, scaled down and as JPEG. */
+// [impl->dsn~note-images~1]
+private suspend fun pickImage(owner: java.awt.Window): ByteArray? =
+    FileKit.openFilePicker(type = FileKitType.Image, dialogSettings = FileKitDialogSettings(title = "Image for the note", parent = FileKitDialogParent.awt(owner)))
+        ?.let { FileKit.compressImage(it.readBytes(), maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE) }
 
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
@@ -94,7 +104,7 @@ fun main(args: Array<String>) {
             icon = icon,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
-            App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, chooseFolder = { chooseFolder(window) }, git = git)
+            App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, chooseFolder = { chooseFolder(window) }, git = git, pickImage = { pickImage(window) })
             // [impl->dsn~link-single-instance~1]
             LaunchedEffect(Unit) {
                 for (received in links) {

@@ -11,6 +11,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - The dialog of a task has a heading, *New task* or *Edit task*, and a handle at its right edge that makes it wider or narrower with the mouse; the width is kept.
 - The calendar of the deadline in the dialog of a task has the button *Use due date*.
+- *Add image* in the dialog of a task attaches an image to its note, and on Android *Take photo* does so with the camera; the dialog shows the images of the note. The image is scaled down and kept as a file next to the note.
+- On Android, an image that another application shares to koppter becomes a task with that image in its note.
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
 

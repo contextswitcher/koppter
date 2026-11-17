@@ -68,7 +68,12 @@ import kotlin.test.assertTrue
 
 private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
     val companions = mutableMapOf<String, String>()
+    val images = mutableMapOf<String, ByteArray>()
     val changes = mutableListOf<String>()
+    override fun readCompanionBytes(path: String) = images[path]
+    override fun writeCompanionBytes(path: String, bytes: ByteArray) {
+        images[path] = bytes
+    }
     override fun readCompanion(path: String) = companions[path]
     override fun writeCompanion(path: String, text: String) {
         companions[path] = text
@@ -700,6 +705,63 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-heading").assertTextEquals("Edit task")
         assertEquals(narrow, width())
+    }
+
+    // [utest->dsn~note-images~1]
+    @Test
+    fun anImageIsAttachedToTheNoteOfATaskAndShownInItsDialog() = runComposeUiTest {
+        // One transparent pixel.
+        val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+        storage.text = "Post signs +GarageSale note:abc.md\nSchedule pickup\n"
+        storage.companions["notes/abc.md"] = "Bring tape\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        var picked: () -> ByteArray? = { png }
+        setContent { App(controller, "todo.txt", pickImage = { picked() }) }
+
+        openTask("Post signs")
+        // Without a camera, as on the desktop.
+        onNodeWithTag("edit-take-photo").assertDoesNotExist()
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-abc-1.jpg").assertExists()
+        onNodeWithTag("edit-note").assertTextContains("Bring tape\n\n![](abc-1.jpg)\n")
+        // A chooser that is left without an image, and one that fails.
+        picked = { null }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        picked = { error("the file is no image") }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-message").assertTextEquals("Not attached: the file is no image")
+        picked = { png }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-message").assertDoesNotExist()
+        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg"), storage.images.keys)
+        assertEquals(png.toList(), storage.images.getValue("notes/abc-1.jpg").toList())
+        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n", storage.companions["notes/abc.md"])
+
+        // The dialog shows the images that the storage has, and names one that it has not.
+        openTask("Post signs")
+        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-note").performTextReplacement("![](abc-1.jpg) ![](gone.jpg)")
+        onNodeWithTag("edit-image-abc-2.jpg").assertDoesNotExist()
+        onNodeWithTag("edit-image-missing-gone.jpg").assertTextEquals("gone.jpg is not shown")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        // An image whose line was removed from the note again is not written; a task without a note gets one for its image.
+        openTask("Schedule pickup")
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-note").performTextReplacement("Ask for a box")
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        val note = Regex("Schedule pickup note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
+        assertEquals("Ask for a box\n\n![]($note-2.jpg)\n", storage.companions["notes/$note.md"])
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/$note-2.jpg"), storage.images.keys)
+
+        // An image that is shared becomes a task of its own.
+        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, png) })
+        val shared = Regex("Image note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
+        assertEquals("![]($shared-1.jpg)\n", storage.companions["notes/$shared.md"])
+        assertEquals(png.toList(), storage.images.getValue("notes/$shared-1.jpg").toList())
     }
 
     // [utest->dsn~new-task-defaults~1]

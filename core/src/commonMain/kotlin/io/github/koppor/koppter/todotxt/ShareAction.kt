@@ -32,6 +32,21 @@ data class ShareAction(val title: String, val template: String) {
     }
 }
 
+private val MARKDOWN_IMAGE = Regex("!\\[[^\\]]*]\\(<?([^)>\\s]+)>?\\)")
+
+/**
+ * The files next to a note that its Markdown text shows as images, in the order of the text.
+ * Only a plain file name counts: an address is not a file of the storage, and a path could lead out of the directory of the notes.
+ */
+// [impl->dsn~note-images~1]
+fun noteImages(note: String): List<String> =
+    MARKDOWN_IMAGE.findAll(note).map { it.groupValues[1] }.filter { name -> name.none { it in ":/\\" } && name != ".." }.distinct().toList()
+
+/** A name for a new image of the note: the name of the note with the first number that is not [taken]. */
+// [impl->dsn~note-images~1]
+fun imageName(noteName: String, taken: (String) -> Boolean): String =
+    generateSequence(1) { it + 1 }.map { "${noteName.substringBeforeLast('.')}-$it.jpg" }.first { !taken(it) }
+
 private val ONENOTE_LINKS = Regex("(?<!onenote:)(https?://\\S+)\\s+(onenote:\\S+)")
 
 /**

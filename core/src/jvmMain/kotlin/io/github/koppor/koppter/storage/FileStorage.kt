@@ -35,6 +35,14 @@ class FileStorage(private val path: Path) : TodoStorage, CompanionFiles {
         file.writeText(text)
     }
 
+    override fun readCompanionBytes(path: String): ByteArray? = companion(path).takeIf { it.exists() }?.let(Files::readAllBytes)
+
+    override fun writeCompanionBytes(path: String, bytes: ByteArray) {
+        val file = companion(path)
+        Files.createDirectories(file.parent)
+        Files.write(file, bytes)
+    }
+
     private fun companion(relative: String): Path = path.toAbsolutePath().parent.resolve(relative)
 
     override fun version(): Any? = if (path.exists()) path.getLastModifiedTime() to Files.size(path) else null

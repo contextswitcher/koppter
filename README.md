@@ -165,6 +165,7 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | --- | --- |
 | `todo.txt` | The tasks |
 | `notes/<name>.md` | The note of the task with the tag `note:<name>.md`, as Markdown |
+| `notes/<name>-<number>.jpg` | An [image](#images-of-a-task) that the note shows |
 | `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), [what a new task starts with](#what-a-new-task-starts-with), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
@@ -352,6 +353,24 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 * A deadline that is given for another place states the offset of its time from UTC, as ISO 8601 writes it: `deadline:2026-11-30T23:59-12:00` is the end of that day "anywhere on Earth" ([decision 0031](docs/decisions/0031-offset-from-utc-in-the-time-of-a-deadline.md)).
   The application counts with the day and the time of the device, here `2026-12-01 12:59` in Germany, and shows them in the label; the pointer on the label shows what is written.
 * The next occurrence of a recurring task has its deadline moved as far as its due date.
+
+## Images of a task
+
+An image belongs to the note of a task ([decision 0038](docs/decisions/0038-images-of-a-task-as-files-next-to-its-note.md)).
+*Add image* below the note in the dialog of a task chooses one, and on Android *Take photo* takes one with the camera.
+The image is scaled down to at most 1600 pixels on its longer side and written as JPEG to the directory `notes`, next to the note, which gets a line for it:
+
+```markdown
+The receipt of the van:
+
+![](k3f-1.jpg)
+```
+
+* The dialog shows the images of the note below it.
+  It shows those that the note names by a file name; an image at an address is left to a program that shows Markdown.
+* On Android, an image that another application shares to koppter becomes a task with that image; a text that comes with it is the description, and without one the task is called *Image*.
+* Removing the line from the note removes the image from the task; the file stays in `notes`.
+* Images need the files next to the `todo.txt` file: a folder or a git repository.
 
 ## Dates in words
 

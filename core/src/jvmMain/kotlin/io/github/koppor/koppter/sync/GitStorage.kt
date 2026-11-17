@@ -61,9 +61,19 @@ class GitStorage(
 
     override fun writeCompanion(path: String, text: String) = synchronized(lock) {
         files.writeCompanion(path, text)
-        companions += this.path.substringBeforeLast('/', "").let { if (it.isEmpty()) path else "$it/$path" }
+        companions += inRepository(path)
         Unit
     }
+
+    override fun readCompanionBytes(path: String): ByteArray? = synchronized(lock) { files.readCompanionBytes(path) }
+
+    override fun writeCompanionBytes(path: String, bytes: ByteArray) = synchronized(lock) {
+        files.writeCompanionBytes(path, bytes)
+        companions += inRepository(path)
+        Unit
+    }
+
+    private fun inRepository(companion: String) = path.substringBeforeLast('/', "").let { if (it.isEmpty()) companion else "$it/$companion" }
 
     override fun read(): String = synchronized(lock) { files.read() }
 

@@ -14,6 +14,10 @@ import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.TodoController
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.bookmarkData
+import io.github.vinceglb.filekit.delete
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.openCameraPicker
+import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.dialogs.init
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
@@ -32,6 +36,12 @@ class MainActivity : ComponentActivity() {
 
     // [impl->dsn~choose-folder~1]
     private suspend fun chooseFolder(): String? = FileKit.openDirectoryPicker()?.also { it.bookmarkData() }?.path
+
+    // [impl->dsn~note-images~1]
+    private suspend fun pickImage(): ByteArray? = FileKit.openFilePicker(type = FileKitType.Image)?.let { noteImage(it.readBytes()) }
+
+    // The camera writes into the cache of the application, where the photo is not needed once it is read.
+    private suspend fun takePhoto(): ByteArray? = FileKit.openCameraPicker()?.let { photo -> noteImage(photo.readBytes()).also { photo.delete() } }
 
     private val gitSetup by lazy { GitSetup(filesDir.toPath().resolve("git")) }
 
@@ -74,6 +84,8 @@ class MainActivity : ComponentActivity() {
             App(
                 controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, chooseFolder = ::chooseFolder, git = gitActions, keyboard = keyboard,
                 shareLog = ::shareLog,
+                pickImage = ::pickImage,
+                takePhoto = ::takePhoto,
                 // [impl->dsn~choose-file~1]
                 chooseFileNote = "Android gives access to a chosen file alone, not to the files next to it: " +
                     "notes, scheduled tasks, board columns and the plan need a chosen folder, whose file todo.txt is opened, or the todo.txt file of a git repository.",
