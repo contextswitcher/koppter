@@ -36,4 +36,24 @@ class ShareActionTest {
         assertEquals(listOf(BoardColumn("Waiting", "@waiting")), ConfigFile.boardColumns(config))
         assertEquals(emptyList(), ConfigFile.shareActions(ConfigFile.withShareActions(config, emptyList())))
     }
+
+    // [utest->dsn~onenote-links~1]
+    @Test
+    fun theTwoLinesThatOneNoteCopiesBecomeTwoMarkdownLinks() {
+        val web = "https://onedrive.example.org/view.aspx?resid=ABC%21101&wd=target%28Notes.one%7C1111%2FShopping%20list%7C2222%2F%29&wdpartid={3333}{1}&end"
+        val desktop = "onenote:https://d.docs.example.org/abc/Documents/Notes.one#Shopping%20list&section-id={1111}&page-id={2222}&end"
+        val links = "- [OneNote Desktop]($desktop)\n- [OneNote Web]($web)"
+
+        assertEquals(links, oneNoteLinks("$web\r\n$desktop"))
+        // The list starts on a line of its own, and what is a list already stays.
+        assertEquals("See:\n$links\nand buy", oneNoteLinks("See:$web\n$desktop\nand buy"))
+        assertEquals(links, oneNoteLinks(links))
+        // A parenthesis would end a Markdown link.
+        assertEquals(
+            "- [OneNote Desktop](<onenote:https://example.org/Notes.one#Plan%20(old)&end>)\n- [OneNote Web](https://example.org/view)",
+            oneNoteLinks("https://example.org/view\nonenote:https://example.org/Notes.one#Plan%20(old)&end"),
+        )
+        // Other addresses stay as they are.
+        assertEquals("https://example.org/a\nhttps://example.org/b", oneNoteLinks("https://example.org/a\nhttps://example.org/b"))
+    }
 }

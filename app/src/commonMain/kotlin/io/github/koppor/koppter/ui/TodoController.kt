@@ -26,6 +26,8 @@ import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
+import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
+import io.github.koppor.koppter.todotxt.listParts
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -113,19 +115,31 @@ class TodoController(
         view = View.LIST
     }
 
-    /** Shows the tasks as a board instead of as a list. */
-    var view by mutableStateOf(View.LIST)
+    /**
+     * What the main screen shows of the tasks.
+     * The settings keep it, and the groups of each view with it, so that a restart shows what was shown last.
+     */
+    // [impl->dsn~view-remembered~1]
+    var view: View
+        get() = View.entries.firstOrNull { it.name == settings.view } ?: View.LIST
+        set(value) = updateSettings(settings.copy(view = value.name))
 
     val board: Boolean get() = view == View.BOARD
 
     /** The attribute whose values are the columns of the board; `null` for the columns the user defined. */
-    var groupKey by mutableStateOf<GroupKey?>(GroupKey.PRIORITY)
+    var groupKey: GroupKey?
+        get() = GroupKey.entries.firstOrNull { it.name == settings.boardGroup }
+        set(value) = updateSettings(settings.copy(boardGroup = value?.name.orEmpty()))
 
     /** The attribute by whose values the list is divided into groups; `null` for a list without groups. */
-    var listGroupKey by mutableStateOf<GroupKey?>(null)
+    var listGroupKey: GroupKey?
+        get() = GroupKey.entries.firstOrNull { it.name == settings.listGroup }
+        set(value) = updateSettings(settings.copy(listGroup = value?.name.orEmpty()))
 
     /** What the overview has its tiles for: one of [OVERVIEW_KEYS]. */
-    var overviewKey by mutableStateOf(GroupKey.CONTEXT)
+    var overviewKey: GroupKey
+        get() = OVERVIEW_KEYS.firstOrNull { it.name == settings.overviewGroup } ?: GroupKey.CONTEXT
+        set(value) = updateSettings(settings.copy(overviewGroup = value.name))
 
     /** The configuration file next to the todo.txt file; `null` if the storage keeps no files next to the todo.txt file. */
     private var config by mutableStateOf<String?>(null)
@@ -225,10 +239,10 @@ class TodoController(
     val groups: List<Group>
         get() = groupKey?.let(::groupsBy) ?: groupByColumns(visible, boardColumns, today())
 
-    /** The visible tasks as the groups of the list: one group without title if the list is not divided. */
+    /** The visible tasks as the groups of the list: the overdue, the next and the completed ones if no attribute divides the list. */
     // [impl->dsn~list-groups~1]
     val listGroups: List<Group>
-        get() = listGroupKey?.let(::groupsBy) ?: listOf(Group("", visible))
+        get() = listGroupKey?.let(::groupsBy) ?: listParts(visible, today())
 
     private fun groupsBy(key: GroupKey): List<Group> {
         val groups = groupEntries(visible, key, today())

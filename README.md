@@ -12,18 +12,43 @@ It is an application for Android and for Windows and Linux desktops.
 This line is a task of priority A with the context *phone*, the project *Health* and a due date.
 The notation is the [todo.txt format](https://github.com/todotxt/todo.txt): the file is read and changed with any text editor, and other tools for the format work on the same file.
 
+## Goals
+
+* The `todo.txt` file is the only data store, and it stays a file that other todo.txt tools can read and write.
+* One code base for phone and desktop: Kotlin Multiplatform with Compose Multiplatform ([decision 0001](docs/decisions/0001-kotlin-multiplatform-with-compose-multiplatform.md)).
+* Synchronization through git, with one commit per added and per completed task.
+  The dates a task was added and completed are then read from the history instead of being written into the file.
+* Synchronization through a local folder and through OneDrive.
+* A task list that shows projects, contexts, hashtags, due date and priority as labels at the right of each task, divided into groups by one of them if wanted.
+* An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
+* A filter panel for completion state, text, priorities, projects, contexts and hashtags.
+* A Kanban board.
+* Support for the [extensions](#extensions-of-the-todotxt-format) `note`, `top` and `ice_recur`, for the `rec:` and `t:` tags, and for hashtags.
+
+The planned scope is tracked as requirements in [docs/requirements](docs/requirements/README.md).
+
+## Skills for agents
+
+[skills/koppter-tasks](skills/koppter-tasks/SKILL.md) is a skill for Claude and other agents that read skills: it tells how to write a task into the `todo.txt` file so that it fits what the application does with it, and how to choose between `rec:` and `ice_recur.txt` for a recurring task.
+To use it in Claude Code, link the directory into the skills of the user:
+
+```sh
+ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
+```
+
 ## Overview
 
 The task list with the filter panel.
-Projects, contexts, tags and the priority are labels at the top right of each task.
+Projects, contexts, tags and the priority are labels at the right of each task: in the line of its description where both fit, above it otherwise.
 An address of the web in the text of a task is a link that opens in the browser.
 A long address is cut after 50 characters; the whole one appears when the pointer of the mouse rests on it, and the edit dialog shows it as well.
 
 ![Task list with the filter panel on the left](docs/screenshots/list.png)
 
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
+The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
-The filter is kept on the device: after a restart, the list shows what it showed before.
+The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
 ![Task list filtered by two projects and a context](docs/screenshots/filter.png)
@@ -54,8 +79,17 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 The edit dialog: the description without metadata at the top, the metadata below, then the note, the resulting line of the `todo.txt` file, and the date the task was added according to the git history.
 The line can be edited as text as well: the fields follow what is typed there.
+The link to a page that OneNote copies, pasted into the note, becomes a list of two Markdown links: *OneNote Desktop* and *OneNote Web*.
 
 ![Edit dialog of a task](docs/screenshots/edit.png)
+
+A date, a time, a duration and a recurrence are typed or chosen: the button of a field opens a calendar, a clock face, two wheels for hours and minutes, or two wheels for the amount and the unit of the interval.
+
+![Clock face that chooses the due time](docs/screenshots/time-picker.png)
+
+![Wheels that choose the duration](docs/screenshots/duration-picker.png)
+
+![Wheels that choose the recurrence](docs/screenshots/recurrence-picker.png)
 
 The settings, with the board columns by filter and the public SSH key for the git repository.
 
@@ -66,6 +100,8 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 ![Editor of the scheduled tasks](docs/screenshots/schedule.png)
 
 In a narrow window, as on a phone, the filter panel is a drawer.
+On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list warns first: a second back leaves the application.
+A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
 
@@ -74,34 +110,10 @@ The screenshots above show Nord in its light variant.
 
 ![Task list in the dark variant of Nord](docs/screenshots/nord-dark.png)
 
-## Goals
-
-* The `todo.txt` file is the only data store, and it stays a file that other todo.txt tools can read and write.
-* One code base for phone and desktop: Kotlin Multiplatform with Compose Multiplatform ([decision 0001](docs/decisions/0001-kotlin-multiplatform-with-compose-multiplatform.md)).
-* Synchronization through git, with one commit per added and per completed task.
-  The dates a task was added and completed are then read from the history instead of being written into the file.
-* Synchronization through a local folder and through OneDrive.
-* A task list that shows projects, contexts, hashtags, due date and priority as labels at the top right of each task, divided into groups by one of them if wanted.
-* An edit dialog that separates the description from the metadata and shows the resulting todo.txt line.
-* A filter panel for completion state, text, priorities, projects, contexts and hashtags.
-* A Kanban board.
-* Support for the [extensions](#extensions-of-the-todotxt-format) `note`, `top` and `ice_recur`, for the `rec:` and `t:` tags, and for hashtags.
-
-The planned scope is tracked as requirements in [docs/requirements](docs/requirements/README.md).
-
-## Skills for agents
-
-[skills/koppter-tasks](skills/koppter-tasks/SKILL.md) is a skill for Claude and other agents that read skills: it tells how to write a task into the `todo.txt` file so that it fits what the application does with it, and how to choose between `rec:` and `ice_recur.txt` for a recurring task.
-To use it in Claude Code, link the directory into the skills of the user:
-
-```sh
-ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
-```
-
 ## Organizing many tasks
 
 [docs/organizing.md](docs/organizing.md) describes a way to keep hundreds of tasks findable with what the application offers:
-projects for the outline of areas and outcomes, contexts for the kinds of work and the places, threshold dates for what is not due yet, and a rhythm of inbox, agenda and plan.
+projects for the outline of areas and outcomes, contexts for the kinds of work and the places, start dates for what is not due yet, and a rhythm of inbox, agenda and plan.
 It compares this with the other way, in which the areas are the contexts, so that each file can decide.
 It also maps the terms of SkedPal to those of the application.
 
@@ -118,7 +130,7 @@ The application covers the lists and steps of Getting Things Done (GTD), the met
 | Waiting for | The context `@waiting` and the board column *Waiting* |
 | Someday/maybe | The hashtag `#someday` and the board column *Someday* |
 | Calendar | The dates `due:` and `deadline:` and the time `at:`; the [agenda and the week](#agenda-and-week) |
-| Tickler file | The threshold date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
+| Tickler file | The start date `t:`, which hides a task until its day, and [recurring tasks](#recurring-tasks) |
 | Reference material | The note of a task, a Markdown file next to the `todo.txt` file |
 | Weekly review | A task on every Friday, which the editor of the [schedule](#by-the-calendar-the-file-ice_recurtxt) suggests for a new `ice_recur.txt`; the overview by project names the projects without next action, and the [plan](#planning) lists what does not fit |
 
@@ -134,7 +146,7 @@ Someday = #someday
 Dragging a task to *Someday* adds `#someday`, and dragging it to *Next* removes `#someday` and `@waiting`.
 
 The next action of a project is its first task in the [order of the list](#order-of-the-list) that can be worked on ([decision 0032](docs/decisions/0032-next-actions-derived-from-the-tasks.md)).
-A task cannot be worked on if it has the context `@waiting`, the hashtag `#someday` or a threshold date in the future, or if it waits for another open task through `id:` and `p:`.
+A task cannot be worked on if it has the context `@waiting`, the hashtag `#someday` or a start date in the future, or if it waits for another open task through `id:` and `p:`.
 
 * *Only the next action of each project* in the filter panel shows one task per project, and each task without project.
   Together with a context in the filter, it shows what is next at the phone or at home.
@@ -158,11 +170,17 @@ Changes of two devices are merged without a conflict to resolve: `todo.txt` and 
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
-A cloned repository and a file chosen with *Choose file* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
+A cloned repository, a file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
+A click on that key copies it.
+With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
+The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it; a folder chosen with *Choose folder* has them.
+On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also where there is none yet: a folder that is the clone of a git repository is committed and synchronized.
+The dialogs are those of the platform, shown through [FileKit](https://github.com/vinceglb/FileKit) ([decision 0036](docs/decisions/0036-file-dialogs-and-document-access-through-filekit.md)).
 
-A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file* in the settings; on the desktop, choose it in the synchronized folder.
+A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file*, or its folder with *Choose folder*, in the settings; on the desktop, choose it in the synchronized folder.
 
 ## Checking a file
 
@@ -186,7 +204,7 @@ The option `--output-format` before the file selects another form of the finding
 | Severity | Findings |
 | --- | --- |
 | error | A value of `due:`, `deadline:`, `t:`, `rec:`, `dur:`, `tt:`, `at:` or `dueby:` that is not read; `p:` without a task of that `id:`; an `id:` of two tasks; a `note:` whose file does not exist; a line of `ice_recur.txt` that is not understood; a time map or limit in `koppter.yml` that is not understood |
-| warning | A tag given twice; a tag with a space after its colon; a tag behind a `+`, `@` or `#`, such as `+rec:+1w`, which is a project; `dueby:` without `due:`; a threshold date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
+| warning | A tag given twice; a tag with a space after its colon; a tag behind a `+`, `@` or `#`, such as `+rec:+1w`, which is a project; `dueby:` without `due:`; a start date after the due date; a line that a change of its task would write differently; a context, project or hashtag that is written elsewhere with other capitals |
 | info | The open tasks without context, which are in the [inbox](#inbox) |
 
 Only open tasks are checked.
@@ -200,11 +218,11 @@ The column *Source* names the tool or document that defines each of them; those 
 | Notation | Meaning | Source | How to use it |
 | --- | --- | --- | --- |
 | `due:2026-12-24` | Due date | [todo.txt format](https://github.com/todotxt/todo.txt#additional-file-format-definitions), which names it as the example of a tag | *Due date* in the edit dialog. The label is highlighted on the day and marked when the date has passed; the list orders tasks of equal priority by due date. |
-| `t:2026-12-01` | Threshold date: the task is not relevant before that day | [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | *Threshold* in the edit dialog. The task is hidden until that day; *Show tasks before their threshold date* in the filter panel shows it. |
+| `t:2026-12-01` | Start date, which Simpletask calls the threshold date: the task is not relevant before that day | [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | *Start date* in the edit dialog. The task is hidden until that day; *Show tasks before their start date* in the filter panel shows it. |
 | `rec:1w` | Recurrence: completing the task adds its next occurrence | [topydo](https://github.com/topydo/topydo/wiki/Recurrence), with the business days of [Simpletask](https://github.com/mpcjanssen/simpletask-android/blob/master/app/src/main/assets/index.en.md#extensions) | See [recurring tasks](#recurring-tasks). |
 | `ice_recur.txt` | Schedules that add tasks on certain days | [ice_recur](https://github.com/rlpowell/todo-text-stuff/blob/master/ice_recur), an [add-on](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#ice_recur-another-recurring-task-action-but-with-much-more-flexibility) of the todo.txt command line | See [recurring tasks](#recurring-tasks). |
 | `note:k3f.md` | A note for the task, kept in the file `notes/k3f.md` | [note](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#note--take-notes-related-to-tasks), an add-on of the todo.txt command line | *Note* in the edit dialog; the application names the file. New notes are Markdown files, which the dialog edits as text; a note named otherwise, such as `note:k3f.txt`, keeps its file. As in the [note add-on](https://github.com/mgarrido/todo.txt-cli/tree/note/todo.actions.d), which reads these notes with `TODO_NOTE_EXT=.md` in its configuration. |
-| `#urgent` | Hashtag: a third kind of label next to `+project` and `@context`, without a fixed meaning | This application | *Add hashtag* in the edit dialog, or typed into the task. A hashtag starts with a letter: `#123` and `C#` stay words of the description ([decision 0014](docs/decisions/0014-hashtags-as-a-third-kind-of-label.md)). |
+| `#urgent` | Hashtag: a third kind of label next to `+project` and `@context`, without a fixed meaning | This application | *Add hashtag* in the edit dialog, or typed into the task. A hashtag starts with a letter or a currency sign, as `#$$$` does: `#123` and `C#` stay words of the description ([decision 0014](docs/decisions/0014-hashtags-as-a-third-kind-of-label.md)). |
 | `@research>reading` | A context below another context, over any number of levels | This application | Typed as the context. The label shows `@reading`, and the path when the pointer rests on it; a click on it shows the tasks of the context. A filter for `@research` includes the contexts below it, and the filter panel shows the contexts as a tree ([decision 0017](docs/decisions/0017-levels-of-a-context-separated-by-a-greater-than-sign.md)). |
 | `+papers>survey` | A project below another project, over any number of levels | This application | Typed as the project. The label shows `+survey`, and the path when the pointer rests on it; a click on it shows the tasks of the project. A filter for `+papers` includes the projects below it, as do a barrier and a limit of the [plan](#planning), and the filter panel shows the projects as a tree ([decision 0026](docs/decisions/0026-levels-of-a-project-written-like-those-of-a-context.md)). |
 | `dur:1h30m` | The time the task is expected to take, in hours and minutes | This application | Field *Duration* in the edit dialog, or typed into the task. [Planning](#planning) gives the task that much time ([decision 0018](docs/decisions/0018-tag-for-the-duration-of-a-task.md)). |
@@ -221,7 +239,7 @@ The option *Only the first 10 tasks* of the filter panel restricts the list to t
 There is no notation for a most important task as the add-ons [mit](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mit-most-important-task) and [mitf](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#mitf-most-important-task-in-the-future) have it: priority `(A)` together with a due date serves that purpose ([decision 0009](docs/decisions/0009-no-notation-for-most-important-tasks.md)).
 
 Notes, `ice_recur.txt`, the board columns by filter, the names of the priorities and the links of projects and contexts need a `todo.txt` file in a folder or a git repository.
-They are not available for a file chosen through the document picker of Android, as the application then has access to that one file only.
+They are not available for a single file chosen through the document picker of Android, as the application then has access to that one file only; a folder chosen there has them.
 
 ### Recurring tasks
 
@@ -255,8 +273,8 @@ With a `+` in front of the interval, it counts from the previous due date, howev
 | `Water the plants due:2026-11-12 rec:1w` | 2026-11-14 | `Water the plants due:2026-11-21 rec:1w` |
 | `Pay the rent due:2026-11-01 rec:+1m` | 2026-11-03 | `Pay the rent due:2026-12-01 rec:+1m` |
 
-A threshold date moves along with the due date and keeps its distance to it.
-A task with a threshold date only gets the next threshold date, and a task with neither date gets a due date.
+A start date moves along with the due date and keeps its distance to it.
+A task with a start date only gets the next start date, and a task with neither date gets a due date.
 The next task keeps the priority.
 
 #### By the calendar: the file `ice_recur.txt`
@@ -332,7 +350,7 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 
 ## Dates in words
 
-A line typed above the list may name its dates in words instead of tags.
+A line typed above the list may name its dates in words instead of tags, and so may the description in the dialog of a task, which marks these words.
 `Write the report next week` is written as `Write the report t:2026-11-16 due:2026-11-22`.
 The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a-plan-for-a-task) reads in the title of a task; the examples are typed on Friday, 13 November 2026.
 
@@ -371,8 +389,8 @@ The edit dialog narrows its known names in the same way.
 ## Order of the list
 
 The list shows the open tasks first, and among them the overdue ones: those whose due date has passed.
-A line separates them from the other tasks.
-Each of the two parts is ordered by priority, then by due date and due time, then by the position of the lines in the file.
+Without groups, the overdue tasks stand below the heading *Overdue*, the other open ones below *Next* and the completed ones below *Done*; within a group, a line separates the overdue tasks from the others.
+Each of these parts is ordered by priority, then by due date and due time, then by the position of the lines in the file.
 A task is moved by dragging it with the mouse, or with the finger after a long press, or one step at a time with the two arrows at its right.
 A line shows where a dragged task would be put.
 
@@ -385,7 +403,7 @@ A line shows where a dragged task would be put.
 * If the task and the one it is put next to are due on different days, it takes the priority and the due date decides its place.
 * No task crosses the line below the overdue tasks: the due date decides on which side a task stands.
 
-A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, next week, in two weeks or in a month, or removes it.
+A click with the right mouse button on a task, or a click on the label of its due date, opens a menu that moves the due date to today, tomorrow, this weekend, in three days, next weekend, in two weeks or in a month, or removes it; a weekend stands for its Sunday.
 The edit dialog offers the same days as chips above the due date, which is the way to them on a phone for a task without a due date.
 A weekend and a week end on their Sunday.
 An overdue task that is moved this way leaves the upper part of the list.
@@ -399,7 +417,9 @@ The list and the columns of the board scroll while a task is held at their upper
 ## Groups in the list
 
 The switches below the views divide the list into groups: by priority, project, context, hashtag or due date range.
-Each group stands below a heading with its title and the number of its tasks, and a second click on the switch shows the list without groups again.
+The ranges of the due date are those of its menu: overdue, today, tomorrow, this weekend, in three days, next weekend, in two weeks, in a month and later.
+Each group stands below a heading with its title and the number of its tasks, a priority with its colored label, and a second click on the switch shows the list without groups again.
+Without groups, a text next to the switches names the [order of the list](#order-of-the-list).
 A task with two projects stands in the groups of both.
 
 ![Task list divided into groups by project](docs/screenshots/list-project.png)
@@ -443,11 +463,11 @@ A tile of a project tells if the project, or one below it, has [no next action](
 The filter panel applies to the overview as it does to the list.
 
 A click on a tile lists the tasks of the context, the most urgent first and those without due date last.
-The bar of a task shows how much of its time has passed: from its threshold date (`t:`) to its due date, else from its creation date, else over the two weeks before the due date.
+The bar of a task shows how much of its time has passed: from its start date (`t:`) to its due date, else from its creation date, else over the two weeks before the due date.
 
 ## Inbox
 
-*Inbox* above the tasks lists the open tasks without context, and the switch tells how many there are.
+*Inbox* above the tasks lists the open tasks without context, and the switch tells in parentheses how many there are.
 Each task shows the contexts of the file; a click on one gives it to the task, which then leaves the inbox.
 
 With the keyboard, one task is marked.
@@ -463,7 +483,7 @@ The arrow keys up and down mark another task, to leave one where it is.
 The `todo.txt` file leads: the plan is computed from it, and planning does not change it.
 
 * A task with a higher priority is planned first, and every task gets the earliest free times, so that tasks without dates are planned soon as well.
-* A task takes its duration (`dur:`), half an hour without one, and is not planned before its threshold date (`t:`).
+* A task takes its duration (`dur:`), half an hour without one, and is not planned before its start date (`t:`).
   A free time that is too short takes a part of the task, but no part is shorter than an hour, the **block**; a task that is shorter is not cut.
 * A task follows the task before it without a gap; after an event of a calendar, it starts on a quarter of an hour.
 * A task that waits for others is planned after them: `Send the paper id:1` waits for `Write the paper p:1`.
@@ -477,7 +497,7 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
   It is set in general (`default = year`), for a project (`+Thesis = 2027-03-31`) or for a context (`@research = year`); the earliest barrier of a task counts.
   A barrier for a project or a context holds for those below it, such as `+Thesis>chapter1`.
   A task that does not fit before its barrier is listed after planning instead of being planned later.
-  A task whose threshold date lies behind its barrier is not due yet: it is neither planned nor listed.
+  A task whose start date lies behind its barrier is not due yet: it is neither planned nor listed.
 * A **limit** states how much is planned for a project or a context, the contexts below it included, as rules separated by commas:
 
   | Rule | Effect |
@@ -516,7 +536,7 @@ Use it for what has its time, such as lunch, a training or an appointment, so th
 | `weekly ; day Monday, Tuesday, Wednesday, Thursday, Friday - Lunch at:12:00 dur:45m` | `ice_recur.txt` | on every working day from 12:00 to 12:45 |
 | `weekly ; day Tuesday - Training @sport at:18:30 dur:1h30m` | `ice_recur.txt` | on every Tuesday from 18:30 to 20:00 |
 
-* The day is the due date, else the threshold date, else today.
+* The day is the due date, else the start date, else today.
 * The time holds whatever the time maps and the calendars say: a training in the evening needs no time map for the evening.
 * For an entry of `ice_recur.txt`, the plan has the time on the later days as well, before the task of the day is added: for as long as tasks are planned, and for four weeks at least.
 * The task of the day is completed like any other task, which takes its block from the next plan.
@@ -612,8 +632,8 @@ The application only reads the calendars and writes nothing to them.
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+Shift+A | Go to the line that adds a task |
-| Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their threshold date, go to the text of the filter |
-| Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
+| Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
+| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
 | Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
@@ -656,7 +676,7 @@ koppter://filter?project=Fair&context=phone
   On a touch screen, a long press on the label in the filter panel does.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
-* A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their threshold date.
+* A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their start date.
   A project or a context includes those below it.
 * If the application is open, its window shows the tasks and comes to the front; no second window opens.
 * On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
@@ -685,7 +705,7 @@ A project, a context or a hashtag has a link of its own, for example to the sect
 ## Board
 
 The board shows one column per priority, project, context, hashtag or due date range.
-Dragging a task to another column changes that attribute of the task.
+Dragging a task to another column changes that attribute of the task; the column of a due date range sets its day, such as the Sunday for *This weekend*.
 
 Columns can also be defined by filters, one per line as `title = filter`.
 They are entered in the settings and kept in `koppter.yml` next to the `todo.txt` file, so that they are synchronized with the tasks ([decision 0012](docs/decisions/0012-board-columns-by-filter-in-a-file.md)):

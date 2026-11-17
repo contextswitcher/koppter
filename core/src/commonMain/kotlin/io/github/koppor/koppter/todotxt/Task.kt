@@ -38,7 +38,7 @@ data class Task(
 
     /**
      * Hashtag names without the leading `#`, in order of appearance.
-     * A hashtag starts with a letter, so that a number such as `#123` stays a word of the description.
+     * A hashtag starts with a letter or a currency sign, so that a number such as `#123` stays a word of the description.
      */
     // [impl->dsn~hashtags~1]
     val hashtags: List<String> get() = tokens.filter(::isHashtag).map { it.substring(1) }.distinct()
@@ -346,7 +346,11 @@ data class Task(
 
         private fun isProject(token: String) = token.length > 1 && token.startsWith('+')
         private fun isContext(token: String) = token.length > 1 && token.startsWith('@')
-        private fun isHashtag(token: String) = token.length > 1 && token.startsWith('#') && token[1].isLetter()
+        private fun isHashtag(token: String) = token.startsWith('#') && isHashtagName(token.substring(1))
+
+        /** Whether a hashtag can have that name: `money` and `$$$` can, `123` cannot. */
+        // [impl->dsn~hashtags~1]
+        fun isHashtagName(name: String) = name.isNotEmpty() && (name[0].isLetter() || name[0].category == CharCategory.CURRENCY_SYMBOL)
 
         // "http://example.org" and "12:30" are words, not tags.
         private fun isTag(token: String) = TAG.matches(token) && !token.first().isDigit()

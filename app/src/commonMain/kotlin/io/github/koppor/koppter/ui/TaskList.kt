@@ -70,28 +70,29 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.math.max
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.todotxt.Entry
+import io.github.koppor.koppter.todotxt.dueChoices
 import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.Task
 import kotlinx.coroutines.delay
-import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
-import kotlinx.datetime.isoDayNumber
-import kotlinx.datetime.plus
 
 /**
- * The tasks as a list, in the groups they are given in: one after the other, each below its title if [headings] is set.
+ * The tasks as a list, in the groups they are given in: one after the other, each below its title.
  * A task is moved by a step or by dragging within its group.
  */
 // [impl->dsn~list-groups~1]
 @Composable
 fun TaskList(
     groups: List<Group>,
-    headings: Boolean,
     today: LocalDate,
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
@@ -99,6 +100,7 @@ fun TaskList(
     onDrop: (entry: Entry, target: Entry, before: Boolean) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    priorities: Boolean = false,
 ) {
     if (groups.all { it.entries.isEmpty() }) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -129,16 +131,13 @@ fun TaskList(
         ) {
             for (group in groups) {
                 val entries = group.entries
-                if (headings) {
-                    item(key = "group/${group.title}") {
-                        Text(
-                            "${group.title} (${entries.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
-                                .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
-                        )
-                    }
+                item(key = "group/${group.title}") {
+                    GroupHeading(
+                        group, priorities,
+                        Modifier.fillMaxWidth().padding(top = 10.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
+                            .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
+                    )
                 }
                 // The overdue tasks are the first ones of a group: see listOrder.
                 val firstNotOverdue = entries.indexOfFirst { !it.task.isOverdue(today) }
@@ -301,23 +300,44 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
     Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().then(secondaryClick).testTag("task")) {
         Row(Modifier.padding(end = 10.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("task-done"))
-            Column(Modifier.weight(1f)) {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth().testTag("task-labels"),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    TaskLabels(task, today, onDue = { dueMenu = true })
+            // [impl->dsn~task-card~1]
+            // In one line where the description and the labels fit next to each other, so that the description stands
+            // at the height of the checkbox; otherwise the labels above the description, each with the whole width.
+            Layout(
+                content = {
+                    FlowRow(
+                        modifier = Modifier.testTag("task-labels"),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        TaskLabels(task, today, onDue = { dueMenu = true })
+                    }
+                    // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
+                    Box { DueMenu(dueMenu, entry, today) { dueMenu = false } }
+                    LinkedText(
+                        task.description,
+                        modifier = Modifier.padding(vertical = 3.dp).testTag("task-description"),
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (task.completed) TextDecoration.LineThrough else null,
+                        color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
+                    )
+                },
+                modifier = Modifier.weight(1f),
+            ) { (labels, menu, description), constraints ->
+                val width = constraints.maxWidth
+                val loose = constraints.copy(minWidth = 0, minHeight = 0)
+                val gap = 8.dp.roundToPx()
+                val placedLabels = labels.measure(loose)
+                val oneLine = placedLabels.width + gap + description.maxIntrinsicWidth(Constraints.Infinity) <= width
+                val placedDescription = description.measure(if (oneLine) loose.copy(maxWidth = width - placedLabels.width - gap) else loose)
+                val placedMenu = menu.measure(loose)
+                val height = if (oneLine) max(placedLabels.height, placedDescription.height) else placedLabels.height + placedDescription.height
+                layout(width, height) {
+                    val labelsTop = if (oneLine) (height - placedLabels.height) / 2 else 0
+                    placedLabels.placeRelative(width - placedLabels.width, labelsTop)
+                    placedMenu.placeRelative(width, labelsTop + placedLabels.height)
+                    placedDescription.placeRelative(0, if (oneLine) (height - placedDescription.height) / 2 else placedLabels.height)
                 }
-                // Without a size at the right end below the labels, so that the menu opens below the label of the due date.
-                Box(Modifier.align(Alignment.End)) { DueMenu(dueMenu, entry, today) { dueMenu = false } }
-                LinkedText(
-                    task.description,
-                    modifier = Modifier.padding(top = 2.dp, bottom = 4.dp).testTag("task-description"),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textDecoration = if (task.completed) TextDecoration.LineThrough else null,
-                    color = if (task.completed) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
-                )
             }
             trailing()
         }
@@ -325,18 +345,24 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
 }
 
 /**
- * The days that are offered for a due date, each with what it is called; each day once, under its first name.
- * A weekend and a week end on their Sunday, as in the dates that are typed in words.
+ * The title of a group and the number of its tasks.
+ * A priority is drawn as at the tasks: its name may be a number, which next to the count reads as a second count.
+ *
+ * @param priorities whether the groups are those of the priorities
  */
-internal fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
-    "today" to today,
-    "tomorrow" to today.plus(DatePeriod(days = 1)),
-    "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
-    "next week" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
-    "in two weeks" to today.plus(DatePeriod(days = 14)),
-    "in a month" to today.plus(DatePeriod(months = 1)),
-    // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
-).distinctBy { it.second }
+// [impl->dsn~list-groups~1]
+@Composable
+private fun GroupHeading(group: Group, priorities: Boolean, modifier: Modifier) {
+    val priority = group.value?.singleOrNull()?.takeIf { priorities }
+    if (priority == null) {
+        Text("${group.title} (${group.entries.size})", style = MaterialTheme.typography.titleSmall, modifier = modifier)
+    } else {
+        Row(modifier.semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PriorityLabel(priority)
+            Text("(${group.entries.size})", style = MaterialTheme.typography.titleSmall)
+        }
+    }
+}
 
 /** The menu that moves the due date of a task. */
 // [impl->dsn~due-menu~1]
@@ -400,6 +426,7 @@ fun Board(
     onMove: (Entry, from: Group, to: Group, at: Entry?, before: Boolean) -> Unit,
     emptyText: String,
     modifier: Modifier = Modifier,
+    priorities: Boolean = false,
 ) {
     if (groups.isEmpty()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -457,11 +484,7 @@ fun Board(
                             )
                             .testTag("board-column"),
                     ) {
-                        Text(
-                            "${group.title} (${group.entries.size})",
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp).testTag("board-column-title"),
-                        )
+                        GroupHeading(group, priorities, Modifier.padding(horizontal = 4.dp, vertical = 6.dp).testTag("board-column-title"))
                         val list = rememberLazyListState()
                         DragScroll(drag, list) { columnBounds[index] }
                         LazyColumn(

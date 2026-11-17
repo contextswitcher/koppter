@@ -7,7 +7,7 @@ Requirements and design for the screens shared by all platforms.
 ### Labels at the top right of a task
 `req~labels-top-right~1`
 
-Each task in the list shows its description and, in a row at the top right, its projects, contexts, hashtags, tags such as the due date, and its priority as labels.
+Each task in the list shows its description and, in a row at the right, in the line of the description or above it, its projects, contexts, hashtags, tags such as the due date, and its priority as labels.
 The description contains no metadata.
 
 Covers:
@@ -42,8 +42,9 @@ Needs: dsn
 `req~quick-add-dates~1`
 
 A typed line may name its dates in words at the end of its text, such as `tomorrow`, `next week`, `by Wed` or `tomorrow 3pm`.
-The task gets the due date, the threshold date and the times that the words name.
+The task gets the due date, the start date and the times that the words name.
 The application shows the resulting line before the task is added.
+The description of the edit dialog reads the same words.
 
 Covers:
 
@@ -66,7 +67,7 @@ Needs: dsn
 `req~edit-dialog~1`
 
 The edit dialog shows the description without metadata in its first field.
-Below it, the dialog has fields for priority, due date, threshold date, recurrence, duration, the task of ContextSwitcher, projects, contexts and hashtags.
+Below it, the dialog has fields for priority, due date, start date, recurrence, duration, the task of ContextSwitcher, projects, contexts and hashtags.
 Below these fields, the dialog shows the line as it will be written to the todo.txt file, in a monospaced font.
 
 Covers:
@@ -104,7 +105,7 @@ Needs: dsn
 ### Moving the due date
 `req~move-due-date~1`
 
-The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next week, in two weeks or in a month.
+The user moves the due date of a task to a day nearby with one click: today, tomorrow, this weekend, next weekend, in two weeks or in a month.
 In the list, this needs no opening of the task.
 
 Covers:
@@ -309,7 +310,8 @@ Needs: impl, utest
 ### Task card
 `dsn~task-card~1`
 
-`TaskCard` shows a checkbox for the completion state and, to its right, a column with the labels in a right-aligned flow row and the description below it.
+`TaskCard` shows a checkbox for the completion state and, to its right, the description and the labels in a right-aligned flow row.
+Where both fit next to each other, they share one line, so that the description stands at the height of the checkbox; otherwise the labels stand above the description, each with the whole width.
 A click on the card opens the edit dialog.
 
 Covers:
@@ -322,8 +324,10 @@ Needs: impl, utest
 ### Groups of the list
 `dsn~list-groups~1`
 
-`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns; without an attribute, the list is one group.
+`TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns.
+Without an attribute, `listParts` divides them into the overdue tasks, the other open tasks and the completed ones, with the titles *Overdue*, *Next* and *Done*; a part without tasks is left out.
 `TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
+The heading of a priority, there and above a column of the board, shows the label of the priority as the tasks have it: a priority may be named by a number, which next to the number of the tasks reads as a second count.
 A task with several values of the attribute stands in each of their groups.
 A step and a drag stay within a group; a task is given another value on the board or in the edit dialog.
 
@@ -396,7 +400,8 @@ Needs: impl, utest
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
-A file that the user chooses with *Choose file*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
+A file that the user chooses with *Choose file*, the todo.txt file of a folder chosen with *Choose folder*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
+A chooser that fails is reported at the field, in the color for errors, and the open file stays.
 The fields for the board columns, the names of the priorities, the links of the labels and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
 The configuration of the dialog is thus written to the file it was read from, never to another one.
 A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
@@ -412,6 +417,7 @@ Needs: impl, utest
 `dsn~overdue-separator~1`
 
 `TaskList` draws a line between the last overdue task and the first task that is not overdue, in each group that has tasks of both kinds.
+The list without groups has none, as its overdue tasks stand below a heading of their own.
 
 Covers:
 
@@ -422,7 +428,7 @@ Needs: impl, utest
 ### Menu of the due date
 `dsn~due-menu~1`
 
-A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, next week, in two weeks and in a month, each day once.
+A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month, each day once and in the order of the days; a weekend stands for its Sunday.
 A weekend and a week end on their Sunday, as in the dates that are typed in words.
 Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
 For a task with a due date, the menu ends with *No due date*, which removes the tag.
@@ -503,11 +509,53 @@ Covers:
 
 Needs: impl, utest
 
+### Dates in words in the edit dialog
+`dsn~edit-dates~1`
+
+`EditDialog` applies `Task.withDates` to the task that its fields give, once the description differs from that of the task: words that a task was written with stay words.
+The dialog marks the words that become dates with a background and says below the field what the mark means; the resulting line shows the tags.
+A date in a field of the dialog wins over the words, as a tag of a typed line does.
+
+Covers:
+
+* `req~quick-add-dates~1`
+
+Needs: impl, utest
+
+### Help at the fields of the edit dialog
+`dsn~edit-help~1`
+
+The fields of `EditDialog` for the dates, the times and the recurrence show a sentence on what they mean, with their tag, while the pointer rests on them for half a second (`WithHelp`).
+The help is bound to the pointer alone: on a touch screen, a long press on a field belongs to its text.
+The field for the tag `t:` is named *Start date*, as topydo names that date; Simpletask calls it the threshold date.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
+### Choosing times and durations in the edit dialog
+`dsn~edit-pickers~1`
+
+The fields of `EditDialog` for the due time and the fixed time have a button that opens the clock face of Material with 24 hours (`TimeField`); without a time, it starts at noon.
+The fields for the duration, the travel time and the time spent have a button that opens two wheels for hours and minutes, the minutes in steps of five (`DurationField`, [decision 0037](../decisions/0037-wheels-for-durations-from-compose-pickers.md)); without a duration, they start at half an hour.
+The field for the recurrence has a button that opens a wheel for the amount, from 1 to 30, a wheel for the unit, and the choice whether the interval counts from the completion or from the due date (`RecurrenceField`); without a recurrence, they start at one week from the completion.
+*OK* writes what was chosen into the field as text, and the other button of each dialog empties the field.
+The fields still take typed text.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Edit dialog
 `dsn~edit-dialog~1`
 
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
+The description starts with the cursor at its end, and the dialog is wide enough for the priorities and the days of the due date in one row each where the window allows that.
 Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
 Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
@@ -555,10 +603,11 @@ Needs: impl, utest
 ### Filter panel
 `dsn~filter-panel~1`
 
-`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the threshold date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+While the text field has a text, a button at its end empties it.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
-From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer.
+From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
 
 Covers:
 
@@ -581,6 +630,21 @@ Covers:
 
 Needs: impl, utest
 
+### Search for labels in the filter panel
+`dsn~filter-label-search~1`
+
+Below *Clear all filters*, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
+A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
+The field does not change the filter and is not kept.
+While it has a text, a button at its end empties it.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Filter after a restart
 `dsn~filter-remembered~1`
 
@@ -596,6 +660,19 @@ Covers:
 
 Needs: impl, utest
 
+### View after a restart
+`dsn~view-remembered~1`
+
+`TodoController` reads the view, the attribute of the groups of the list, that of the columns of the board and that of the tiles of the overview from the settings of the device and writes them there with every change.
+The application therefore starts with the view that was shown last.
+A name that this version does not know gives the list, the list without groups, the board by priority and the overview of the contexts.
+
+Covers:
+
+* `req~persistent-settings~1`
+
+Needs: impl, utest
+
 ### Main screen
 `dsn~main-screen~1`
 
@@ -603,6 +680,7 @@ The main screen consists of the top bar, the filter panel, the switches for the 
 The switches stand above the field, as a task is looked up more often than added.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
+The quick add field is a line to type into and is left out on a device without a keyboard (`LocalKeyboard`), where the button for a new task opens the dialog.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
@@ -617,12 +695,13 @@ Needs: impl
 `dsn~keyboard-shortcuts~1`
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
-With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, and 1 to 6 show the list and the views in the order of their switches.
-The search shows the list with every task, the completed ones and those before their threshold date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
+With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
+The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
 `LocalKeyboard` tells whether the device has a keyboard; with one, the description of the edit dialog and the field of the inbox get the focus when they appear.
+Without one, the description gets the focus in the dialog of a new task only, as the keyboard of the screen hides half of an existing task.
 On Android, it is the keyboard of the configuration of the device.
 
 Covers:
@@ -717,6 +796,7 @@ Needs: impl
 A changed location makes the controller load the other file.
 The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
 A field for a block of the configuration file shows an example in a pale color while it is empty.
+The help of the field for the file tells that the files next to the todo.txt file belong to it, and a note that the platform passes stands below the button that chooses a file (`dsn~choose-file~1`).
 Below the field for the file stands what holds for a file in a git repository.
 
 Covers:
@@ -745,7 +825,7 @@ Needs: impl
 `dsn~app-links~1`
 
 A link has the form `koppter://filter?project=papers>survey&context=phone&hashtag=someday`: each of the keys `project`, `context` and `hashtag` may be given, also several times.
-The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their threshold date.
+The other criteria of the filter have keys as well: `not-project`, `not-context` and `not-hashtag` for what is excluded, `priority` with a letter, `text`, `show` with `all` or `done` for completed tasks, and `future=1` for tasks before their start date.
 `filterOfLink` reads it into a filter; it decodes characters that a program wrote as `%3E`, takes a name with or without its sign, and accepts the forms `koppter:filter?` and `koppter://filter/?`, which programs make of the link.
 `TodoController.openLink` replaces the filter by that of the link, turns off the options of the first tasks and of the next actions, and shows the list; a text that is no such link changes nothing.
 

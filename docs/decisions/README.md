@@ -40,6 +40,8 @@ Architectural decisions are recorded as [Markdown Architectural Decision Records
 | [0033](0033-links-to-the-application-with-a-query.md) | Links to the application name a filter in a query |
 | [0034](0034-tag-for-the-time-spent-on-a-task.md) | The time spent on a task is a tag |
 | [0035](0035-links-of-projects-and-contexts-in-the-configuration-file.md) | Links of projects and contexts are kept in the configuration file |
+| [0036](0036-file-dialogs-and-document-access-through-filekit.md) | File dialogs and document access through FileKit |
+| [0037](0037-wheels-for-durations-from-compose-pickers.md) | Wheels for durations from Compose Pickers |
 
 ## Conventions
 

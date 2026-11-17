@@ -5,14 +5,19 @@ import android.content.res.Configuration
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.TodoController
-import kotlinx.coroutines.CompletableDeferred
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.bookmarkData
+import io.github.vinceglb.filekit.dialogs.init
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -20,27 +25,13 @@ import kotlinx.coroutines.withContext
 private const val SHARED_LOG_LENGTH = 60_000
 
 class MainActivity : ComponentActivity() {
-    private var picked: CompletableDeferred<String?>? = null
-
-    // The permission is persisted, as the file is read again after every restart of the application.
+    // The bookmark persists the permission, as the file is read again after every restart of the application.
+    // Any type of file is offered: a todo.txt file is not always reported as text/plain by a document provider.
     // [impl->dsn~choose-file~1]
-    private val picker = registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            contentResolver.takePersistableUriPermission(
-                uri,
-                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION,
-            )
-        }
-        picked?.complete(uri?.toString())
-    }
+    private suspend fun chooseFile(): String? = FileKit.openFilePicker()?.also { it.bookmarkData() }?.path
 
-    private suspend fun chooseFile(): String? {
-        val result = CompletableDeferred<String?>()
-        picked = result
-        // A todo.txt file is not always reported as text/plain by a document provider.
-        picker.launch(arrayOf("*/*"))
-        return result.await()
-    }
+    // [impl->dsn~choose-folder~1]
+    private suspend fun chooseFolder(): String? = FileKit.openDirectoryPicker()?.also { it.bookmarkData() }?.path
 
     private val gitSetup by lazy { GitSetup(filesDir.toPath().resolve("git")) }
 
@@ -71,13 +62,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // The pickers of FileKit start from this activity.
+        FileKit.init(this)
         controller = todoController(gitSetup)
         publishShareTargets(controller.shareActions)
         // [impl->dsn~android-links~1]
         // Not after a change of the configuration, such as a rotation: the link would undo what the user filtered since.
         if (savedInstanceState == null) intent?.dataString?.let(controller::openLink)
         val keyboard = resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
-        setContent { App(controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, git = gitActions, keyboard = keyboard, shareLog = ::shareLog) }
+        setContent {
+            App(
+                controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, chooseFolder = ::chooseFolder, git = gitActions, keyboard = keyboard,
+                shareLog = ::shareLog,
+                // [impl->dsn~choose-file~1]
+                chooseFileNote = "Android gives access to a chosen file alone, not to the files next to it: " +
+                    "notes, scheduled tasks, board columns and the plan need a chosen folder, whose file todo.txt is opened, or the todo.txt file of a git repository.",
+                // [impl->dsn~back~1]
+                backHandler = { onBack -> BackHandler(onBack = onBack) },
+                // To the background, as back does it for the first activity of an application since Android 12: the application keeps what it shows.
+                leave = { moveTaskToBack(true) },
+            )
+        }
     }
 
     // A link that is clicked while the application is open.

@@ -11,6 +11,9 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.border
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
@@ -18,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -35,6 +39,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.materialIcon
+import androidx.compose.material.icons.materialPath
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -46,11 +54,19 @@ import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.TimePickerDialog
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberTimePickerState
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,13 +74,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.OffsetMapping
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.input.TransformedText
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
+import io.github.koppor.koppter.todotxt.oneNoteLinks
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.dueChoices
+import com.kez.picker.Picker
+import com.kez.picker.PickerDefaults
+import com.kez.picker.duration.DurationPicker
+import com.kez.picker.duration.rememberDurationPickerState
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Edits one task.
@@ -96,7 +127,8 @@ fun EditDialog(
     var base by remember { mutableStateOf(original) }
     /** The line while it is typed: what was typed stays, where the fields would write it in another form. */
     var line by remember { mutableStateOf<String?>(null) }
-    var description by remember(base) { mutableStateOf(base.description) }
+    // With the cursor at the end, where the user goes on typing.
+    var description by remember(base) { mutableStateOf(TextFieldValue(base.description, TextRange(base.description.length))) }
     var priority by remember(base) { mutableStateOf(base.priority) }
     var due by remember(base) { mutableStateOf(base.tag(Task.DUE).orEmpty()) }
     var deadline by remember(base) { mutableStateOf(base.tag(Task.DEADLINE).orEmpty()) }
@@ -111,7 +143,7 @@ fun EditDialog(
     var projects by remember(base) { mutableStateOf(base.projects) }
     var contexts by remember(base) { mutableStateOf(base.contexts) }
     var hashtags by remember(base) { mutableStateOf(base.hashtags) }
-    var note by remember { mutableStateOf(originalNote.orEmpty()) }
+    var note by remember { mutableStateOf(TextFieldValue(originalNote.orEmpty())) }
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
     val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
@@ -122,8 +154,8 @@ fun EditDialog(
     val travelValid = travel.isBlank() || Task.parseDuration(travel.trim()) != null
     val spentValid = spent.isBlank() || Task.parseDuration(spent.trim()) != null
     val byValid = by.isBlank() || Task.parseTime(by.trim()) != null
-    val result = base
-        .edit(description = description, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
+    val fields = base
+        .edit(description = description.text, priority = priority, projects = projects, contexts = contexts, hashtags = hashtags)
         .withTag(Task.DUE, due.trim())
         .withTag(Task.BY, by.trim())
         .withTag(Task.DEADLINE, deadline.trim())
@@ -137,25 +169,32 @@ fun EditDialog(
         .withTag(Task.CONTEXT_SWITCHER, Task.contextSwitcherId(contextSwitcher))
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
         // [impl->dsn~notes~1]
-        .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
+        .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.text.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
+    // [impl->dsn~edit-dates~1]
+    // Words of a description that was not touched stay words: they were there when the task was written.
+    val result = if (description.text == base.description) fields else fields.withDates(today)
+    /** Where the words that became dates start in the description; `null` if there are none. */
+    val phraseStart = result.description.length.takeIf { result != fields && description.text.startsWith(result.description) }
     val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank()
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current
-    LaunchedEffect(Unit) { if (keyboard) descriptionFocus.requestFocus() }
+    // Without a keyboard, the focus brings up the keyboard of the screen, which hides half of an existing task; a new task is typed first.
+    LaunchedEffect(Unit) { if (keyboard || isNew) descriptionFocus.requestFocus() }
 
-    val state = result.toLine() to note
+    val state = result.toLine() to note.text
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 6.dp,
-            modifier = Modifier.widthIn(max = 560.dp).testTag("edit-dialog")
+            // Wide enough for the priorities and the days of the due date in one row each.
+            modifier = Modifier.widthIn(max = 760.dp).testTag("edit-dialog")
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
-                    if (save && valid) onSave(result, if (originalNote == null) null else note)
+                    if (save && valid) onSave(result, if (originalNote == null) null else note.text)
                     save
                 },
         ) {
@@ -165,8 +204,11 @@ fun EditDialog(
             ) {
                 OutlinedTextField(
                     value = description,
-                    onValueChange = { description = it.replace('\n', ' ') },
+                    onValueChange = { description = it.copy(text = it.text.replace('\n', ' ')) },
                     label = { Text("Description") },
+                    // Marked, as the words leave the description when the task is saved.
+                    visualTransformation = phraseColor(phraseStart, MaterialTheme.colorScheme.tertiaryContainer),
+                    supportingText = phraseStart?.let { { Text("The marked words become the dates of the task.", Modifier.testTag("edit-dates-hint")) } },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocus).testTag("edit-description"),
                 )
@@ -200,69 +242,38 @@ fun EditDialog(
                 // A flow row: three fields side by side on the desktop, wrapped on a phone.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     val field = Modifier.width(165.dp)
-                    DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due"))
+                    WithHelp("The day by which the task is to be done (due:).") { DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due")) }
                     // [impl->dsn~due-time~1]
-                    OutlinedTextField(
-                        value = by,
-                        onValueChange = { by = it },
-                        label = { Text("Due time") },
-                        placeholder = { Text("14:00") },
-                        isError = !byValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-by"),
-                    )
+                    WithHelp("The time of the due date by which the task is to be done (dueby:).") {
+                        TimeField("Due time", "14:00", by, { by = it }, byValid, field.testTag("edit-by"))
+                    }
                     // [impl->dsn~deadline~1]
-                    DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
-                    DateField("Threshold", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
-                    OutlinedTextField(
-                        value = recurrence,
-                        onValueChange = { recurrence = it },
-                        label = { Text("Recurrence") },
-                        placeholder = { Text("w, 2w, +1m") },
-                        isError = !recurrenceValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-recurrence"),
-                    )
+                    WithHelp("The day that others set for the task, after which it is late (deadline:).") {
+                        DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
+                    }
+                    // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
+                    WithHelp("The task is hidden and not planned before this day (t:).") {
+                        DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
+                    }
+                    WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
+                        RecurrenceField(recurrence, { recurrence = it }, recurrenceValid, field.testTag("edit-recurrence"))
+                    }
                     // [impl->dsn~fixed-time~1]
-                    OutlinedTextField(
-                        value = at,
-                        onValueChange = { at = it },
-                        label = { Text("Fixed time") },
-                        placeholder = { Text("12:00") },
-                        isError = !atValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-at"),
-                    )
+                    WithHelp("The time at which the task takes place (at:).") {
+                        TimeField("Fixed time", "12:00", at, { at = it }, atValid, field.testTag("edit-at"))
+                    }
                     // [impl->dsn~duration~1]
-                    OutlinedTextField(
-                        value = duration,
-                        onValueChange = { duration = it },
-                        label = { Text("Duration") },
-                        placeholder = { Text("45m, 1h30m") },
-                        isError = !durationValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-duration"),
-                    )
+                    WithHelp("How long the task takes, such as 30m or 2h (dur:).") {
+                        DurationField("Duration", "45m, 1h30m", duration, { duration = it }, durationValid, field.testTag("edit-duration"))
+                    }
                     // [impl->dsn~travel-time~1]
-                    OutlinedTextField(
-                        value = travel,
-                        onValueChange = { travel = it },
-                        label = { Text("Travel time") },
-                        placeholder = { Text("30m") },
-                        isError = !travelValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-travel"),
-                    )
+                    WithHelp("The way to the task, kept free before and after it (tt:).") {
+                        DurationField("Travel time", "30m", travel, { travel = it }, travelValid, field.testTag("edit-travel"))
+                    }
                     // [impl->dsn~time-spent~1]
-                    OutlinedTextField(
-                        value = spent,
-                        onValueChange = { spent = it },
-                        label = { Text("Time spent") },
-                        placeholder = { Text("1h30m") },
-                        isError = !spentValid,
-                        singleLine = true,
-                        modifier = field.testTag("edit-spent"),
-                    )
+                    WithHelp("The time that was worked on the task already (spent:).") {
+                        DurationField("Time spent", "1h30m", spent, { spent = it }, spentValid, field.testTag("edit-spent"))
+                    }
                 }
 
                 // [impl->dsn~context-switcher-tag~1]
@@ -279,12 +290,18 @@ fun EditDialog(
                 NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
                 // [impl->dsn~hashtags-in-ui~1]
                 // "#123" in a line is a word of the description, not a hashtag.
-                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true) { it.first().isLetter() }
+                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
 
                 if (originalNote != null) {
                     OutlinedTextField(
                         value = note,
-                        onValueChange = { note = it },
+                        // [impl->dsn~onenote-links~1]
+                        onValueChange = { typed ->
+                            // Only what stands before the cursor, where a pasted text ends, so that the cursor stays behind it.
+                            val cursor = typed.selection.end
+                            val before = oneNoteLinks(typed.text.substring(0, cursor))
+                            note = if (before.length == cursor) typed else TextFieldValue(before + typed.text.substring(cursor), TextRange(before.length))
+                        },
                         label = { Text("Note (Markdown)") },
                         minLines = 2,
                         maxLines = 8,
@@ -324,14 +341,219 @@ fun EditDialog(
                     }
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
-                    Button(onClick = { onSave(result, if (originalNote == null) null else note) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+                    Button(onClick = { onSave(result, if (originalNote == null) null else note.text) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                 }
             }
         }
     }
 }
 
+/** How long the pointer rests on a field before its help is shown, in milliseconds. */
+private const val HELP_DELAY = 500L
+
+/**
+ * Shows the help while the pointer rests on the field.
+ * A touch screen has no pointer that rests, and a long press there belongs to the text of the field.
+ */
+// [impl->dsn~edit-help~1]
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WithHelp(help: String, field: @Composable () -> Unit) {
+    val tooltip = rememberTooltipState(isPersistent = true)
+    val interactions = remember { MutableInteractionSource() }
+    val hovered by interactions.collectIsHoveredAsState()
+    LaunchedEffect(hovered) {
+        if (hovered) {
+            delay(HELP_DELAY)
+            tooltip.show()
+        } else {
+            tooltip.dismiss()
+        }
+    }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(help) } },
+        state = tooltip,
+        focusable = false,
+        enableUserInput = false,
+    ) {
+        Box(Modifier.hoverable(interactions)) { field() }
+    }
+}
+
+/** Gives the text from [start] on a background; nothing for `null`. */
+private fun phraseColor(start: Int?, color: Color) = VisualTransformation { text ->
+    val marked = if (start == null || start >= text.length) text else AnnotatedString.Builder(text).apply { addStyle(SpanStyle(background = color), start, text.length) }.toAnnotatedString()
+    TransformedText(marked, OffsetMapping.Identity)
+}
+
 private const val MILLIS_PER_DAY = 86_400_000L
+
+/** A clock, which the icons that come with Compose lack: the path of the Material icon "access time". */
+private val Clock: ImageVector by lazy {
+    materialIcon("Clock") {
+        materialPath {
+            moveTo(11.99f, 2f)
+            curveTo(6.47f, 2f, 2f, 6.48f, 2f, 12f)
+            reflectiveCurveToRelative(4.47f, 10f, 9.99f, 10f)
+            curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
+            reflectiveCurveTo(17.52f, 2f, 11.99f, 2f)
+            close()
+            moveTo(12f, 20f)
+            curveToRelative(-4.42f, 0f, -8f, -3.58f, -8f, -8f)
+            reflectiveCurveToRelative(3.58f, -8f, 8f, -8f)
+            reflectiveCurveToRelative(8f, 3.58f, 8f, 8f)
+            reflectiveCurveToRelative(-3.58f, 8f, -8f, 8f)
+            close()
+            moveTo(12.5f, 7f)
+            horizontalLineTo(11f)
+            verticalLineToRelative(6f)
+            lineToRelative(5.25f, 3.15f)
+            lineToRelative(0.75f, -1.23f)
+            lineToRelative(-4.5f, -2.67f)
+            close()
+        }
+    }
+}
+
+/** A time of the day, which is typed or chosen on the clock face of Material. */
+// [impl->dsn~edit-pickers~1]
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TimeField(label: String, example: String, value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+    var picking by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        placeholder = { Text(example) },
+        isError = !valid,
+        singleLine = true,
+        trailingIcon = { IconButton(onClick = { picking = true }) { Icon(Clock, contentDescription = "Choose $label") } },
+        modifier = modifier,
+    )
+    if (picking) {
+        // Without a time, the clock starts at noon: the middle of the day is the shortest way to any time.
+        val minutes = Task.parseTime(value.trim()) ?: (12 * 60)
+        val state = rememberTimePickerState(initialHour = minutes / 60, initialMinute = minutes % 60, is24Hour = true)
+        TimePickerDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    onChange("${state.hour.toString().padStart(2, '0')}:${state.minute.toString().padStart(2, '0')}")
+                    picking = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { onChange(""); picking = false }) { Text("No time") } },
+            title = { Text(label) },
+        ) {
+            TimePicker(state)
+        }
+    }
+}
+
+/** A duration, which is typed or chosen on two wheels for its hours and minutes. */
+// [impl->dsn~edit-pickers~1]
+@Composable
+private fun DurationField(label: String, example: String, value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+    var picking by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        placeholder = { Text(example) },
+        isError = !valid,
+        singleLine = true,
+        trailingIcon = { IconButton(onClick = { picking = true }) { Icon(Clock, contentDescription = "Choose $label") } },
+        modifier = modifier,
+    )
+    if (picking) {
+        // Steps of five minutes keep the wheel short; any other duration is typed.
+        val items = remember { PickerDefaults.durationPickerItems(minuteItems = (0..55 step 5).toList()) }
+        // The wheels take whole minutes only, and the nearest of their values for any other duration.
+        val state = rememberDurationPickerState(items, Task.parseDuration(value.trim())?.inWholeMinutes?.minutes ?: 30.minutes)
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = { onChange(Task.durationText(state.selectedDuration)); picking = false }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { onChange(""); picking = false }) { Text("No duration") } },
+            title = { Text(label) },
+            text = {
+                DurationPicker(
+                    state = state,
+                    items = items,
+                    format = PickerDefaults.durationPickerFormat(hourItemText = { "$it h" }, minuteItemText = { "$it min" }),
+                    modifier = Modifier.testTag("duration-picker"),
+                )
+            },
+        )
+    }
+}
+
+private val UNIT_NAMES = mapOf(
+    Recurrence.Unit.DAY to "day",
+    Recurrence.Unit.BUSINESS_DAY to "business day",
+    Recurrence.Unit.WEEK to "week",
+    Recurrence.Unit.MONTH to "month",
+    Recurrence.Unit.YEAR to "year",
+)
+
+/** The field of the recurrence, with a button that opens wheels for the amount and the unit and a choice of the day that the interval counts from. */
+// [impl->dsn~edit-pickers~1]
+@Composable
+private fun RecurrenceField(value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+    var picking by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text("Recurrence") },
+        placeholder = { Text("w, 2w, +1m") },
+        isError = !valid,
+        singleLine = true,
+        trailingIcon = { IconButton(onClick = { picking = true }) { Icon(Icons.Default.Refresh, contentDescription = "Choose Recurrence") } },
+        modifier = modifier,
+    )
+    if (picking) {
+        // Up to 30 keeps the wheel short; any other amount is typed.
+        val amounts = remember { (1..30).toList() }
+        val start = remember { Recurrence.parse(value.trim()) ?: Recurrence(1, Recurrence.Unit.WEEK) }
+        var amount by remember { mutableStateOf(start.amount.coerceAtMost(amounts.last())) }
+        var unit by remember { mutableStateOf(start.unit) }
+        var strict by remember { mutableStateOf(start.strict) }
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = { onChange(Recurrence(amount, unit, strict).toString()); picking = false }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { onChange(""); picking = false }) { Text("No recurrence") } },
+            title = { Text("Recurrence") },
+            text = {
+                Column {
+                    Row(
+                        Modifier.fillMaxWidth().testTag("recurrence-picker"),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Every")
+                        Picker(amounts, amount, { amount = it }, Modifier.weight(1f))
+                        val plural = if (amount == 1) "" else "s"
+                        Picker(
+                            Recurrence.Unit.entries,
+                            unit,
+                            { unit = it },
+                            Modifier.weight(2f),
+                            format = PickerDefaults.itemFormat(itemText = { UNIT_NAMES.getValue(it) + plural }),
+                            isInfinity = false,
+                        )
+                    }
+                    Text("Counted from", Modifier.padding(top = 12.dp))
+                    RadioRow(listOf(false to "the completion", true to "the due date"), strict, "recurrence-from") { strict = it }
+                }
+            },
+        )
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

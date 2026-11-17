@@ -134,7 +134,8 @@ fun Agenda(
     }
 }
 
-private val MIN_HOUR_HEIGHT = 48.dp
+/** A block of half an hour still shows the start of its text; a whole day fits on a phone that is held upright. */
+private val MIN_HOUR_HEIGHT = 20.dp
 
 /** The blocks of the plan of one week as a calendar: one column per day, the time running down. */
 // [impl->dsn~agenda~1]
@@ -163,7 +164,7 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (En
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // On a phone, the days keep a readable width and the week scrolls sideways.
             val dayWidth = maxOf(110.dp, (maxWidth - 44.dp) / 7)
-            // The hours share the height that is left; in a low window they keep a readable height and the week scrolls.
+            // The hours share the height that is left, so that the week is seen at once; only in a very low window the week scrolls.
             val hourHeight = maxOf(MIN_HOUR_HEIGHT, (maxHeight - 28.dp) / (lastHour - firstHour))
             Row(Modifier.verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState())) {
                 Column(Modifier.width(44.dp).padding(top = 28.dp).testTag("week-hours")) {

@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -198,6 +199,20 @@ class ScreenshotTest {
         start()
         onNodeWithTag("group-PROJECT").performClick()
         save("list-project.png")
+    }
+
+    @Test
+    fun rendersPickers() = runDesktopComposeUiTest(width = 1100, height = 760) {
+        start()
+        onNodeWithText("Prepare the slides for the team meeting").performClick()
+        onNodeWithContentDescription("Choose Due time").performClick()
+        save("time-picker.png")
+        onNodeWithText("OK").performClick()
+        onNodeWithContentDescription("Choose Duration").performClick()
+        save("duration-picker.png")
+        onNodeWithText("OK").performClick()
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        save("recurrence-picker.png")
     }
 
     @Test

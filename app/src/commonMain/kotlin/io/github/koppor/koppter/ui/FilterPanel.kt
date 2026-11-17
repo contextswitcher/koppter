@@ -6,6 +6,10 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +25,10 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,6 +42,7 @@ import io.github.koppor.koppter.todotxt.Completion
 import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.LEVEL_SEPARATOR
 import io.github.koppor.koppter.todotxt.hierarchyOrder
+import io.github.koppor.koppter.todotxt.isWithin
 
 /**
  * The filter criteria as a column: text, threshold date, priorities, projects, contexts, hashtags, completion.
@@ -57,18 +66,21 @@ fun FilterPanel(
     modifier: Modifier = Modifier,
     /** For the field of the text, so that a shortcut can give it the focus. */
     textModifier: Modifier = Modifier,
+    /** Closes the panel where it lies above the list; `null` where it stands beside the list. */
+    onClose: (() -> Unit)? = null,
 ) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp).testTag("filter-panel")) {
-        Text("Filter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(bottom = 8.dp).testTag("filter-heading"))
-        OutlinedTextField(
-            value = filter.text,
-            onValueChange = { onChange(filter.copy(text = it)) },
-            placeholder = { Text("Search text") },
-            singleLine = true,
-            modifier = textModifier.fillMaxWidth().testTag("filter-text"),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+            Text("Filter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).testTag("filter-heading"))
+            if (onClose != null) {
+                IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
+            }
+        }
+        SearchField(filter.text, { onChange(filter.copy(text = it)) }, "Search text", "filter-text", textModifier)
+        // [impl->dsn~filter-label-search~1]
+        var labels by remember { mutableStateOf("") }
 
-        Option("Show tasks before their threshold date", !filter.hideFuture, "filter-future") {
+        Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
             onChange(filter.copy(hideFuture = !it))
         }
         // [impl->dsn~top-tasks~1]
@@ -81,7 +93,7 @@ fun FilterPanel(
         }
         // [impl->dsn~project-hierarchy~1]
         LabelFilter(
-            "Projects", projects, filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
+            "Projects", narrowed(projects, '+', labels), filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
             order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
             excluded = filter.excludedProjects, onInclude = { onChange(filter.copy(excludedProjects = filter.excludedProjects - it)) },
         ) { value, suffix, modifier ->
@@ -93,7 +105,7 @@ fun FilterPanel(
         }
         // [impl->dsn~context-hierarchy~1]
         LabelFilter(
-            "Contexts", contexts, filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
+            "Contexts", narrowed(contexts, '@', labels), filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
             order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
             excluded = filter.excludedContexts, onInclude = { onChange(filter.copy(excludedContexts = filter.excludedContexts - it)) },
         ) { value, suffix, modifier ->
@@ -105,7 +117,7 @@ fun FilterPanel(
         }
         // [impl->dsn~hashtags-in-ui~1]
         LabelFilter(
-            "Hashtags", hashtags, filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
+            "Hashtags", narrowed(hashtags, '#', labels), filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
             excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
@@ -144,7 +156,39 @@ fun FilterPanel(
         ) {
             Text("Clear all filters")
         }
+        SearchField(labels, { labels = it }, "Search labels", "filter-labels", Modifier.padding(top = 12.dp))
     }
+}
+
+/** A field of one line that has a button at its end, tagged [tag]`-clear`, which empties it. */
+@Composable
+private fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        placeholder = { Text(placeholder) },
+        singleLine = true,
+        trailingIcon = {
+            if (value.isNotEmpty()) {
+                IconButton(onClick = { onChange("") }, modifier = Modifier.testTag("$tag-clear")) {
+                    Icon(Icons.Default.Close, contentDescription = "Clear the text")
+                }
+            }
+        },
+        modifier = modifier.fillMaxWidth().testTag(tag),
+    )
+}
+
+/**
+ * The [values] whose name contains the [search] text, each with the values above it, so that a tree keeps its shape.
+ * A text that starts with the sign of another kind of label finds nothing.
+ */
+private fun narrowed(values: List<String>, sign: Char, search: String): List<String> {
+    val word = search.trim()
+    if (word.isEmpty()) return values
+    if (word[0] in "+@#" && word[0] != sign) return emptyList()
+    val found = values.filter { it.contains(word.removePrefix(sign.toString()), ignoreCase = true) }
+    return values.filter { value -> found.any { it.isWithin(value) } }
 }
 
 /**

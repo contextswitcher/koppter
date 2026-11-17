@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
@@ -20,6 +19,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.ClipboardManager
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.UriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -56,6 +61,21 @@ interface GitSetupActions {
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
 internal fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
 
+/**
+ * The address for SSH of a repository of GitHub that is given as the address of one of its pages, which is what the browser offers to copy;
+ * any other text as it is. The application has an SSH key and no password for HTTPS.
+ */
+// [impl->dsn~git-setup-dialog~1]
+internal fun sshAddress(text: String): String =
+    Regex("https?://(?:www\\.)?github\\.com/([\\w.-]+)/([\\w.-]+?)(?:\\.git)?(?:[/?#].*)?").matchEntire(text)
+        ?.let { "git@github.com:${it.groupValues[1]}/${it.groupValues[2]}.git" } ?: text
+
+/** The page of GitHub that adds a deploy key to the repository of the address; `null` for an address of another server. */
+// [impl->dsn~git-setup-dialog~1]
+internal fun deployKeyPage(address: String): String? =
+    Regex("(?:ssh://)?git@github\\.com[:/]([\\w.-]+)/([\\w.-]+?)(?:\\.git)?/?").matchEntire(sshAddress(address.trim()))
+        ?.let { "https://github.com/${it.groupValues[1]}/${it.groupValues[2]}/settings/keys/new" }
+
 private const val OPENED = "Opened. The fields below show the configuration of this file. Cancel returns to the file from before."
 
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
@@ -73,6 +93,10 @@ fun SettingsDialog(
     settings: Settings,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
+    /** Lets the user pick a folder whose todo.txt file is opened. */
+    chooseFolder: (suspend () -> String?)?,
+    /** What the user has to know about a file chosen with [chooseFile]; `null` if there is nothing. */
+    chooseFileNote: String?,
     git: GitSetupActions?,
     /** Passes the log to another application; `null` on a platform where the user reaches the log file. */
     shareLog: (() -> Unit)?,
@@ -95,6 +119,11 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
+    // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
+    @Suppress("DEPRECATION")
+    val clipboard = LocalClipboardManager.current
+    // That of the application, which reports a link that is not opened; taken outside the dialog as the clipboard is.
+    val uriHandler = LocalUriHandler.current
     // [impl->dsn~settings-open-file~1]
     // What depends on the file starts anew when another file is opened from the dialog.
     val openFile = settings.todoFile
@@ -108,6 +137,8 @@ fun SettingsDialog(
     var links by remember(openFile) { mutableStateOf(labelLinks) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
+    var fileFailed by remember { mutableStateOf(false) }
+    val scroll = rememberScrollState()
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
@@ -118,40 +149,62 @@ fun SettingsDialog(
     // Another file that was opened is a change as well: leaving the dialog without Save returns to the file from before.
     GuardedDialog(changed = state != initial || openFile != fileBefore, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
-            Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.verticalScroll(scroll).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)
                 OutlinedTextField(
                     value = todoFile,
-                    onValueChange = { todoFile = it },
+                    // A pasted address, which arrives at once, is converted; one that is typed is left alone until it is cloned.
+                    onValueChange = { todoFile = if (git != null && it.length > todoFile.length + 1) sshAddress(it) else it },
                     label = { Text(if (git == null) "todo.txt file" else "todo.txt file or address of a git repository") },
                     placeholder = { Text(defaultTodoFile) },
                     supportingText = {
                         Text(
                             "Empty: $defaultTodoFile" +
-                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, and the todo.txt file of the clone is opened.") +
-                                "\nA file in a git repository is committed after every change and synchronized with the remote repository.",
+                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, and the todo.txt file of the clone is opened. The address of a page of a repository of GitHub becomes that form.") +
+                                "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
+                                "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
                         )
                     },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("settings-file"),
                 )
                 if (fileMessage.isNotEmpty()) {
-                    Text(fileMessage, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-file-message"))
+                    Text(
+                        fileMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (fileFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
+                        modifier = Modifier.testTag("settings-file-message"),
+                    )
                 }
                 if (chooseFile != null) {
-                    OutlinedButton(
-                        onClick = {
-                            scope.launch {
-                                chooseFile()?.let {
-                                    onOpenFile(it)
-                                    fileMessage = OPENED
-                                }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for ((title, tag, choose) in listOfNotNull(
+                            Triple("Choose file", "settings-choose-file", chooseFile),
+                            chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
+                        )) {
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        try {
+                                            choose()?.let {
+                                                onOpenFile(it)
+                                                fileFailed = false
+                                                fileMessage = OPENED
+                                            }
+                                        } catch (e: Exception) {
+                                            // A platform without a program that shows the dialog, or one that refuses it.
+                                            fileFailed = true
+                                            fileMessage = "Not chosen: ${e.message ?: e}"
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.testTag(tag),
+                            ) {
+                                Text(title)
                             }
-                        },
-                        modifier = Modifier.testTag("settings-choose-file"),
-                    ) {
-                        Text("Choose file")
+                        }
                     }
+                    if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
                 }
                 Row(
                     Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
@@ -212,7 +265,7 @@ fun SettingsDialog(
                 RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
                 RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
                 if (git != null) {
-                    GitSection(git)
+                    GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
                 }
                 Row(Modifier.fillMaxWidth()) {
                     // [impl->dsn~share-log~1]
@@ -230,18 +283,25 @@ fun SettingsDialog(
                     )
                     Button(
                         onClick = {
-                            val file = todoFile.trim()
+                            val file = todoFile.trim().let { if (git != null) sshAddress(it) else it }
                             if (git != null && address) {
                                 cloning = true
+                                fileFailed = false
                                 fileMessage = "Cloning"
                                 scope.launch {
                                     try {
                                         onOpenFile(git.clone(file))
                                         fileMessage = OPENED
                                     } catch (e: Exception) {
-                                        fileMessage = "Not cloned: ${e.message ?: e}"
+                                        fileFailed = true
+                                        // A server that does not know the key ends the connection without saying why.
+                                        val ownKey = runCatching(git::publicKey).getOrNull() != null
+                                        fileMessage = "Not cloned: ${e.message ?: e}" +
+                                            if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
                                     }
                                     cloning = false
+                                    // The message stands at the file, far above the button that was clicked.
+                                    scroll.animateScrollTo(0)
                                 }
                             } else {
                                 save(file)
@@ -282,19 +342,39 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
-private fun GitSection(git: GitSetupActions) {
+private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: String?) {
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
     Text("Git repository", style = MaterialTheme.typography.titleMedium)
-    Text("Public SSH key of this device. Register it with the git server, for GitHub as a deploy key with write access.", style = MaterialTheme.typography.bodySmall)
-    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
-        SelectionContainer {
-            Text(
-                publicKey,
-                fontFamily = FontFamily.Monospace,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(8.dp).testTag("settings-public-key"),
-            )
-        }
+    var copied by remember { mutableStateOf(false) }
+    Text(
+        "Public SSH key of this device. Register it with the git server, for GitHub as a deploy key with write access. " +
+            if (copied) "Copied to the clipboard." else "A tap on the key copies it.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.testTag("settings-public-key-help"),
+    )
+    // A tap copies the whole key: selecting a line of some hundred characters on a touch screen does not work well.
+    Surface(
+        onClick = {
+            clipboard.setText(AnnotatedString(publicKey))
+            copied = true
+        },
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = MaterialTheme.shapes.small,
+        modifier = Modifier.fillMaxWidth().testTag("settings-public-key"),
+    ) {
+        Text(publicKey, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+    }
+    // The API of GitHub for deploy keys needs a login with the rights of an administrator; the page in the browser has that login already.
+    if (deployKeyPage != null) {
+        OutlinedButton(
+            onClick = {
+                clipboard.setText(AnnotatedString(publicKey))
+                copied = true
+                uriHandler.openUri(deployKeyPage)
+            },
+            modifier = Modifier.testTag("settings-add-key"),
+        ) { Text("Copy the key and open GitHub to add it") }
+        Text("On the page of GitHub, paste the key, tick \"Allow write access\" and add the key.", style = MaterialTheme.typography.bodySmall)
     }
 }

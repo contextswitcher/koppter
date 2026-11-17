@@ -129,7 +129,7 @@ class Query private constructor(private val terms: List<Term>) {
                     '+' -> return Project(word.substring(1))
                     '@' -> return Context(word.substring(1))
                     // As in a task, "#123" is a word.
-                    '#' -> if (word[1].isLetter()) return Hashtag(word.substring(1))
+                    '#' -> if (Task.isHashtagName(word.substring(1))) return Hashtag(word.substring(1))
                 }
             }
             PRIORITY.matchEntire(word)?.let { return Priority(it.groupValues[1], it.groupValues[2].single()) }

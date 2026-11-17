@@ -3,6 +3,10 @@ package io.github.koppor.koppter.ui
 import androidx.compose.ui.test.withKeysDown
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
@@ -17,6 +21,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -50,7 +55,9 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
+import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
@@ -92,7 +99,8 @@ class AppTest {
     }
 
     private fun ComposeUiTest.openTask(description: String) {
-        onNodeWithText(description).performClick()
+        // On the description itself: the middle of the card may be a label, which has a click of its own.
+        onNodeWithText(description, useUnmergedTree = true).performClick()
         onNodeWithTag("edit-dialog").assertExists()
     }
 
@@ -113,15 +121,31 @@ class AppTest {
     }
 
     // [utest->dsn~overdue-separator~1]
+    // [utest->dsn~list-groups~1]
     // [utest->dsn~list-step~1]
     @Test
-    fun overdueTasksStandFirstAboveALineThatNoStepCrosses() = runComposeUiTest {
-        storage.text = "(A) Write the report\n(C) Return the books due:2026-11-10\n"
-        start()
+    fun overdueTasksStandFirstAboveABorderThatNoStepCrosses() = runComposeUiTest {
+        storage.text = "(A) Write the report +Work\n(C) Return the books +Work due:2026-11-10\nx Sharpen the pencils +Work\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
         fun bounds(text: String) = onNodeWithText(text).fetchSemanticsNode().boundsInRoot
+
+        // Within a group, a line is the border.
+        controller.listGroupKey = GroupKey.PROJECT
         val line = onNodeWithTag("overdue-separator").fetchSemanticsNode().boundsInRoot
         assertTrue(bounds("Return the books").bottom <= line.top)
         assertTrue(line.bottom <= bounds("Write the report").top)
+
+        // Without groups, the two kinds stand below a heading each, and the completed tasks below a third one.
+        controller.listGroupKey = null
+        onNodeWithTag("overdue-separator").assertDoesNotExist()
+        assertTrue(bounds("Overdue (1)").bottom <= bounds("Return the books").top)
+        assertTrue(bounds("Return the books").bottom <= bounds("Next (1)").top)
+        assertTrue(bounds("Next (1)").bottom <= bounds("Write the report").top)
+        onNodeWithText("Done (1)").assertDoesNotExist()
+        onNodeWithTag("filter-done").performScrollTo().performClick()
+        assertTrue(bounds("Write the report").bottom <= bounds("Done (1)").top)
+        assertTrue(bounds("Done (1)").bottom <= bounds("Sharpen the pencils").top)
         // The due date decides on which side of the line a task stands, not its priority.
         onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
         onAllNodesWithTag("task-up")[1].assertIsNotEnabled()
@@ -206,9 +230,14 @@ class AppTest {
             listOf("2026-11-12", "2026-11-13", "2026-11-15", "2026-11-22", "2026-11-26", "2026-12-12"),
             dueChoices(LocalDate(2026, 11, 12)).map { it.second.toString() },
         )
+        // On that Thursday, three days from now are this weekend.
+        assertEquals(listOf("today", "tomorrow", "this weekend", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 12)).map { it.first })
         // On a Sunday, this weekend is today, and on a Saturday, it is tomorrow.
-        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
-        assertEquals(listOf("today", "tomorrow", "next week", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "in three days", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 15)).map { it.first })
+        assertEquals(listOf("today", "tomorrow", "in three days", "next weekend", "in two weeks", "in a month"), dueChoices(LocalDate(2026, 11, 14)).map { it.first })
+        // The choices stand in the order of their days: on a Friday, the weekend comes before the third day, on a Monday after it.
+        assertEquals(listOf("today", "tomorrow", "this weekend", "in three days"), dueChoices(LocalDate(2026, 11, 13)).map { it.first }.take(4))
+        assertEquals(listOf("today", "tomorrow", "in three days", "this weekend"), dueChoices(LocalDate(2026, 11, 16)).map { it.first }.take(4))
         // The end of January has no day a month later.
         assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
     }
@@ -587,6 +616,132 @@ class AppTest {
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
+    // [utest->dsn~view-remembered~1]
+    // [utest->dsn~settings-file~1]
+    @Test
+    fun theViewAndItsGroupsAreThereAgainAfterARestart() = runComposeUiTest {
+        var saved = Settings(view = "BOARD", boardGroup = "PROJECT", listGroup = "CONTEXT")
+        val controller = TodoController(saved, { storage }, saveSettings = { saved = it }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("board-switch").assertIsSelected()
+        onNodeWithTag("group-PROJECT").assertIsSelected()
+
+        onNodeWithTag("list-switch").performClick()
+        onNodeWithTag("group-CONTEXT").assertIsSelected().performClick()
+        onNodeWithTag("overview-switch").performClick()
+        onNodeWithTag("group-HASHTAG").performClick()
+        assertEquals(Settings(view = "OVERVIEW", boardGroup = "PROJECT", listGroup = "", overviewGroup = "HASHTAG"), saved)
+        assertEquals(saved, Settings.fromProperties(saved.toProperties()))
+        // A settings file of an earlier version, or one with a name that this version does not know, gives the list.
+        assertEquals(Settings(), Settings.fromProperties(emptyMap()))
+        assertEquals(View.LIST, TodoController(Settings(view = "TIMELINE"), { storage }, today = { LocalDate(2026, 11, 12) }).view)
+    }
+
+    // [utest->dsn~view-options~1]
+    @Test
+    fun aListWithoutGroupsSaysHowItIsOrdered() = runComposeUiTest {
+        start()
+        onNodeWithTag("group-none").assertTextEquals(NO_GROUPS)
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("group-none").assertDoesNotExist()
+        onNodeWithTag("group-PROJECT").performClick()
+        onNodeWithTag("group-none").assertExists()
+        // The board always has columns.
+        onNodeWithTag("board-switch").performClick()
+        onNodeWithTag("group-none").assertDoesNotExist()
+    }
+
+    // [utest->dsn~edit-pickers~1]
+    @Test
+    fun aTimeAndADurationOfTheDialogAreChosenInADialogOfTheirOwn() = runComposeUiTest {
+        start()
+        onNodeWithTag("new-task").performClick()
+
+        // The clock face starts at noon and is left with the time it shows.
+        onNodeWithContentDescription("Choose Due time").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-by").assertTextContains("12:00")
+        onNodeWithTag("edit-at").performTextInput("9:30")
+        onNodeWithContentDescription("Choose Fixed time").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-at").assertTextContains("09:30")
+        onNodeWithContentDescription("Choose Fixed time").performClick()
+        onNodeWithText("No time").performClick()
+        onNodeWithTag("edit-at").assertTextEquals("Fixed time", "")
+
+        // The wheels start at half an hour, as planning does for a task without duration, or at the duration of the field.
+        onNodeWithContentDescription("Choose Duration").performClick()
+        onNodeWithTag("duration-picker").assertExists()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-duration").assertTextContains("30m")
+        onNodeWithTag("edit-travel").performTextInput("1h17m")
+        onNodeWithContentDescription("Choose Travel time").performClick()
+        onNodeWithText("OK").performClick()
+        // The wheels have steps of five minutes.
+        onNodeWithTag("edit-travel").assertTextContains("1h15m")
+        onNodeWithContentDescription("Choose Travel time").performClick()
+        onNodeWithText("No duration").performClick()
+        onNodeWithTag("edit-travel").assertTextEquals("Travel time", "")
+
+        // The wheels of the recurrence start at one week, or at the recurrence of the field.
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithTag("recurrence-picker").assertExists()
+        onNodeWithTag("recurrence-from-the completion").assertIsSelected()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-recurrence").assertTextContains("1w")
+        onNodeWithTag("edit-recurrence").performTextReplacement("2m")
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithText("months").assertExists()
+        onNodeWithTag("recurrence-from-the due date").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-recurrence").assertTextContains("+2m")
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithTag("recurrence-from-the due date").assertIsSelected()
+        onNodeWithText("No recurrence").performClick()
+        onNodeWithTag("edit-recurrence").assertTextEquals("Recurrence", "")
+    }
+
+    // [utest->dsn~edit-help~1]
+    @Test
+    fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {
+        start()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-threshold").assertTextContains("Start date")
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithTag("edit-threshold").performMouseInput { moveTo(center) }
+        // Not at once: the pointer may be on its way to another field.
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        mainClock.advanceTimeBy(1_000)
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertExists()
+        onNodeWithTag("edit-duration").performMouseInput { moveTo(center) }
+        mainClock.advanceTimeBy(1_000)
+        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("How long the task takes, such as 30m or 2h (dur:).").assertExists()
+    }
+
+    // [utest->dsn~edit-dates~1]
+    @Test
+    fun theDescriptionOfTheDialogReadsDatesInWordsOnceItIsChanged() = runComposeUiTest {
+        storage.text += "Plan next week\n"
+        start()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Water plants tomorrow")
+        onNodeWithTag("edit-dates-hint", useUnmergedTree = true).assertExists()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Water plants due:2026-11-13")
+        // A date of the fields stays.
+        onNodeWithTag("edit-due-2026-11-12").performScrollTo().performClick()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Water plants due:2026-11-12")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("Water plants due:2026-11-12", storage.text.trim().lines().last())
+
+        // The words of a task that exists stay until its description is typed in, which starts at its end.
+        openTask("Plan next week")
+        onNodeWithTag("edit-dates-hint", useUnmergedTree = true).assertDoesNotExist()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Plan next week")
+        onNodeWithTag("edit-description").performTextInput(" by Fri")
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Plan next week due:2026-11-13")
+    }
+
     @Test
     fun aFieldOfOneLineKeepsItsHeightWhenTextIsTyped() = runComposeUiTest {
         start()
@@ -595,6 +750,46 @@ class AppTest {
             onNodeWithTag(tag).performTextInput("mom")
             assertEquals(empty, onNodeWithTag(tag).fetchSemanticsNode().size.height, tag)
         }
+    }
+
+    // [utest->dsn~filter-label-search~1]
+    @Test
+    fun theSearchForLabelsNarrowsWhatTheFilterPanelOffers() = runComposeUiTest {
+        val labelled = MemoryStorage("Read the survey +papers>survey @research>reading #someday\nBuy paint +House @errands #money\n")
+        val controller = TodoController(Settings(), { labelled }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-labels-clear").assertDoesNotExist()
+        // A found project keeps the project above it; the case of the letters does not count.
+        onNodeWithTag("filter-labels").performScrollTo().performTextInput("SURV")
+        onNodeWithTag("filter-project-papers").assertExists()
+        onNodeWithTag("filter-project-papers>survey").assertExists()
+        onNodeWithTag("filter-project-House").assertDoesNotExist()
+        onNodeWithTag("filter-context-errands").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+        // The tasks stay as they are.
+        onAllNodesWithTag("task").assertCountEquals(2)
+
+        // The sign of a kind of label restricts the search to that kind.
+        onNodeWithTag("filter-labels").performTextReplacement("@e")
+        onNodeWithTag("filter-context-errands").assertExists()
+        onNodeWithTag("filter-context-research").assertExists()
+        onNodeWithTag("filter-context-research>reading").assertExists()
+        onNodeWithTag("filter-project-House").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+
+        // A selected label stays whatever is searched.
+        onNodeWithTag("filter-context-errands").performClick()
+        onNodeWithTag("filter-labels").performTextReplacement("#some")
+        onNodeWithTag("filter-context-errands").assertIsOn()
+        onNodeWithTag("filter-context-research").assertDoesNotExist()
+        onNodeWithTag("filter-hashtag-someday").assertExists()
+
+        onNodeWithTag("filter-labels-clear").performClick()
+        onNodeWithTag("filter-labels").assertTextEquals("Search labels", "")
+        onNodeWithTag("filter-project-House").assertExists()
+        onNodeWithTag("filter-context-research").assertExists()
+        onNodeWithTag("filter-hashtag-money").assertExists()
     }
 
     // [utest->dsn~filter-panel~1]
@@ -1111,7 +1306,7 @@ class AppTest {
     fun theInboxGivesATaskItsContextWithOneClickOrByTyping() = runComposeUiTest {
         storage.text += "Sweep the floor\nMow the lawn\nRead the survey @research>reading\n"
         start()
-        onNodeWithTag("inbox-switch").assertTextEquals("Inbox 3").performClick()
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (3)").performClick()
         onAllNodesWithTag("inbox-task").assertCountEquals(2)
         onNodeWithTag("inbox-marked").assertExists()
 
@@ -1119,7 +1314,7 @@ class AppTest {
         onAllNodesWithTag("inbox-context-phone")[0].performClick()
         assertEquals(1, storage.text.lines().count { it.endsWith(" @phone") && "Mom" !in it && "pickup" !in it })
         assertEquals(true, storage.changes.last().startsWith("Edit task: "))
-        onNodeWithTag("inbox-switch").assertTextEquals("Inbox 2")
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (2)")
 
         // With the keyboard: the field has the focus, typing narrows the contexts of the marked task, Enter gives the first.
         onNodeWithTag("inbox-typed").assertIsFocused().performTextInput("rea")
@@ -1151,11 +1346,11 @@ class AppTest {
 
         // With a change, the user may go back to the dialog, which still holds the change.
         openTask("Post signs")
-        onNodeWithTag("edit-description").performTextInput("Not wanted ")
+        onNodeWithTag("edit-description").performTextInput(" not wanted")
         esc("edit-description")
         onNodeWithTag("discard-dialog").assertExists()
         onNodeWithTag("discard-keep").performClick()
-        onNodeWithTag("edit-description").assertTextContains("Not wanted Post signs")
+        onNodeWithTag("edit-description").assertTextContains("Post signs not wanted")
 
         esc("edit-description")
         onNodeWithTag("discard-confirm").performClick()
@@ -1192,6 +1387,17 @@ class AppTest {
 
         ctrl(Key.F, shift = true)
         onNodeWithTag("filter-text").assertIsFocused()
+        ctrl(Key.A, shift = true)
+        onNodeWithTag("quick-add").assertIsFocused()
+        // The key of browsers and editors for their search; the field offers to empty it once it has a text.
+        ctrl(Key.F)
+        onNodeWithTag("filter-text-clear").assertDoesNotExist()
+        val all = onAllNodesWithTag("task").fetchSemanticsNodes().size
+        onNodeWithTag("filter-text").assertIsFocused().performTextInput("mom")
+        onAllNodesWithTag("task").assertCountEquals(1)
+        onNodeWithTag("filter-text-clear").performClick()
+        onAllNodesWithTag("task").assertCountEquals(all)
+        onNodeWithTag("filter-text-clear").assertDoesNotExist()
         ctrl(Key.A, shift = true)
         onNodeWithTag("quick-add").assertIsFocused()
         ctrl(Key.L, shift = true)
@@ -1396,7 +1602,9 @@ class AppTest {
         // With an address in the field of the file, the button clones.
         onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
         onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
-        onNodeWithTag("settings-file-message").assertTextEquals("Not cloned: no such repository")
+        // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
+        onNodeWithTag("settings-file-message").assertIsDisplayed()
+            .assertTextEquals("Not cloned: no such repository\nIs the public SSH key of this device, shown below, registered with the server?")
         assertEquals("", controller.settings.todoFile)
 
         // [utest->dsn~settings-open-file~1]
@@ -1434,6 +1642,166 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
         onNodeWithText("Thank Mom").assertExists()
         onNodeWithText("Read the paper").assertDoesNotExist()
+    }
+
+    // [utest->dsn~settings-open-file~1]
+    @Test
+    fun aChosenFolderIsOpenedAtOnceAndAChooserThatFailsIsReported() = runComposeUiTest {
+        val chosen = MemoryStorage("Read the paper\n")
+        val controller = TodoController(Settings(), { if (it.todoFile == "content://documents/tree/todo") chosen else storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", chooseFile = { error("No program shows the dialog") }, chooseFolder = { "content://documents/tree/todo" }) }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-choose-file").performScrollTo().performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals("Not chosen: No program shows the dialog")
+        assertEquals("", controller.settings.todoFile)
+
+        onNodeWithTag("settings-choose-folder").performScrollTo().performClick()
+        onNodeWithTag("settings-file-message").assertTextContains("Opened.", substring = true)
+        assertEquals("content://documents/tree/todo", controller.settings.todoFile)
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithText("Read the paper").assertExists()
+    }
+
+    // [utest->dsn~git-setup-dialog~1]
+    @Test
+    fun aClickOnThePublicKeyCopiesItAndAPastedPageOfGitHubBecomesTheAddressForSsh() = runComposeUiTest {
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val git = object : GitSetupActions {
+            override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
+            override suspend fun clone(url: String) = error("not cloned in this test")
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        setContent {
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard, LocalUriHandler provides links) { App(controller, "todo.txt", git = git) }
+        }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-public-key").performScrollTo().performClick()
+        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        onNodeWithTag("settings-public-key-help").assertTextContains("Copied to the clipboard.", substring = true)
+        // Without the address of a repository of GitHub, there is no page to open.
+        onNodeWithTag("settings-add-key").assertDoesNotExist()
+
+        // Pasted text arrives at once.
+        onNodeWithTag("settings-file").performScrollTo().performTextInput("https://github.com/demo-user/todo/tree/main")
+        onNodeWithTag("settings-file").assertTextContains("git@github.com:demo-user/todo.git")
+        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone")
+
+        // The page for a deploy key of that repository, with the key in the clipboard.
+        copied = null
+        onNodeWithTag("settings-add-key").performScrollTo().performClick()
+        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        assertEquals(listOf("https://github.com/demo-user/todo/settings/keys/new"), opened)
+        assertEquals("https://github.com/demo-user/my.todo/settings/keys/new", deployKeyPage(" ssh://git@github.com/demo-user/my.todo.git "))
+        for (other in listOf("git@example.org:demo-user/todo.git", "/home/user/todo.txt", "")) assertEquals(null, deployKeyPage(other))
+
+        assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo"))
+        assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo.git"))
+        assertEquals("git@github.com:demo-user/my.todo.git", sshAddress("http://www.github.com/demo-user/my.todo/pull/10?diff=split"))
+        // Another server may offer no SSH, and an address for SSH stays as it is.
+        for (other in listOf("https://example.org/demo-user/todo.git", "git@github.com:demo-user/todo.git", "https://github.com/demo-user", "/home/user/todo.txt")) assertEquals(other, sshAddress(other))
+    }
+
+    // [utest->dsn~settings-dialog~1]
+    @Test
+    fun theSettingsTellThatTheFilesNextToTheFileBelongToItAndWhatThePlatformSaysAboutAChosenFile() = runComposeUiTest {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", chooseFile = { null }, chooseFileNote = "A chosen file is opened alone.") }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithText("The files next to the todo.txt file belong to it", substring = true).assertExists()
+        onNodeWithTag("settings-choose-file-note").assertTextEquals("A chosen file is opened alone.")
+    }
+
+    // [utest->dsn~keyboard-shortcuts~1]
+    @Test
+    fun withoutAKeyboardThereIsNoLineForANewTaskAndTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", keyboard = false) }
+
+        onNodeWithTag("quick-add").assertDoesNotExist()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").assertIsFocused()
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        // An existing task is read first: the keyboard of the screen would hide half of it.
+        openTask("Post signs")
+        onNodeWithTag("edit-description").assertIsNotFocused()
+    }
+
+    // [utest->dsn~back~1]
+    // [utest->dsn~filter-panel~1]
+    @Test
+    fun backClosesTheFilterPanelThenReturnsToTheListAndWarnsBeforeItLeaves() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        // What the platform calls for its back gesture.
+        var back: (() -> Unit)? = null
+        var left = 0
+        setContent { App(controller, "todo.txt", backHandler = { back = it }, leave = { left++ }) }
+
+        // The panel above the list has a button that closes it.
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-close").assertIsDisplayed().performClick()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-close").assertIsDisplayed()
+        back!!()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+
+        controller.view = View.WEEK
+        onNodeWithTag("week").assertExists()
+        back!!()
+        assertEquals(View.LIST, controller.view)
+        onNodeWithTag("week").assertDoesNotExist()
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+
+        // From the list with nothing above it, back warns, and leaves when it follows while the warning is shown.
+        mainClock.autoAdvance = false
+        back!!()
+        mainClock.advanceTimeBy(500)
+        onNodeWithText(LEAVE_WARNING).assertExists()
+        assertEquals(0, left)
+        back!!()
+        assertEquals(1, left)
+        mainClock.advanceTimeBy(500)
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+
+        // A warning that went away counts no longer.
+        back!!()
+        mainClock.advanceTimeBy(60_000)
+        onNodeWithText(LEAVE_WARNING).assertDoesNotExist()
+        back!!()
+        assertEquals(1, left)
+    }
+
+    // [utest->dsn~agenda~1]
+    @Test
+    fun theWeekShowsAWholeDayWithoutScrollingInAWindowOfAPhone() = runDesktopComposeUiTest(width = 412, height = 760) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  06:00-06:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  22:00-23:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", keyboard = false) }
+        controller.view = View.WEEK
+
+        onNodeWithText("06:00").assertExists()
+        val window = onNodeWithTag("main-screen").fetchSemanticsNode().boundsInRoot.bottom
+        assertTrue(onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom <= window)
     }
 
     // [utest->dsn~git-setup-dialog~1]
@@ -1579,7 +1947,7 @@ class AppTest {
         onNodeWithTag("filter-hashtag-import").assertDoesNotExist()
         onNodeWithTag("filter-hashtag-import-excluded").assertExists()
         // The inbox and the overview follow the filter.
-        onNodeWithText("Inbox 1").assertExists()
+        onNodeWithText("Inbox (1)").assertExists()
 
         // A click on the excluded label shows its tasks again.
         onNodeWithTag("filter-hashtag-import-excluded").performClick()
@@ -1660,7 +2028,8 @@ class AppTest {
     fun theListIsDividedIntoGroupsWithHeadings() = runComposeUiTest {
         storage.text += "Order the cake +Family +GarageSale\n"
         start()
-        onNodeWithTag("list-group").assertDoesNotExist()
+        // Without groups, the open tasks that are not overdue are the only part.
+        onNodeWithTag("list-group").assertTextEquals("Next (4)")
         onNodeWithTag("group-PROJECT").performClick()
         onAllNodesWithTag("list-group").assertCountEquals(3)
         onNodeWithText("+Family (1)").assertExists()
@@ -1672,7 +2041,7 @@ class AppTest {
         onAllNodesWithTag("task-down")[0].assertIsNotEnabled()
         // A second click on the attribute shows the list without groups again.
         onNodeWithTag("group-PROJECT").performClick()
-        onNodeWithTag("list-group").assertDoesNotExist()
+        onNodeWithTag("list-group").assertTextEquals("Next (4)")
         onAllNodesWithTag("task").assertCountEquals(4)
     }
 
@@ -1683,7 +2052,8 @@ class AppTest {
         start()
         onNodeWithTag("board-switch").performClick()
         onAllNodesWithTag("board-column").assertCountEquals(3)
-        onNodeWithText("A (1)").assertExists()
+        // A priority is drawn as at the tasks, next to the number of its tasks.
+        onAllNodesWithTag("board-column-title")[0].assertTextEquals("A", "(1)")
         onNodeWithText("No priority (1)").assertExists()
 
         onNodeWithTag("group-PROJECT").performClick()
@@ -1694,6 +2064,20 @@ class AppTest {
         // A task on the board is completed and edited like a task in the list.
         onNodeWithText("Thank Mom").performClick()
         onNodeWithTag("edit-dialog").assertExists()
+    }
+
+    // [utest->dsn~onenote-links~1]
+    @Test
+    fun aLinkOfOneNotePastedIntoTheNoteBecomesTwoMarkdownLinks() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-note").performScrollTo().performTextInput("https://example.org/view?page=7\nonenote:https://example.org/Notes.one#Signs&end")
+        // The cursor stands behind the links.
+        onNodeWithTag("edit-note").performTextInput("\nAsk there")
+        val links = "- [OneNote Desktop](onenote:https://example.org/Notes.one#Signs&end)\n- [OneNote Web](https://example.org/view?page=7)\nAsk there"
+        onNodeWithTag("edit-note").assertTextEquals("Note (Markdown)", links)
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(links, storage.companions.entries.single { it.key.startsWith("notes/") }.value)
     }
 
     // [utest->dsn~notes~1]
@@ -1825,7 +2209,7 @@ class AppTest {
 
         assertEquals("(A) Schedule pickup +GarageSale @phone", storage.text.lines()[0])
         assertEquals("Move task to A: Schedule pickup", storage.changes.last())
-        onNodeWithText("A (2)").assertExists()
+        onAllNodesWithTag("board-column-title")[0].assertTextEquals("A", "(2)")
         onNodeWithTag("task-dragged").assertDoesNotExist()
         onNodeWithTag("edit-dialog").assertDoesNotExist()
     }
@@ -1922,11 +2306,13 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-hashtag-add").performTextInput("123 ")
         onNodeWithTag("edit-hashtag-add").performTextInput("#urgent ")
-        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale #urgent")
+        // A name is taken with or without its sign, and a currency sign starts a name as a letter does.
+        onNodeWithTag("edit-hashtag-add").performTextInput("$$$ ")
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale #urgent #$$$")
         // The dialog is higher than the window of the test.
         onNodeWithTag("edit-save").performScrollTo().performClick()
 
-        assertEquals("Post signs +GarageSale #urgent", storage.text.lines()[1])
+        assertEquals("Post signs +GarageSale #urgent #$$$", storage.text.lines()[1])
         // On the card and in the filter panel.
         onAllNodesWithText("#urgent", useUnmergedTree = true).assertCountEquals(2)
         onNodeWithTag("filter-hashtag-urgent").performClick()

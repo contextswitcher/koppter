@@ -61,7 +61,7 @@ koppter writes tasks in that order, so a line written the same way does not chan
 | `spent:1h30m` | The time that was worked on the task so far | Only when the user says how long they worked on a task that is not done: add it to the value that is there. The plan gives the task the rest of `dur:`, so leave `dur:` as it is. |
 | `tt:30m` | The time that the way to the task takes; the way back counts the same | Only when the user states it for a task that takes place somewhere else. The plan keeps it free before and after the task. |
 | `at:14:00` | The time of the day at which the task takes place | Only for what has its time: an appointment, lunch, a training. The plan does not move the task. The day is `due:`, else `t:`, else today. |
-| `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter. `#someday` marks a task that is not decided yet: it is not a next action of its project either. |
+| `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter or a currency sign. `#someday` marks a task that is not decided yet: it is not a next action of its project either. |
 | `id:1`, `p:1` | Order between tasks | The task with `id:1` waits for the tasks with `p:1`. Pick a value that the file does not use yet: `grep -o ' id:[^ ]*' todo.txt`. |
 | `note:k3f.md` | Details of several lines | Write them to `notes/k3f.md` (three characters, a name not in use) and name the file in the tag. |
 

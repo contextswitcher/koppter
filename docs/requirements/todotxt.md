@@ -67,7 +67,7 @@ Needs: dsn
 `req~filter-criteria~1`
 
 The user restricts the list by completion state (all, completed, open), by a text, by priorities, by projects and by contexts.
-Tasks with a threshold date (`t:`) in the future are hidden unless the user asks for them.
+Tasks with a start date (`t:`) in the future are hidden unless the user asks for them.
 
 Covers:
 
@@ -213,7 +213,7 @@ Needs: impl, utest
 `Filter` holds the criteria; `Filter.matches` combines them with *and*.
 Within priorities, projects, contexts and hashtags, one matching value suffices, and an empty selection does not restrict.
 The text is searched in the whole line, ignoring case.
-The default shows open tasks whose threshold date is not in the future.
+The default shows open tasks whose start date is not in the future.
 
 Covers:
 
@@ -309,7 +309,7 @@ Needs: impl, utest
 
 `lint` returns the findings in the open tasks of a `TodoFile`, each with the number of its line and a severity, and uses the functions with which the application reads the tags.
 An error is a value that is not read: a date, recurrence, duration or time in a tag for one, a `p:` without a task of that `id:`, an `id:` of two tasks, and a note that does not exist.
-A warning is what probably has another effect than intended: a tag given twice, a known key without a value, a project, context or hashtag whose name starts with a known key and a colon, such as `+rec:+1w`, `dueby:` without `due:`, a threshold date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
+A warning is what probably has another effect than intended: a tag given twice, a known key without a value, a project, context or hashtag whose name starts with a known key and a colon, such as `+rec:+1w`, `dueby:` without `due:`, a start date after the due date, a line that a change of its task writes differently, and a context, project or hashtag that differs from another one in case only.
 The tasks without context are named in one finding of the severity information, as they are in the inbox.
 
 Covers:

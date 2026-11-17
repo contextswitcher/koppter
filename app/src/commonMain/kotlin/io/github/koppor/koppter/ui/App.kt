@@ -65,6 +65,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.key.Key
@@ -105,6 +106,10 @@ private const val RELOAD_INTERVAL_MILLIS = 2_000L
  *   or `null` if the user canceled.
  * @param git offered in the settings on platforms where the application has to bring its own git access
  * @param keyboard whether the device has a keyboard, see [LocalKeyboard]
+ * @param backHandler takes what the back gesture of the platform does; a platform without such a gesture takes nothing
+ * @param leave leaves the application, after a second back gesture that has nothing left to close
+ * @param chooseFolder lets the user pick a folder and returns the location that stands for its todo.txt file, which need not exist yet
+ * @param chooseFileNote what the user has to know about a file chosen with [chooseFile], shown below its button
  * @param shareLog passes the log to another application, offered in the settings on platforms where the user does not reach the log file
  */
 @Composable
@@ -112,9 +117,13 @@ fun App(
     controller: TodoController,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)? = null,
+    chooseFolder: (suspend () -> String?)? = null,
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
+    chooseFileNote: String? = null,
+    backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
+    leave: () -> Unit = {},
 ) {
     val dark = when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
@@ -144,10 +153,15 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, git, shareLog)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, backHandler, leave)
         }
     }
 }
+
+internal const val LEAVE_WARNING = "Back again leaves koppter."
+
+/** What the list is without groups. */
+internal const val NO_GROUPS = "no groups: by priority, then due date"
 
 /** The task whose edit dialog is open; `entry` is null for a task that is not in the file yet. */
 /**
@@ -168,8 +182,12 @@ private fun MainScreen(
     controller: TodoController,
     defaultTodoFile: String,
     chooseFile: (suspend () -> String?)?,
+    chooseFolder: (suspend () -> String?)?,
+    chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    backHandler: @Composable (onBack: () -> Unit) -> Unit,
+    leave: () -> Unit,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
     var showSettings by remember { mutableStateOf(false) }
@@ -212,10 +230,11 @@ private fun MainScreen(
             !event.isShiftPressed && event.key == Key.N -> editing = Editing(null)
             // The key of OneNote for its search.
             !event.isShiftPressed && event.key == Key.E -> search(all = true)
+            // The key of browsers and editors for their search; with Shift, it is the key of SkedPal.
+            event.key == Key.F -> search(all = false)
             !event.isShiftPressed && view >= 0 -> controller.view = View.entries[view]
             !event.isShiftPressed -> return false
             event.key == Key.A -> quickAddFocus.requestFocus()
-            event.key == Key.F -> search(all = false)
             // The keys of SkedPal for its outline, today list, calendar and plan.
             event.key == Key.O -> controller.view = View.LIST
             event.key == Key.Y -> controller.view = View.AGENDA
@@ -239,7 +258,7 @@ private fun MainScreen(
         }
     }
 
-    val filterPanel: @Composable (Modifier) -> Unit = { modifier ->
+    val filterPanel: @Composable (Modifier, (() -> Unit)?) -> Unit = { modifier, onClose ->
         FilterPanel(
             filter = controller.filter,
             onChange = { controller.filter = it },
@@ -254,7 +273,29 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             textModifier = Modifier.focusRequester(filterFocus),
+            onClose = onClose,
         )
+    }
+
+    // [impl->dsn~back~1]
+    // Back first closes the filter panel and then returns to the list; from the list, it warns, and leaves the application while the warning is shown.
+    var leaving by remember { mutableStateOf(false) }
+    backHandler {
+        when {
+            drawer.isOpen -> scope.launch { drawer.close() }
+            controller.view != View.LIST -> controller.view = View.LIST
+            leaving -> {
+                leaving = false
+                leave()
+            }
+            else -> leaving = true
+        }
+    }
+    LaunchedEffect(leaving) {
+        if (leaving) {
+            snackbar.showSnackbar(LEAVE_WARNING)
+            leaving = false
+        }
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {
@@ -262,7 +303,7 @@ private fun MainScreen(
         ModalNavigationDrawer(
             drawerState = drawer,
             gesturesEnabled = !wide,
-            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) } },
+            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
             Scaffold(
                 topBar = {
@@ -295,13 +336,14 @@ private fun MainScreen(
             ) { padding ->
                 Row(Modifier.padding(padding).fillMaxSize()) {
                     if (wide) {
-                        filterPanel(Modifier.width(280.dp).fillMaxHeight())
+                        filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
                         // The views stand above the field for a new task: a task is looked up more often than added.
                         ViewOptions(controller)
-                        QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
+                        // A line to type into is for a keyboard; without one, the button for a new task opens the dialog.
+                        if (LocalKeyboard.current) QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -321,11 +363,13 @@ private fun MainScreen(
                                 moved = controller::moved,
                                 onMove = controller::move,
                                 emptyText = emptyText,
+                                priorities = controller.groupKey == GroupKey.PRIORITY,
                             )
                         } else {
                             TaskList(
-                                controller.listGroups, controller.listGroupKey != null, controller.today(),
+                                controller.listGroups, controller.today(),
                                 controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
+                                priorities = controller.listGroupKey == GroupKey.PRIORITY,
                             )
                         }
                     }
@@ -377,6 +421,8 @@ private fun MainScreen(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
             chooseFile = chooseFile,
+            chooseFolder = chooseFolder,
+            chooseFileNote = chooseFileNote,
             git = git,
             shareLog = shareLog,
             boardColumns = controller.boardColumnsText,
@@ -419,7 +465,7 @@ private fun ViewOptions(controller: TodoController) {
                 FilterChip(
                     selected = controller.view == view,
                     onClick = { controller.view = view },
-                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} ${controller.inbox.size}" else view.title) },
+                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} (${controller.inbox.size})" else view.title) },
                     modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
                 )
             }
@@ -427,7 +473,11 @@ private fun ViewOptions(controller: TodoController) {
         val list = controller.view == View.LIST
         val overview = controller.view == View.OVERVIEW
         if (!list && !overview && !controller.board) return
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            Modifier.horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             for (key in if (overview) OVERVIEW_KEYS else GroupKey.entries) {
                 FilterChip(
                     selected = when {
@@ -445,6 +495,15 @@ private fun ViewOptions(controller: TodoController) {
                     },
                     label = { Text("by ${key.label.lowercase()}") },
                     modifier = Modifier.testTag("group-${key.name}"),
+                )
+            }
+            if (list && controller.listGroupKey == null) {
+                // No switch is selected then, which alone does not tell how the tasks are ordered.
+                Text(
+                    NO_GROUPS,
+                    Modifier.testTag("group-none"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (controller.board && controller.boardColumns.isNotEmpty()) {

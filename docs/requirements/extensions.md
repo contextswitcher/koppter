@@ -229,7 +229,7 @@ Needs: dsn
 ### Hashtags of a task
 `dsn~hashtags~1`
 
-`Task.hashtags` are the words of the body that start with `#` followed by a letter, without the `#`.
+`Task.hashtags` are the words of the body that start with `#` followed by a letter or a currency sign, without the `#` (`Task.isHashtagName`): `#money` and `#$$$` are hashtags.
 A number sign followed by another character, such as `#123`, and a number sign inside a word stay words of the description.
 Hashtags are not part of the description, and `Task.edit` writes them between the contexts and the tags.
 
@@ -244,7 +244,7 @@ Needs: impl, utest
 `dsn~hashtags-in-ui~1`
 
 A hashtag is an outlined label on the task, after the contexts.
-The filter panel and the edit dialog have a section for hashtags that works like those for projects and contexts; the edit dialog accepts only names that start with a letter.
+The filter panel and the edit dialog have a section for hashtags that works like those for projects and contexts; the edit dialog accepts only names that start with a letter or a currency sign, typed with or without the `#`.
 The board offers the hashtags as columns.
 
 Covers:
@@ -256,8 +256,8 @@ Needs: impl, utest
 ### Recurrence on completion
 `dsn~recurrence-on-completion~1`
 
-`Task.nextOccurrence` returns the open copy of a recurring task with its dates moved: the due date to the next date of the recurrence, the threshold date by the same distance.
-A task with only a threshold date gets a new threshold date; a task without dates gets a due date.
+`Task.nextOccurrence` returns the open copy of a recurring task with its dates moved: the due date to the next date of the recurrence, the start date by the same distance.
+A task with only a start date gets a new start date; a task without dates gets a due date.
 `TodoController.toggle` appends the next occurrence in the same write as the completion, so that both are one commit.
 
 Covers:
@@ -296,13 +296,28 @@ Needs: impl
 
 `groupEntries` distributes entries over groups by priority, project, context, hashtag or due date.
 A task with several projects or contexts appears in each of their groups.
-The due date groups are overdue, today, later and no due date.
+The due date groups are described in `dsn~due-groups~1`.
 Tasks without a value form the last group; empty groups are left out.
 
 Covers:
 
 * `req~board~1`
 * `adr~board-columns-by-attribute~1`
+
+Needs: impl, utest
+
+### Groups by due date
+`dsn~due-groups~1`
+
+The groups by due date are *Overdue*, then one group for each day of `dueChoices`, then *Later* and *No due date*.
+The days of `dueChoices` are those that the menu of the due date and the edit dialog offer: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month.
+The group of a day has the tasks that are due after the day of the group before it, up to its own day; *Later* has those after the last day.
+Moving a task to the group of a day sets that day as its due date, and moving it to *Later* the day after the last one.
+
+Covers:
+
+* `req~board~1`
+* `req~list-groups~1`
 
 Needs: impl, utest
 
@@ -390,7 +405,7 @@ Needs: impl, utest
 `moveToGroup` returns the task as it is after a move from one group to another.
 For priorities, the task gets the priority of the target group, or none.
 For projects, contexts and hashtags, the value of the source group is replaced by that of the target group; the other projects, contexts and hashtags of the task stay.
-For due dates, the group *today* sets today, the group *later* tomorrow, and the group without due date removes the date.
+For due dates, a group sets its day (`dsn~due-groups~1`), and the group without due date removes the date.
 A move within a group or into the group of overdue tasks changes nothing.
 
 Covers:
@@ -454,6 +469,7 @@ Needs: impl, utest
 A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
 One of them is always selected.
 For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
+While the list has no groups, a text at the end of that row tells its order: by priority, then by due date.
 For the overview, the second row selects what the tiles stand for: contexts, projects or hashtags.
 Each row is one line that scrolls sideways in a window that is too narrow for it.
 
@@ -528,7 +544,7 @@ Needs: impl, utest
 ### Overview
 `dsn~overview~1`
 
-`Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the threshold date, else the creation date, else two weeks before the due date.
+`Task.urgency` gives the days until the due date of an open task and the part of the time that has passed since its start: the start date, else the creation date, else two weeks before the due date.
 `overviewStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
 It groups by the projects of the outermost level or by the hashtags in the same way.
 The state of a group is that of its most urgent task: overdue, due today, or neither.
@@ -550,7 +566,7 @@ Needs: impl, utest
 One task is marked, at first the first one.
 A field takes typed text: the marked task then shows the contexts that contain the text, those first of which a level starts with it.
 Enter gives the marked task the first of them, or the typed text as a new context if no context contains it; the arrow keys up and down move the mark.
-The switch of the inbox above the tasks shows the number of its tasks.
+The switch of the inbox above the tasks shows the number of its tasks in parentheses, as the headings of groups show their counts.
 
 Covers:
 
@@ -581,6 +597,19 @@ A task without a note gets the tag `note:` with a new file name of three charact
 The note is Markdown by its file name only: the dialog edits it as text, and a note with another extension, such as the `.txt` of the add-on, is read and written under its name.
 `TodoController` writes the text to `notes/<name>` before it writes the task.
 A change of the note alone is passed to the storage as a change of its own, so that a storage with a history records it.
+
+Covers:
+
+* `req~notes~1`
+
+Needs: impl, utest
+
+### Links of OneNote in a note
+`dsn~onenote-links~1`
+
+OneNote copies the link to a page as two lines: the address of the page on the web and, starting with `onenote:`, the address that opens the page in the program.
+`oneNoteLinks` turns the two into a Markdown list of the links *OneNote Desktop* and *OneNote Web*, on lines of their own; an address with a parenthesis stands in angle brackets.
+The field of the note applies it with every change to the text before the cursor, so that a link pasted there is converted and the cursor stays behind it.
 
 Covers:
 
@@ -670,10 +699,10 @@ Needs: impl, utest
 ### Next actions
 `dsn~next-actions~1`
 
-`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose threshold date has come, and that wait for no other open task through `id:` and `p:`.
+`actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose start date has come, and that wait for no other open task through `id:` and `p:`.
 With the option *Only the next action of each project* of the filter panel on, `TodoController.visible` is cut by `nextActions` to these tasks, and of each project to the first one in list order among the filtered tasks; a task without project stays.
 *Clear all filters* turns the option off.
-`projectsWithoutNextAction` gives the projects that have an open task whose threshold date has come, but none that can be worked on, in the projects below them neither.
+`projectsWithoutNextAction` gives the projects that have an open task whose start date has come, but none that can be worked on, in the projects below them neither.
 `overviewStates` adds them to the tiles by project from all tasks of the file, whatever the filter shows, and `Overview` names them on the tile.
 
 Covers:

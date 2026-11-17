@@ -24,6 +24,14 @@ data class Settings(
     val calendars: String = "",
     /** The filter of the task list as the link that names it, so that it is there again after a restart; blank for the filter that restricts nothing. */
     val filter: String = "",
+    /** The name of the view that was shown last, so that it is there again after a restart. */
+    val view: String = "LIST",
+    /** The name of the attribute of the groups of the list; blank for a list without groups. */
+    val listGroup: String = "",
+    /** The name of the attribute of the columns of the board; blank for the columns that the user defined. */
+    val boardGroup: String = "PRIORITY",
+    /** The name of the attribute of the tiles of the overview. */
+    val overviewGroup: String = "CONTEXT",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -35,6 +43,10 @@ data class Settings(
         APPEARANCE to appearance.name,
         CALENDARS to calendars,
         FILTER to filter,
+        VIEW to view,
+        LIST_GROUP to listGroup,
+        BOARD_GROUP to boardGroup,
+        OVERVIEW_GROUP to overviewGroup,
     )
 
     companion object {
@@ -46,6 +58,10 @@ data class Settings(
         private const val APPEARANCE = "appearance"
         private const val CALENDARS = "calendars"
         private const val FILTER = "filter"
+        private const val VIEW = "view"
+        private const val LIST_GROUP = "listGroup"
+        private const val BOARD_GROUP = "boardGroup"
+        private const val OVERVIEW_GROUP = "overviewGroup"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -57,6 +73,10 @@ data class Settings(
             appearance = Appearance.entries.firstOrNull { it.name == properties[APPEARANCE] } ?: Appearance.SYSTEM,
             calendars = properties[CALENDARS].orEmpty(),
             filter = properties[FILTER].orEmpty(),
+            view = properties[VIEW] ?: Settings().view,
+            listGroup = properties[LIST_GROUP].orEmpty(),
+            boardGroup = properties[BOARD_GROUP] ?: Settings().boardGroup,
+            overviewGroup = properties[OVERVIEW_GROUP] ?: Settings().overviewGroup,
         )
     }
 }

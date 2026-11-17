@@ -2,6 +2,8 @@ package io.github.koppor.koppter.todotxt
 
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 
 /** The attribute whose values form the columns of the board. */
@@ -22,6 +24,17 @@ enum class GroupKey(val label: String) {
 data class Group(val title: String, val entries: List<Entry>, val value: String? = null)
 
 /**
+ * The parts of a list without groups, in the order of [listOrder]: the overdue tasks, the other open ones and the completed ones.
+ * A part without tasks is left out.
+ */
+// [impl->dsn~list-groups~1]
+fun listParts(entries: List<Entry>, today: LocalDate): List<Group> = listOf(
+    Group("Overdue", entries.filter { it.task.isOverdue(today) }),
+    Group("Next", entries.filter { !it.task.completed && !it.task.isOverdue(today) }),
+    Group("Done", entries.filter { it.task.completed }),
+).filter { it.entries.isNotEmpty() }
+
+/**
  * Distributes the entries over groups by the given attribute, keeping their order within each group.
  *
  * A task with several projects, contexts or hashtags appears in each of their groups.
@@ -39,12 +52,20 @@ fun groupEntries(entries: List<Entry>, key: GroupKey, today: LocalDate): List<Gr
         GroupKey.PROJECT -> byValues("No project", "+") { it.projects }
         GroupKey.CONTEXT -> byValues("No context", "@") { it.contexts }
         GroupKey.HASHTAG -> byValues("No hashtag", "#") { it.hashtags }
-        GroupKey.DUE -> listOf(
-            Group("Overdue", entries.filter { it.task.due.let { due -> due != null && due < today } }, OVERDUE),
-            Group("Today", entries.filter { it.task.due == today }, TODAY),
-            Group("Later", entries.filter { it.task.due.let { due -> due != null && due > today } }, LATER),
-            Group("No due date", entries.filter { it.task.due == null }),
-        )
+        // [impl->dsn~due-groups~1]
+        GroupKey.DUE -> buildList {
+            fun between(after: LocalDate?, until: LocalDate?) =
+                entries.filter { it.task.due.let { due -> due != null && (after == null || due > after) && (until == null || due <= until) } }
+            var last = today.minus(DatePeriod(days = 1))
+            add(Group("Overdue", between(null, last), OVERDUE))
+            // A group has the tasks that are due after the day of the group before it, up to its own day.
+            for ((name, day) in dueChoices(today)) {
+                add(Group(name.replaceFirstChar(Char::uppercase), between(last, day), day.toString()))
+                last = day
+            }
+            add(Group("Later", between(last, null), LATER))
+            add(Group("No due date", entries.filter { it.task.due == null }))
+        }
     }.filter { it.entries.isNotEmpty() }
 }
 
@@ -77,14 +98,31 @@ fun groupByColumns(entries: List<Entry>, columns: List<BoardColumn>, today: Loca
     }
 
 private const val OVERDUE = "overdue"
-private const val TODAY = "today"
 private const val LATER = "later"
+
+/**
+ * The days that are offered for a due date, each with what it is called, in the order of the days; each day once.
+ * A weekend and a week end on their Sunday, as in the dates that are typed in words.
+ */
+// [impl->dsn~due-menu~1]
+fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
+    "today" to today,
+    "tomorrow" to today.plus(DatePeriod(days = 1)),
+    "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
+    "in three days" to today.plus(DatePeriod(days = 3)),
+    // Named after the day it sets, the Sunday: as "next week", it read like a day a week from now.
+    "next weekend" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
+    "in two weeks" to today.plus(DatePeriod(days = 14)),
+    "in a month" to today.plus(DatePeriod(months = 1)),
+    // A day keeps its first name: on a Sunday, this weekend is today, and on a Thursday, three days from now are this weekend.
+).distinctBy { it.second }.sortedBy { it.second }
 
 /**
  * The task as it is after the user moved it from one column of the board to another.
  *
  * The value of the source column is replaced by that of the target column; other projects, contexts and hashtags stay.
- * For due date ranges, *today* sets today, *later* tomorrow, and the column without due date removes the date.
+ * For due date ranges, a column sets its day, such as the Sunday for *this weekend*, *later* the day after the last of them,
+ * and the column without due date removes the date.
  *
  * @return `null` if the move makes no sense: within a column, or into the column of overdue tasks
  */
@@ -98,9 +136,9 @@ fun moveToGroup(task: Task, key: GroupKey, from: Group, to: Group, today: LocalD
         GroupKey.HASHTAG -> task.edit(hashtags = (task.hashtags - listOfNotNull(from.value).toSet() + listOfNotNull(to.value)).distinct())
         GroupKey.DUE -> when (to.value) {
             null -> task.withTag(Task.DUE, null)
-            TODAY -> task.withTag(Task.DUE, today.toString())
-            LATER -> task.withTag(Task.DUE, today.plus(DatePeriod(days = 1)).toString())
-            else -> null
+            OVERDUE -> null
+            LATER -> task.withTag(Task.DUE, dueChoices(today).last().second.plus(DatePeriod(days = 1)).toString())
+            else -> task.withTag(Task.DUE, to.value)
         }
     }
 }

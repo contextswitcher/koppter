@@ -57,7 +57,7 @@ class LintTest {
             listOf(
                 "todo.txt: info: open tasks without context, which are in the inbox: lines 5",
                 "todo.txt:1: warning: dueby: has no effect without due:",
-                "todo.txt:2: warning: the threshold date 2026-11-20 is after the due date 2026-11-18",
+                "todo.txt:2: warning: the start date 2026-11-20 is after the due date 2026-11-18",
                 "todo.txt:3: warning: due: is given more than once; the first one counts",
                 "todo.txt:4: warning: due: has no value; a tag has no space after the colon",
                 "todo.txt:5: warning: a change of this task writes the line as: Buy a present +Family",

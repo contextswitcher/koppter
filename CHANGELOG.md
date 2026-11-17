@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [2026-11-16] - 2026-11-16
+
+### Added
+
+- The filter panel of a narrow window, as on a phone, has a button that closes it.
+- The fields of the dialog of a task for the dates, the times and the recurrence show a short help while the pointer rests on them.
+- The application starts with the view that was shown last, and with the groups of the list, the columns of the board and the tiles of the overview that were chosen.
+- In the dialog of a task, the due time and the fixed time are chosen on a clock face, and the duration, the travel time and the time spent on two wheels for hours and minutes; the fields still take typed text.
+- A list without groups tells next to the switches of the groups how it is ordered: by priority, then by due date.
+- Ctrl+F goes to the search text of the filter, and the field has a button that empties it.
+- In the dialog of a task, the recurrence is chosen on two wheels for the amount and the unit, with the choice whether it counts from the completion or from the due date; the field still takes typed text.
+- The filter panel has the field *Search labels*, which narrows the projects, contexts and hashtags that it offers to those that contain the typed text.
+- The link to a page that OneNote copies, pasted into the note of a task, becomes a list of the two Markdown links *OneNote Desktop* and *OneNote Web*.
+- The menu of the due date and the dialog of a task offer *in three days*.
+- A hashtag may start with a currency sign: `#$$$`.
+- The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.
+- *Choose folder* in the settings opens the `todo.txt` file of a folder. On Android, such a folder has the notes, the scheduled tasks, the configuration and the plan next to the file, which a single chosen file has not. On the desktop, the file need not exist yet.
+- For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
+- The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
+
+### Changed
+
+- On Android, the back gesture closes the filter panel and returns from another view to the list; from the list, it warns, and a second back leaves the application.
+- The week shows all its hours without scrolling, also on a phone that is held upright.
+- The heading of a group of a priority shows the colored label of the priority, so that a priority named by a number is not read as a count.
+- The dialog of a task is wider, and its description starts with the cursor at the end.
+- The switch of the inbox shows the number of its tasks in parentheses: *Inbox (4)*.
+- A list without groups has the headings *Overdue*, *Next* and *Done* with the number of their tasks, in place of the line below the overdue tasks.
+- The description of a task stands in one line with its labels, at the height of its checkbox, where both fit next to each other.
+- The groups by due date are those of the menu of the due date, from *Today* to *In a month*, with *Overdue* before them and *Later* after them; a column of the board sets its day.
+- The date of the tag `t:` is called the start date instead of the threshold date: the field of the dialog of a task is *Start date*, and the option of the filter panel *Show tasks before their start date*. The tag stays `t:`.
+- The day that the menu of the due date and the dialog of a task called *next week* is called *next weekend*, as it is the Sunday of the next week.
+- The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.
+- A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
+- A click on the public SSH key in the settings copies it.
+- A clone that fails is reported in red, the settings scroll to the message, and on a device with a key of its own it asks whether the key is registered with the server.
+- The address of a page of a repository of GitHub that is pasted into the settings becomes the address for SSH of that repository.
+
+### Fixed
+
+- On Windows, *Choose file* in the settings no longer ends with two error messages while the file dialog is open.
+
 ## [2026-11-15] - 2026-11-15
 
 ### Added
@@ -134,6 +176,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[2026-11-16]: https://github.com/koppor/koppter/compare/v2026-11-15...v2026-11-16
 [2026-11-15]: https://github.com/koppor/koppter/compare/v2026-11-14...v2026-11-15
 [2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
 [2026-11-13]: https://github.com/koppor/koppter/compare/v2026-11-12...v2026-11-13
