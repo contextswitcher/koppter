@@ -110,6 +110,8 @@ fun SettingsDialog(
     labelLinks: String?,
     /** The contexts of the projects; `null` if the storage cannot keep them. */
     projectContexts: String?,
+    /** What a new task starts with; `null` if the storage cannot keep it. */
+    newTask: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
     /**
@@ -117,7 +119,7 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
-    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?) -> Unit,
+    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -138,6 +140,7 @@ fun SettingsDialog(
     var priorities by remember(openFile) { mutableStateOf(priorityNames) }
     var links by remember(openFile) { mutableStateOf(labelLinks) }
     var contexts by remember(openFile) { mutableStateOf(projectContexts) }
+    var newTaskDefaults by remember(openFile) { mutableStateOf(newTask) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
@@ -145,7 +148,7 @@ fun SettingsDialog(
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts)
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -256,6 +259,14 @@ fun SettingsDialog(
                         "settings-links",
                     )
                 }
+                // [impl->dsn~new-task-defaults~1]
+                newTaskDefaults?.let { text ->
+                    ConfigField(
+                        "New task", text, { newTaskDefaults = it }, "priority = C\ndue = next weekend",
+                        "What the dialog of a new task starts with: priority = a priority, and due = a day of the menu of the due date, such as tomorrow or next weekend, or an interval such as 10d. Without lines, a new task starts empty.",
+                        "settings-new-task",
+                    )
+                }
                 // [impl->dsn~project-contexts~1]
                 contexts?.let { text ->
                     ConfigField(
@@ -292,6 +303,7 @@ fun SettingsDialog(
                         priorities?.trim(),
                         links?.trim(),
                         contexts?.trim(),
+                        newTaskDefaults?.trim(),
                     )
                     Button(
                         onClick = {

@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- A new task starts with the priority C and the due date of the next weekend; *New task* in the settings states another priority and day, or none.
 - The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.
 - The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
 - Ctrl+Shift+A opens the dialog of a new task.

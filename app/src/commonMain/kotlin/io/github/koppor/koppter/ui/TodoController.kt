@@ -326,6 +326,19 @@ class TodoController(
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.LINKS, links), "Edit links of projects and contexts")
     }
 
+    /** The task that the dialog of a new task starts with; an empty one if the storage keeps no configuration file, where it could not be changed. */
+    // [impl->dsn~new-task-defaults~1]
+    fun newTask(): Task = config?.let { ConfigFile.newTask(it, today()) } ?: Task(body = "")
+
+    /** What a new task starts with, one per line as `name = value`; `null` if the storage keeps no configuration file. */
+    val newTaskText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.newTaskDefaults(it)) }
+
+    fun updateNewTask(text: String) {
+        val defaults = ConfigFile.parseLines(text)
+        if (defaults == ConfigFile.newTaskDefaults(config.orEmpty())) return
+        writeConfig(ConfigFile.withNewTaskDefaults(config.orEmpty(), defaults), "Edit what a new task starts with")
+    }
+
     /** The contexts that a task takes with the project. */
     // [impl->dsn~project-contexts~1]
     fun contextsOf(project: String): List<String> =

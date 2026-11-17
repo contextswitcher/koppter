@@ -191,7 +191,9 @@ fun EditDialog(
     val result = if (description.text == base.description) fields else fields.withDates(today)
     /** Where the words that became dates start in the description; `null` if there are none. */
     val phraseStart = result.description.length.takeIf { result != fields && description.text.startsWith(result.description) }
-    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank()
+    val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank() &&
+        // What a new task starts with is no task yet.
+        (!isNew || result != original)
 
     val descriptionFocus = remember { FocusRequester() }
     val keyboard = LocalKeyboard.current

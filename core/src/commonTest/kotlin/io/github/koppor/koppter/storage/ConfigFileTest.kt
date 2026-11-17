@@ -79,6 +79,27 @@ class ConfigFileTest {
         )
     }
 
+    // [utest->dsn~new-task-defaults~1]
+    // [utest->dsn~config-defaults~1]
+    @Test
+    fun aNewTaskStartsWithWhatTheConfigurationStates() {
+        val thursday = LocalDate(2026, 11, 12)
+        assertEquals("(C) due:2026-11-22", ConfigFile.newTask("", thursday).toLine())
+        assertEquals("(B) due:2026-11-22", ConfigFile.newTask(ConfigFile.withNewTaskDefaults("", listOf("priority" to "B", "due" to "10d")), thursday).toLine())
+        // The name of a priority, and on a Sunday the weekend that the menu of the due date calls today.
+        val named = ConfigFile.withEntries(
+            ConfigFile.withNewTaskDefaults("", listOf("priority" to "5", "due" to "this weekend")),
+            ConfigFile.PRIORITIES,
+            listOf("A" to "1", "D" to "5"),
+        )
+        assertEquals("(D) due:2026-11-15", ConfigFile.newTask(named, LocalDate(2026, 11, 15)).toLine())
+        // What is not understood is left out, and the key without entries is an empty task.
+        val unknown = ConfigFile.withNewTaskDefaults("", listOf("priority" to "high", "due" to "tomorrow", "size" to "m"))
+        assertEquals("due:2026-11-13", ConfigFile.newTask(unknown, thursday).toLine())
+        assertEquals("", ConfigFile.newTask(ConfigFile.withNewTaskDefaults("", listOf("due" to "someday")), thursday).toLine())
+        assertEquals("", ConfigFile.newTask(ConfigFile.withNewTaskDefaults("", emptyList()), thursday).toLine())
+    }
+
     // [utest->dsn~project-contexts~1]
     @Test
     fun aProjectBringsItsContextsAndThoseOfTheLevelsAboveIt() {

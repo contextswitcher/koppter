@@ -165,7 +165,7 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | --- | --- |
 | `todo.txt` | The tasks |
 | `notes/<name>.md` | The note of the task with the tag `note:<name>.md`, as Markdown |
-| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
+| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), [what a new task starts with](#what-a-new-task-starts-with), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
@@ -701,6 +701,23 @@ A project, a context or a hashtag has a link of its own, for example to the sect
 * A project or a context below another one, such as `+Fair>Booth`, has the link of that one unless it has its own.
 * The links are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file ([decision 0035](docs/decisions/0035-links-of-projects-and-contexts-in-the-configuration-file.md)).
   A link to a program that a device does not have is reported as not opened there.
+
+## What a new task starts with
+
+The dialog of a new task starts with the priority C and the due date of the next weekend, the Sunday of the next week.
+*New task* in the settings changes that:
+
+```text
+priority = C
+due = next weekend
+```
+
+* `priority` takes a priority by its letter or by its [name](#names-for-priorities), such as `3`.
+* `due` takes a day as the menu of the due date names it (`today`, `tomorrow`, `this weekend`, `in three days`, `next weekend`, `in two weeks`, `in a month`) or an interval from today, such as `10d`.
+* A line that is left out is not set, and without lines a new task starts empty.
+* The values are kept in `koppter.yml` under the key `new-task` and are therefore the same on every device that synchronizes the file.
+  A `todo.txt` file without the files next to it starts a new task empty.
+* A task that is shared to the application on Android has what its [share action](#sharing-to-koppter-on-android) states instead.
 
 ## Contexts of projects
 

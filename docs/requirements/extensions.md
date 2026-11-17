@@ -370,14 +370,16 @@ Needs: impl, utest
 
 A configuration without the key `board-columns` has the columns `ConfigFile.DEFAULT_BOARD_COLUMNS`, which are lists of Getting Things Done: *Today*, *Next* for what neither waits nor is for someday, *Waiting* for `@waiting` and *Someday* for `#someday`.
 A configuration without the key `share-actions` has the actions `ConfigFile.DEFAULT_SHARE_ACTIONS`: *inbox*, which takes the shared text as it is, and *reading*, which adds a project, a context, a due date and a duration.
+A configuration without the key `new-task` has `ConfigFile.DEFAULT_NEW_TASK`: the priority C and the due date of the next weekend.
 The board and the settings thereby show what such a definition looks like, and the share sheet offers a choice.
-A user who removes all columns or actions wants none: the key is then written without entries, which is read as none.
-A storage that keeps no configuration file has neither columns nor actions, as the user could not change them.
+A user who removes all columns, actions or entries of a new task wants none: the key is then written without entries, which is read as none.
+A storage that keeps no configuration file has neither columns nor actions and starts a new task empty, as the user could not change them.
 
 Covers:
 
 * `req~board-defined-columns~1`
 * `req~share-actions~1`
+* `req~new-task-defaults~1`
 
 Needs: impl, utest
 

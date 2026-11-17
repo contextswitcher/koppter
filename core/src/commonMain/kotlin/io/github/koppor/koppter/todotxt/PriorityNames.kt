@@ -21,7 +21,8 @@ data class PriorityNames(val names: Map<Char, String> = emptyMap()) {
         FILTER_TERM.matchEntire(word)?.let { term -> letter(term.groupValues[2])?.let { term.groupValues[1] + it + ")" } } ?: word
     }
 
-    private fun letter(name: String): Char? = names.entries.firstOrNull { it.value == name }?.key
+    /** The priority that has the name. */
+    fun letter(name: String): Char? = names.entries.firstOrNull { it.value == name }?.key
 
     companion object {
         private val FILTER_TERM = Regex("^(-?\\((?:<=|>=|<|>|=)?)(.+)\\)$")

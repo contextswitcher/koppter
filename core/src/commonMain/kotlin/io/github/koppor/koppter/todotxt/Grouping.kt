@@ -105,7 +105,10 @@ private const val LATER = "later"
  * A weekend and a week end on their Sunday, as in the dates that are typed in words.
  */
 // [impl->dsn~due-menu~1]
-fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
+fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = dueDays(today).distinctBy { it.second }.sortedBy { it.second }
+
+/** The days of [dueChoices], each under its name on every day. */
+fun dueDays(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
     "today" to today,
     "tomorrow" to today.plus(DatePeriod(days = 1)),
     "this weekend" to today.plus(DatePeriod(days = 7 - today.dayOfWeek.isoDayNumber)),
@@ -114,8 +117,8 @@ fun dueChoices(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
     "next weekend" to today.plus(DatePeriod(days = 14 - today.dayOfWeek.isoDayNumber)),
     "in two weeks" to today.plus(DatePeriod(days = 14)),
     "in a month" to today.plus(DatePeriod(months = 1)),
-    // A day keeps its first name: on a Sunday, this weekend is today, and on a Thursday, three days from now are this weekend.
-).distinctBy { it.second }.sortedBy { it.second }
+    // In the choices, a day keeps its first name: on a Sunday, this weekend is today, and on a Thursday, three days from now are this weekend.
+)
 
 /**
  * The task as it is after the user moved it from one column of the board to another.

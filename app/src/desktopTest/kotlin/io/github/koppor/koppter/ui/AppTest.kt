@@ -91,7 +91,8 @@ class AppTest {
         (A) Thank Mom @phone due:2026-11-20
         x Call Mom +Family @phone
         """.trimIndent() + "\n",
-    )
+        // A new task starts empty, so that a test states all that its task has.
+    ).apply { companions["koppter.yml"] = "new-task:\n" }
 
     /** Adds a task in its dialog, which the button for a new task opens. */
     private fun ComposeUiTest.addTask(description: String) {
@@ -699,6 +700,40 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-heading").assertTextEquals("Edit task")
         assertEquals(narrow, width())
+    }
+
+    // [utest->dsn~new-task-defaults~1]
+    // [utest->dsn~config-defaults~1]
+    @Test
+    fun aNewTaskStartsWithThePriorityAndTheDueDateOfTheSettings() = runComposeUiTest {
+        storage.companions.remove("koppter.yml")
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        // Without the key, a middle priority and the Sunday of the next week, which alone are no task yet.
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("(C) due:2026-11-22")
+        onNodeWithTag("edit-save").assertIsNotEnabled()
+        onNodeWithTag("edit-description").performTextInput("Buy milk")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("(C) Buy milk due:2026-11-22", storage.text.trim().lines().last())
+
+        // A priority is given by its name.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-new-task").performScrollTo().assertTextContains("priority = C\ndue = next weekend")
+        onNodeWithTag("settings-new-task").performTextReplacement("priority = 5\ndue = tomorrow")
+        onNodeWithTag("settings-priorities").performScrollTo().performTextReplacement("A = 1\nB = 2\nC = 3\nD = 5")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        addTask("Call the plumber")
+        assertEquals("(D) Call the plumber due:2026-11-13", storage.text.trim().lines().last())
+
+        // Without lines, a new task starts empty, and the default does not come back.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-new-task").performScrollTo().performTextReplacement("")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals(true, storage.companions.getValue("koppter.yml").contains("new-task:"))
+        addTask("Sweep the yard")
+        assertEquals("Sweep the yard", storage.text.trim().lines().last())
     }
 
     // [utest->dsn~project-contexts~1]
@@ -1628,6 +1663,8 @@ class AppTest {
     // [utest->dsn~git-setup-dialog~1]
     @Test
     fun theSettingsShowThePublicKeyAndCloneARepository() = runComposeUiTest {
+        // The configuration is compared as a whole.
+        storage.companions.remove("koppter.yml")
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") "/data/repository/todo.txt" else error("no such repository")
@@ -2304,6 +2341,8 @@ class AppTest {
     // [utest->dsn~settings-dialog~1]
     @Test
     fun columnsDefinedInTheSettingsFormTheBoard() = runComposeUiTest {
+        // The configuration is compared as a whole.
+        storage.companions.remove("koppter.yml")
         start()
         onNodeWithTag("board-switch").performClick()
         // [utest->dsn~config-defaults~1]

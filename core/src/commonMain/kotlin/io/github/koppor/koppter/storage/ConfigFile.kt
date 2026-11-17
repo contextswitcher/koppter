@@ -3,9 +3,14 @@ package io.github.koppor.koppter.storage
 import io.github.koppor.koppter.plan.PlanConfig
 import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.todotxt.BoardColumn
+import io.github.koppor.koppter.todotxt.PriorityNames
+import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
+import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.dueDays
 import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.withAncestors
+import kotlinx.datetime.LocalDate
 
 /**
  * The configuration that is kept next to the todo.txt file and synchronized with it.
@@ -22,6 +27,7 @@ import io.github.koppor.koppter.todotxt.withAncestors
  * and so do the keys `time-maps`, `context-time-maps` and `barriers` for planning.
  * The key `priorities` maps the letter of a priority to the name it is shown with.
  * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
+ * The key `new-task` holds what a new task starts with, under `priority` and `due`.
  * The key `project-contexts` maps a project, written with its sign, to the contexts that a task takes with it.
  */
 // ponytail: reads the subset of YAML that it writes (one line per column, plain or quoted scalars, the escapes \" and \\);
@@ -40,6 +46,7 @@ object ConfigFile {
     const val PRIORITIES = "priorities:"
     const val LINKS = "links:"
     const val PROJECT_CONTEXTS = "project-contexts:"
+    private const val NEW_TASK = "new-task:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
     /**
@@ -58,6 +65,32 @@ object ConfigFile {
      * in the share sheet applies as the first action, and an example of an action that adds something, for the user to choose.
      */
     val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("inbox", "{}"), ShareAction("reading", "{} +research @reading due:2w dur:1h"))
+
+    /** What a new task starts with in a configuration that does not have the key: a middle priority and the end of the next week. */
+    val DEFAULT_NEW_TASK = listOf("priority" to "C", "due" to "next weekend")
+
+    /** What a new task starts with, as `priority` and `due`; the default if the file does not have the key. */
+    // [impl->dsn~config-defaults~1]
+    fun newTaskDefaults(config: String): List<Pair<String, String>> = block(config, NEW_TASK) ?: DEFAULT_NEW_TASK
+
+    /** Without entries, the key stays, which tells that a new task starts empty. */
+    fun withNewTaskDefaults(config: String, defaults: List<Pair<String, String>>): String = withBlock(config, NEW_TASK, defaults, keepEmpty = true)
+
+    /**
+     * The task that the dialog of a new task starts with.
+     * The priority is given by its name or its letter; the due date by a name of [dueDays], such as `next weekend`,
+     * or as a filter gives a date: `tomorrow` or an interval from today, such as `10d`.
+     */
+    // [impl->dsn~new-task-defaults~1]
+    // ponytail: a value that is not understood is left out without a message; report it in the settings when that confuses.
+    fun newTask(config: String, today: LocalDate): Task {
+        val defaults = newTaskDefaults(config).toMap()
+        val priority = defaults["priority"]?.let { name ->
+            PriorityNames.of(entries(config, PRIORITIES)).letter(name) ?: name.singleOrNull()?.takeIf { it in 'A'..'Z' }
+        }
+        val due = defaults["due"]?.ifBlank { null }?.let { day -> dueDays(today).firstOrNull { it.first == day }?.second ?: Query.date(day, today) }
+        return Task(body = "").edit(priority = priority).withTag(Task.DUE, due?.toString())
+    }
 
     /** The columns in the order of the file; the default ones if the file does not have the key. */
     // [impl->dsn~config-defaults~1]
