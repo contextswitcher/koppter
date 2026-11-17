@@ -17,16 +17,6 @@ class PriorityNamesTest {
 
     // [utest->dsn~priority-names~1]
     @Test
-    fun aNameTypedAtTheStartOfALineBecomesItsLetter() {
-        assertEquals("(D) Call the dentist (5) times", fibonacci.toLetters("(5) Call the dentist (5) times"))
-        assertEquals("(B) Call", fibonacci.toLetters("(B) Call"))
-        assertEquals("(13) Call", fibonacci.toLetters("(13) Call"))
-        assertEquals("(5)Call", fibonacci.toLetters("(5)Call"))
-        assertEquals("Call (5) times", fibonacci.toLetters("Call (5) times"))
-    }
-
-    // [utest->dsn~priority-names~1]
-    @Test
     fun aFilterNamesAPriorityByItsNameOrByItsLetter() {
         assertEquals("(>C) -(E) @phone (B) due:<1w", fibonacci.toLettersInFilter("(>3) -(8) @phone (B) due:<1w"))
         assertEquals("(<=D)", fibonacci.toLettersInFilter("(<=5)"))

@@ -1,9 +1,9 @@
 package io.github.koppor.koppter.ui
 
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Ics
@@ -256,23 +256,6 @@ class TodoController(
     val contexts: List<String> get() = file.entries.flatMap { it.task.contexts }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     val hashtags: List<String> get() = file.entries.flatMap { it.task.hashtags }.distinct().sorted()
     val priorities: List<Char> get() = file.entries.mapNotNull { it.task.priority }.distinct().sorted()
-
-    /**
-     * What the word at the end of a typed line can be completed to, if it starts a project, a context or a hashtag:
-     * the known names that contain what follows the sign, so that a context below another one is found by its last level.
-     */
-    // [impl->dsn~quick-add-completion~1]
-    fun completions(line: String): List<String> {
-        val word = line.substringAfterLast(' ')
-        val known = when (word.firstOrNull()) {
-            '+' -> projects
-            '@' -> contexts
-            '#' -> hashtags
-            else -> return emptyList()
-        }
-        val typed = word.drop(1)
-        return known.filter { it != typed && it.contains(typed, ignoreCase = true) }.take(8).map { word.first() + it }
-    }
 
     fun load() {
         guarded {
@@ -561,11 +544,6 @@ class TodoController(
         guarded { saveNote(task, note) }
         write(file.add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
     }
-
-    fun add(line: String) = add(Task.parse(priorityNames.toLetters(line)).withDates(today()).withContextSwitcherTags())
-
-    /** The line that [add] writes for the typed one, if words of it become dates; `null` otherwise. */
-    fun datesPreview(line: String): String? = Task.parse(priorityNames.toLetters(line)).let { task -> task.withDates(today()).takeIf { it != task }?.toLine() }
 
     fun toggle(entry: Entry) {
         val index = locate(entry) ?: return

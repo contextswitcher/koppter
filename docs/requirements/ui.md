@@ -16,35 +16,12 @@ Covers:
 
 Needs: dsn
 
-### Add a task by typing a line
-`req~quick-add~1`
+### Dates in words
+`req~dates-in-words~1`
 
-The user adds a task by typing a line in todo.txt syntax into a field above the list.
-
-Covers:
-
-* `feat~task-editing~1`
-
-Needs: dsn
-
-### Completion when adding a task
-`req~quick-add-completion~1`
-
-While the user types a project, a context or a hashtag into the line that adds a task, the application offers the known ones that fit.
-
-Covers:
-
-* `feat~task-editing~1`
-
-Needs: dsn
-
-### Dates in words when adding a task
-`req~quick-add-dates~1`
-
-A typed line may name its dates in words at the end of its text, such as `tomorrow`, `next week`, `by Wed` or `tomorrow 3pm`.
+The description that the user types for a task may name its dates in words at the end of its text, such as `tomorrow`, `next week`, `by Wed` or `tomorrow 3pm`.
 The task gets the due date, the start date and the times that the words name.
-The application shows the resulting line before the task is added.
-The description of the edit dialog reads the same words.
+The application shows the resulting line before the task is saved.
 
 Covers:
 
@@ -466,46 +443,19 @@ Covers:
 
 Needs: impl
 
-### Quick add
-`dsn~quick-add~1`
+### Dates in words
+`dsn~dates-in-words~1`
 
-A text field above the list passes its content to `TodoController.add` on Enter and clears itself.
-
-Covers:
-
-* `req~quick-add~1`
-
-Needs: impl, utest
-
-### Completion in the quick add line
-`dsn~quick-add-completion~1`
-
-`TodoController.completions` takes the word at the end of the typed line.
-If it starts with `+`, `@` or `#`, it returns at most eight known projects, contexts or hashtags that contain the rest of the word, in any case of the letters, so that a name below another one is found by its last level.
-The line shows them in a menu below the field, which does not take the focus.
-Tab takes the first one, a click any of them: the word is replaced by the name, followed by a blank.
-Esc closes the menu until the text changes.
-
-Covers:
-
-* `req~quick-add-completion~1`
-
-Needs: impl, utest
-
-### Dates in words in the quick add line
-`dsn~quick-add-dates~1`
-
-`TodoController.add` applies `Task.withDates` to the typed line, which `DatePhrase` implements.
+`Task.withDates`, which `DatePhrase` implements, reads the words.
 The phrases are those that SkedPal reads in the title of a task, in English and in any case of the letters; the README lists them.
 A phrase is read at the end of the text only, where projects, contexts, hashtags and tags may follow it; the same words elsewhere stay text.
 It is removed from the text and becomes the tags `t:`, `due:`, `at:` and `dueby:`.
 A tag that the line already has stays.
 A weekday or a day of a month names the first such day from today on, and a week runs from Monday to Sunday.
-The quick add field shows the line that `TodoController.datesPreview` returns below the typed one, as there is no other sign that words become a date.
 
 Covers:
 
-* `req~quick-add-dates~1`
+* `req~dates-in-words~1`
 
 Needs: impl, utest
 
@@ -514,11 +464,11 @@ Needs: impl, utest
 
 `EditDialog` applies `Task.withDates` to the task that its fields give, once the description differs from that of the task: words that a task was written with stay words.
 The dialog marks the words that become dates with a background and says below the field what the mark means; the resulting line shows the tags.
-A date in a field of the dialog wins over the words, as a tag of a typed line does.
+A date in a field of the dialog wins over the words.
 
 Covers:
 
-* `req~quick-add-dates~1`
+* `req~dates-in-words~1`
 
 Needs: impl, utest
 
@@ -576,8 +526,7 @@ Needs: impl, utest
 The key `priorities` of `koppter.yml` maps the letter of a priority to its name; the settings dialog edits it, one priority per line as `letter = name`.
 `PriorityNames` gives the name of a priority, which is its letter if it has none, and the priorities to offer: those with a name, or A to F without names.
 The label of a priority, the filter panel, the titles of the board columns by priority and the edit dialog show the name.
-`TodoController.add` replaces a name in parentheses at the start of a typed line by its letter.
-`TodoController.boardColumns` does the same for the priority terms of the filters, so that a filter names a priority by its name or by its letter, and the settings keep the filter as it was typed.
+`TodoController.boardColumns` replaces a name by its letter in the priority terms of the filters, so that a filter names a priority by its name or by its letter, and the settings keep the filter as it was typed.
 Below the field for the names, the settings dialog has one button per scale, which fills the field.
 
 Covers:
@@ -603,8 +552,9 @@ Needs: impl, utest
 ### Filter panel
 `dsn~filter-panel~1`
 
-`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the text as a text field and the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
-While the text field has a text, a button at its end empties it.
+`FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+The text of the filter is a field of the main screen above the list (`SearchField`), in a window of any width, so that a search needs no panel.
+While the field has a text, a button at its end empties it; a text typed in the agenda or the week, which the filter does not apply to, shows the list.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
 From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
@@ -676,18 +626,15 @@ Needs: impl, utest
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the switches for the view, the quick add field below them, the task list and a button for a new task.
-The switches stand above the field, as a task is looked up more often than added.
+The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them, the task list and a button for a new task, which opens the edit dialog.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
-The quick add field is a line to type into and is left out on a device without a keyboard (`LocalKeyboard`), where the button for a new task opens the dialog.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
 
 Covers:
 
 * `req~filter-panel~1`
-* `req~quick-add~1`
 
 Needs: impl
 
@@ -698,7 +645,7 @@ The main screen is focusable and takes the focus whenever none of its elements h
 With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
-With Ctrl and Shift: A gives the focus to the quick add field, F to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
+With Ctrl and Shift: A opens the dialog for a new task, F gives the focus to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
 `LocalKeyboard` tells whether the device has a keyboard; with one, the description of the edit dialog and the field of the inbox get the focus when they appear.
 Without one, the description gets the focus in the dialog of a new task only, as the keyboard of the screen hides half of an existing task.

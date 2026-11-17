@@ -93,6 +93,13 @@ class AppTest {
         """.trimIndent() + "\n",
     )
 
+    /** Adds a task in its dialog, which the button for a new task opens. */
+    private fun ComposeUiTest.addTask(description: String) {
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput(description)
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+    }
+
     private fun ComposeUiTest.start(settings: Settings = Settings()) {
         val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
@@ -240,16 +247,6 @@ class AppTest {
         assertEquals(listOf("today", "tomorrow", "in three days", "this weekend"), dueChoices(LocalDate(2026, 11, 16)).map { it.first }.take(4))
         // The end of January has no day a month later.
         assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
-    }
-
-    // [utest->dsn~quick-add~1]
-    @Test
-    fun quickAddAppendsTheTypedLine() = runComposeUiTest {
-        start()
-        onNodeWithTag("quick-add").performTextInput("(C) Buy milk @shop")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("(C) Buy milk @shop", storage.text.trim().lines().last())
-        onNodeWithText("Buy milk").assertExists()
     }
 
     // [utest->dsn~list-step~1]
@@ -406,43 +403,6 @@ class AppTest {
         assertEquals("(A) Thank Mom +GarageSale @phone due:2026-11-20", storage.text.lines()[4])
     }
 
-    // [utest->dsn~quick-add-completion~1]
-    @Test
-    fun theLineThatAddsATaskCompletesProjectsContextsAndHashtags() = runComposeUiTest {
-        storage.text += "Read the survey @research>reading #someday\n"
-        start()
-        onNodeWithTag("quick-add").performTextInput("Review the paper")
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        // A context below another one is found by its last level, and Tab takes the first one offered.
-        onNodeWithTag("quick-add").performTextInput(" @rea")
-        onNodeWithTag("quick-add-complete-@research>reading").assertExists()
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Tab) }
-        onNodeWithTag("quick-add").assertTextContains("Review the paper @research>reading ")
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        // The sign alone offers all known names, and a click takes one of them.
-        onNodeWithTag("quick-add").performTextInput("+")
-        onNodeWithTag("quick-add-complete-+Family").assertExists()
-        onNodeWithTag("quick-add-complete-+GarageSale").performClick()
-        onNodeWithTag("quick-add").performTextInput("#so")
-        // Esc closes the offers and leaves the word as it was typed.
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Escape) }
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Review the paper @research>reading +GarageSale #so", storage.text.trim().lines().last())
-    }
-
-    // [utest->dsn~quick-add-dates~1]
-    @Test
-    fun quickAddShowsAndWritesTheDatesOfTypedWords() = runComposeUiTest {
-        start()
-        onNodeWithTag("quick-add").performTextInput("Write the report")
-        onNodeWithTag("quick-add-preview").assertDoesNotExist()
-        onNodeWithTag("quick-add").performTextInput(" next week")
-        onNodeWithTag("quick-add-preview", useUnmergedTree = true).assertTextEquals("Write the report t:2026-11-16 due:2026-11-22")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Write the report t:2026-11-16 due:2026-11-22", storage.text.trim().lines().last())
-    }
-
     // [utest->dsn~task-operations~1]
     @Test
     fun completingWritesNoDateByDefault() = runComposeUiTest {
@@ -456,8 +416,7 @@ class AppTest {
     @Test
     fun addingAndCompletingWriteDatesWhenSwitchedOn() = runComposeUiTest {
         start(Settings(writeDates = true))
-        onNodeWithTag("quick-add").performTextInput("Buy milk")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
+        addTask("Buy milk")
         assertEquals("2026-11-12 Buy milk", storage.text.trim().lines().last())
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
@@ -745,11 +704,9 @@ class AppTest {
     @Test
     fun aFieldOfOneLineKeepsItsHeightWhenTextIsTyped() = runComposeUiTest {
         start()
-        for (tag in listOf("filter-text", "quick-add")) {
-            val empty = onNodeWithTag(tag).fetchSemanticsNode().size.height
-            onNodeWithTag(tag).performTextInput("mom")
-            assertEquals(empty, onNodeWithTag(tag).fetchSemanticsNode().size.height, tag)
-        }
+        val empty = onNodeWithTag("filter-text").fetchSemanticsNode().size.height
+        onNodeWithTag("filter-text").performTextInput("mom")
+        assertEquals(empty, onNodeWithTag("filter-text").fetchSemanticsNode().size.height)
     }
 
     // [utest->dsn~filter-label-search~1]
@@ -790,6 +747,20 @@ class AppTest {
         onNodeWithTag("filter-project-House").assertExists()
         onNodeWithTag("filter-context-research").assertExists()
         onNodeWithTag("filter-hashtag-money").assertExists()
+    }
+
+    // [utest->dsn~filter-panel~1]
+    @Test
+    fun theTextOfTheFilterStandsAboveTheListOfANarrowWindowAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        // The panel with the other criteria is closed.
+        onNodeWithTag("filter-heading").assertIsNotDisplayed()
+        controller.view = View.WEEK
+        onNodeWithTag("week").assertExists()
+        onNodeWithTag("filter-text").assertIsDisplayed().performTextInput("mom")
+        onNodeWithTag("week").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(1)
     }
 
     // [utest->dsn~filter-panel~1]
@@ -851,9 +822,9 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
 
-        onNodeWithTag("quick-add").performTextInput("Review the comments contextswitcher://task/jabref/fix-npe +JabRef")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Review the comments +JabRef cs:jabref/fix-npe", storage.text.trim().lines().last())
+        // A link in the description of a new task becomes the tag.
+        addTask("Review the comments contextswitcher://task/jabref/fix-npe")
+        assertEquals("Review the comments cs:jabref/fix-npe", storage.text.trim().lines().last())
 
         onNodeWithTag("label-cs", useUnmergedTree = true).performClick()
         assertEquals(listOf("contextswitcher://switch/jabref/fix-npe"), opened)
@@ -865,16 +836,16 @@ class AppTest {
         onNodeWithTag("edit-cs").assertTextContains("jabref/fix-npe")
         onNodeWithTag("edit-cs").performTextReplacement("contextswitcher://task/jabref/review")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("Review the comments +JabRef cs:jabref/review", storage.text.trim().lines().last())
+        assertEquals("Review the comments cs:jabref/review", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("Review the comments +JabRef", storage.text.trim().lines().last())
+        assertEquals("Review the comments", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("jabref/fix-npe")
         onNodeWithTag("edit-save").performScrollTo().performClick()
 
-        controller.add("Call cs:missing")
+        controller.add(Task.parse("Call cs:missing"))
         onAllNodesWithTag("label-cs", useUnmergedTree = true)[1].performClick()
         onNodeWithText("Not opened: contextswitcher://switch/missing").assertExists()
     }
@@ -1058,9 +1029,7 @@ class AppTest {
         )
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("priorities:\n  \"A\": \"1\""))
 
-        onNodeWithTag("quick-add").performTextInput("(5) Buy milk @shop")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("(D) Buy milk @shop", storage.text.trim().lines().last())
+        controller.add(Task.parse("(D) Buy milk @shop"))
         onNode(hasText("5") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
 
         openTask("Buy milk")
@@ -1387,8 +1356,10 @@ class AppTest {
 
         ctrl(Key.F, shift = true)
         onNodeWithTag("filter-text").assertIsFocused()
+        // The key of SkedPal for a new task.
         ctrl(Key.A, shift = true)
-        onNodeWithTag("quick-add").assertIsFocused()
+        onNodeWithTag("edit-dialog").assertExists()
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
         // The key of browsers and editors for their search; the field offers to empty it once it has a text.
         ctrl(Key.F)
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
@@ -1398,8 +1369,6 @@ class AppTest {
         onNodeWithTag("filter-text-clear").performClick()
         onAllNodesWithTag("task").assertCountEquals(all)
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
-        ctrl(Key.A, shift = true)
-        onNodeWithTag("quick-add").assertIsFocused()
         ctrl(Key.L, shift = true)
         onNodeWithTag("plan-dialog").assertExists()
         onNodeWithTag("plan-close").performScrollTo().performClick()
@@ -1535,7 +1504,7 @@ class AppTest {
             fetch = { error("No such calendar at https://example.org/secret") },
             log = { message, cause -> logged += message to cause },
         )
-        controller.add("Buy milk")
+        controller.add(Task.parse("Buy milk"))
         assertEquals("The disk is full", controller.error)
         assertEquals("The disk is full", logged.single().first)
         assertEquals("The disk is full", logged.single().second?.message)
@@ -1728,11 +1697,10 @@ class AppTest {
 
     // [utest->dsn~keyboard-shortcuts~1]
     @Test
-    fun withoutAKeyboardThereIsNoLineForANewTaskAndTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
+    fun withoutAKeyboardTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", keyboard = false) }
 
-        onNodeWithTag("quick-add").assertDoesNotExist()
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").assertIsFocused()
         onNodeWithTag("edit-cancel").performScrollTo().performClick()

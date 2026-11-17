@@ -4,7 +4,7 @@ import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-// [utest->dsn~quick-add-dates~1]
+// [utest->dsn~dates-in-words~1]
 class DatePhraseTest {
     private val friday = LocalDate(2026, 11, 13)
 

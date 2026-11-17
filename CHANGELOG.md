@@ -20,7 +20,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The link to a page that OneNote copies, pasted into the note of a task, becomes a list of the two Markdown links *OneNote Desktop* and *OneNote Web*.
 - The menu of the due date and the dialog of a task offer *in three days*.
 - A hashtag may start with a currency sign: `#$$$`.
-- The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, as the line above the list does, and marks the words that become dates.
+- The description in the dialog of a task reads dates in words, such as `tomorrow` or `by Fri`, and marks the words that become dates.
 - *Choose folder* in the settings opens the `todo.txt` file of a folder. On Android, such a folder has the notes, the scheduled tasks, the configuration and the plan next to the file, which a single chosen file has not. On the desktop, the file need not exist yet.
 - For a repository of GitHub, a button in the settings copies the public SSH key and opens the page of the repository that adds it as a deploy key.
 - The settings tell that the files next to the `todo.txt` file belong to it, and on Android that a file chosen with *Choose file* comes without them.
@@ -38,10 +38,16 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The date of the tag `t:` is called the start date instead of the threshold date: the field of the dialog of a task is *Start date*, and the option of the filter panel *Show tasks before their start date*. The tag stays `t:`.
 - The day that the menu of the due date and the dialog of a task called *next week* is called *next weekend*, as it is the Sunday of the next week.
 - The dialogs that choose a file come from the library FileKit: on the desktop, they are those of the operating system, and on Linux that of the desktop portal.
-- A device without a keyboard has no line for a new task above the list, and the dialog of a new task starts with the cursor in the description.
+- On a device without a keyboard, the dialog of a new task starts with the cursor in the description.
+- The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
+- Ctrl+Shift+A opens the dialog of a new task.
 - A click on the public SSH key in the settings copies it.
 - A clone that fails is reported in red, the settings scroll to the message, and on a device with a key of its own it asks whether the key is registered with the server.
 - The address of a page of a repository of GitHub that is pasted into the settings becomes the address for SSH of that repository.
+
+### Removed
+
+- The line above the list that added a task as it was typed, with its completion of projects, contexts and hashtags and its names of priorities at the start of a line; a task is added in its dialog, which the button with the plus and Ctrl+N open.
 
 ### Fixed
 

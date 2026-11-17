@@ -11,7 +11,7 @@ import kotlinx.datetime.plus
  * Dates typed as words at the end of the text of a task, such as `next week` or `by Wed 14:00`.
  * The phrases are those that SkedPal reads in the title of a task.
  */
-// [impl->dsn~quick-add-dates~1]
+// [impl->dsn~dates-in-words~1]
 internal object DatePhrase {
     private class Plan(val start: LocalDate? = null, val due: LocalDate? = null, val at: String? = null, val by: String? = null)
 

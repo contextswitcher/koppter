@@ -39,6 +39,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 ## Overview
 
 The task list with the filter panel.
+The field above the list searches the text of the tasks.
 Projects, contexts, tags and the priority are labels at the right of each task: in the line of its description where both fit, above it otherwise.
 An address of the web in the text of a task is a link that opens in the browser.
 A long address is cut after 50 characters; the whole one appears when the pointer of the mouse rests on it, and the edit dialog shows it as well.
@@ -101,7 +102,7 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 
 In a narrow window, as on a phone, the filter panel is a drawer.
 On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list warns first: a second back leaves the application.
-A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
+The button with the plus opens the dialog of a new task, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
 
@@ -350,7 +351,7 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
 
 ## Dates in words
 
-A line typed above the list may name its dates in words instead of tags, and so may the description in the dialog of a task, which marks these words.
+The description in the dialog of a task may name its dates in words instead of tags; the dialog marks these words.
 `Write the report next week` is written as `Write the report t:2026-11-16 due:2026-11-22`.
 The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a-plan-for-a-task) reads in the title of a task; the examples are typed on Friday, 13 November 2026.
 
@@ -373,18 +374,16 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 * A day is `today`, `tomorrow`, a weekday, a day of a month such as `Sep 15`, `15 Sep` or `September 15th`, or a date such as `2026-12-24`.
 * A weekday or a day of a month is the first such day from today on; a week runs from Monday to Sunday.
 * The phrase stands at the end of the text; projects, contexts, hashtags and tags may follow it: `Buy milk tomorrow @shop`.
-* While typing, the field shows the line that will be written.
-  If words are not meant as a date, end the line with a full stop: `Buy tickets for the weekend.` stays as it is.
+* While typing, the dialog shows the line that will be written.
+  If words are not meant as a date, end the description with a full stop: `Buy tickets for the weekend.` stays as it is.
 * A `due:`, `t:`, `at:` or `dueby:` tag that is typed as well stays.
-* The phrases are English, and they are read in the line above the list only, not in the edit dialog.
+* The phrases are English.
 * Recurrence is not typed in words: use `rec:` or `ice_recur.txt`.
 
 ## Completion while typing
 
-The line above the list completes a project, a context or a hashtag while it is typed.
-After `+`, `@` or `#` it offers the known names that contain what follows, so that `@rea` offers `@research>reading` and `+survey` offers `+papers>survey`.
-Tab takes the first name offered, a click any of them, and Esc closes the offers.
-The edit dialog narrows its known names in the same way.
+The fields of the edit dialog that add a project, a context or a hashtag narrow the known names to those that contain what is typed, so that `rea` offers `@research>reading` and `survey` offers `+papers>survey`.
+A click takes one of them.
 
 ## Order of the list
 
@@ -444,7 +443,6 @@ The buttons below the field fill in a scale: the letters, the numbers 1 to 5, or
 
 * The labels of the tasks, the filter panel, the board by priority and the edit dialog then show 1, 2, 3, 5 and 8.
 * The edit dialog offers the priorities that have a name, here five; without names, it offers A to F.
-* A line typed above the list may start with a name: `(5) Call the dentist` is written as `(D) Call the dentist`.
 * The file keeps the letters, so that other todo.txt tools read the priorities and order by them ([decision 0024](docs/decisions/0024-names-for-priorities-kept-in-the-configuration-file.md)).
 * The order is that of the letters: the name of A is the highest priority, so `A = 8` to `E = 1` makes 8 the highest.
 
@@ -628,10 +626,9 @@ The application only reads the calendars and writes nothing to them.
 
 | Keys | Effect |
 | --- | --- |
-| Ctrl+N | New task in the edit dialog |
+| Ctrl+N, Ctrl+Shift+A | New task in the edit dialog |
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
-| Ctrl+Shift+A | Go to the line that adds a task |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
 | Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
 | Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
