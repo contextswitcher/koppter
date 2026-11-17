@@ -378,6 +378,8 @@ private fun MainScreen(
             knownContexts = controller.contexts,
             knownHashtags = controller.hashtags,
             today = controller.today(),
+            width = controller.settings.editWidth,
+            onWidth = { controller.updateSettings(controller.settings.copy(editWidth = it)) },
             onSave = { task, note ->
                 if (entry == null) controller.add(task, note) else controller.replace(entry, task, note)
                 editing = null

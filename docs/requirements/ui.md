@@ -57,7 +57,7 @@ Needs: dsn
 `req~priority-names~1`
 
 The user gives priorities names, such as the numbers 1, 2, 3, 5 and 8 for A to E.
-The application shows the names where it shows a priority, offers the named priorities for a task, and accepts a name where a line or a filter is typed.
+The application shows the names where it shows a priority, offers the named priorities for a task, and accepts a name where a filter is typed.
 The settings offer scales to choose with one click: numbers and steps of the Fibonacci sequence.
 The file keeps the letters of the todo.txt format.
 
@@ -516,10 +516,12 @@ Needs: impl, utest
 
 `EditDialog` keeps the edited values as dialog state and computes the resulting task with `Task.edit` and `Task.withTag` on every change.
 The resulting line is shown below the fields in a monospaced font.
-The description starts with the cursor at its end, and the dialog is wide enough for the priorities and the days of the due date in one row each where the window allows that.
-Projects, contexts and hashtags are chips: those of the task, then known ones to add with a click, then a field of the size of a chip for another name.
+A heading names the dialog: *New task* or *Edit task*.
+The description starts with the cursor at its end.
+Projects, contexts and hashtags are chips: those of the task, then all known ones to add with a click, then a field of the size of a chip for another name.
 Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
+The calendar of the deadline has the button *Use due date* while the task has a due date, as the two are often the same day.
 *Save* is disabled while a date, the recurrence or the duration is invalid or the task is empty.
 The dialog also serves for a new task.
 
@@ -528,6 +530,20 @@ Covers:
 * `req~edit-dialog~1`
 * `req~complete-and-delete~1`
 * `adr~metadata-after-description~1`
+
+Needs: impl, utest
+
+### Width of the edit dialog
+`dsn~edit-resize~1`
+
+The edit dialog is 760 dp wide where the window allows that, which is enough for the priorities and the days of the due date in one row each.
+On a device with a keyboard, its right edge has a handle that is dragged: the dialog stays in the middle of the window, so its width changes by twice the way of the pointer, between 420 and 2400 dp.
+The dialog is a layer of the window of the application and not a window of its own, so it has no frame of the operating system to drag.
+The width is kept in the settings of the device as `editWidth` when the drag ends.
+
+Covers:
+
+* `req~edit-dialog~1`
 
 Needs: impl, utest
 

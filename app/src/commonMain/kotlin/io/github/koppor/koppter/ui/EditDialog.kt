@@ -18,6 +18,17 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.Alignment
+import kotlin.math.roundToInt
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.background
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -121,6 +132,9 @@ fun EditDialog(
     onSave: (Task, note: String?) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
+    /** The width of the dialog in dp where the window allows it, and what keeps a width that the user chose. */
+    width: Int = 760,
+    onWidth: (Int) -> Unit = {},
 ) {
     // The task as the line was last typed; the fields start anew from it.
     // [impl->dsn~edit-line~1]
@@ -185,12 +199,15 @@ fun EditDialog(
     val state = result.toLine() to note.text
     val initial = remember { state }
 
+    // [impl->dsn~edit-resize~1]
+    var shownWidth by remember { mutableStateOf(width.dp) }
+    val density = LocalDensity.current
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 6.dp,
-            // Wide enough for the priorities and the days of the due date in one row each.
-            modifier = Modifier.widthIn(max = 760.dp).testTag("edit-dialog")
+            // By default wide enough for the priorities and the days of the due date in one row each.
+            modifier = Modifier.widthIn(max = shownWidth).testTag("edit-dialog")
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
@@ -198,150 +215,176 @@ fun EditDialog(
                     save
                 },
         ) {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                OutlinedTextField(
-                    value = description,
-                    onValueChange = { description = it.copy(text = it.text.replace('\n', ' ')) },
-                    label = { Text("Description") },
-                    // Marked, as the words leave the description when the task is saved.
-                    visualTransformation = phraseColor(phraseStart, MaterialTheme.colorScheme.tertiaryContainer),
-                    supportingText = phraseStart?.let { { Text("The marked words become the dates of the task.", Modifier.testTag("edit-dates-hint")) } },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocus).testTag("edit-description"),
-                )
-
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    val names = LocalPriorityNames.current
-                    val choices = (listOf<Char?>(null) + names.choices).let { if (priority in it) it else it + priority }
-                    for (choice in choices) {
-                        FilterChip(
-                            selected = priority == choice,
-                            onClick = { priority = choice },
-                            label = { Text(choice?.let(names::name) ?: "No priority") },
-                            modifier = Modifier.testTag("edit-priority-${choice ?: "none"}"),
-                        )
-                    }
-                }
-
-                // [impl->dsn~due-chips~1]
-                // The days of the menu of a task card, which a device without a mouse does not open for a task without due date.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("Due", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
-                    for ((title, date) in dueChoices(today)) {
-                        FilterChip(
-                            selected = due.trim() == date.toString(),
-                            onClick = { due = if (due.trim() == date.toString()) "" else date.toString() },
-                            label = { Text(title) },
-                            modifier = Modifier.testTag("edit-due-$date"),
-                        )
-                    }
-                }
-                // A flow row: three fields side by side on the desktop, wrapped on a phone.
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    val field = Modifier.width(165.dp)
-                    WithHelp("The day by which the task is to be done (due:).") { DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due")) }
-                    // [impl->dsn~due-time~1]
-                    WithHelp("The time of the due date by which the task is to be done (dueby:).") {
-                        TimeField("Due time", "14:00", by, { by = it }, byValid, field.testTag("edit-by"))
-                    }
-                    // [impl->dsn~deadline~1]
-                    WithHelp("The day that others set for the task, after which it is late (deadline:).") {
-                        DateField("Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"))
-                    }
-                    // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
-                    WithHelp("The task is hidden and not planned before this day (t:).") {
-                        DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
-                    }
-                    WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
-                        RecurrenceField(recurrence, { recurrence = it }, recurrenceValid, field.testTag("edit-recurrence"))
-                    }
-                    // [impl->dsn~fixed-time~1]
-                    WithHelp("The time at which the task takes place (at:).") {
-                        TimeField("Fixed time", "12:00", at, { at = it }, atValid, field.testTag("edit-at"))
-                    }
-                    // [impl->dsn~duration~1]
-                    WithHelp("How long the task takes, such as 30m or 2h (dur:).") {
-                        DurationField("Duration", "45m, 1h30m", duration, { duration = it }, durationValid, field.testTag("edit-duration"))
-                    }
-                    // [impl->dsn~travel-time~1]
-                    WithHelp("The way to the task, kept free before and after it (tt:).") {
-                        DurationField("Travel time", "30m", travel, { travel = it }, travelValid, field.testTag("edit-travel"))
-                    }
-                    // [impl->dsn~time-spent~1]
-                    WithHelp("The time that was worked on the task already (spent:).") {
-                        DurationField("Time spent", "1h30m", spent, { spent = it }, spentValid, field.testTag("edit-spent"))
-                    }
-                }
-
-                // [impl->dsn~context-switcher-tag~1]
-                OutlinedTextField(
-                    value = contextSwitcher,
-                    onValueChange = { contextSwitcher = it },
-                    label = { Text("ContextSwitcher task") },
-                    placeholder = { Text("category/task or a copied link") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("edit-cs"),
-                )
-
-                NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project", projectColors())
-                NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
-                // [impl->dsn~hashtags-in-ui~1]
-                // "#123" in a line is a word of the description, not a hashtag.
-                NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
-
-                if (originalNote != null) {
+            Box {
+                Column(
+                    Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Text(if (isNew) "New task" else "Edit task", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("edit-heading"))
                     OutlinedTextField(
-                        value = note,
-                        // [impl->dsn~onenote-links~1]
-                        onValueChange = { typed ->
-                            // Only what stands before the cursor, where a pasted text ends, so that the cursor stays behind it.
-                            val cursor = typed.selection.end
-                            val before = oneNoteLinks(typed.text.substring(0, cursor))
-                            note = if (before.length == cursor) typed else TextFieldValue(before + typed.text.substring(cursor), TextRange(before.length))
-                        },
-                        label = { Text("Note (Markdown)") },
-                        minLines = 2,
-                        maxLines = 8,
-                        modifier = Modifier.fillMaxWidth().testTag("edit-note"),
+                        value = description,
+                        onValueChange = { description = it.copy(text = it.text.replace('\n', ' ')) },
+                        label = { Text("Description") },
+                        // Marked, as the words leave the description when the task is saved.
+                        visualTransformation = phraseColor(phraseStart, MaterialTheme.colorScheme.tertiaryContainer),
+                        supportingText = phraseStart?.let { { Text("The marked words become the dates of the task.", Modifier.testTag("edit-dates-hint")) } },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocus).testTag("edit-description"),
                     )
-                }
 
-                Text("Line in todo.txt", style = MaterialTheme.typography.labelMedium)
-                // [impl->dsn~edit-line~1]
-                Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
-                    BasicTextField(
-                        value = line ?: result.toLine(),
-                        onValueChange = { typed ->
-                            line = typed.replace('\n', ' ')
-                            base = Task.parse(line!!)
-                        },
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.padding(8.dp).fillMaxWidth().onFocusChanged { if (!it.isFocused) line = null }.testTag("edit-line"),
-                    )
-                }
-
-                // [impl->dsn~dates-in-dialog~1]
-                val history = listOfNotNull(dates?.added?.let { "Added $it" }, dates?.completed?.let { "Completed $it" })
-                if (history.isNotEmpty()) {
-                    Text(
-                        history.joinToString(" · ") + " (from the git history)",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testTag("edit-dates"),
-                    )
-                }
-
-                Row(Modifier.fillMaxWidth()) {
-                    if (!isNew) {
-                        TextButton(onClick = onDelete, modifier = Modifier.testTag("edit-delete")) { Text("Delete") }
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        val names = LocalPriorityNames.current
+                        val choices = (listOf<Char?>(null) + names.choices).let { if (priority in it) it else it + priority }
+                        for (choice in choices) {
+                            FilterChip(
+                                selected = priority == choice,
+                                onClick = { priority = choice },
+                                label = { Text(choice?.let(names::name) ?: "No priority") },
+                                modifier = Modifier.testTag("edit-priority-${choice ?: "none"}"),
+                            )
+                        }
                     }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
-                    Button(onClick = { onSave(result, if (originalNote == null) null else note.text) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+
+                    // [impl->dsn~due-chips~1]
+                    // The days of the menu of a task card, which a device without a mouse does not open for a task without due date.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Due", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+                        for ((title, date) in dueChoices(today)) {
+                            FilterChip(
+                                selected = due.trim() == date.toString(),
+                                onClick = { due = if (due.trim() == date.toString()) "" else date.toString() },
+                                label = { Text(title) },
+                                modifier = Modifier.testTag("edit-due-$date"),
+                            )
+                        }
+                    }
+                    // A flow row: three fields side by side on the desktop, wrapped on a phone.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        val field = Modifier.width(165.dp)
+                        WithHelp("The day by which the task is to be done (due:).") { DateField("Due date", due, { due = it }, dueValid, field.testTag("edit-due")) }
+                        // [impl->dsn~due-time~1]
+                        WithHelp("The time of the due date by which the task is to be done (dueby:).") {
+                            TimeField("Due time", "14:00", by, { by = it }, byValid, field.testTag("edit-by"))
+                        }
+                        // [impl->dsn~deadline~1]
+                        WithHelp("The day that others set for the task, after which it is late (deadline:).") {
+                            DateField(
+                                "Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"),
+                                // The deadline is often the day that the task is due on.
+                                shortcut = ("Use due date" to due.trim()).takeIf { due.isNotBlank() && dueValid },
+                            )
+                        }
+                        // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
+                        WithHelp("The task is hidden and not planned before this day (t:).") {
+                            DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
+                        }
+                        WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
+                            RecurrenceField(recurrence, { recurrence = it }, recurrenceValid, field.testTag("edit-recurrence"))
+                        }
+                        // [impl->dsn~fixed-time~1]
+                        WithHelp("The time at which the task takes place (at:).") {
+                            TimeField("Fixed time", "12:00", at, { at = it }, atValid, field.testTag("edit-at"))
+                        }
+                        // [impl->dsn~duration~1]
+                        WithHelp("How long the task takes, such as 30m or 2h (dur:).") {
+                            DurationField("Duration", "45m, 1h30m", duration, { duration = it }, durationValid, field.testTag("edit-duration"))
+                        }
+                        // [impl->dsn~travel-time~1]
+                        WithHelp("The way to the task, kept free before and after it (tt:).") {
+                            DurationField("Travel time", "30m", travel, { travel = it }, travelValid, field.testTag("edit-travel"))
+                        }
+                        // [impl->dsn~time-spent~1]
+                        WithHelp("The time that was worked on the task already (spent:).") {
+                            DurationField("Time spent", "1h30m", spent, { spent = it }, spentValid, field.testTag("edit-spent"))
+                        }
+                    }
+
+                    // [impl->dsn~context-switcher-tag~1]
+                    OutlinedTextField(
+                        value = contextSwitcher,
+                        onValueChange = { contextSwitcher = it },
+                        label = { Text("ContextSwitcher task") },
+                        placeholder = { Text("category/task or a copied link") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("edit-cs"),
+                    )
+
+                    NameList("Project", "+", projects, knownProjects, { projects = it }, "edit-project", projectColors())
+                    NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
+                    // [impl->dsn~hashtags-in-ui~1]
+                    // "#123" in a line is a word of the description, not a hashtag.
+                    NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
+
+                    if (originalNote != null) {
+                        OutlinedTextField(
+                            value = note,
+                            // [impl->dsn~onenote-links~1]
+                            onValueChange = { typed ->
+                                // Only what stands before the cursor, where a pasted text ends, so that the cursor stays behind it.
+                                val cursor = typed.selection.end
+                                val before = oneNoteLinks(typed.text.substring(0, cursor))
+                                note = if (before.length == cursor) typed else TextFieldValue(before + typed.text.substring(cursor), TextRange(before.length))
+                            },
+                            label = { Text("Note (Markdown)") },
+                            minLines = 2,
+                            maxLines = 8,
+                            modifier = Modifier.fillMaxWidth().testTag("edit-note"),
+                        )
+                    }
+
+                    Text("Line in todo.txt", style = MaterialTheme.typography.labelMedium)
+                    // [impl->dsn~edit-line~1]
+                    Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.small, modifier = Modifier.fillMaxWidth()) {
+                        BasicTextField(
+                            value = line ?: result.toLine(),
+                            onValueChange = { typed ->
+                                line = typed.replace('\n', ' ')
+                                base = Task.parse(line!!)
+                            },
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace, color = MaterialTheme.colorScheme.onSurfaceVariant),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.padding(8.dp).fillMaxWidth().onFocusChanged { if (!it.isFocused) line = null }.testTag("edit-line"),
+                        )
+                    }
+
+                    // [impl->dsn~dates-in-dialog~1]
+                    val history = listOfNotNull(dates?.added?.let { "Added $it" }, dates?.completed?.let { "Completed $it" })
+                    if (history.isNotEmpty()) {
+                        Text(
+                            history.joinToString(" · ") + " (from the git history)",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("edit-dates"),
+                        )
+                    }
+
+                    Row(Modifier.fillMaxWidth()) {
+                        if (!isNew) {
+                            TextButton(onClick = onDelete, modifier = Modifier.testTag("edit-delete")) { Text("Delete") }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
+                        Button(onClick = { onSave(result, if (originalNote == null) null else note.text) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+                    }
+                }
+                // [impl->dsn~edit-resize~1]
+                // For a pointer: a finger has the whole width of a phone anyway.
+                if (keyboard) {
+                    Box(Modifier.matchParentSize()) {
+                        Box(
+                            Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(14.dp).testTag("edit-resize")
+                                .pointerHoverIcon(PointerIcon.Hand)
+                                .draggable(
+                                    // The dialog stays in the middle of the window, so its edge follows the pointer if the width changes by twice the way.
+                                    rememberDraggableState { delta -> shownWidth = (shownWidth + with(density) { (2 * delta).toDp() }).coerceIn(420.dp, 2400.dp) },
+                                    Orientation.Horizontal,
+                                    onDragStopped = { onWidth(shownWidth.value.roundToInt()) },
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                        }
+                    }
                 }
             }
         }
@@ -557,7 +600,15 @@ private fun RecurrenceField(value: String, onChange: (String) -> Unit, valid: Bo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateField(label: String, value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+private fun DateField(
+    label: String,
+    value: String,
+    onChange: (String) -> Unit,
+    valid: Boolean,
+    modifier: Modifier,
+    /** A button of the calendar and the value that it writes into the field. */
+    shortcut: Pair<String, String>? = null,
+) {
     var picking by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = value,
@@ -584,7 +635,10 @@ private fun DateField(label: String, value: String, onChange: (String) -> Unit, 
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { onChange(""); picking = false }) { Text("No date") }
+                Row {
+                    shortcut?.let { (title, date) -> TextButton(onClick = { onChange(date); picking = false }) { Text(title) } }
+                    TextButton(onClick = { onChange(""); picking = false }) { Text("No date") }
+                }
             },
         ) {
             DatePicker(state)
@@ -616,7 +670,7 @@ private fun NameList(
     }
     // The names of the task first, then the known names that can be added with one click.
     // Any part of the name counts, so that a name below another one is found by its last level: `rea` finds `research>reading`.
-    val suggestions = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }.take(8)
+    val suggestions = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }
     val colors = MaterialTheme.colorScheme
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (name in names) {

@@ -658,6 +658,47 @@ class AppTest {
         onNodeWithTag("recurrence-from-the due date").assertIsSelected()
         onNodeWithText("No recurrence").performClick()
         onNodeWithTag("edit-recurrence").assertTextEquals("Recurrence", "")
+
+        // The calendar of the deadline takes the due date with one click, once the task has one.
+        onNodeWithContentDescription("Choose Deadline").performClick()
+        onNodeWithText("Use due date").assertDoesNotExist()
+        onNodeWithText("No date").performClick()
+        onNodeWithTag("edit-due").performTextInput("2026-11-20")
+        onNodeWithContentDescription("Choose Deadline").performClick()
+        onNodeWithText("Use due date").performClick()
+        onNodeWithTag("edit-deadline").assertTextContains("2026-11-20")
+    }
+
+    // [utest->dsn~edit-dialog~1]
+    // [utest->dsn~edit-resize~1]
+    @Test
+    fun theDialogHasAHeadingAllKnownNamesAndAWidthThatIsDraggedAndKept() = runComposeUiTest {
+        storage.text += (1..12).joinToString("") { "Sort the box +Box$it\n" }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+        // More names than a row or two hold.
+        onNodeWithTag("edit-project-suggest-Box12").assertExists()
+
+        fun width() = onNodeWithTag("edit-dialog").fetchSemanticsNode().size.width
+        val wide = width()
+        onNodeWithTag("edit-resize").performMouseInput {
+            moveTo(center)
+            press()
+            moveBy(Offset(-100f, 0f))
+            release()
+        }
+        // The dialog stays in the middle, so it loses the way of the pointer on both sides.
+        val narrow = width()
+        assertTrue(narrow < wide - 100, "$narrow < $wide - 100")
+        assertEquals(true, controller.settings.editWidth < 760)
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        openTask("Post signs")
+        onNodeWithTag("edit-heading").assertTextEquals("Edit task")
+        assertEquals(narrow, width())
     }
 
     // [utest->dsn~edit-help~1]

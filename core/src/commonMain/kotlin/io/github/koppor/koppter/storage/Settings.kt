@@ -32,6 +32,8 @@ data class Settings(
     val boardGroup: String = "PRIORITY",
     /** The name of the attribute of the tiles of the overview. */
     val overviewGroup: String = "CONTEXT",
+    /** The width of the dialog of a task in dp, where the window allows it. */
+    val editWidth: Int = 760,
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -47,6 +49,7 @@ data class Settings(
         LIST_GROUP to listGroup,
         BOARD_GROUP to boardGroup,
         OVERVIEW_GROUP to overviewGroup,
+        EDIT_WIDTH to editWidth.toString(),
     )
 
     companion object {
@@ -62,6 +65,7 @@ data class Settings(
         private const val LIST_GROUP = "listGroup"
         private const val BOARD_GROUP = "boardGroup"
         private const val OVERVIEW_GROUP = "overviewGroup"
+        private const val EDIT_WIDTH = "editWidth"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -77,6 +81,7 @@ data class Settings(
             listGroup = properties[LIST_GROUP].orEmpty(),
             boardGroup = properties[BOARD_GROUP] ?: Settings().boardGroup,
             overviewGroup = properties[OVERVIEW_GROUP] ?: Settings().overviewGroup,
+            editWidth = properties[EDIT_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().editWidth,
         )
     }
 }
