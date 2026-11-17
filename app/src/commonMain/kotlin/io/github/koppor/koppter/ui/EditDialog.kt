@@ -39,6 +39,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.materialPath
 import androidx.compose.material3.AlertDialog
@@ -87,6 +88,7 @@ import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Recurrence
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
+import com.kez.picker.Picker
 import com.kez.picker.PickerDefaults
 import com.kez.picker.duration.DurationPicker
 import com.kez.picker.duration.rememberDurationPickerState
@@ -253,15 +255,7 @@ fun EditDialog(
                         DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
                     }
                     WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
-                        OutlinedTextField(
-                            value = recurrence,
-                            onValueChange = { recurrence = it },
-                            label = { Text("Recurrence") },
-                            placeholder = { Text("w, 2w, +1m") },
-                            isError = !recurrenceValid,
-                            singleLine = true,
-                            modifier = field.testTag("edit-recurrence"),
-                        )
+                        RecurrenceField(recurrence, { recurrence = it }, recurrenceValid, field.testTag("edit-recurrence"))
                     }
                     // [impl->dsn~fixed-time~1]
                     WithHelp("The time at which the task takes place (at:).") {
@@ -485,6 +479,70 @@ private fun DurationField(label: String, example: String, value: String, onChang
                     format = PickerDefaults.durationPickerFormat(hourItemText = { "$it h" }, minuteItemText = { "$it min" }),
                     modifier = Modifier.testTag("duration-picker"),
                 )
+            },
+        )
+    }
+}
+
+private val UNIT_NAMES = mapOf(
+    Recurrence.Unit.DAY to "day",
+    Recurrence.Unit.BUSINESS_DAY to "business day",
+    Recurrence.Unit.WEEK to "week",
+    Recurrence.Unit.MONTH to "month",
+    Recurrence.Unit.YEAR to "year",
+)
+
+/** The field of the recurrence, with a button that opens wheels for the amount and the unit and a choice of the day that the interval counts from. */
+// [impl->dsn~edit-pickers~1]
+@Composable
+private fun RecurrenceField(value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+    var picking by remember { mutableStateOf(false) }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text("Recurrence") },
+        placeholder = { Text("w, 2w, +1m") },
+        isError = !valid,
+        singleLine = true,
+        trailingIcon = { IconButton(onClick = { picking = true }) { Icon(Icons.Default.Refresh, contentDescription = "Choose Recurrence") } },
+        modifier = modifier,
+    )
+    if (picking) {
+        // Up to 30 keeps the wheel short; any other amount is typed.
+        val amounts = remember { (1..30).toList() }
+        val start = remember { Recurrence.parse(value.trim()) ?: Recurrence(1, Recurrence.Unit.WEEK) }
+        var amount by remember { mutableStateOf(start.amount.coerceAtMost(amounts.last())) }
+        var unit by remember { mutableStateOf(start.unit) }
+        var strict by remember { mutableStateOf(start.strict) }
+        AlertDialog(
+            onDismissRequest = { picking = false },
+            confirmButton = {
+                TextButton(onClick = { onChange(Recurrence(amount, unit, strict).toString()); picking = false }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { onChange(""); picking = false }) { Text("No recurrence") } },
+            title = { Text("Recurrence") },
+            text = {
+                Column {
+                    Row(
+                        Modifier.fillMaxWidth().testTag("recurrence-picker"),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Every")
+                        Picker(amounts, amount, { amount = it }, Modifier.weight(1f))
+                        val plural = if (amount == 1) "" else "s"
+                        Picker(
+                            Recurrence.Unit.entries,
+                            unit,
+                            { unit = it },
+                            Modifier.weight(2f),
+                            format = PickerDefaults.itemFormat(itemText = { UNIT_NAMES.getValue(it) + plural }),
+                            isInfinity = false,
+                        )
+                    }
+                    Text("Counted from", Modifier.padding(top = 12.dp))
+                    RadioRow(listOf(false to "the completion", true to "the due date"), strict, "recurrence-from") { strict = it }
+                }
             },
         )
     }

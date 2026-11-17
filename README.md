@@ -82,11 +82,13 @@ The line can be edited as text as well: the fields follow what is typed there.
 
 ![Edit dialog of a task](docs/screenshots/edit.png)
 
-A date, a time and a duration are typed or chosen: the button of a field opens a calendar, a clock face, or two wheels for hours and minutes.
+A date, a time, a duration and a recurrence are typed or chosen: the button of a field opens a calendar, a clock face, two wheels for hours and minutes, or two wheels for the amount and the unit of the interval.
 
 ![Clock face that chooses the due time](docs/screenshots/time-picker.png)
 
 ![Wheels that choose the duration](docs/screenshots/duration-picker.png)
+
+![Wheels that choose the recurrence](docs/screenshots/recurrence-picker.png)
 
 The settings, with the board columns by filter and the public SSH key for the git repository.
 

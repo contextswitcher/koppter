@@ -210,6 +210,9 @@ class ScreenshotTest {
         onNodeWithText("OK").performClick()
         onNodeWithContentDescription("Choose Duration").performClick()
         save("duration-picker.png")
+        onNodeWithText("OK").performClick()
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        save("recurrence-picker.png")
     }
 
     @Test

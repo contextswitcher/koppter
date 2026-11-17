@@ -665,6 +665,23 @@ class AppTest {
         onNodeWithContentDescription("Choose Travel time").performClick()
         onNodeWithText("No duration").performClick()
         onNodeWithTag("edit-travel").assertTextEquals("Travel time", "")
+
+        // The wheels of the recurrence start at one week, or at the recurrence of the field.
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithTag("recurrence-picker").assertExists()
+        onNodeWithTag("recurrence-from-the completion").assertIsSelected()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-recurrence").assertTextContains("1w")
+        onNodeWithTag("edit-recurrence").performTextReplacement("2m")
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithText("months").assertExists()
+        onNodeWithTag("recurrence-from-the due date").performClick()
+        onNodeWithText("OK").performClick()
+        onNodeWithTag("edit-recurrence").assertTextContains("+2m")
+        onNodeWithContentDescription("Choose Recurrence").performClick()
+        onNodeWithTag("recurrence-from-the due date").assertIsSelected()
+        onNodeWithText("No recurrence").performClick()
+        onNodeWithTag("edit-recurrence").assertTextEquals("Recurrence", "")
     }
 
     // [utest->dsn~edit-help~1]

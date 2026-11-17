@@ -538,6 +538,7 @@ Needs: impl, utest
 
 The fields of `EditDialog` for the due time and the fixed time have a button that opens the clock face of Material with 24 hours (`TimeField`); without a time, it starts at noon.
 The fields for the duration, the travel time and the time spent have a button that opens two wheels for hours and minutes, the minutes in steps of five (`DurationField`, [decision 0037](../decisions/0037-wheels-for-durations-from-compose-pickers.md)); without a duration, they start at half an hour.
+The field for the recurrence has a button that opens a wheel for the amount, from 1 to 30, a wheel for the unit, and the choice whether the interval counts from the completion or from the due date (`RecurrenceField`); without a recurrence, they start at one week from the completion.
 *OK* writes what was chosen into the field as text, and the other button of each dialog empties the field.
 The fields still take typed text.
 
