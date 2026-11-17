@@ -1667,10 +1667,19 @@ class AppTest {
         storage.companions.remove("koppter.yml")
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
-            override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") "/data/repository/todo.txt" else error("no such repository")
+            override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") {
+                "/data/repository/todo.txt"
+            } else {
+                // As a library reports it: the same message twice, and the reason below them.
+                throw IllegalStateException("remote hung up unexpectedly", IllegalStateException("remote hung up unexpectedly", NoSuchMethodError("no such repository")))
+            }
         }
+        val logged = mutableListOf<String>()
         val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
-        val controller = TodoController(Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) })
+        val controller = TodoController(
+            Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) },
+            log = { message, cause -> logged += "$message: ${cause?.message}" },
+        )
         setContent { App(controller, "todo.txt", git = git) }
 
         onNodeWithTag("open-settings").performClick()
@@ -1680,7 +1689,12 @@ class AppTest {
         onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
         // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
         onNodeWithTag("settings-file-message").assertIsDisplayed()
-            .assertTextEquals("Not cloned: no such repository\nIs the public SSH key of this device, shown below, registered with the server?")
+            .assertTextEquals(
+                "Not cloned: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
+                    "Is the public SSH key of this device, shown below, registered with the server?",
+            )
+        // [utest->dsn~failure-log~1]
+        assertEquals(listOf("Clone failed: remote hung up unexpectedly"), logged)
         assertEquals("", controller.settings.todoFile)
 
         // [utest->dsn~settings-open-file~1]

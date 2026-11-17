@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
 - The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.
 - A new task starts with the priority C and the due date of the next weekend; *New task* in the settings states another priority and day, or none.
 - The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.

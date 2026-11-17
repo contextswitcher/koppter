@@ -350,7 +350,7 @@ Needs: impl, utest
 ### Log of failures
 `dsn~failure-log~1`
 
-`TodoController` passes what failed to the function `log` that the platform gives it: an operation whose failure it shows to the user, with the exception, and a synchronization that failed, with the cause that `SyncStatus` carries.
+`TodoController` passes what failed to the function `log` that the platform gives it: an operation whose failure it shows to the user, with the exception, a synchronization that failed, with the cause that `SyncStatus` carries, and a clone that failed in the settings dialog, with the exception.
 For a calendar that was not read, it passes the host of the address and the kind of the exception only, as the address is a secret.
 The desktop application and the Android application write these as errors to tinylog, and they do the same for an exception that no code caught.
 `logToFile` names the log file for tinylog before anything logs: the desktop application passes the directory `logs` of its data directory, and `KoppterApplication` passes the directory `logs` of the application in the shared storage of the device, or in its private storage if there is none.

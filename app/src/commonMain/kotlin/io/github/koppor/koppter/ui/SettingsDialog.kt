@@ -46,6 +46,22 @@ import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.storage.Settings
 import kotlinx.coroutines.launch
 
+/**
+ * The message of a failure, followed by its causes where they say something else:
+ * a library often reports only that a connection ended, and the cause tells why.
+ */
+// [impl->dsn~git-setup-dialog~1]
+internal fun failureText(e: Throwable): String {
+    val lines = mutableListOf(e.message ?: e.toString())
+    var last = e.message
+    // Not endlessly, should a cause name itself.
+    generateSequence(e.cause) { it.cause }.take(8).forEach { cause ->
+        if (cause.message != last) lines += "Cause: ${cause::class.simpleName}: ${cause.message}"
+        last = cause.message
+    }
+    return lines.joinToString("\n")
+}
+
 /** Git access that the application brings along, for a repository that is not cloned yet. */
 interface GitSetupActions {
     /**
@@ -119,6 +135,8 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
+    /** Called with a clone that failed, for the log. */
+    onCloneFailed: (Exception) -> Unit = {},
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -320,7 +338,8 @@ fun SettingsDialog(
                                         fileFailed = true
                                         // A server that does not know the key ends the connection without saying why.
                                         val ownKey = runCatching(git::publicKey).getOrNull() != null
-                                        fileMessage = "Not cloned: ${e.message ?: e}" +
+                                        onCloneFailed(e)
+                                        fileMessage = "Not cloned: ${failureText(e)}" +
                                             if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
                                     }
                                     cloning = false

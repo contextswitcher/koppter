@@ -339,6 +339,10 @@ class TodoController(
         writeConfig(ConfigFile.withNewTaskDefaults(config.orEmpty(), defaults), "Edit what a new task starts with")
     }
 
+    /** Records a failure that a dialog shows to the user itself. */
+    // [impl->dsn~failure-log~1]
+    fun report(message: String, cause: Throwable) = log(message, cause)
+
     /** The contexts that a task takes with the project. */
     // [impl->dsn~project-contexts~1]
     fun contextsOf(project: String): List<String> =

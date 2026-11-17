@@ -257,6 +257,7 @@ Needs: impl, utest
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
 With such an address in the field, the button of the dialog reads *Clone*: it clones the address and opens the todo.txt file of the clone as `dsn~settings-open-file~1` says; if the clone fails, the dialog shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
+The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
 The dialog scrolls to that message, which stands at the field and not at the button.
 The address of a page of a repository of GitHub, as the browser has it, becomes the address for SSH of that repository (`sshAddress`) when it is pasted and before it is cloned: the application has an SSH key and no password for HTTPS.
 The dialog shows the public key of the device where the actions have one; a click on the key copies it to the clipboard.
