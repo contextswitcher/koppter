@@ -32,6 +32,30 @@ Covers:
 
 Needs: dsn
 
+### Colors of the times of a time map
+`req~time-map-colors~1`
+
+The times of a time map are green, yellow, red or black.
+A task is planned in green times; a task that would otherwise be done after its due date or not before its barrier is planned in yellow times as well, and then in red ones.
+Black times are green for the tasks of their map and are not used for the tasks of other maps.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Painting a time map
+`req~time-map-editor~1`
+
+The user paints a time map on the days of a week, from 00:00 to 24:00 in quarters of an hour, with green, yellow, red, black or the eraser, and saves or reverts what was painted.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Barriers
 `req~barriers~1`
 
@@ -252,6 +276,37 @@ Covers:
 
 * `req~plan~1`
 * `req~barriers~1`
+
+Needs: impl, utest
+
+### Colors of the times of a time map
+`dsn~time-map-colors~1`
+
+A rule of a time map definition may name a color with the word `yellow`, `red`, `black` or `green`; without one, its times are green, so that the definitions before the colors keep their meaning.
+A later rule paints over the times of an earlier one on the days that both name.
+`TimeMaps.spans` gives the times up to a color: green and black, then yellow as well, then red as well; it leaves out the black times of all maps other than the map and the maps it is restricted to.
+A map restricted to another one takes the times of that map in all its colors.
+`plan` plans with green times first; a task that ends after its due date although it was moved to the front, or a task that is not planned, gets the yellow times as well and the plan is made again, and then the red times.
+
+Covers:
+
+* `req~time-map-colors~1`
+* `adr~time-map-colors~1`
+
+Needs: impl, utest
+
+### Painting a time map
+`dsn~time-map-editor~1`
+
+The plan dialog has a button *Paint* for each map of the field of the time maps.
+`TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the cells that a press or a drag touches with the chosen color, or clears them with the eraser.
+`TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
+A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved; a map restricted to another one keeps the name of that map in front.
+Saving replaces the line of the map in the field and leaves the other lines as they were typed; the field is saved with the next planning.
+
+Covers:
+
+* `req~time-map-editor~1`
 
 Needs: impl, utest
 

@@ -33,6 +33,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -1441,6 +1442,29 @@ class AppTest {
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-barriers").assertTextContains("default = month")
         onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00")
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aTimeMapIsPaintedOnTheDaysOfAWeek() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00\nEvenings = Mon-Thu 19:00-21:00")
+        onNodeWithTag("plan-edit-map-General").performClick()
+        onNodeWithTag("time-map-paint-yellow").performClick()
+        // Down on Monday from eight o'clock to a quarter to ten: the quarters of an hour that the drag touches.
+        onNodeWithTag("time-map-grid").performTouchInput {
+            swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
+        }
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
+        onNodeWithTag("time-map-revert").performClick()
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("time-map-paint-black").performClick()
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
+        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-editor").assertDoesNotExist()
+        // The other map stays as it was typed.
+        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black\nEvenings = Mon-Thu 19:00-21:00")
     }
 
     // [utest->dsn~plan-dialog~1]
