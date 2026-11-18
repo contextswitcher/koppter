@@ -708,7 +708,8 @@ On Windows, the list shows the open items of the To-Do list of the classic Outlo
 They are read through [AnchorHub](https://github.com/contextswitcher/anchorhub), which has to be installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and read again every two minutes while Outlook is running ([decision 0039](docs/decisions/0039-outlook-through-anchorhub.md)).
 The file stays as it is until an item is changed.
 
-* An item shows its subject, its due date and the label *Outlook*; a click on the label opens the item in Outlook.
+* An item shows its subject, the hashtag `#outlook`, its due date and the label *Outlook*; a click on the label opens the item in Outlook.
+  The hashtag stays in the line that is written for the item, so that a filter for `#outlook` shows the items and the tasks that came from them.
 * An item has no context, so it stands in the [inbox](#inbox) as well.
 * Giving an item a context or a project, in the inbox, on the board or in the edit dialog, writes it to the file as a task with the tag `ol:`, which names the item; so does any other change, such as a due date.
   From then on, the line stands for the item.

@@ -38,6 +38,7 @@ class OutlookTest {
         val task = Outlook.task(OutlookItem(entryId, "Material zu\r\n  Literaturrecherche", LocalDate(2026, 11, 18)))
         assertEquals("Material zu Literaturrecherche", task.description)
         assertEquals(LocalDate(2026, 11, 18), task.due)
+        assertEquals(listOf("outlook"), task.hashtags)
         assertEquals(entryId, Outlook.entryId(task.tag(Task.OUTLOOK)!!))
         assertNull(Outlook.task(OutlookItem(entryId, "No date", null)).due)
         assertEquals("(no subject)", Outlook.task(OutlookItem(entryId, " ", null)).description)

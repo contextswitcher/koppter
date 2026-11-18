@@ -43,6 +43,9 @@ object Outlook {
     private val HEX = Regex("^(?:[0-9A-Fa-f]{2})+$")
     private const val ANCHOR_PREFIX = "anchor://outlook/message/"
 
+    /** The hashtag of an item, which shows where it comes from and lets a filter select the items; it stays in the line that is written for the item. */
+    const val HASHTAG = "outlook"
+
     /** The value of the tag `ol:` for an EntryID: its bytes in Base64 for URLs, two thirds as long as the hexadecimal digits. */
     @OptIn(ExperimentalStdlibApi::class)
     fun tag(entryId: String): String = BASE64.encode(entryId.hexToByteArray())
@@ -60,7 +63,7 @@ object Outlook {
         link.takeIf { it.startsWith(ANCHOR_PREFIX) }?.removePrefix(ANCHOR_PREFIX)?.substringBefore('?')?.takeIf(HEX::matches)
 
     /**
-     * The item as a task: its subject, its due date and the tag `ol:`.
+     * The item as a task: its subject, the hashtag [HASHTAG], its due date and the tag `ol:`.
      * Line breaks and runs of blanks in the subject become single blanks, and a subject that would read as a completed task or a priority keeps that as text.
      */
     // [impl->dsn~outlook-items~1]
@@ -68,7 +71,7 @@ object Outlook {
         var subject = item.subject.trim().replace(WHITESPACE, " ").ifEmpty { "(no subject)" }
         if (subject.startsWith("x ") || PRIORITY.containsMatchIn(subject) || DATE.containsMatchIn(subject)) subject = "- $subject"
         val due = item.due?.let { " ${Task.DUE}:$it" }.orEmpty()
-        return Task(body = "$subject$due ${Task.OUTLOOK}:${tag(item.entryId)}")
+        return Task(body = "$subject #$HASHTAG$due ${Task.OUTLOOK}:${tag(item.entryId)}")
     }
 
     /**

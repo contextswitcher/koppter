@@ -1050,9 +1050,16 @@ class AppTest {
         assertTrue(opened.single() in setOf(mail, task))
         onNodeWithTag("edit-dialog").assertDoesNotExist()
 
+        // In the inbox, the item shows where it comes from, and the contexts below it are choices.
+        controller.view = View.INBOX
+        onAllNodesWithTag("inbox-hashtag-outlook", useUnmergedTree = true).assertCountEquals(2)
+        // The task "Post signs" of the file has no context either.
+        onAllNodesWithText("Give it:", useUnmergedTree = true).assertCountEquals(3)
+        controller.view = View.LIST
+
         // A context writes the item as a line, which then stands for it.
         runOnIdle { controller.assignContext(controller.inbox.first { it.task.description == "Answer the invitation" }, "phone") }
-        assertEquals("Answer the invitation @phone due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
+        assertEquals("Answer the invitation @phone #outlook due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
         assertEquals(listOf(false), controller.visible.filter { it.task.description == "Answer the invitation" }.map(Outlook::isItem))
 
         // Completing an item or a line that names one marks it done in Outlook.
