@@ -86,6 +86,7 @@ import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
 import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.launch
 
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
@@ -133,9 +134,19 @@ fun App(
     val uriHandler = remember(platform) {
         object : UriHandler {
             override fun openUri(uri: String) = try {
-                platform.openUri(uri)
+                // [impl->dsn~outlook-tag~1]
+                if (!controller.openOutlook(uri)) platform.openUri(uri) else Unit
             } catch (e: Exception) {
                 controller.error = "Not opened: $uri"
+            }
+        }
+    }
+    // [impl->dsn~outlook-items~1]
+    if (controller.readsOutlook) {
+        LaunchedEffect(controller) {
+            while (true) {
+                controller.refreshOutlook()
+                delay(OUTLOOK_REFRESH)
             }
         }
     }
@@ -157,6 +168,9 @@ fun App(
 }
 
 internal const val LEAVE_WARNING = "Back again leaves koppter."
+
+/** How often the To-Do list of Outlook is read again: each reading starts a process that asks Outlook. */
+private val OUTLOOK_REFRESH = 2.minutes
 
 /** What the list is without groups. */
 internal const val NO_GROUPS = "no groups: by priority, then due date"

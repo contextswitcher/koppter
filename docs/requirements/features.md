@@ -83,3 +83,10 @@ Needs: req
 The application runs on Android and on Windows and Linux desktops.
 
 Needs: req
+
+## Tasks of Outlook
+`feat~outlook~1`
+
+The application shows the open items of the To-Do list of the classic desktop Outlook next to the tasks of the file.
+
+Needs: req

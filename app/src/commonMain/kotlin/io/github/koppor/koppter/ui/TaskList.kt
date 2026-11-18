@@ -78,6 +78,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.dueChoices
 import io.github.koppor.koppter.todotxt.Group
@@ -147,7 +148,7 @@ fun TaskList(
                 itemsIndexed(entries, key = { _, entry -> "task/${group.title}/${entry.index}" }) { position, entry ->
                     // [impl->dsn~list-step~1]
                     fun step(up: Boolean): (() -> Unit)? =
-                        entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task, today) }?.let { { onStep(entry, it, up) } }
+                        entries.getOrNull(if (up) position - 1 else position + 1)?.takeIf { entry.task.canStepOver(it.task, today) && !Outlook.isItem(entry) && !Outlook.isItem(it) }?.let { { onStep(entry, it, up) } }
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         // [impl->dsn~overdue-separator~1]
                         if (position == firstNotOverdue && position > 0) {

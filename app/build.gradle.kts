@@ -41,6 +41,9 @@ kotlin {
                 implementation(libs.appdirs)
                 // [impl->adr~file-dialogs-of-filekit~1]
                 implementation(libs.filekit.dialogs)
+                // [impl->adr~outlook-through-anchorhub~1]
+                // Reads what AnchorHub prints; the JSON elements need no compiler plugin.
+                implementation(libs.kotlinx.serialization.json)
                 // [impl->adr~log-messages-through-tinylog~1]
                 // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
                 implementation(libs.tinylog.api)
