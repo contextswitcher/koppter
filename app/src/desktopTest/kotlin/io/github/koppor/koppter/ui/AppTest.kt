@@ -1838,12 +1838,22 @@ class AppTest {
     @Test
     fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {
         var version by mutableStateOf<String?>(null)
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { App(controller, "todo.txt", version = version) }
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", version = version) } }
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-version").assertDoesNotExist()
         version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
         onNodeWithTag("settings-version").performScrollTo().assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
+        onNodeWithTag("settings-version").performTouchInput { longClick() }
+        assertEquals("1234abc", copied)
+        onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30) · Copied 1234abc")
     }
 
     // [utest->dsn~failure-log~1]

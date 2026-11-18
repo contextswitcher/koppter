@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
@@ -417,15 +417,20 @@ fun SettingsDialog(
                 }
                 // [impl->dsn~build-version~1]
                 if (version != null) {
-                    // Selectable, so that the commit goes into a report of a problem.
-                    SelectionContainer {
-                        Text(
-                            version,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.testTag("settings-version"),
-                        )
-                    }
+                    // A long press copies the hash of the commit, for a report of a problem; the text ends `<hash> (<date>)`.
+                    var copied by remember { mutableStateOf(false) }
+                    val commit = version.substringBefore(" (").substringAfterLast(' ')
+                    Text(
+                        if (copied) "$version · Copied $commit" else version,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .combinedClickable(onClick = {}, onLongClick = {
+                                clipboard.setText(AnnotatedString(commit))
+                                copied = true
+                            })
+                            .testTag("settings-version"),
+                    )
                 }
             }
         }

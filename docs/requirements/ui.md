@@ -413,7 +413,7 @@ Needs: impl, utest
 ### Line with the version of the build
 `dsn~build-version~1`
 
-`App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line, in a container that lets the user select and copy it.
+`App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line; a long press on it copies the hash of the commit to the clipboard and adds *Copied* with the hash to the line.
 The build of `:android` writes the short hash and the date of the commit of `HEAD` into `BuildConfig.GIT_COMMIT_LINE`; `MainActivity` puts the version name of a release before it.
 The desktop application gives no text.
 
