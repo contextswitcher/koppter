@@ -24,11 +24,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,7 +45,8 @@ import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.isWithin
 
 /**
- * The filter criteria as a column: text, threshold date, priorities, projects, contexts, hashtags, completion.
+ * The filter criteria as a column: start date, priorities, projects, contexts, hashtags, completion.
+ * The text of the filter is a field of the main screen, above the list.
  * Priorities, projects, contexts and hashtags offer the values that occur in the file, as the labels that the tasks carry.
  */
 // [impl->dsn~filter-panel~1]
@@ -53,6 +54,8 @@ import io.github.koppor.koppter.todotxt.isWithin
 fun FilterPanel(
     filter: Filter,
     onChange: (Filter) -> Unit,
+    /** Renames a project, a context or a hashtag, told by its sign, in all tasks. */
+    onRename: (sign: Char, from: String, to: String) -> Unit,
     priorities: List<Char>,
     projects: List<String>,
     contexts: List<String>,
@@ -64,8 +67,6 @@ fun FilterPanel(
     nextOnly: Boolean,
     onNextOnly: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    /** For the field of the text, so that a shortcut can give it the focus. */
-    textModifier: Modifier = Modifier,
     /** Closes the panel where it lies above the list; `null` where it stands beside the list. */
     onClose: (() -> Unit)? = null,
 ) {
@@ -76,7 +77,6 @@ fun FilterPanel(
                 IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
             }
         }
-        SearchField(filter.text, { onChange(filter.copy(text = it)) }, "Search text", "filter-text", textModifier)
         // [impl->dsn~filter-label-search~1]
         var labels by remember { mutableStateOf("") }
 
@@ -99,7 +99,7 @@ fun FilterPanel(
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(projects = filter.projects - value, excludedProjects = filter.excludedProjects + value)) }
             // A selected project stands outside the tree and shows its path.
-            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }) {
+            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }, copyLink = false, onRename = { onRename('+', value, it) }) {
                 ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
             }
         }
@@ -111,7 +111,7 @@ fun FilterPanel(
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(contexts = filter.contexts - value, excludedContexts = filter.excludedContexts + value)) }
             // A selected context stands outside the tree and shows its path.
-            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }) {
+            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }, copyLink = false, onRename = { onRename('@', value, it) }) {
                 ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty())
             }
         }
@@ -121,7 +121,7 @@ fun FilterPanel(
             excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
-            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }) {
+            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }, copyLink = false, onRename = { onRename('#', value, it) }) {
                 HashtagLabel(value, modifier, suffix)
             }
         }
@@ -162,7 +162,7 @@ fun FilterPanel(
 
 /** A field of one line that has a button at its end, tagged [tag]`-clear`, which empties it. */
 @Composable
-private fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
+internal fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
     OutlinedTextField(
         value = value,
         onValueChange = onChange,

@@ -1,9 +1,9 @@
 package io.github.koppor.koppter.ui
 
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Ics
@@ -28,6 +28,8 @@ import io.github.koppor.koppter.todotxt.BoardColumn
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
 import io.github.koppor.koppter.todotxt.listParts
+import io.github.koppor.koppter.todotxt.isWithin
+import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -38,6 +40,8 @@ import io.github.koppor.koppter.todotxt.parseBoardColumns
 import io.github.koppor.koppter.todotxt.groupEntries
 import io.github.koppor.koppter.todotxt.iceRecurOccurrences
 import io.github.koppor.koppter.todotxt.iceRecurTasks
+import io.github.koppor.koppter.todotxt.imageName
+import io.github.koppor.koppter.todotxt.noteImages
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
@@ -257,23 +261,6 @@ class TodoController(
     val hashtags: List<String> get() = file.entries.flatMap { it.task.hashtags }.distinct().sorted()
     val priorities: List<Char> get() = file.entries.mapNotNull { it.task.priority }.distinct().sorted()
 
-    /**
-     * What the word at the end of a typed line can be completed to, if it starts a project, a context or a hashtag:
-     * the known names that contain what follows the sign, so that a context below another one is found by its last level.
-     */
-    // [impl->dsn~quick-add-completion~1]
-    fun completions(line: String): List<String> {
-        val word = line.substringAfterLast(' ')
-        val known = when (word.firstOrNull()) {
-            '+' -> projects
-            '@' -> contexts
-            '#' -> hashtags
-            else -> return emptyList()
-        }
-        val typed = word.drop(1)
-        return known.filter { it != typed && it.contains(typed, ignoreCase = true) }.take(8).map { word.first() + it }
-    }
-
     fun load() {
         guarded {
             file = TodoFile.parse(storage.read())
@@ -339,6 +326,37 @@ class TodoController(
         val links = ConfigFile.parseLines(text)
         if (links == ConfigFile.entries(config.orEmpty(), ConfigFile.LINKS)) return
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.LINKS, links), "Edit links of projects and contexts")
+    }
+
+    /** The task that the dialog of a new task starts with; an empty one if the storage keeps no configuration file, where it could not be changed. */
+    // [impl->dsn~new-task-defaults~1]
+    fun newTask(): Task = config?.let { ConfigFile.newTask(it, today()) } ?: Task(body = "")
+
+    /** What a new task starts with, one per line as `name = value`; `null` if the storage keeps no configuration file. */
+    val newTaskText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.newTaskDefaults(it)) }
+
+    fun updateNewTask(text: String) {
+        val defaults = ConfigFile.parseLines(text)
+        if (defaults == ConfigFile.newTaskDefaults(config.orEmpty())) return
+        writeConfig(ConfigFile.withNewTaskDefaults(config.orEmpty(), defaults), "Edit what a new task starts with")
+    }
+
+    /** Records a failure that a dialog shows to the user itself. */
+    // [impl->dsn~failure-log~1]
+    fun report(message: String, cause: Throwable) = log(message, cause)
+
+    /** The contexts that a task takes with the project. */
+    // [impl->dsn~project-contexts~1]
+    fun contextsOf(project: String): List<String> =
+        ConfigFile.contextsOf(ConfigFile.entries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS).toMap(), project)
+
+    /** The contexts of the projects, one project per line as `+project = @context`; `null` if the storage keeps no configuration file. */
+    val projectContextsText: String? get() = config?.let { ConfigFile.toLines(ConfigFile.entries(it, ConfigFile.PROJECT_CONTEXTS)) }
+
+    fun updateProjectContexts(text: String) {
+        val contexts = ConfigFile.parseLines(text)
+        if (contexts == ConfigFile.entries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS)) return
+        writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS, contexts), "Edit contexts of projects")
     }
 
     /** The state of the plan of an open task and a text that tells its start; `null` if nothing was planned yet. */
@@ -452,13 +470,20 @@ class TodoController(
     /**
      * Adds the text that another application shared as a task.
      * [action] is the title of the share action to apply; without it or if there is none with this title, the first one is applied.
+     * A shared [image] becomes the note of the task; without a text, the task is called after it.
      * Returns what to tell the user.
      */
-    fun share(text: String, action: String? = null): String {
+    // [impl->dsn~note-images~1]
+    fun share(text: String, action: String? = null, image: ByteArray? = null): String {
+        if (image != null && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
         val chosen = shareActions.firstOrNull { it.title == action } ?: shareActions.firstOrNull()
-        val task = chosen?.task(text, today()) ?: Task(body = text.trim().replace(Regex("\\s+"), " "))
+        val shared = text.ifBlank { if (image == null) text else "Image" }
+        val plain = chosen?.task(shared, today()) ?: Task(body = shared.trim().replace(Regex("\\s+"), " "))
+        val noteName = newNoteName()
+        val imageFile = imageName(noteName) { false }
+        val task = if (image == null) plain else plain.withTag(Task.NOTE, noteName)
         error = null
-        add(task)
+        if (image == null) add(task) else add(task, "![]($imageFile)\n", mapOf(imageFile to image))
         return error ?: "Added${chosen?.let { " (${it.title})" }.orEmpty()}: ${task.description}"
     }
 
@@ -544,28 +569,38 @@ class TodoController(
         null
     }
 
+    /** The image of a note, by its file name in the directory of the notes; `null` if it is not there or cannot be read. */
+    // [impl->dsn~note-images~1]
+    fun imageOf(name: String): ByteArray? = try {
+        (storage as? CompanionFiles)?.readCompanionBytes("$NOTES_DIRECTORY/$name")
+    } catch (_: Exception) {
+        null
+    }
+
     /** A file name for the note of a task that has none yet; Markdown, so that programs that show the file format it. */
     fun newNoteName(): String = Random.nextInt(36 * 36 * 36).toString(36).padStart(3, '0') + ".md"
 
-    /** Writes the note into the file that the `note:` tag of the task names; returns whether the text changed. */
-    private fun saveNote(task: Task, note: String?): Boolean {
+    /**
+     * Writes the note into the file that the `note:` tag of the task names; returns whether the text changed.
+     * The [images] that the note shows are written next to it, each under its file name.
+     */
+    // [impl->dsn~note-images~1]
+    private fun saveNote(task: Task, note: String?, images: Map<String, ByteArray>): Boolean {
         val name = task.tag(Task.NOTE) ?: return false
         if (note == null || note == noteOf(task)) return false
-        (storage as? CompanionFiles)?.writeCompanion("$NOTES_DIRECTORY/$name", note) ?: return false
+        val files = storage as? CompanionFiles ?: return false
+        // Before the note, so that the note never shows an image that is not there.
+        noteImages(note).forEach { image -> images[image]?.let { files.writeCompanionBytes("$NOTES_DIRECTORY/$image", it) } }
+        files.writeCompanion("$NOTES_DIRECTORY/$name", note)
         return true
     }
 
     // [impl->dsn~task-operations~1]
-    fun add(task: Task, note: String? = null) {
+    fun add(task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
         if (task.body.isBlank()) return
-        guarded { saveNote(task, note) }
+        guarded { saveNote(task, note, images) }
         write(file.add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
     }
-
-    fun add(line: String) = add(Task.parse(priorityNames.toLetters(line)).withDates(today()).withContextSwitcherTags())
-
-    /** The line that [add] writes for the typed one, if words of it become dates; `null` otherwise. */
-    fun datesPreview(line: String): String? = Task.parse(priorityNames.toLetters(line)).let { task -> task.withDates(today()).takeIf { it != task }?.toLine() }
 
     fun toggle(entry: Entry) {
         val index = locate(entry) ?: return
@@ -579,10 +614,10 @@ class TodoController(
         }
     }
 
-    fun replace(entry: Entry, task: Task, note: String? = null) {
+    fun replace(entry: Entry, task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
         val index = locate(entry) ?: return
         var noteChanged = false
-        guarded { noteChanged = saveNote(task, note) }
+        guarded { noteChanged = saveNote(task, note, images) }
         val new = file.replace(index, task)
         // A changed note alone is a change to record, although the todo.txt file stays the same.
         if (new == file && noteChanged) guarded { storage.write(file.serialize(), "Edit note: ${task.description}") }
@@ -619,6 +654,29 @@ class TodoController(
         // A move to another column changes what the column stands for and nothing else: the task gets its place only among tasks of its priority.
         if (at != null && (task == null || task.priority == at.task.priority)) locate(at)?.let { other -> new.moveTo(index, other, before, today())?.let { new = it } }
         write(new, if (task == null) "Move task: ${entry.task.description}" else "Move task to ${to.title}: ${task.description}")
+    }
+
+    /**
+     * Renames a project, a context or a hashtag, told by its sign, with those below it: in all tasks, in the scheduled tasks, which would bring
+     * the old name back, and in the filter.
+     */
+    // [impl->dsn~label-rename~1]
+    // ponytail: the limits and board columns of koppter.yml keep the old name; rename them there when that is missed.
+    fun rename(sign: Char, from: String, to: String) {
+        guarded {
+            val files = storage as? CompanionFiles ?: return@guarded
+            config?.let { before -> ConfigFile.renamed(before, sign, from, to).takeIf { it != before }?.let { files.writeCompanion(ConfigFile.NAME, it) } }
+            val schedule = files.readCompanion(ICE_RECUR_FILE) ?: return@guarded
+            renameLabel(schedule, sign, from, to).takeIf { it != schedule }?.let { files.writeCompanion(ICE_RECUR_FILE, it) }
+        }
+        write(file.rename(sign, from, to), "Rename $sign$from to $sign$to")
+        loadConfig()
+        fun Set<String>.renamed() = map { if (it.isWithin(from)) to + it.substring(from.length) else it }.toSet()
+        filter = when (sign) {
+            '+' -> filter.copy(projects = filter.projects.renamed(), excludedProjects = filter.excludedProjects.renamed())
+            '@' -> filter.copy(contexts = filter.contexts.renamed(), excludedContexts = filter.excludedContexts.renamed())
+            else -> filter.copy(hashtags = filter.hashtags.renamed(), excludedHashtags = filter.excludedHashtags.renamed())
+        }
     }
 
     /** Moves the due date of the task to the given day; without a day, the task has no due date anymore. */

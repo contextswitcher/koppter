@@ -39,6 +39,7 @@ ln -s "$PWD/skills/koppter-tasks" ~/.claude/skills/koppter-tasks
 ## Overview
 
 The task list with the filter panel.
+The field above the list searches the text of the tasks.
 Projects, contexts, tags and the priority are labels at the right of each task: in the line of its description where both fit, above it otherwise.
 An address of the web in the text of a task is a link that opens in the browser.
 A long address is cut after 50 characters; the whole one appears when the pointer of the mouse rests on it, and the edit dialog shows it as well.
@@ -48,6 +49,7 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
 The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
+*Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and so do the [links](#links-of-projects-and-contexts) and the [contexts of projects](#contexts-of-projects); the limits and board columns of `koppter.yml` are changed by hand.
 The filter and the view are kept on the device: after a restart, the application shows what it showed before.
 A click moves a label to the selected ones beside the title; here, the list shows the tasks of the projects *GarageSale* or *Work* that have the context *phone*.
 
@@ -79,6 +81,9 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 The edit dialog: the description without metadata at the top, the metadata below, then the note, the resulting line of the `todo.txt` file, and the date the task was added according to the git history.
 The line can be edited as text as well: the fields follow what is typed there.
+The dialog offers all known projects, contexts and hashtags, and typing into *Add project* and the like narrows them.
+With a mouse, the handle at its right edge makes the dialog wider or narrower; the width is kept.
+The calendar of the deadline has the button *Use due date*.
 The link to a page that OneNote copies, pasted into the note, becomes a list of two Markdown links: *OneNote Desktop* and *OneNote Web*.
 
 ![Edit dialog of a task](docs/screenshots/edit.png)
@@ -101,7 +106,7 @@ The editor of the scheduled tasks tells for each entry on which day it adds its 
 
 In a narrow window, as on a phone, the filter panel is a drawer.
 On Android, the back gesture closes the drawer, then returns from another view to the list, and from the list warns first: a second back leaves the application.
-A device without a keyboard has no line for a new task above the list: the button with the plus opens the dialog, with the cursor in the description.
+The button with the plus opens the dialog of a new task, with the cursor in the description.
 
 ![Task list in a narrow window](docs/screenshots/narrow.png)
 
@@ -160,7 +165,8 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | --- | --- |
 | `todo.txt` | The tasks |
 | `notes/<name>.md` | The note of the task with the tag `note:<name>.md`, as Markdown |
-| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), and the time maps and barriers for [planning](#planning) |
+| `notes/<name>-<number>.jpg` | An [image](#images-of-a-task) that the note shows |
+| `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), [what a new task starts with](#what-a-new-task-starts-with), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
@@ -170,12 +176,14 @@ Changes of two devices are merged without a conflict to resolve: `todo.txt` and 
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
-A cloned repository, a file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
+*Clone*, below the field, does that, closes the settings and shows the tasks of the repository; it writes nothing that stood in the settings.
+A file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
 With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
 The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+With an address in the field, *Check connection* tells whether the server is reached and lets the device read the repository, without cloning it; if not, it shows the reason.
 On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it; a folder chosen with *Choose folder* has them.
 On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also where there is none yet: a folder that is the clone of a git repository is committed and synchronized.
 The dialogs are those of the platform, shown through [FileKit](https://github.com/vinceglb/FileKit) ([decision 0036](docs/decisions/0036-file-dialogs-and-document-access-through-filekit.md)).
@@ -187,10 +195,10 @@ A file in OneDrive, or in another storage service, is used through the platform 
 A file that is edited by hand, by a script or by an agent is checked on the command line with [jbang](https://www.jbang.dev/), without the application:
 
 ```shell
-jbang lint@koppor/koppter todo.txt
+jbang lint@contextswitcher/koppter todo.txt
 ```
 
-Before its first run from the web, jbang asks whether it trusts the address; `jbang trust add https://github.com/koppor/koppter/` answers that beforehand, which a run without a terminal needs.
+Before its first run from the web, jbang asks whether it trusts the address; `jbang trust add https://github.com/contextswitcher/koppter/` answers that beforehand, which a run without a terminal needs.
 In a clone of this repository, `jbang .jbang/KoppterLint.kt todo.txt` checks with the sources of the clone.
 Each finding is one line, such as `todo.txt:12: error: due:tomorrow is not a date as YYYY-MM-DD`, and the command ends with 1 if an error is among them, so that it serves as a check of a repository of tasks.
 The option `--output-format` before the file selects another form of the findings:
@@ -348,9 +356,27 @@ File the tax return @home due:2026-11-20 deadline:2026-11-30
   The application counts with the day and the time of the device, here `2026-12-01 12:59` in Germany, and shows them in the label; the pointer on the label shows what is written.
 * The next occurrence of a recurring task has its deadline moved as far as its due date.
 
+## Images of a task
+
+An image belongs to the note of a task ([decision 0038](docs/decisions/0038-images-of-a-task-as-files-next-to-its-note.md)).
+*Add image* below the note in the dialog of a task chooses one, and on Android *Take photo* takes one with the camera.
+The image is scaled down to at most 1600 pixels on its longer side and written as JPEG to the directory `notes`, next to the note, which gets a line for it:
+
+```markdown
+The receipt of the van:
+
+![](k3f-1.jpg)
+```
+
+* The dialog shows the images of the note below it.
+  It shows those that the note names by a file name; an image at an address is left to a program that shows Markdown.
+* On Android, an image that another application shares to koppter becomes a task with that image; a text that comes with it is the description, and without one the task is called *Image*.
+* Removing the line from the note removes the image from the task; the file stays in `notes`.
+* Images need the files next to the `todo.txt` file: a folder or a git repository.
+
 ## Dates in words
 
-A line typed above the list may name its dates in words instead of tags, and so may the description in the dialog of a task, which marks these words.
+The description in the dialog of a task may name its dates in words instead of tags; the dialog marks these words.
 `Write the report next week` is written as `Write the report t:2026-11-16 due:2026-11-22`.
 The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a-plan-for-a-task) reads in the title of a task; the examples are typed on Friday, 13 November 2026.
 
@@ -373,18 +399,16 @@ The phrases are those that [SkedPal](https://docs.skedpal.com/planning/setting-a
 * A day is `today`, `tomorrow`, a weekday, a day of a month such as `Sep 15`, `15 Sep` or `September 15th`, or a date such as `2026-12-24`.
 * A weekday or a day of a month is the first such day from today on; a week runs from Monday to Sunday.
 * The phrase stands at the end of the text; projects, contexts, hashtags and tags may follow it: `Buy milk tomorrow @shop`.
-* While typing, the field shows the line that will be written.
-  If words are not meant as a date, end the line with a full stop: `Buy tickets for the weekend.` stays as it is.
+* While typing, the dialog shows the line that will be written.
+  If words are not meant as a date, end the description with a full stop: `Buy tickets for the weekend.` stays as it is.
 * A `due:`, `t:`, `at:` or `dueby:` tag that is typed as well stays.
-* The phrases are English, and they are read in the line above the list only, not in the edit dialog.
+* The phrases are English.
 * Recurrence is not typed in words: use `rec:` or `ice_recur.txt`.
 
 ## Completion while typing
 
-The line above the list completes a project, a context or a hashtag while it is typed.
-After `+`, `@` or `#` it offers the known names that contain what follows, so that `@rea` offers `@research>reading` and `+survey` offers `+papers>survey`.
-Tab takes the first name offered, a click any of them, and Esc closes the offers.
-The edit dialog narrows its known names in the same way.
+The fields of the edit dialog that add a project, a context or a hashtag narrow the known names to those that contain what is typed, so that `rea` offers `@research>reading` and `survey` offers `+papers>survey`.
+A click takes one of them.
 
 ## Order of the list
 
@@ -444,7 +468,6 @@ The buttons below the field fill in a scale: the letters, the numbers 1 to 5, or
 
 * The labels of the tasks, the filter panel, the board by priority and the edit dialog then show 1, 2, 3, 5 and 8.
 * The edit dialog offers the priorities that have a name, here five; without names, it offers A to F.
-* A line typed above the list may start with a name: `(5) Call the dentist` is written as `(D) Call the dentist`.
 * The file keeps the letters, so that other todo.txt tools read the priorities and order by them ([decision 0024](docs/decisions/0024-names-for-priorities-kept-in-the-configuration-file.md)).
 * The order is that of the letters: the name of A is the highest priority, so `A = 8` to `E = 1` makes 8 the highest.
 
@@ -628,10 +651,9 @@ The application only reads the calendars and writes nothing to them.
 
 | Keys | Effect |
 | --- | --- |
-| Ctrl+N | New task in the edit dialog |
+| Ctrl+N, Ctrl+Shift+A | New task in the edit dialog |
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
-| Ctrl+Shift+A | Go to the line that adds a task |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
 | Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
 | Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
@@ -672,8 +694,7 @@ koppter://filter?hashtag=someday
 koppter://filter?project=Fair&context=phone
 ```
 
-* A right click on the label of a project, a context or a hashtag, at a task or in the filter panel, offers *Copy link*.
-  On a touch screen, a long press on the label in the filter panel does.
+* A right click on the label of a project, a context or a hashtag at a task offers *Copy link*.
   The copied link has signs such as `>` encoded, as `koppter://filter?project=papers%3Esurvey`, so that the other program takes the whole link.
 * The link replaces the filter and shows the list.
 * A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their start date.
@@ -701,6 +722,38 @@ A project, a context or a hashtag has a link of its own, for example to the sect
 * A project or a context below another one, such as `+Fair>Booth`, has the link of that one unless it has its own.
 * The links are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file ([decision 0035](docs/decisions/0035-links-of-projects-and-contexts-in-the-configuration-file.md)).
   A link to a program that a device does not have is reported as not opened there.
+
+## What a new task starts with
+
+The dialog of a new task starts with the priority C and the due date of the next weekend, the Sunday of the next week.
+*New task* in the settings changes that:
+
+```text
+priority = C
+due = next weekend
+```
+
+* `priority` takes a priority by its letter or by its [name](#names-for-priorities), such as `3`.
+* `due` takes a day as the menu of the due date names it (`today`, `tomorrow`, `this weekend`, `in three days`, `next weekend`, `in two weeks`, `in a month`) or an interval from today, such as `10d`.
+* A line that is left out is not set, and without lines a new task starts empty.
+* The values are kept in `koppter.yml` under the key `new-task` and are therefore the same on every device that synchronizes the file.
+  A `todo.txt` file without the files next to it starts a new task empty.
+* A task that is shared to the application on Android has what its [share action](#sharing-to-koppter-on-android) states instead.
+
+## Contexts of projects
+
+*Contexts of projects* in the settings takes one project per line as `+project = @context`:
+
+```text
++Fair = @errands
++Garden = @home @weekend
+```
+
+* A project that is added to a task in its dialog, with a click on its name or typed into the field next to the names, adds these contexts to the task.
+  A context added this way is removed like any other; it comes back only when the project is added again.
+* A project below another one, such as `+Fair>Booth`, brings the contexts of that one as well.
+* A project typed into the description brings no contexts.
+* The contexts are kept in `koppter.yml` and are therefore the same on every device that synchronizes the file.
 
 ## Board
 
@@ -736,7 +789,7 @@ The application writes all filters quoted.
 
 ## Installing
 
-The [latest release](https://github.com/koppor/koppter/releases/latest) carries the application as files to install:
+The [latest release](https://github.com/contextswitcher/koppter/releases/latest) carries the application as files to install:
 
 | File | System |
 | --- | --- |
@@ -776,6 +829,16 @@ The directory `logs` in the data directory holds the log of the application, wit
 On Android, the log is in `Android/data/io.github.koppor.koppter/files/logs` of the shared storage, which a computer connected by USB shows, and warnings and errors go to logcat as well.
 *Share log* in the settings passes the end of the newest log file as text to another application, such as a mail program.
 A log can name the address of the git repository: look at it before passing it on.
+
+```shell
+just run-loop
+```
+
+runs the desktop application from the checkout and keeps it current; it needs [just](https://just.systems), and `just loop` does the same.
+It pulls, builds the application and starts it.
+The application then looks every half hour whether the repository has newer commits and, if so, shows *Restart to update* in its top bar.
+A click ends it with the exit code 55, on which the loop pulls, builds and starts it again; closing the window ends the loop.
+Without just, `scripts/run-loop.sh` or `scripts\run-loop.cmd` does the same.
 
 ```shell
 ./gradlew :android:assembleDebug

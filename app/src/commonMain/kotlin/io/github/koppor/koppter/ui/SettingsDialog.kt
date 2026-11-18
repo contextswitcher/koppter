@@ -46,6 +46,22 @@ import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.storage.Settings
 import kotlinx.coroutines.launch
 
+/**
+ * The message of a failure, followed by its causes where they say something else:
+ * a library often reports only that a connection ended, and the cause tells why.
+ */
+// [impl->dsn~git-setup-dialog~1]
+internal fun failureText(e: Throwable): String {
+    val lines = mutableListOf(e.message ?: e.toString())
+    var last = e.message
+    // Not endlessly, should a cause name itself.
+    generateSequence(e.cause) { it.cause }.take(8).forEach { cause ->
+        if (cause.message != last) lines += "Cause: ${cause::class.simpleName}: ${cause.message}"
+        last = cause.message
+    }
+    return lines.joinToString("\n")
+}
+
 /** Git access that the application brings along, for a repository that is not cloned yet. */
 interface GitSetupActions {
     /**
@@ -56,6 +72,9 @@ interface GitSetupActions {
 
     /** Clones the repository and returns the location of its todo.txt file. */
     suspend fun clone(url: String): String
+
+    /** Fails as [clone] would if the server is not reached or does not let this device in; clones nothing. */
+    suspend fun check(url: String)
 }
 
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
@@ -108,6 +127,10 @@ fun SettingsDialog(
     priorityNames: String?,
     /** The links of projects, contexts and hashtags; `null` if the storage cannot keep them. */
     labelLinks: String?,
+    /** The contexts of the projects; `null` if the storage cannot keep them. */
+    projectContexts: String?,
+    /** What a new task starts with; `null` if the storage cannot keep it. */
+    newTask: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
     /**
@@ -115,7 +138,11 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
-    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?) -> Unit,
+    /** Called with the todo.txt file of a repository that was cloned: it becomes the file of the application, and the dialog is left. */
+    onCloned: (String) -> Unit = onOpenFile,
+    /** Called with what failed with the repository, a clone or a check of the connection, for the log. */
+    onGitFailed: (String, Exception) -> Unit = { _, _ -> },
+    onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -135,6 +162,8 @@ fun SettingsDialog(
     var actions by remember(openFile) { mutableStateOf(shareActions) }
     var priorities by remember(openFile) { mutableStateOf(priorityNames) }
     var links by remember(openFile) { mutableStateOf(labelLinks) }
+    var contexts by remember(openFile) { mutableStateOf(projectContexts) }
+    var newTaskDefaults by remember(openFile) { mutableStateOf(newTask) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
@@ -142,7 +171,16 @@ fun SettingsDialog(
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links)
+    /** Shows why the repository was not reached, with what most often is the cause on a device with a key of its own. */
+    fun gitFailed(shown: String, logged: String, e: Exception) {
+        fileFailed = true
+        onGitFailed(logged, e)
+        // A server that does not know the key ends the connection without saying why.
+        val ownKey = git?.let { runCatching(it::publicKey).getOrNull() } != null
+        fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
+    }
+
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -160,7 +198,7 @@ fun SettingsDialog(
                     supportingText = {
                         Text(
                             "Empty: $defaultTodoFile" +
-                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, and the todo.txt file of the clone is opened. The address of a page of a repository of GitHub becomes that form.") +
+                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub becomes that form.") +
                                 "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
                                 "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
                         )
@@ -176,10 +214,10 @@ fun SettingsDialog(
                         modifier = Modifier.testTag("settings-file-message"),
                     )
                 }
-                if (chooseFile != null) {
+                if (chooseFile != null || git != null) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for ((title, tag, choose) in listOfNotNull(
-                            Triple("Choose file", "settings-choose-file", chooseFile),
+                            chooseFile?.let { Triple("Choose file", "settings-choose-file", it) },
                             chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
                         )) {
                             OutlinedButton(
@@ -201,6 +239,52 @@ fun SettingsDialog(
                                 modifier = Modifier.testTag(tag),
                             ) {
                                 Text(title)
+                            }
+                        }
+                        if (git != null) {
+                            // [impl->dsn~git-setup-dialog~1]
+                            OutlinedButton(
+                                onClick = {
+                                    cloning = true
+                                    fileFailed = false
+                                    fileMessage = "Checking"
+                                    scope.launch {
+                                        try {
+                                            git.check(sshAddress(todoFile.trim()))
+                                            fileMessage = "Connected"
+                                        } catch (e: Exception) {
+                                            gitFailed("Not connected", "Connection check failed", e)
+                                        }
+                                        cloning = false
+                                        // The message stands above the buttons and may be out of view.
+                                        scroll.animateScrollTo(0)
+                                    }
+                                },
+                                enabled = address && !cloning,
+                                modifier = Modifier.testTag("settings-check-connection"),
+                            ) {
+                                Text("Check connection")
+                            }
+                            // At the address and not at the end of the dialog, where Save stands: a clone saves nothing of the dialog.
+                            Button(
+                                onClick = {
+                                    cloning = true
+                                    fileFailed = false
+                                    fileMessage = "Cloning"
+                                    scope.launch {
+                                        try {
+                                            onCloned(git.clone(sshAddress(todoFile.trim())))
+                                        } catch (e: Exception) {
+                                            gitFailed("Not cloned", "Clone failed", e)
+                                        }
+                                        cloning = false
+                                        scroll.animateScrollTo(0)
+                                    }
+                                },
+                                enabled = address && !cloning,
+                                modifier = Modifier.testTag("settings-clone"),
+                            ) {
+                                Text("Clone")
                             }
                         }
                     }
@@ -253,6 +337,22 @@ fun SettingsDialog(
                         "settings-links",
                     )
                 }
+                // [impl->dsn~new-task-defaults~1]
+                newTaskDefaults?.let { text ->
+                    ConfigField(
+                        "New task", text, { newTaskDefaults = it }, "priority = C\ndue = next weekend",
+                        "What the dialog of a new task starts with: priority = a priority, and due = a day of the menu of the due date, such as tomorrow or next weekend, or an interval such as 10d. Without lines, a new task starts empty.",
+                        "settings-new-task",
+                    )
+                }
+                // [impl->dsn~project-contexts~1]
+                contexts?.let { text ->
+                    ConfigField(
+                        "Contexts of projects", text, { contexts = it }, "+Fair = @errands\n+Garden = @home @weekend",
+                        "One project per line as +project = @context. A project that is added to a task in its dialog brings these contexts along.",
+                        "settings-project-contexts",
+                    )
+                }
                 // [impl->dsn~share-actions~1]
                 actions?.let { text ->
                     ConfigField(
@@ -280,37 +380,15 @@ fun SettingsDialog(
                         actions?.trim(),
                         priorities?.trim(),
                         links?.trim(),
+                        contexts?.trim(),
+                        newTaskDefaults?.trim(),
                     )
                     Button(
-                        onClick = {
-                            val file = todoFile.trim().let { if (git != null) sshAddress(it) else it }
-                            if (git != null && address) {
-                                cloning = true
-                                fileFailed = false
-                                fileMessage = "Cloning"
-                                scope.launch {
-                                    try {
-                                        onOpenFile(git.clone(file))
-                                        fileMessage = OPENED
-                                    } catch (e: Exception) {
-                                        fileFailed = true
-                                        // A server that does not know the key ends the connection without saying why.
-                                        val ownKey = runCatching(git::publicKey).getOrNull() != null
-                                        fileMessage = "Not cloned: ${e.message ?: e}" +
-                                            if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
-                                    }
-                                    cloning = false
-                                    // The message stands at the file, far above the button that was clicked.
-                                    scroll.animateScrollTo(0)
-                                }
-                            } else {
-                                save(file)
-                            }
-                        },
-                        enabled = topCountValue != null && !cloning,
+                        onClick = { save(todoFile.trim()) },
+                        // An address is no file to save: it is cloned first.
+                        enabled = topCountValue != null && !cloning && !address,
                         modifier = Modifier.testTag("settings-save"),
-                        // The dialog stays open after cloning, so the button says what it does.
-                    ) { Text(if (address) "Clone" else "Save") }
+                    ) { Text("Save") }
                 }
             }
         }

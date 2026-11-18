@@ -10,7 +10,6 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -19,12 +18,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -33,8 +29,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -43,12 +37,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -56,14 +50,14 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,13 +70,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.PopupProperties
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
@@ -122,6 +111,12 @@ fun App(
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
     chooseFileNote: String? = null,
+    /** Lets the user choose an image for a note and gives its bytes, scaled down; `null` on a platform without that. */
+    pickImage: (suspend () -> ByteArray?)? = null,
+    /** As [pickImage], with the camera of the device. */
+    takePhoto: (suspend () -> ByteArray?)? = null,
+    /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
+    update: (() -> Unit)? = null,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
 ) {
@@ -153,7 +148,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, update, backHandler, leave)
         }
     }
 }
@@ -172,6 +167,9 @@ val LocalKeyboard = staticCompositionLocalOf { true }
 
 private data class Editing(val entry: Entry?)
 
+/** The longer side of an image of a note in pixels: enough to read a photographed page, and a file of some hundred kilobytes for the repository. */
+const val NOTE_IMAGE_SIZE = 1600
+
 /** Ctrl with the n-th of these keys shows the n-th view. */
 private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six)
 
@@ -186,6 +184,9 @@ private fun MainScreen(
     chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    pickImage: (suspend () -> ByteArray?)?,
+    takePhoto: (suspend () -> ByteArray?)?,
+    update: (() -> Unit)?,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
 ) {
@@ -197,7 +198,6 @@ private fun MainScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val rootFocus = remember { FocusRequester() }
-    val quickAddFocus = remember { FocusRequester() }
     val filterFocus = remember { FocusRequester() }
     // Keys reach the shortcuts only through a focused element, so the screen takes the focus whenever none of its elements has it:
     // at the start, after the element with the focus went away with its view, after a dialog closed, and after a touch took the focus away.
@@ -209,7 +209,6 @@ private fun MainScreen(
     fun shortcut(event: KeyEvent): Boolean {
         if (event.type != KeyEventType.KeyDown || !(event.isCtrlPressed || event.isMetaPressed) || event.isAltPressed) return false
         val view = VIEW_KEYS.indexOf(event.key)
-        // In a narrow window, the filter panel is in the drawer and has no field to focus.
         fun search(all: Boolean) {
             if (all) {
                 // Every task: also the completed ones and those before their threshold date, and not only the top ones.
@@ -220,11 +219,7 @@ private fun MainScreen(
             }
             // The agenda and the week show the plan, which the filter does not apply to.
             if (controller.view == View.AGENDA || controller.view == View.WEEK) controller.view = View.LIST
-            try {
-                filterFocus.requestFocus()
-            } catch (_: IllegalStateException) {
-                scope.launch { drawer.open() }
-            }
+            filterFocus.requestFocus()
         }
         when {
             !event.isShiftPressed && event.key == Key.N -> editing = Editing(null)
@@ -234,8 +229,8 @@ private fun MainScreen(
             event.key == Key.F -> search(all = false)
             !event.isShiftPressed && view >= 0 -> controller.view = View.entries[view]
             !event.isShiftPressed -> return false
-            event.key == Key.A -> quickAddFocus.requestFocus()
-            // The keys of SkedPal for its outline, today list, calendar and plan.
+            // The keys of SkedPal for a new task and for its outline, today list, calendar and plan.
+            event.key == Key.A -> editing = Editing(null)
             event.key == Key.O -> controller.view = View.LIST
             event.key == Key.Y -> controller.view = View.AGENDA
             event.key == Key.C -> controller.view = View.WEEK
@@ -262,6 +257,7 @@ private fun MainScreen(
         FilterPanel(
             filter = controller.filter,
             onChange = { controller.filter = it },
+            onRename = controller::rename,
             priorities = controller.priorities,
             projects = controller.projects,
             contexts = controller.contexts,
@@ -272,7 +268,6 @@ private fun MainScreen(
             nextOnly = controller.nextOnly,
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
-            textModifier = Modifier.focusRequester(filterFocus),
             onClose = onClose,
         )
     }
@@ -317,6 +312,9 @@ private fun MainScreen(
                             }
                         },
                         actions = {
+                            // [impl->dsn~restart-to-update~1]
+                            // Words, as no icon tells that the application ends and comes back.
+                            update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text("Restart to update") } }
                             controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
                             if (controller.canSchedule) {
                                 // [impl->dsn~plan-dialog~1]
@@ -340,10 +338,17 @@ private fun MainScreen(
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
-                        // The views stand above the field for a new task: a task is looked up more often than added.
                         ViewOptions(controller)
-                        // A line to type into is for a keyboard; without one, the button for a new task opens the dialog.
-                        if (LocalKeyboard.current) QuickAdd(onAdd = controller::add, preview = controller::datesPreview, completions = controller::completions, focus = quickAddFocus)
+                        // [impl->dsn~filter-panel~1]
+                        SearchField(
+                            controller.filter.text,
+                            { text ->
+                                controller.filter = controller.filter.copy(text = text)
+                                // The agenda and the week show the plan, which the filter does not apply to.
+                                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
+                            },
+                            "Search text", "filter-text", Modifier.padding(8.dp).focusRequester(filterFocus),
+                        )
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -380,7 +385,7 @@ private fun MainScreen(
 
     editing?.let { (entry) ->
         EditDialog(
-            original = entry?.task ?: Task(body = ""),
+            original = entry?.task ?: remember { controller.newTask() },
             isNew = entry == null,
             dates = remember(entry) { entry?.let { controller.datesOf(it.task) } },
             originalNote = remember(entry) { controller.noteOf(entry?.task ?: Task(body = "")) },
@@ -388,9 +393,15 @@ private fun MainScreen(
             knownProjects = controller.projects,
             knownContexts = controller.contexts,
             knownHashtags = controller.hashtags,
+            contextsOf = controller::contextsOf,
             today = controller.today(),
-            onSave = { task, note ->
-                if (entry == null) controller.add(task, note) else controller.replace(entry, task, note)
+            width = controller.settings.editWidth,
+            onWidth = { controller.updateSettings(controller.settings.copy(editWidth = it)) },
+            pickImage = pickImage,
+            takePhoto = takePhoto,
+            imageOf = controller::imageOf,
+            onSave = { task, note, images ->
+                if (entry == null) controller.add(task, note, images) else controller.replace(entry, task, note, images)
                 editing = null
             },
             onDelete = {
@@ -429,16 +440,28 @@ private fun MainScreen(
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,
             labelLinks = controller.labelLinksText,
+            projectContexts = controller.projectContextsText,
+            // [impl->dsn~failure-log~1]
+            onGitFailed = controller::report,
+            newTask = controller.newTaskText,
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             // [impl->dsn~settings-open-file~1]
             onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
-            onSave = { settings, boardColumns, shareActions, priorityNames, labelLinks ->
+            // [impl->dsn~git-setup-dialog~1]
+            // The user wants the tasks of the repository; nothing of the dialog is written to it.
+            onCloned = {
+                controller.updateSettings(controller.settings.copy(todoFile = it))
+                showSettings = false
+            },
+            onSave = { settings, boardColumns, shareActions, priorityNames, labelLinks, projectContexts, newTask ->
                 // The columns, share actions, names and links belong to the file that is open, not to one whose path was typed into the field.
                 boardColumns?.let(controller::updateBoardColumns)
                 shareActions?.let(controller::updateShareActions)
                 priorityNames?.let(controller::updatePriorityNames)
                 labelLinks?.let(controller::updateLabelLinks)
+                projectContexts?.let(controller::updateProjectContexts)
+                newTask?.let(controller::updateNewTask)
                 controller.updateSettings(settings)
                 showSettings = false
             },
@@ -550,65 +573,5 @@ private fun SyncIndicator(status: SyncStatus, onSync: () -> Unit) {
     )
     IconButton(onClick = onSync, enabled = status.state != SyncState.RUNNING, modifier = Modifier.testTag("sync-now")) {
         Icon(Icons.Default.Refresh, contentDescription = "Synchronize now")
-    }
-}
-
-/**
- * A line that adds a task from text in todo.txt syntax, for input without opening the dialog.
- * A project, a context or a hashtag that is being typed is completed from the known ones: Tab takes the first one offered.
- */
-// [impl->dsn~quick-add~1]
-@Composable
-private fun QuickAdd(onAdd: (String) -> Unit, preview: (String) -> String?, completions: (String) -> List<String>, focus: FocusRequester) {
-    var value by remember { mutableStateOf(TextFieldValue("")) }
-    val text = value.text
-    fun submit() {
-        onAdd(text)
-        value = TextFieldValue("")
-    }
-    // [impl->dsn~quick-add-completion~1]
-    // The text for which the user closed the offers; they come back with the next character.
-    var closedFor by remember { mutableStateOf<String?>(null) }
-    // ponytail: completes the word at the end of the line, not the one at the cursor; look at the selection if that is missed.
-    val offers = if (closedFor == text) emptyList() else completions(text)
-    fun complete(name: String) {
-        val completed = text.substringBeforeLast(' ', "").let { if (it.isEmpty()) "" else "$it " } + name + " "
-        value = TextFieldValue(completed, TextRange(completed.length))
-    }
-    Box(Modifier.fillMaxWidth()) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = { value = it.copy(text = it.text.replace("\n", "")) },
-            placeholder = { Text("Add a task, such as: (A) Call Mom +Family @phone next week") },
-            // [impl->dsn~quick-add-dates~1]
-            // Shows the line before it is written, as words that were not meant as a date become one as well.
-            supportingText = preview(text)?.let { line -> { Text(line, Modifier.testTag("quick-add-preview")) } },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { submit() }),
-            modifier = Modifier.fillMaxWidth().padding(8.dp).focusRequester(focus).testTag("quick-add")
-                .onPreviewKeyEvent {
-                    when {
-                        it.type != KeyEventType.KeyDown -> false
-                        // The Enter key of a hardware keyboard does not trigger the IME action on the desktop.
-                        it.key == Key.Enter -> true.also { submit() }
-                        it.key == Key.Tab && offers.isNotEmpty() -> true.also { complete(offers.first()) }
-                        it.key == Key.Escape && offers.isNotEmpty() -> true.also { closedFor = text }
-                        else -> false
-                    }
-                },
-        )
-        // Not focusable, so that the keys keep going to the field.
-        DropdownMenu(
-            expanded = offers.isNotEmpty(),
-            onDismissRequest = { closedFor = text },
-            offset = DpOffset(8.dp, (-4).dp),
-            properties = PopupProperties(focusable = false),
-            modifier = Modifier.testTag("quick-add-completions"),
-        ) {
-            for (offer in offers) {
-                DropdownMenuItem(text = { Text(offer) }, onClick = { complete(offer) }, modifier = Modifier.testTag("quick-add-complete-$offer"))
-            }
-        }
     }
 }

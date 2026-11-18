@@ -5,6 +5,7 @@ import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
@@ -29,6 +30,7 @@ import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
@@ -68,7 +70,12 @@ import kotlin.test.assertTrue
 
 private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
     val companions = mutableMapOf<String, String>()
+    val images = mutableMapOf<String, ByteArray>()
     val changes = mutableListOf<String>()
+    override fun readCompanionBytes(path: String) = images[path]
+    override fun writeCompanionBytes(path: String, bytes: ByteArray) {
+        images[path] = bytes
+    }
     override fun readCompanion(path: String) = companions[path]
     override fun writeCompanion(path: String, text: String) {
         companions[path] = text
@@ -91,7 +98,15 @@ class AppTest {
         (A) Thank Mom @phone due:2026-11-20
         x Call Mom +Family @phone
         """.trimIndent() + "\n",
-    )
+        // A new task starts empty, so that a test states all that its task has.
+    ).apply { companions["koppter.yml"] = "new-task:\n" }
+
+    /** Adds a task in its dialog, which the button for a new task opens. */
+    private fun ComposeUiTest.addTask(description: String) {
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput(description)
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+    }
 
     private fun ComposeUiTest.start(settings: Settings = Settings()) {
         val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) })
@@ -240,16 +255,6 @@ class AppTest {
         assertEquals(listOf("today", "tomorrow", "in three days", "this weekend"), dueChoices(LocalDate(2026, 11, 16)).map { it.first }.take(4))
         // The end of January has no day a month later.
         assertEquals(LocalDate(2027, 2, 28), dueChoices(LocalDate(2027, 1, 31)).last().second)
-    }
-
-    // [utest->dsn~quick-add~1]
-    @Test
-    fun quickAddAppendsTheTypedLine() = runComposeUiTest {
-        start()
-        onNodeWithTag("quick-add").performTextInput("(C) Buy milk @shop")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("(C) Buy milk @shop", storage.text.trim().lines().last())
-        onNodeWithText("Buy milk").assertExists()
     }
 
     // [utest->dsn~list-step~1]
@@ -406,43 +411,6 @@ class AppTest {
         assertEquals("(A) Thank Mom +GarageSale @phone due:2026-11-20", storage.text.lines()[4])
     }
 
-    // [utest->dsn~quick-add-completion~1]
-    @Test
-    fun theLineThatAddsATaskCompletesProjectsContextsAndHashtags() = runComposeUiTest {
-        storage.text += "Read the survey @research>reading #someday\n"
-        start()
-        onNodeWithTag("quick-add").performTextInput("Review the paper")
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        // A context below another one is found by its last level, and Tab takes the first one offered.
-        onNodeWithTag("quick-add").performTextInput(" @rea")
-        onNodeWithTag("quick-add-complete-@research>reading").assertExists()
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Tab) }
-        onNodeWithTag("quick-add").assertTextContains("Review the paper @research>reading ")
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        // The sign alone offers all known names, and a click takes one of them.
-        onNodeWithTag("quick-add").performTextInput("+")
-        onNodeWithTag("quick-add-complete-+Family").assertExists()
-        onNodeWithTag("quick-add-complete-+GarageSale").performClick()
-        onNodeWithTag("quick-add").performTextInput("#so")
-        // Esc closes the offers and leaves the word as it was typed.
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Escape) }
-        onNodeWithTag("quick-add-completions").assertDoesNotExist()
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Review the paper @research>reading +GarageSale #so", storage.text.trim().lines().last())
-    }
-
-    // [utest->dsn~quick-add-dates~1]
-    @Test
-    fun quickAddShowsAndWritesTheDatesOfTypedWords() = runComposeUiTest {
-        start()
-        onNodeWithTag("quick-add").performTextInput("Write the report")
-        onNodeWithTag("quick-add-preview").assertDoesNotExist()
-        onNodeWithTag("quick-add").performTextInput(" next week")
-        onNodeWithTag("quick-add-preview", useUnmergedTree = true).assertTextEquals("Write the report t:2026-11-16 due:2026-11-22")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Write the report t:2026-11-16 due:2026-11-22", storage.text.trim().lines().last())
-    }
-
     // [utest->dsn~task-operations~1]
     @Test
     fun completingWritesNoDateByDefault() = runComposeUiTest {
@@ -456,8 +424,7 @@ class AppTest {
     @Test
     fun addingAndCompletingWriteDatesWhenSwitchedOn() = runComposeUiTest {
         start(Settings(writeDates = true))
-        onNodeWithTag("quick-add").performTextInput("Buy milk")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
+        addTask("Buy milk")
         assertEquals("2026-11-12 Buy milk", storage.text.trim().lines().last())
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
@@ -699,6 +666,181 @@ class AppTest {
         onNodeWithTag("recurrence-from-the due date").assertIsSelected()
         onNodeWithText("No recurrence").performClick()
         onNodeWithTag("edit-recurrence").assertTextEquals("Recurrence", "")
+
+        // The calendar of the deadline takes the due date with one click, once the task has one.
+        onNodeWithContentDescription("Choose Deadline").performClick()
+        onNodeWithText("Use due date").assertDoesNotExist()
+        onNodeWithText("No date").performClick()
+        onNodeWithTag("edit-due").performTextInput("2026-11-20")
+        onNodeWithContentDescription("Choose Deadline").performClick()
+        onNodeWithText("Use due date").performClick()
+        onNodeWithTag("edit-deadline").assertTextContains("2026-11-20")
+    }
+
+    // [utest->dsn~edit-dialog~1]
+    // [utest->dsn~edit-resize~1]
+    @Test
+    fun theDialogHasAHeadingAllKnownNamesAndAWidthThatIsDraggedAndKept() = runComposeUiTest {
+        storage.text += (1..12).joinToString("") { "Sort the box +Box$it\n" }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+        // More names than a row or two hold.
+        onNodeWithTag("edit-project-suggest-Box12").assertExists()
+
+        fun width() = onNodeWithTag("edit-dialog").fetchSemanticsNode().size.width
+        val wide = width()
+        onNodeWithTag("edit-resize").performMouseInput {
+            moveTo(center)
+            press()
+            moveBy(Offset(-100f, 0f))
+            release()
+        }
+        // The dialog stays in the middle, so it loses the way of the pointer on both sides.
+        val narrow = width()
+        assertTrue(narrow < wide - 100, "$narrow < $wide - 100")
+        assertEquals(true, controller.settings.editWidth < 760)
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        openTask("Post signs")
+        onNodeWithTag("edit-heading").assertTextEquals("Edit task")
+        assertEquals(narrow, width())
+    }
+
+    // [utest->dsn~restart-to-update~1]
+    @Test
+    fun anUpdateThatWaitsIsOfferedInTheTopBar() = runComposeUiTest {
+        var update by mutableStateOf<(() -> Unit)?>(null)
+        var restarted = false
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", update = update) }
+        onNodeWithTag("restart-to-update").assertDoesNotExist()
+
+        update = { restarted = true }
+        onNodeWithTag("restart-to-update").assertTextEquals("Restart to update").performClick()
+        assertEquals(true, restarted)
+    }
+
+    // [utest->dsn~note-images~1]
+    @Test
+    fun anImageIsAttachedToTheNoteOfATaskAndShownInItsDialog() = runComposeUiTest {
+        // One transparent pixel.
+        val png = java.util.Base64.getDecoder().decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+        storage.text = "Post signs +GarageSale note:abc.md\nSchedule pickup\n"
+        storage.companions["notes/abc.md"] = "Bring tape\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        var picked: () -> ByteArray? = { png }
+        setContent { App(controller, "todo.txt", pickImage = { picked() }) }
+
+        openTask("Post signs")
+        // Without a camera, as on the desktop.
+        onNodeWithTag("edit-take-photo").assertDoesNotExist()
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-abc-1.jpg").assertExists()
+        onNodeWithTag("edit-note").assertTextContains("Bring tape\n\n![](abc-1.jpg)\n")
+        // A chooser that is left without an image, and one that fails.
+        picked = { null }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        picked = { error("the file is no image") }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-message").assertTextEquals("Not attached: the file is no image")
+        picked = { png }
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-image-message").assertDoesNotExist()
+        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg"), storage.images.keys)
+        assertEquals(png.toList(), storage.images.getValue("notes/abc-1.jpg").toList())
+        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n", storage.companions["notes/abc.md"])
+
+        // The dialog shows the images that the storage has, and names one that it has not.
+        openTask("Post signs")
+        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-note").performTextReplacement("![](abc-1.jpg) ![](gone.jpg)")
+        onNodeWithTag("edit-image-abc-2.jpg").assertDoesNotExist()
+        onNodeWithTag("edit-image-missing-gone.jpg").assertTextEquals("gone.jpg is not shown")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        // An image whose line was removed from the note again is not written; a task without a note gets one for its image.
+        openTask("Schedule pickup")
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-note").performTextReplacement("Ask for a box")
+        onNodeWithTag("edit-add-image").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        val note = Regex("Schedule pickup note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
+        assertEquals("Ask for a box\n\n![]($note-2.jpg)\n", storage.companions["notes/$note.md"])
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/$note-2.jpg"), storage.images.keys)
+
+        // An image that is shared becomes a task of its own.
+        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, png) })
+        val shared = Regex("Image note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
+        assertEquals("![]($shared-1.jpg)\n", storage.companions["notes/$shared.md"])
+        assertEquals(png.toList(), storage.images.getValue("notes/$shared-1.jpg").toList())
+    }
+
+    // [utest->dsn~new-task-defaults~1]
+    // [utest->dsn~config-defaults~1]
+    @Test
+    fun aNewTaskStartsWithThePriorityAndTheDueDateOfTheSettings() = runComposeUiTest {
+        storage.companions.remove("koppter.yml")
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        // Without the key, a middle priority and the Sunday of the next week, which alone are no task yet.
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-line").performScrollTo().assertTextEquals("(C) due:2026-11-22")
+        onNodeWithTag("edit-save").assertIsNotEnabled()
+        onNodeWithTag("edit-description").performTextInput("Buy milk")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("(C) Buy milk due:2026-11-22", storage.text.trim().lines().last())
+
+        // A priority is given by its name.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-new-task").performScrollTo().assertTextContains("priority = C\ndue = next weekend")
+        onNodeWithTag("settings-new-task").performTextReplacement("priority = 5\ndue = tomorrow")
+        onNodeWithTag("settings-priorities").performScrollTo().performTextReplacement("A = 1\nB = 2\nC = 3\nD = 5")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        addTask("Call the plumber")
+        assertEquals("(D) Call the plumber due:2026-11-13", storage.text.trim().lines().last())
+
+        // Without lines, a new task starts empty, and the default does not come back.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-new-task").performScrollTo().performTextReplacement("")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals(true, storage.companions.getValue("koppter.yml").contains("new-task:"))
+        addTask("Sweep the yard")
+        assertEquals("Sweep the yard", storage.text.trim().lines().last())
+    }
+
+    // [utest->dsn~project-contexts~1]
+    @Test
+    fun aProjectThatIsAddedInTheDialogBringsTheContextsOfTheSettings() = runComposeUiTest {
+        storage.text += "Order the tables +Fair\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-project-contexts").performScrollTo().performTextReplacement("+Fair = @errands")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals(true, storage.companions.getValue("koppter.yml").contains("project-contexts:\n  \"+Fair\": \"@errands\""))
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-context-errands").assertDoesNotExist()
+        onNodeWithTag("edit-project-suggest-Fair").performScrollTo().performClick()
+        onNodeWithTag("edit-context-errands").assertExists()
+        // A context that is removed stays removed, and comes back with the project.
+        onNodeWithTag("edit-context-errands").performClick()
+        onNodeWithTag("edit-context-errands").assertDoesNotExist()
+        onNodeWithTag("edit-project-Fair").performClick()
+        onNodeWithTag("edit-project-suggest-Fair").performClick()
+        onNodeWithTag("edit-description").performTextInput("Rent a van")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(true, storage.text.contains("Rent a van +Fair @errands"))
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-project-contexts").performScrollTo().assertTextContains("+Fair = @errands")
     }
 
     // [utest->dsn~edit-help~1]
@@ -745,11 +887,9 @@ class AppTest {
     @Test
     fun aFieldOfOneLineKeepsItsHeightWhenTextIsTyped() = runComposeUiTest {
         start()
-        for (tag in listOf("filter-text", "quick-add")) {
-            val empty = onNodeWithTag(tag).fetchSemanticsNode().size.height
-            onNodeWithTag(tag).performTextInput("mom")
-            assertEquals(empty, onNodeWithTag(tag).fetchSemanticsNode().size.height, tag)
-        }
+        val empty = onNodeWithTag("filter-text").fetchSemanticsNode().size.height
+        onNodeWithTag("filter-text").performTextInput("mom")
+        assertEquals(empty, onNodeWithTag("filter-text").fetchSemanticsNode().size.height)
     }
 
     // [utest->dsn~filter-label-search~1]
@@ -790,6 +930,20 @@ class AppTest {
         onNodeWithTag("filter-project-House").assertExists()
         onNodeWithTag("filter-context-research").assertExists()
         onNodeWithTag("filter-hashtag-money").assertExists()
+    }
+
+    // [utest->dsn~filter-panel~1]
+    @Test
+    fun theTextOfTheFilterStandsAboveTheListOfANarrowWindowAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        // The panel with the other criteria is closed.
+        onNodeWithTag("filter-heading").assertIsNotDisplayed()
+        controller.view = View.WEEK
+        onNodeWithTag("week").assertExists()
+        onNodeWithTag("filter-text").assertIsDisplayed().performTextInput("mom")
+        onNodeWithTag("week").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(1)
     }
 
     // [utest->dsn~filter-panel~1]
@@ -851,9 +1005,9 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
 
-        onNodeWithTag("quick-add").performTextInput("Review the comments contextswitcher://task/jabref/fix-npe +JabRef")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("Review the comments +JabRef cs:jabref/fix-npe", storage.text.trim().lines().last())
+        // A link in the description of a new task becomes the tag.
+        addTask("Review the comments contextswitcher://task/jabref/fix-npe")
+        assertEquals("Review the comments cs:jabref/fix-npe", storage.text.trim().lines().last())
 
         onNodeWithTag("label-cs", useUnmergedTree = true).performClick()
         assertEquals(listOf("contextswitcher://switch/jabref/fix-npe"), opened)
@@ -865,16 +1019,16 @@ class AppTest {
         onNodeWithTag("edit-cs").assertTextContains("jabref/fix-npe")
         onNodeWithTag("edit-cs").performTextReplacement("contextswitcher://task/jabref/review")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("Review the comments +JabRef cs:jabref/review", storage.text.trim().lines().last())
+        assertEquals("Review the comments cs:jabref/review", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("")
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals("Review the comments +JabRef", storage.text.trim().lines().last())
+        assertEquals("Review the comments", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("jabref/fix-npe")
         onNodeWithTag("edit-save").performScrollTo().performClick()
 
-        controller.add("Call cs:missing")
+        controller.add(Task.parse("Call cs:missing"))
         onAllNodesWithTag("label-cs", useUnmergedTree = true)[1].performClick()
         onNodeWithText("Not opened: contextswitcher://switch/missing").assertExists()
     }
@@ -892,7 +1046,7 @@ class AppTest {
         setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
 
         // Without a link, the menu does not offer to open one.
-        onNodeWithTag("filter-project-GarageSale").performMouseInput { rightClick() }
+        onAllNodesWithTag("label-project-GarageSale", useUnmergedTree = true)[0].performMouseInput { rightClick() }
         onNodeWithTag("copy-link").assertExists()
         onNodeWithTag("open-link").assertDoesNotExist()
         onNodeWithTag("copy-link").performClick()
@@ -1058,9 +1212,7 @@ class AppTest {
         )
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("priorities:\n  \"A\": \"1\""))
 
-        onNodeWithTag("quick-add").performTextInput("(5) Buy milk @shop")
-        onNodeWithTag("quick-add").performKeyInput { pressKey(Key.Enter) }
-        assertEquals("(D) Buy milk @shop", storage.text.trim().lines().last())
+        controller.add(Task.parse("(D) Buy milk @shop"))
         onNode(hasText("5") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
 
         openTask("Buy milk")
@@ -1387,8 +1539,10 @@ class AppTest {
 
         ctrl(Key.F, shift = true)
         onNodeWithTag("filter-text").assertIsFocused()
+        // The key of SkedPal for a new task.
         ctrl(Key.A, shift = true)
-        onNodeWithTag("quick-add").assertIsFocused()
+        onNodeWithTag("edit-dialog").assertExists()
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
         // The key of browsers and editors for their search; the field offers to empty it once it has a text.
         ctrl(Key.F)
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
@@ -1398,8 +1552,6 @@ class AppTest {
         onNodeWithTag("filter-text-clear").performClick()
         onAllNodesWithTag("task").assertCountEquals(all)
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
-        ctrl(Key.A, shift = true)
-        onNodeWithTag("quick-add").assertIsFocused()
         ctrl(Key.L, shift = true)
         onNodeWithTag("plan-dialog").assertExists()
         onNodeWithTag("plan-close").performScrollTo().performClick()
@@ -1535,7 +1687,7 @@ class AppTest {
             fetch = { error("No such calendar at https://example.org/secret") },
             log = { message, cause -> logged += message to cause },
         )
-        controller.add("Buy milk")
+        controller.add(Task.parse("Buy milk"))
         assertEquals("The disk is full", controller.error)
         assertEquals("The disk is full", logged.single().first)
         assertEquals("The disk is full", logged.single().second?.message)
@@ -1589,38 +1741,71 @@ class AppTest {
     // [utest->dsn~git-setup-dialog~1]
     @Test
     fun theSettingsShowThePublicKeyAndCloneARepository() = runComposeUiTest {
+        // The configuration is compared as a whole.
+        storage.companions.remove("koppter.yml")
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
-            override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") "/data/repository/todo.txt" else error("no such repository")
+            override suspend fun clone(url: String) = if (url == "git@example.org:todo.git") {
+                "/data/repository/todo.txt"
+            } else {
+                // As a library reports it: the same message twice, and the reason below them.
+                throw IllegalStateException("remote hung up unexpectedly", IllegalStateException("remote hung up unexpectedly", NoSuchMethodError("no such repository")))
+            }
+
+            override suspend fun check(url: String) {
+                clone(url)
+            }
         }
+        val logged = mutableListOf<String>()
         val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
-        val controller = TodoController(Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) })
+        val controller = TodoController(
+            Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) },
+            log = { message, cause -> logged += "$message: ${cause?.message}" },
+        )
         setContent { App(controller, "todo.txt", git = git) }
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").assertTextEquals("ecdsa-sha2-nistp256 AAAA koppter")
-        // With an address in the field of the file, the button clones.
-        onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
-        // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
+        // Without an address, there is no connection to check.
+        onNodeWithTag("settings-check-connection").assertIsNotEnabled()
+        onNodeWithTag("settings-file").performTextInput("git@example.org:todo.git")
+        onNodeWithTag("settings-check-connection").performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals("Connected")
+        // Nothing is cloned or opened by the check.
+        onNodeWithText("Read the paper").assertDoesNotExist()
+        onNodeWithTag("settings-file").performTextReplacement("git@example.org:other.git")
+        onNodeWithTag("settings-check-connection").performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals(
+            "Not connected: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
+                "Is the public SSH key of this device, shown below, registered with the server?",
+        )
+        // An address is cloned, not saved as a file.
+        onNodeWithTag("settings-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("settings-clone").performScrollTo().performClick()
+        // The reason, with what most often is the cause on a device with a key of its own.
         onNodeWithTag("settings-file-message").assertIsDisplayed()
-            .assertTextEquals("Not cloned: no such repository\nIs the public SSH key of this device, shown below, registered with the server?")
+            .assertTextEquals(
+                "Not cloned: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
+                    "Is the public SSH key of this device, shown below, registered with the server?",
+            )
+        // [utest->dsn~failure-log~1]
+        assertEquals(listOf("Connection check failed: remote hung up unexpectedly", "Clone failed: remote hung up unexpectedly"), logged)
         assertEquals("", controller.settings.todoFile)
 
-        // [utest->dsn~settings-open-file~1]
-        // The clone is opened at once, and the dialog stays open with the configuration that the repository brings along.
-        onNodeWithTag("settings-file").performTextReplacement("git@example.org:todo.git")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
-        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
-        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
-        onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
-        // What is changed now belongs to the repository, and the file that was open before stays as it was.
-        onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nHome = @home")
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Save").performClick()
+        // The clone shows its tasks at once: the dialog is left, and what stood in it is written nowhere.
+        onNodeWithTag("settings-board-columns").performScrollTo().performTextReplacement("Home = @home")
+        onNodeWithTag("settings-file").performScrollTo().performTextReplacement("git@example.org:todo.git")
+        onNodeWithTag("settings-clone").performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
-        assertEquals(true, cloned.companions.getValue("koppter.yml").contains("\"Home\": \"@home\""))
-        assertNull(storage.companions["koppter.yml"])
         onNodeWithText("Read the paper").assertExists()
+        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+        assertEquals("board-columns:\n  Phone: \"@phone\"\n", cloned.companions["koppter.yml"])
+        assertNull(storage.companions["koppter.yml"])
+
+        // The settings then show the configuration that the repository brings along.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
+        onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
     }
 
     // [utest->dsn~settings-open-file~1]
@@ -1676,6 +1861,7 @@ class AppTest {
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun check(url: String) = error("not checked in this test")
         }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         val opened = mutableListOf<String>()
@@ -1698,7 +1884,7 @@ class AppTest {
         // Pasted text arrives at once.
         onNodeWithTag("settings-file").performScrollTo().performTextInput("https://github.com/demo-user/todo/tree/main")
         onNodeWithTag("settings-file").assertTextContains("git@github.com:demo-user/todo.git")
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone")
+        onNodeWithTag("settings-clone").assertIsEnabled()
 
         // The page for a deploy key of that repository, with the key in the clipboard.
         copied = null
@@ -1728,11 +1914,10 @@ class AppTest {
 
     // [utest->dsn~keyboard-shortcuts~1]
     @Test
-    fun withoutAKeyboardThereIsNoLineForANewTaskAndTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
+    fun withoutAKeyboardTheDialogOfANewTaskHasTheFocusInItsDescription() = runComposeUiTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", keyboard = false) }
 
-        onNodeWithTag("quick-add").assertDoesNotExist()
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").assertIsFocused()
         onNodeWithTag("edit-cancel").performScrollTo().performClick()
@@ -1889,10 +2074,11 @@ class AppTest {
         onNodeWithTag("copy-link").performClick()
         assertEquals("koppter://filter?hashtag=quick", copied)
 
-        // A label of the filter panel, which is not selected by that click.
+        // A label of the filter panel has a menu without the link and is not selected by that click.
         onNodeWithTag("filter-context-errands>city").performMouseInput { rightClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?context=errands%3Ecity", copied)
+        onNodeWithTag("copy-link").assertDoesNotExist()
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-cancel").performClick()
         onNodeWithTag("filter-clear").assertIsNotEnabled()
         // The card still has its menu.
         onNodeWithText("Post signs").performMouseInput { rightClick() }
@@ -1901,27 +2087,16 @@ class AppTest {
 
     // [utest->dsn~app-link-copy~1]
     @Test
-    @Suppress("DEPRECATION")
-    fun aLongPressOnALabelOffersItsLinkOnATouchScreen() = runComposeUiTest {
+    fun aLongPressOnALabelOfTheFilterPanelOpensItsMenuOnATouchScreen() = runComposeUiTest {
         storage.text = "Post signs +GarageSale @errands>city #quick\nCall Mom @phone\n"
-        var copied: String? = null
-        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
-            override fun getText() = copied?.let(::AnnotatedString)
-            override fun setText(annotatedString: AnnotatedString) {
-                copied = annotatedString.text
-            }
-        }
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt") } }
+        start()
 
         // The long press on a label of the filter panel opens the menu and does not select the label.
         onNodeWithTag("filter-context-phone").performTouchInput { longClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?context=phone", copied)
+        onNodeWithTag("exclude-label").assertExists()
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-cancel").performClick()
         onAllNodesWithTag("task").assertCountEquals(2)
-        onNodeWithTag("filter-project-GarageSale").performTouchInput { longClick() }
-        onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?project=GarageSale", copied)
 
         // A short touch selects the label as before.
         onNodeWithTag("filter-context-phone").performTouchInput { click() }
@@ -1931,6 +2106,48 @@ class AppTest {
         // The label of a task has no menu for a finger: a long press there picks up the card.
         onNodeWithTag("label-context-phone", useUnmergedTree = true).performTouchInput { longClick() }
         onNodeWithTag("link-menu").assertDoesNotExist()
+    }
+
+    // [utest->dsn~label-rename~1]
+    @Test
+    fun aLabelOfTheFilterPanelIsRenamedInAllTasks() = runComposeUiTest {
+        storage.text = "Read the survey +papers>survey @desk\nx Write the paper +papers\nSort the shelf +papers2\n"
+        storage.companions["ice_recur.txt"] = "weekly ; day Friday - Review the notes +papers\n"
+        storage.companions["koppter.yml"] = "project-contexts:\n  \"+papers\": \"@desk\"\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-project-papers").performClick()
+        onNodeWithTag("filter-project-papers").performMouseInput { rightClick() }
+        onNodeWithTag("rename-label").assertTextEquals("Rename\u2026").performClick()
+        // The same name, two words and nothing are no new name.
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("two words")
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("articles")
+        onNodeWithTag("rename-ok").performClick()
+
+        // The project below it follows, and so do the completed task, the scheduled tasks and the filter.
+        assertEquals("Read the survey +articles>survey @desk\nx Write the paper +articles\nSort the shelf +papers2\n", storage.text)
+        assertEquals("weekly ; day Friday - Review the notes +articles\n", storage.companions["ice_recur.txt"])
+        assertEquals("Rename +papers to +articles", storage.changes.last())
+        // The contexts of the project are those of its new name.
+        assertEquals(listOf("desk"), controller.contextsOf("articles"))
+        assertEquals(emptyList(), controller.contextsOf("papers"))
+        assertEquals(setOf("articles"), controller.filter.projects)
+        onNodeWithTag("filter-project-articles").assertIsOn()
+        onNodeWithTag("filter-project-papers").assertDoesNotExist()
+
+        // A hashtag does not start with a digit.
+        storage.text += "Buy paint #home\n"
+        runOnUiThread { controller.load() }
+        onNodeWithTag("filter-hashtag-home").performScrollTo().performMouseInput { rightClick() }
+        onNodeWithTag("rename-label").performClick()
+        onNodeWithTag("rename-name").performTextReplacement("2026")
+        onNodeWithTag("rename-ok").assertIsNotEnabled()
+        onNodeWithTag("rename-name").performTextReplacement("house")
+        onNodeWithTag("rename-ok").performClick()
+        assertEquals("Buy paint #house", storage.text.trim().lines().last())
     }
 
     // [utest->dsn~filter-exclusion~1]
@@ -2020,6 +2237,18 @@ class AppTest {
         onNodeWithTag("group-PROJECT").assertDoesNotExist()
         onNodeWithTag("list-switch").performClick()
         onAllNodesWithTag("task").assertCountEquals(3)
+    }
+
+    // [utest->dsn~list-groups~1]
+    @Test
+    fun theHeadingOfAGroupStaysWhileItsTasksAreScrolled() = runComposeUiTest {
+        storage.text = (1..40).joinToString("") { "Sort box $it\n" }
+        start()
+        val top = onNodeWithTag("list-group").fetchSemanticsNode().boundsInRoot.top
+        onNodeWithTag("task-list").performScrollToIndex(30)
+        onNodeWithText("Sort box 1").assertDoesNotExist()
+        onNodeWithTag("list-group").assertIsDisplayed().assertTextEquals("Next (40)")
+        assertEquals(top, onNodeWithTag("list-group").fetchSemanticsNode().boundsInRoot.top)
     }
 
     // [utest->dsn~list-groups~1]
@@ -2234,6 +2463,8 @@ class AppTest {
     // [utest->dsn~settings-dialog~1]
     @Test
     fun columnsDefinedInTheSettingsFormTheBoard() = runComposeUiTest {
+        // The configuration is compared as a whole.
+        storage.companions.remove("koppter.yml")
         start()
         onNodeWithTag("board-switch").performClick()
         // [utest->dsn~config-defaults~1]

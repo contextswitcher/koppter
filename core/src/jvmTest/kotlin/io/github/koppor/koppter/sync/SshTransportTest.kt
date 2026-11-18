@@ -11,6 +11,7 @@ import kotlin.io.path.writeText
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /** The key and the host key handling of [GitSetup] against an SSH server in the same process. */
@@ -40,9 +41,14 @@ class SshTransportTest {
     // [utest->dsn~ssh-key~1]
     // [utest->dsn~host-keys~1]
     // [utest->dsn~clone~1]
+    // The build runs the tests without a home folder of the user, as on Android.
+    // [utest->dsn~ssh-home~1]
     @Test
     fun clonesAndPushesOverSshWithTheGeneratedKey() {
         val port = server.start()
+        setup.check("ssh://git@localhost:$port/served")
+        // A device whose key the server does not know is not let in.
+        assertFailsWith<Exception> { GitSetup(root.resolve("stranger")).check("ssh://git@localhost:$port/served") }
         val file = setup.clone("ssh://git@localhost:$port/served")
         assertEquals("Call Mom\n", file.readText())
         assertTrue("localhost" in root.resolve("app/ssh/known_hosts").readText())

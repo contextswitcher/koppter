@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [2026-11-17] - 2026-11-17
+
+### Added
+
+- The dialog of a task has a heading, *New task* or *Edit task*, and a handle at its right edge that makes it wider or narrower with the mouse; the width is kept.
+- The calendar of the deadline in the dialog of a task has the button *Use due date*.
+- *Add image* in the dialog of a task attaches an image to its note, and on Android *Take photo* does so with the camera; the dialog shows the images of the note. The image is scaled down and kept as a file next to the note.
+- On Android, an image that another application shares to koppter becomes a task with that image in its note.
+- *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
+- *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
+- *Check connection* in the settings, next to *Choose folder*, tells whether the server of the git repository in the field of the file is reached and lets the device in, without cloning.
+- `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
+
+### Changed
+
+- The heading of a group of the list, such as *Next (33)*, stays at the top while its tasks are scrolled.
+- *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
+- A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
+- The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.
+- A new task starts with the priority C and the due date of the next weekend; *New task* in the settings states another priority and day, or none.
+- The dialog of a task offers all known projects, contexts and hashtags, not only the first eight.
+- The search text of the filter stands above the list, in a narrow window as well, where the line that added a task stood; the other criteria stay in the filter panel.
+- Ctrl+Shift+A opens the dialog of a new task.
+
+### Removed
+
+- *Copy link* in the menu of a label of the filter panel; the label of a task still offers it.
+- The line above the list that added a task as it was typed, with its completion of projects, contexts and hashtags and its names of priorities at the start of a line; a task is added in its dialog, which the button with the plus and Ctrl+N open.
+
+### Fixed
+
+- On Android, a clone over SSH no longer fails for the lack of a home folder of the user, which the SSH library asks for; every attempt ended with "remote hung up unexpectedly".
+
 ## [2026-11-16] - 2026-11-16
 
 ### Added
@@ -176,8 +209,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
-[2026-11-16]: https://github.com/koppor/koppter/compare/v2026-11-15...v2026-11-16
-[2026-11-15]: https://github.com/koppor/koppter/compare/v2026-11-14...v2026-11-15
-[2026-11-14]: https://github.com/koppor/koppter/compare/v2026-11-13...v2026-11-14
-[2026-11-13]: https://github.com/koppor/koppter/compare/v2026-11-12...v2026-11-13
-[2026-11-12]: https://github.com/koppor/koppter/releases/tag/v2026-11-12
+[2026-11-17]: https://github.com/contextswitcher/koppter/compare/v2026-11-16...v2026-11-17
+[2026-11-16]: https://github.com/contextswitcher/koppter/compare/v2026-11-15...v2026-11-16
+[2026-11-15]: https://github.com/contextswitcher/koppter/compare/v2026-11-14...v2026-11-15
+[2026-11-14]: https://github.com/contextswitcher/koppter/compare/v2026-11-13...v2026-11-14
+[2026-11-13]: https://github.com/contextswitcher/koppter/compare/v2026-11-12...v2026-11-13
+[2026-11-12]: https://github.com/contextswitcher/koppter/releases/tag/v2026-11-12

@@ -37,6 +37,15 @@ class ShareActionTest {
         assertEquals(emptyList(), ConfigFile.shareActions(ConfigFile.withShareActions(config, emptyList())))
     }
 
+    // [utest->dsn~note-images~1]
+    @Test
+    fun theImagesOfANoteAreItsMarkdownImagesThatNameAFile() {
+        val note = "Receipt:\n\n![](a1b-1.jpg)\n![the stand](<a1b-2.jpg>) ![](https://example.org/x.png) ![](../todo.txt) ![](a1b-1.jpg) [no image](a1b-3.jpg)"
+        assertEquals(listOf("a1b-1.jpg", "a1b-2.jpg"), noteImages(note))
+        assertEquals("a1b-3.jpg", imageName("a1b.md") { it in noteImages(note) })
+        assertEquals("a1b-1.jpg", imageName("a1b.md") { false })
+    }
+
     // [utest->dsn~onenote-links~1]
     @Test
     fun theTwoLinesThatOneNoteCopiesBecomeTwoMarkdownLinks() {

@@ -21,6 +21,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -340,12 +345,23 @@ private fun WithTooltip(text: String, label: @Composable () -> Unit) {
  *
  * @param key the key of the link, such as [LINK_PROJECT]
  * @param onExclude hides the tasks of the label; `null` where the menu does not offer that
+ * @param copyLink whether the menu offers the link to the tasks of the label
+ * @param onRename gives the label the new name in all tasks; `null` where the menu does not offer that
  * @param longPress opens the menu also when a finger stays on the label; not for the label of a task, where a long press picks up the card
  */
 // [impl->dsn~app-link-copy~1]
 @Composable
-fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclude: (() -> Unit)? = null, label: @Composable () -> Unit) {
+fun WithLinkMenu(
+    key: String,
+    name: String,
+    longPress: Boolean = false,
+    onExclude: (() -> Unit)? = null,
+    copyLink: Boolean = true,
+    onRename: ((String) -> Unit)? = null,
+    label: @Composable () -> Unit,
+) {
     var open by remember { mutableStateOf(false) }
+    var renaming by remember { mutableStateOf(false) }
     // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
@@ -389,14 +405,16 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclud
     ) {
         label()
         DropdownMenu(open, onDismissRequest = { open = false }, modifier = Modifier.testTag("link-menu")) {
-            DropdownMenuItem(
-                text = { Text("Copy link") },
-                onClick = {
-                    clipboard.setText(AnnotatedString(linkTo(key, name)))
-                    open = false
-                },
-                modifier = Modifier.testTag("copy-link"),
-            )
+            if (copyLink) {
+                DropdownMenuItem(
+                    text = { Text("Copy link") },
+                    onClick = {
+                        clipboard.setText(AnnotatedString(linkTo(key, name)))
+                        open = false
+                    },
+                    modifier = Modifier.testTag("copy-link"),
+                )
+            }
             // [impl->dsn~label-links~1]
             if (link != null) {
                 DropdownMenuItem(
@@ -406,6 +424,17 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclud
                         open = false
                     },
                     modifier = Modifier.testTag("open-link"),
+                )
+            }
+            // [impl->dsn~label-rename~1]
+            if (onRename != null) {
+                DropdownMenuItem(
+                    text = { Text("Rename\u2026") },
+                    onClick = {
+                        open = false
+                        renaming = true
+                    },
+                    modifier = Modifier.testTag("rename-label"),
                 )
             }
             // [impl->dsn~filter-exclusion~1]
@@ -419,6 +448,25 @@ fun WithLinkMenu(key: String, name: String, longPress: Boolean = false, onExclud
                     modifier = Modifier.testTag("exclude-label"),
                 )
             }
+        }
+        if (renaming && onRename != null) {
+            var to by remember { mutableStateOf(name) }
+            // A label is one word, and a hashtag does not start with a digit.
+            val valid = to.isNotEmpty() && to != name && to.none { it.isWhitespace() } && (key != LINK_HASHTAG || Task.isHashtagName(to))
+            AlertDialog(
+                onDismissRequest = { renaming = false },
+                confirmButton = {
+                    TextButton(onClick = { onRename(to); renaming = false }, enabled = valid, modifier = Modifier.testTag("rename-ok")) { Text("Rename") }
+                },
+                dismissButton = { TextButton(onClick = { renaming = false }, modifier = Modifier.testTag("rename-cancel")) { Text("Cancel") } },
+                title = { Text("Rename $sign$name") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(to, { to = it }, prefix = { Text(sign) }, singleLine = true, modifier = Modifier.testTag("rename-name"))
+                        Text("In all tasks and scheduled tasks.", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+            )
         }
     }
 }
