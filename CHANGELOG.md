@@ -20,6 +20,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The inbox shows the hashtags of a task next to its text and puts *Give it:* before the contexts to choose from, so that they no longer look like contexts of the task.
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
 - The search fields are lower, and the field that searches labels in the filter panel stands at its top instead of below *Clear all filters*, where it was out of view.
+- *Choose file* and *Choose folder* in the settings close the settings and show the tasks of the chosen file, as *Clone* does; what was typed into the settings before is not written.
 - `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.
 - The Windows task manager names the desktop application *koppter* instead of *Tasks in a todo.txt file*.
 

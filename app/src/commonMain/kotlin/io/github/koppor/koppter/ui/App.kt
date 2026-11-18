@@ -465,7 +465,6 @@ private fun MainScreen(
         )
     }
     if (showSettings) {
-        val fileBefore = remember { controller.settings.todoFile }
         SettingsDialog(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
@@ -485,10 +484,9 @@ private fun MainScreen(
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             // [impl->dsn~settings-open-file~1]
-            onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
             // [impl->dsn~git-setup-dialog~1]
-            // The user wants the tasks of the repository; nothing of the dialog is written to it.
-            onCloned = {
+            // The user wants the tasks of the file or repository; nothing of the dialog is written to it.
+            onOpenFile = {
                 controller.updateSettings(controller.settings.copy(todoFile = it))
                 showSettings = false
             },
@@ -508,11 +506,7 @@ private fun MainScreen(
                 override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
                 override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)
             },
-            onDismiss = {
-                // A file opened from the dialog was a look at it: without Save, the file from before is open again.
-                controller.updateSettings(controller.settings.copy(todoFile = fileBefore))
-                showSettings = false
-            },
+            onDismiss = { showSettings = false },
         )
     }
 }
