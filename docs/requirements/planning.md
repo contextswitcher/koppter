@@ -154,6 +154,22 @@ Covers:
 
 Needs: dsn
 
+### Plan in the calendar of Outlook
+`req~outlook-calendar~1`
+
+The plan of the next weeks, three unless configured otherwise, is written into the main calendar of an account of the classic desktop Outlook, the default account unless configured otherwise.
+The appointments are private and tentative, and their subjects end with `[koppter]`.
+A new plan replaces the appointments that koppter wrote before; appointments that koppter did not write are never changed or deleted.
+Planning takes the appointments of that calendar as busy times.
+The user removes all appointments that koppter wrote with one action, after confirming their number.
+
+Covers:
+
+* `feat~planning~1`
+* `feat~outlook~1`
+
+Needs: dsn
+
 ### Views of the plan
 `req~agenda~1`
 
@@ -361,6 +377,48 @@ The addresses of the calendars are a setting of the device, as they are secrets;
 Covers:
 
 * `req~busy-times~1`
+
+Needs: impl, utest
+
+### Blocks in the calendar of Outlook
+`dsn~outlook-blocks~1`
+
+`TodoController.planWithCalendars` passes the blocks of the plan that start between now and the end of the day before today plus `outlookWeeks` weeks (`OutlookCalendar.window`, `OutlookCalendar.blocks`) to `OutlookBridge.syncBlocks`, for the account `outlookCalendar` of the settings; 0 weeks writes nothing.
+A block has the id of its event in `calendar.ics` (`Ics.id`), its subject is its text followed by ` [koppter]`, and its text starts with `[koppter]`.
+On the desktop, `AnchorHubOutlook` passes them as JSON on the standard input of `ankd outlook-blocks-sync`, which creates them as private, tentative appointments without reminder and replaces those of its own in the window.
+The summary of the plan tells what changed in Outlook; a failure is shown as a problem of the plan.
+The settings dialog has the fields for the account and the weeks where Outlook is reached.
+
+Covers:
+
+* `req~outlook-calendar~1`
+* `adr~plan-in-outlook~1`
+
+Needs: impl, utest
+
+### Busy times of Outlook
+`dsn~outlook-busy~1`
+
+Before planning, `TodoController.planWithCalendars` reads the appointments of the same calendar for a year through `ankd outlook-busy`, which leaves out the blocks of koppter.
+`OutlookCalendar.busyTimes` takes those that are not free and not whole-day appointments, split at midnight, as busy times in addition to those of the iCalendar files.
+
+Covers:
+
+* `req~outlook-calendar~1`
+
+Needs: impl, utest
+
+### Removing the blocks from Outlook
+`dsn~outlook-clear~1`
+
+The button *Remove koppter's blocks from Outlook* of the settings dialog asks `ankd outlook-blocks-clear --dry-run` for the number of blocks in the calendar of the account in the field and shows it in a confirmation; only after the confirmation does `ankd outlook-blocks-clear` delete them.
+AnchorHub counts an appointment as a block of koppter only if it has both the user property `KoppterBlockId`, which only AnchorHub sets, and the category `koppter`, and is neither recurring nor a meeting; the subject is not considered.
+Deleted appointments go to the deleted items of Outlook.
+
+Covers:
+
+* `req~outlook-calendar~1`
+* `adr~plan-in-outlook~1`
 
 Needs: impl, utest
 

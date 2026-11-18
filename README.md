@@ -619,6 +619,24 @@ Such an address lets everyone who has it read the calendar.
 It is therefore kept in the settings of the device and not in `koppter.yml`; each device needs it entered once.
 The application only reads the calendars and writes nothing to them.
 
+### Calendar of Outlook
+
+On Windows with the classic Outlook and [AnchorHub](#tasks-of-outlook), planning also works with the main calendar of an Outlook account ([decision 0041](docs/decisions/0041-plan-in-the-main-calendar-of-outlook.md)):
+
+* Its appointments are busy times, as those of the calendars above; whole-day appointments and those marked as free do not count.
+* The plan of the next three weeks goes into it as appointments that are private and tentative, without reminder, whose subject ends with `[koppter]`.
+  Colleagues see the time as tentatively taken, not the task.
+* Each plan replaces the appointments that koppter wrote before; a block that is still in the plan stays as it is.
+* *Account of the calendar* in the settings names the account as Outlook shows it, such as its email address; empty for the default account.
+  *Weeks of the plan in Outlook* sets the three weeks; 0 writes nothing.
+* *Remove koppter's blocks from Outlook* in the settings shows the number of the appointments that koppter wrote and deletes them after a confirmation.
+  They go to the deleted items of Outlook.
+
+An appointment counts as koppter's only if AnchorHub created it: it carries a hidden property and the category `koppter`, which AnchorHub sets.
+An appointment of the user is never changed or deleted, whatever its subject says, and neither is a recurring appointment or a meeting.
+
+Do not enter the published address of the same calendar under *Calendars with busy times*: the published file has the blocks without their marks, so that the next plan would avoid them as busy times.
+
 ### Limits of planning
 
 * A budget counts what is planned from now on: what was planned earlier in the running week is not counted.

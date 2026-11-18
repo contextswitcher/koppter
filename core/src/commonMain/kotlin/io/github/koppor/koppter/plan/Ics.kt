@@ -25,7 +25,7 @@ object Ics {
             val day = block.date.toString().replace("-", "")
             line("BEGIN:VEVENT")
             // The same block has the same id in every export, so that a calendar that knows the id replaces the event.
-            line("UID:$day-${block.span.start}-${text.hashCode().toUInt().toString(16)}@koppter")
+            line("UID:${id(block)}@koppter")
             line("DTSTAMP:${today.toString().replace("-", "")}T000000Z")
             line("DTSTART:${day}T${time(block.span.start)}")
             line("DTEND:${day}T${time(block.span.end)}")
@@ -36,6 +36,9 @@ object Ics {
         }
         line("END:VCALENDAR")
     }
+
+    /** The id of a block, derived from its day, start and text, so that the same plan gives the same ids. */
+    fun id(block: Block): String = "${block.date.toString().replace("-", "")}-${block.span.start}-${block.text.hashCode().toUInt().toString(16)}"
 
     private fun time(minutes: Int) = "${(minutes / 60).toString().padStart(2, '0')}${(minutes % 60).toString().padStart(2, '0')}00"
 }

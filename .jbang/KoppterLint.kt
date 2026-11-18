@@ -6,6 +6,7 @@
 //JAVA 21+
 //DEPS org.jetbrains.kotlinx:kotlinx-datetime-jvm:0.8.0
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/outlook/Outlook.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/outlook/OutlookCalendar.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/BusyTimes.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/CalendarTxt.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Ics.kt

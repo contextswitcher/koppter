@@ -7,7 +7,11 @@ import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
-import io.github.koppor.koppter.outlook.OutlookTodos
+import io.github.koppor.koppter.outlook.OutlookBridge
+import io.github.koppor.koppter.outlook.OutlookCalendar
+import io.github.koppor.koppter.plan.Block
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.plan.CalendarTxt
@@ -83,8 +87,8 @@ class TodoController(
     private val fetch: (suspend (String) -> String)? = null,
     /** Takes what failed, with its cause if there is one, for the log of the platform. */
     private val log: (message: String, cause: Throwable?) -> Unit = { _, _ -> },
-    /** The To-Do list of Outlook; `null` where the platform has none. */
-    private val outlook: OutlookTodos? = null,
+    /** The To-Do list and the calendar of Outlook; `null` where the platform has none. */
+    private val outlook: OutlookBridge? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -430,12 +434,11 @@ class TodoController(
      */
     // [impl->dsn~busy-times~1]
     suspend fun planWithCalendars(settings: PlanSettings, calendars: String?): PlanResult? {
-        val fetch = fetch
-        if (calendars == null || fetch == null) return plan(settings)
-        updateSettings(this.settings.copy(calendars = calendars.trim()))
         val busy = mutableMapOf<LocalDate, List<Span>>()
         val problems = mutableListOf<String>()
-        for (address in calendars.lines().map(String::trim).filter(String::isNotEmpty)) {
+        val fetch = fetch
+        if (calendars != null && fetch != null) updateSettings(this.settings.copy(calendars = calendars.trim()))
+        if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter(String::isNotEmpty)) {
             try {
                 busyTimes(fetch(address), today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault())
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
@@ -447,8 +450,47 @@ class TodoController(
                 log("Calendar of $host was not read: ${e::class.simpleName}", null)
             }
         }
-        return plan(settings, busy, problems)
+        val bridge = outlook
+        // [impl->dsn~outlook-busy~1]
+        if (bridge != null) {
+            try {
+                val appointments = withContext(Dispatchers.Default) { bridge.busy(outlookCalendar, today(), today().plus(DatePeriod(years = 1))) }
+                OutlookCalendar.busyTimes(appointments).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
+            } catch (e: Exception) {
+                problems += "The calendar of Outlook was not read: ${e.message ?: e}"
+                log("The calendar of Outlook was not read", e)
+            }
+        }
+        val result = plan(settings, busy, problems) ?: return null
+        // [impl->dsn~outlook-blocks~1]
+        val weeks = this.settings.outlookWeeks
+        if (bridge == null || weeks == 0) return result
+        val minute = minuteOfDay()
+        val window = OutlookCalendar.window(LocalDateTime(today(), LocalTime(minute / 60, minute % 60)), weeks)
+        return try {
+            val change = withContext(Dispatchers.Default) { bridge.syncBlocks(outlookCalendar, window, OutlookCalendar.blocks(plannedBlocks, window)) }
+            result.copy(summary = "${result.summary} Outlook: $change.")
+        } catch (e: Exception) {
+            log("The plan was not written to Outlook", e)
+            result.copy(problems = result.problems + "The plan was not written to Outlook: ${e.message ?: e}")
+        }
     }
+
+    /** The blocks of the last plan of this run of the application, for the calendar of Outlook. */
+    private var plannedBlocks: List<Block> = emptyList()
+
+    /** The account whose calendar of Outlook is meant; `null` for the default account. */
+    private val outlookCalendar: String? get() = settings.outlookCalendar.trim().ifEmpty { null }
+
+    /** The number of the blocks of koppter in the main calendar of the account, by its name in Outlook; blank for the default account. */
+    // [impl->dsn~outlook-clear~1]
+    suspend fun countOutlookBlocks(calendar: String): Int =
+        withContext(Dispatchers.Default) { outlook?.countBlocks(calendar.trim().ifEmpty { null }) ?: 0 }
+
+    /** Deletes the blocks of koppter, and only those, from the main calendar of the account; returns their number. */
+    // [impl->dsn~outlook-clear~1]
+    suspend fun clearOutlookBlocks(calendar: String): Int =
+        withContext(Dispatchers.Default) { outlook?.clearBlocks(calendar.trim().ifEmpty { null }) ?: 0 }
 
     /**
      * Saves the configuration for planning, plans the open tasks from now on and writes the plan to `calendar.txt`.
@@ -476,6 +518,7 @@ class TodoController(
             files.writeCompanion(CalendarTxt.NAME, CalendarTxt.write(files.readCompanion(CalendarTxt.NAME).orEmpty(), plan.blocks, today()))
             // [impl->dsn~ics-export~1]
             files.writeCompanion(Ics.NAME, Ics.write(plan.blocks, today()))
+            plannedBlocks = plan.blocks
             // The storage records the files next to the todo.txt file with a change of that file.
             storage.write(file.serialize(), "Update the plan")
             loadedVersion = storage.version()

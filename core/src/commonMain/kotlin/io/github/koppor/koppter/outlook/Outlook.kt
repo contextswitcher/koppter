@@ -3,14 +3,19 @@ package io.github.koppor.koppter.outlook
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.Task
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import kotlin.io.encoding.Base64
 
 /** An open item of the To-Do list of Outlook: a flagged mail or a task. [entryId] is the EntryID in hexadecimal digits, as Outlook gives it. */
 data class OutlookItem(val entryId: String, val subject: String, val due: LocalDate?)
 
-/** The To-Do list of the classic desktop Outlook, read and changed through another program. */
-interface OutlookTodos {
-    /** The open items of the To-Do lists of all accounts; blocks while Outlook answers. */
+/**
+ * The classic desktop Outlook, read and changed through another program: its To-Do list and a calendar.
+ * A [calendar] names the account whose main calendar is meant; `null` for the main calendar of the default account.
+ * The functions that return something block while Outlook answers.
+ */
+interface OutlookBridge {
+    /** The open items of the To-Do lists of all accounts. */
     fun items(): List<OutlookItem>
 
     /** Shows the item in a window of Outlook; returns at once. */
@@ -18,6 +23,18 @@ interface OutlookTodos {
 
     /** Marks the item done in Outlook; returns at once. */
     fun complete(entryId: String)
+
+    /** Makes the blocks of koppter that start in the window those given, and leaves every other appointment alone; returns what changed, for the user. */
+    fun syncBlocks(calendar: String?, window: ClosedRange<LocalDateTime>, blocks: List<OutlookBlock>): String
+
+    /** The number of the blocks of koppter in the calendar. */
+    fun countBlocks(calendar: String?): Int
+
+    /** Deletes all blocks of koppter in the calendar, and nothing else; returns their number. */
+    fun clearBlocks(calendar: String?): Int
+
+    /** The appointments of the calendar on the days from [from] to before [to], without the blocks of koppter. */
+    fun busy(calendar: String?, from: LocalDate, to: LocalDate): List<OutlookBusy>
 }
 
 // [impl->dsn~outlook-tag~1]
