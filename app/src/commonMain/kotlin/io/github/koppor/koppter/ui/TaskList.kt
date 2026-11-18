@@ -126,15 +126,18 @@ fun TaskList(
         LazyColumn(
             state = list,
             modifier = Modifier.fillMaxSize().testTag("task-list"),
-            contentPadding = PaddingValues(start = 8.dp, top = 4.dp, end = 8.dp, bottom = 88.dp),
+            // No padding at the top: tasks would show in it above a heading that stays there.
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = 88.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             for (group in groups) {
                 val entries = group.entries
-                item(key = "group/${group.title}") {
+                // The heading stays at the top while the tasks of its group pass, so that a long group still tells what it is.
+                stickyHeader(key = "group/${group.title}") {
                     GroupHeading(
                         group, priorities,
-                        Modifier.fillMaxWidth().padding(top = 10.dp)
+                        // The tasks pass behind the heading: the space above it and its round corners cover them as well.
+                        Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.background).padding(top = 10.dp)
                             .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.small)
                             .padding(horizontal = 12.dp, vertical = 6.dp).testTag("list-group"),
                     )

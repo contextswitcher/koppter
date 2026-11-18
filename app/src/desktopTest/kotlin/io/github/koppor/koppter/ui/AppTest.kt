@@ -30,6 +30,7 @@ import androidx.compose.ui.test.performFirstLinkClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.longClick
@@ -2236,6 +2237,18 @@ class AppTest {
         onNodeWithTag("group-PROJECT").assertDoesNotExist()
         onNodeWithTag("list-switch").performClick()
         onAllNodesWithTag("task").assertCountEquals(3)
+    }
+
+    // [utest->dsn~list-groups~1]
+    @Test
+    fun theHeadingOfAGroupStaysWhileItsTasksAreScrolled() = runComposeUiTest {
+        storage.text = (1..40).joinToString("") { "Sort box $it\n" }
+        start()
+        val top = onNodeWithTag("list-group").fetchSemanticsNode().boundsInRoot.top
+        onNodeWithTag("task-list").performScrollToIndex(30)
+        onNodeWithText("Sort box 1").assertDoesNotExist()
+        onNodeWithTag("list-group").assertIsDisplayed().assertTextEquals("Next (40)")
+        assertEquals(top, onNodeWithTag("list-group").fetchSemanticsNode().boundsInRoot.top)
     }
 
     // [utest->dsn~list-groups~1]
