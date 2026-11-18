@@ -60,7 +60,11 @@ import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
-import io.github.koppor.koppter.outlook.OutlookTodos
+import io.github.koppor.koppter.outlook.BusyStatus
+import io.github.koppor.koppter.outlook.OutlookBlock
+import io.github.koppor.koppter.outlook.OutlookBridge
+import io.github.koppor.koppter.outlook.OutlookBusy
+import kotlinx.datetime.LocalDateTime
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
@@ -90,6 +94,31 @@ private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
         changes += change
     }
     override fun version(): Any? = text
+}
+
+/** Outlook as AnchorHub would show it, with what was asked of it. */
+private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appointments: List<OutlookBusy> = emptyList(), var blocks: Int = 0) : OutlookBridge {
+    val opened = mutableListOf<String>()
+    val completed = mutableListOf<String>()
+    var synced: Pair<ClosedRange<LocalDateTime>, List<OutlookBlock>>? = null
+    var cleared = 0
+    override fun items() = items
+    override fun open(entryId: String) {
+        opened += entryId
+    }
+    override fun complete(entryId: String) {
+        completed += entryId
+    }
+    override fun syncBlocks(calendar: String?, window: ClosedRange<LocalDateTime>, blocks: List<OutlookBlock>): String {
+        synced = window to blocks
+        return "${blocks.size} blocks added, 0 deleted, 0 kept"
+    }
+    override fun countBlocks(calendar: String?) = blocks
+    override fun clearBlocks(calendar: String?): Int {
+        cleared++
+        return blocks.also { blocks = 0 }
+    }
+    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments
 }
 
 @OptIn(ExperimentalTestApi::class)
@@ -1005,17 +1034,9 @@ class AppTest {
     fun theItemsOfOutlookAreShownAndBecomeALineWhenOneGetsAContext() = runComposeUiTest {
         val mail = "00000000A1B2C3D4"
         val task = "00000000E5F60718"
-        val opened = mutableListOf<String>()
-        val completed = mutableListOf<String>()
-        val outlook = object : OutlookTodos {
-            override fun items() = listOf(OutlookItem(mail, "Answer the invitation", LocalDate(2026, 11, 12)), OutlookItem(task, "Book the hotel", null))
-            override fun open(entryId: String) {
-                opened += entryId
-            }
-            override fun complete(entryId: String) {
-                completed += entryId
-            }
-        }
+        val outlook = FakeOutlook(listOf(OutlookItem(mail, "Answer the invitation", LocalDate(2026, 11, 12)), OutlookItem(task, "Book the hotel", null)))
+        val opened = outlook.opened
+        val completed = outlook.completed
         val before = storage.text
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
         setContent { App(controller, "todo.txt") }
@@ -1029,9 +1050,16 @@ class AppTest {
         assertTrue(opened.single() in setOf(mail, task))
         onNodeWithTag("edit-dialog").assertDoesNotExist()
 
+        // In the inbox, the item shows where it comes from, and the contexts below it are choices.
+        controller.view = View.INBOX
+        onAllNodesWithTag("inbox-hashtag-outlook", useUnmergedTree = true).assertCountEquals(2)
+        // The task "Post signs" of the file has no context either.
+        onAllNodesWithText("Give it:", useUnmergedTree = true).assertCountEquals(3)
+        controller.view = View.LIST
+
         // A context writes the item as a line, which then stands for it.
         runOnIdle { controller.assignContext(controller.inbox.first { it.task.description == "Answer the invitation" }, "phone") }
-        assertEquals("Answer the invitation @phone due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
+        assertEquals("Answer the invitation @phone #outlook due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
         assertEquals(listOf(false), controller.visible.filter { it.task.description == "Answer the invitation" }.map(Outlook::isItem))
 
         // Completing an item or a line that names one marks it done in Outlook.
@@ -1043,8 +1071,52 @@ class AppTest {
         assertTrue(storage.text.trim().lines().last().startsWith("x "))
     }
 
-    // [utest->dsn~context-switcher-tag~1]
+    // [utest->dsn~outlook-blocks~1]
+    // [utest->dsn~outlook-busy~1]
     @Test
+    fun planningAvoidsTheAppointmentsOfOutlookAndWritesTheBlocksOfTheWeeksToIt() {
+        val meeting = OutlookBusy(LocalDateTime(2026, 11, 12, 0, 0), LocalDateTime(2026, 11, 26, 0, 0), false, BusyStatus.BUSY)
+        val outlook = FakeOutlook(appointments = listOf(meeting))
+        val controller = TodoController(Settings(outlookWeeks = 4), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 }, outlook = outlook)
+        val result = runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }!!
+        val (window, blocks) = outlook.synced!!
+        assertEquals(LocalDateTime(2026, 11, 12, 8, 0)..LocalDateTime(2026, 12, 10, 0, 0), window)
+        assertTrue(blocks.isNotEmpty(), result.summary)
+        assertTrue(blocks.all { it.subject.endsWith(" [koppter]") && it.start >= window.start && it.start < window.endInclusive })
+        // The busy weeks of Outlook stay free of blocks.
+        assertTrue(blocks.all { it.start >= meeting.end }, blocks.toString())
+        assertTrue(result.summary.endsWith("Outlook: ${blocks.size} blocks added, 0 deleted, 0 kept."), result.summary)
+
+        // With 0 weeks, nothing is written.
+        outlook.synced = null
+        controller.updateSettings(controller.settings.copy(outlookWeeks = 0))
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
+        assertNull(outlook.synced)
+    }
+
+    // [utest->dsn~outlook-clear~1]
+    @Test
+    fun theBlocksOfKoppterAreRemovedFromOutlookAfterTheUserConfirmedTheirNumber() = runComposeUiTest {
+        val outlook = FakeOutlook(blocks = 7)
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-outlook-clear").performScrollTo().performClick()
+        waitUntil { onAllNodesWithTag("settings-outlook-clear-confirm").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Remove 7 blocks?").assertExists()
+        assertEquals(0, outlook.cleared)
+        onNodeWithTag("settings-outlook-clear-confirm").performClick()
+        waitUntil { onAllNodesWithTag("settings-outlook-message").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, outlook.cleared)
+        onNodeWithTag("settings-outlook-message").assertTextEquals("Removed 7 blocks from the calendar of the default account.")
+
+        // Without blocks, there is nothing to confirm.
+        onNodeWithTag("settings-outlook-clear").performScrollTo().performClick()
+        waitUntil { onAllNodesWithText("There are no blocks of koppter in the calendar of the default account.").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, outlook.cleared)
+    }
+
+    // [utest->dsn~context-switcher-tag~1]    @Test
     fun theLabelOfAContextSwitcherTaskSwitchesToItAndAPastedLinkBecomesTheTag() = runComposeUiTest {
         val opened = mutableListOf<String>()
         val links = object : UriHandler {

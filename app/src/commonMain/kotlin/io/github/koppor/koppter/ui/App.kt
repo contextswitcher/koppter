@@ -503,6 +503,11 @@ private fun MainScreen(
                 controller.updateSettings(settings)
                 showSettings = false
             },
+            // [impl->dsn~outlook-clear~1]
+            outlookBlocks = if (!controller.readsOutlook) null else object : OutlookBlockActions {
+                override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
+                override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)
+            },
             onDismiss = {
                 // A file opened from the dialog was a look at it: without Save, the file from before is open again.
                 controller.updateSettings(controller.settings.copy(todoFile = fileBefore))

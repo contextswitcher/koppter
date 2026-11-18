@@ -42,6 +42,10 @@ data class Settings(
     val committerName: String = "",
     /** The email address in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_EMAIL]. */
     val committerEmail: String = "",
+    /** The account whose main calendar takes the plan, by its name in Outlook; blank for the default account. */
+    val outlookCalendar: String = "",
+    /** For how many weeks from today the plan is written to the calendar of Outlook; 0 writes nothing. */
+    val outlookWeeks: Int = 3,
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -60,6 +64,8 @@ data class Settings(
         EDIT_WIDTH to editWidth.toString(),
         COMMITTER_NAME to committerName,
         COMMITTER_EMAIL to committerEmail,
+        OUTLOOK_CALENDAR to outlookCalendar,
+        OUTLOOK_WEEKS to outlookWeeks.toString(),
     )
 
     companion object {
@@ -78,6 +84,8 @@ data class Settings(
         private const val EDIT_WIDTH = "editWidth"
         private const val COMMITTER_NAME = "committerName"
         private const val COMMITTER_EMAIL = "committerEmail"
+        private const val OUTLOOK_CALENDAR = "outlookCalendar"
+        private const val OUTLOOK_WEEKS = "outlookWeeks"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -96,6 +104,8 @@ data class Settings(
             editWidth = properties[EDIT_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().editWidth,
             committerName = properties[COMMITTER_NAME].orEmpty(),
             committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
+            outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
+            outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
         )
     }
 }

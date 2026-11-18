@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
@@ -47,6 +48,7 @@ import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.storage.Settings
 import kotlinx.coroutines.launch
+import io.github.koppor.koppter.outlook.OutlookCalendar
 
 /**
  * The message of a failure, followed by its causes where they say something else:
@@ -146,6 +148,8 @@ fun SettingsDialog(
     onGitFailed: (String, Exception) -> Unit = { _, _ -> },
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
     onDismiss: () -> Unit,
+    /** Counts and deletes the blocks of koppter in the calendar of Outlook of an account; `null` where Outlook is not reached. */
+    outlookBlocks: OutlookBlockActions? = null,
 ) {
     val scope = rememberCoroutineScope()
     // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
@@ -168,6 +172,9 @@ fun SettingsDialog(
     var newTaskDefaults by remember(openFile) { mutableStateOf(newTask) }
     var committerName by remember { mutableStateOf(settings.committerName) }
     var committerEmail by remember { mutableStateOf(settings.committerEmail) }
+    var outlookCalendar by remember { mutableStateOf(settings.outlookCalendar) }
+    var outlookWeeks by remember { mutableStateOf(settings.outlookWeeks.toString()) }
+    val outlookWeeksValue = outlookWeeks.trim().toIntOrNull()?.takeIf { it >= 0 }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
@@ -184,7 +191,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail)
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -375,6 +382,24 @@ fun SettingsDialog(
                     CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, DEFAULT_COMMITTER_EMAIL, "settings-committer-email")
                     GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
                 }
+                if (outlookBlocks != null) {
+                    // [impl->dsn~outlook-blocks~1]
+                    Text("Outlook", style = MaterialTheme.typography.titleMedium)
+                    CommitterField(
+                        "Account of the calendar", outlookCalendar, { outlookCalendar = it }, "Default account", "settings-outlook-calendar",
+                        "The name of the account in Outlook, such as its email address. Its main calendar takes the plan as private, tentative appointments whose subject ends with ${OutlookCalendar.MARK}.",
+                    )
+                    OutlinedTextField(
+                        value = outlookWeeks,
+                        onValueChange = { outlookWeeks = it },
+                        label = { Text("Weeks of the plan in Outlook") },
+                        supportingText = { Text("Planning writes the blocks of so many weeks from today to Outlook and replaces those it wrote before; 0 writes nothing.") },
+                        isError = outlookWeeksValue == null,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testTag("settings-outlook-weeks"),
+                    )
+                    OutlookClearButton(outlookBlocks, outlookCalendar)
+                }
                 Row(Modifier.fillMaxWidth()) {
                     // [impl->dsn~share-log~1]
                     if (shareLog != null) {
@@ -386,6 +411,7 @@ fun SettingsDialog(
                         settings.copy(
                             todoFile = file, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
+                            outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks,
                         ),
                         columns?.trim(),
                         actions?.trim(),
@@ -397,7 +423,7 @@ fun SettingsDialog(
                     Button(
                         onClick = { save(todoFile.trim()) },
                         // An address is no file to save: it is cloned first.
-                        enabled = topCountValue != null && !cloning && !address,
+                        enabled = topCountValue != null && outlookWeeksValue != null && !cloning && !address,
                         modifier = Modifier.testTag("settings-save"),
                     ) { Text("Save") }
                 }
@@ -428,9 +454,76 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
     }
 }
 
+/** Counts and deletes the blocks of koppter in the main calendar of an account of Outlook, named as in Outlook; blank for the default account. */
+interface OutlookBlockActions {
+    suspend fun count(calendar: String): Int
+    suspend fun clear(calendar: String): Int
+}
+
+/**
+ * Deletes the blocks of koppter from the calendar of Outlook after the user confirmed their number.
+ * Which appointments are koppter's is decided by AnchorHub, by marks that only it sets.
+ */
+// [impl->dsn~outlook-clear~1]
+@Composable
+private fun OutlookClearButton(actions: OutlookBlockActions, calendar: String) {
+    val scope = rememberCoroutineScope()
+    var message by remember { mutableStateOf("") }
+    var confirm by remember { mutableStateOf<Int?>(null) }
+    var busy by remember { mutableStateOf(false) }
+    val name = calendar.trim().ifEmpty { "the default account" }
+    fun run(action: suspend () -> Unit) {
+        busy = true
+        scope.launch {
+            try {
+                action()
+            } catch (e: Exception) {
+                message = "Outlook did not answer: ${e.message ?: e}"
+            }
+            busy = false
+        }
+    }
+    OutlinedButton(
+        onClick = {
+            message = ""
+            run {
+                val count = actions.count(calendar)
+                if (count == 0) message = "There are no blocks of koppter in the calendar of $name." else confirm = count
+            }
+        },
+        enabled = !busy,
+        modifier = Modifier.testTag("settings-outlook-clear"),
+    ) { Text("Remove koppter's blocks from Outlook") }
+    if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-outlook-message"))
+    confirm?.let { count ->
+        AlertDialog(
+            onDismissRequest = { confirm = null },
+            title = { Text("Remove $count blocks?") },
+            text = { Text("The calendar of $name has $count appointments that koppter wrote. They go to the deleted items of Outlook; other appointments are not touched.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirm = null
+                        run { message = "Removed ${actions.clear(calendar)} blocks from the calendar of $name." }
+                    },
+                    modifier = Modifier.testTag("settings-outlook-clear-confirm"),
+                ) { Text("Remove") }
+            },
+            dismissButton = { TextButton(onClick = { confirm = null }) { Text("Cancel") } },
+        )
+    }
+}
+
 /** A field whose [default], which applies while it is empty, stands in it in gray. */
 @Composable
-private fun CommitterField(title: String, value: String, onChange: (String) -> Unit, default: String, tag: String) {
+private fun CommitterField(
+    title: String,
+    value: String,
+    onChange: (String) -> Unit,
+    default: String,
+    tag: String,
+    help: String = "Empty: that of the git configuration, otherwise the value in gray.",
+) {
     Column {
         // The title stands above the field: as a label in it, it would hide the default until the field has the focus.
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
@@ -438,7 +531,7 @@ private fun CommitterField(title: String, value: String, onChange: (String) -> U
             value = value,
             onValueChange = onChange,
             placeholder = { Text(default, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
-            supportingText = { Text("Empty: that of the git configuration, otherwise the value in gray.") },
+            supportingText = { Text(help) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth().testTag(tag),
         )

@@ -270,8 +270,14 @@ fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String
                 modifier = Modifier.fillMaxWidth().testTag(if (index == marked) "inbox-marked" else "inbox-task"),
             ) {
                 Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(entry.task.description, style = MaterialTheme.typography.bodyLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // The hashtags tell where a task comes from, such as #outlook; the task has no context and no project to show here.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
+                        Text(entry.task.description, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 4.dp))
+                        entry.task.hashtags.forEach { HashtagLabel(it, Modifier.testTag("inbox-hashtag-$it")) }
+                    }
+                    // The contexts below are choices, not contexts of the task: a click gives the task that context.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
+                        Text("Give it:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(vertical = 5.dp))
                         for (context in if (index == marked) matching else contexts) {
                             // The area that reacts to a click is larger than the label, which is too small for a finger.
                             ContextLabel(

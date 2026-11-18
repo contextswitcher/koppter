@@ -612,7 +612,7 @@ Needs: impl, utest
 `dsn~inbox~1`
 
 `TodoController.inbox` gives the visible open tasks without context.
-`Inbox` shows each of them with the contexts of the file as labels with all their levels; a click on a label gives the task that context through `Task.edit`, and a click on the task opens the edit dialog.
+`Inbox` shows each of them with its hashtags next to its text and, after *Give it:*, the contexts of the file as labels with all their levels; a click on a label gives the task that context through `Task.edit`, and a click on the task opens the edit dialog.
 One task is marked, at first the first one.
 A field takes typed text: the marked task then shows the contexts that contain the text, those first of which a level starts with it.
 Enter gives the marked task the first of them, or the typed text as a new context if no context contains it; the arrow keys up and down move the mark.
@@ -644,7 +644,7 @@ Needs: impl, utest
 
 `OutlookTodos` reads the items; on the desktop, `AnchorHubOutlook` runs `ankd outlook-todos` of AnchorHub, installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and reads the JSON array it prints (`parseOutlookTodos`).
 `App` has `TodoController.refreshOutlook` read them at the start and every two minutes; a failure is logged and keeps the items read before.
-`Outlook.entries` makes each item an entry with a negative index, whose task has the subject, `due:` and the tag `ol:` (`Outlook.task`); an item that the tag `ol:` of a line names, open or completed, is left out.
+`Outlook.entries` makes each item an entry with a negative index, whose task has the subject, the hashtag `#outlook`, `due:` and the tag `ol:` (`Outlook.task`); an item that the tag `ol:` of a line names, open or completed, is left out.
 `TodoController.visible` adds them to the lines of the file, so that filter, order, groups and inbox treat them as tasks.
 `replace` and `move` add the changed task of an item to the file as a new line, with the creation date if dates are written; the other operations that need a line do nothing for an item.
 A subject that would read as the completion mark, a priority or a date at the start of a line gets a hyphen and a blank in front.
