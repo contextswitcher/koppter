@@ -4,7 +4,9 @@ import io.github.koppor.koppter.storage.TodoStorage
 import org.apache.sshd.common.config.keys.KeyUtils
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter
 import org.apache.sshd.common.keyprovider.KeyPairProvider
+import org.apache.sshd.common.util.io.PathUtils
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.TransportConfigCallback
 import org.eclipse.jgit.transport.SshSessionFactory
 import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder
@@ -28,6 +30,12 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
     private val publicKeyFile = sshDirectory.resolve("id_ecdsa.pub")
     val repositoryDirectory: Path = directory.resolve("repository")
 
+    init {
+        // [impl->dsn~ssh-home~1]
+        // The SSH library asks for the home folder of the user when it is loaded and fails where there is none, as on Android.
+        if (System.getProperty("user.home").isNullOrEmpty()) PathUtils.setUserHomeFolderResolver { directory }
+    }
+
     /** The storage for the file, as [storageForFile], but with the SSH key and the known hosts of the application. */
     fun storageFor(file: Path): TodoStorage = storageForFile(file, ssh)
 
@@ -49,6 +57,19 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
     fun publicKey(): String {
         prepare()
         return publicKeyFile.readText().trim()
+    }
+
+    /** SSH of the application where it has a key of its own, and the SSH configuration of the user otherwise. */
+    private val transport = TransportConfigCallback { if (ownKey && it is SshTransport) it.sshSessionFactory = ssh }
+
+    /**
+     * Asks the server for the branches of the repository and fails as a clone would: the server is not reached, or it does not let this device in.
+     * Nothing is cloned.
+     */
+    // ponytail: reading only; a key without write access passes here and fails at the first push. Add a push of nothing if that is seen.
+    // [impl->dsn~clone~1]
+    fun check(url: String) {
+        Git.lsRemoteRepository().setRemote(url).setTransportConfigCallback(transport).call()
     }
 
     private fun prepare() {
@@ -79,7 +100,7 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
             Git.cloneRepository()
                 .setURI(url)
                 .setDirectory(repositoryDirectory.toFile())
-                .setTransportConfigCallback { if (ownKey && it is SshTransport) it.sshSessionFactory = ssh }
+                .setTransportConfigCallback(transport)
                 .call()
                 .close()
         }

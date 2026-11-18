@@ -109,6 +109,7 @@ fun main(args: Array<String>) {
     val git = object : GitSetupActions {
         override fun publicKey(): String? = null
         override suspend fun clone(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).clone(url).toString() }
+        override suspend fun check(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).check(url) }
     }
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
     val controller = TodoController(

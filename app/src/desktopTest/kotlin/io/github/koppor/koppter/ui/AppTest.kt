@@ -1749,6 +1749,10 @@ class AppTest {
                 // As a library reports it: the same message twice, and the reason below them.
                 throw IllegalStateException("remote hung up unexpectedly", IllegalStateException("remote hung up unexpectedly", NoSuchMethodError("no such repository")))
             }
+
+            override suspend fun check(url: String) {
+                clone(url)
+            }
         }
         val logged = mutableListOf<String>()
         val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
@@ -1760,8 +1764,20 @@ class AppTest {
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").assertTextEquals("ecdsa-sha2-nistp256 AAAA koppter")
+        // Without an address, there is no connection to check.
+        onNodeWithTag("settings-check-connection").assertIsNotEnabled()
+        onNodeWithTag("settings-file").performTextInput("git@example.org:todo.git")
+        onNodeWithTag("settings-check-connection").performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals("Connected")
+        // Nothing is cloned or opened by the check.
+        onNodeWithText("Read the paper").assertDoesNotExist()
+        onNodeWithTag("settings-file").performTextReplacement("git@example.org:other.git")
+        onNodeWithTag("settings-check-connection").performClick()
+        onNodeWithTag("settings-file-message").assertTextEquals(
+            "Not connected: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
+                "Is the public SSH key of this device, shown below, registered with the server?",
+        )
         // With an address in the field of the file, the button clones.
-        onNodeWithTag("settings-file").performTextInput("git@example.org:other.git")
         onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
         // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
         onNodeWithTag("settings-file-message").assertIsDisplayed()
@@ -1770,7 +1786,7 @@ class AppTest {
                     "Is the public SSH key of this device, shown below, registered with the server?",
             )
         // [utest->dsn~failure-log~1]
-        assertEquals(listOf("Clone failed: remote hung up unexpectedly"), logged)
+        assertEquals(listOf("Connection check failed: remote hung up unexpectedly", "Clone failed: remote hung up unexpectedly"), logged)
         assertEquals("", controller.settings.todoFile)
 
         // [utest->dsn~settings-open-file~1]
@@ -1842,6 +1858,7 @@ class AppTest {
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun check(url: String) = error("not checked in this test")
         }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         val opened = mutableListOf<String>()

@@ -28,3 +28,9 @@ kotlin {
         }
     }
 }
+
+// As on Android, which has no home folder of the user: the SSH library fails there unless `GitSetup` names one.
+// It also keeps the tests apart from the git configuration of whoever runs them.
+tasks.withType<Test>().configureEach {
+    systemProperty("user.home", "")
+}

@@ -50,6 +50,8 @@ class MainActivity : ComponentActivity() {
         override fun publicKey(): String = gitSetup.publicKey()
 
         override suspend fun clone(url: String): String = withContext(Dispatchers.IO) { gitSetup.clone(url).toString() }
+
+        override suspend fun check(url: String) = withContext(Dispatchers.IO) { gitSetup.check(url) }
     }
 
     /**

@@ -442,7 +442,7 @@ private fun MainScreen(
             labelLinks = controller.labelLinksText,
             projectContexts = controller.projectContextsText,
             // [impl->dsn~failure-log~1]
-            onCloneFailed = { controller.report("Clone failed", it) },
+            onGitFailed = controller::report,
             newTask = controller.newTaskText,
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },

@@ -72,6 +72,9 @@ interface GitSetupActions {
 
     /** Clones the repository and returns the location of its todo.txt file. */
     suspend fun clone(url: String): String
+
+    /** Fails as [clone] would if the server is not reached or does not let this device in; clones nothing. */
+    suspend fun check(url: String)
 }
 
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
@@ -135,8 +138,8 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
-    /** Called with a clone that failed, for the log. */
-    onCloneFailed: (Exception) -> Unit = {},
+    /** Called with what failed with the repository, a clone or a check of the connection, for the log. */
+    onGitFailed: (String, Exception) -> Unit = { _, _ -> },
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -165,6 +168,15 @@ fun SettingsDialog(
     val scroll = rememberScrollState()
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
+
+    /** Shows why the repository was not reached, with what most often is the cause on a device with a key of its own. */
+    fun gitFailed(shown: String, logged: String, e: Exception) {
+        fileFailed = true
+        onGitFailed(logged, e)
+        // A server that does not know the key ends the connection without saying why.
+        val ownKey = git?.let { runCatching(it::publicKey).getOrNull() } != null
+        fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
+    }
 
     val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults)
     val initial = remember(openFile) { state }
@@ -200,10 +212,10 @@ fun SettingsDialog(
                         modifier = Modifier.testTag("settings-file-message"),
                     )
                 }
-                if (chooseFile != null) {
+                if (chooseFile != null || git != null) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for ((title, tag, choose) in listOfNotNull(
-                            Triple("Choose file", "settings-choose-file", chooseFile),
+                            chooseFile?.let { Triple("Choose file", "settings-choose-file", it) },
                             chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
                         )) {
                             OutlinedButton(
@@ -225,6 +237,29 @@ fun SettingsDialog(
                                 modifier = Modifier.testTag(tag),
                             ) {
                                 Text(title)
+                            }
+                        }
+                        if (git != null) {
+                            // [impl->dsn~git-setup-dialog~1]
+                            OutlinedButton(
+                                onClick = {
+                                    cloning = true
+                                    fileFailed = false
+                                    fileMessage = "Checking"
+                                    scope.launch {
+                                        try {
+                                            git.check(sshAddress(todoFile.trim()))
+                                            fileMessage = "Connected"
+                                        } catch (e: Exception) {
+                                            gitFailed("Not connected", "Connection check failed", e)
+                                        }
+                                        cloning = false
+                                    }
+                                },
+                                enabled = address && !cloning,
+                                modifier = Modifier.testTag("settings-check-connection"),
+                            ) {
+                                Text("Check connection")
                             }
                         }
                     }
@@ -335,12 +370,7 @@ fun SettingsDialog(
                                         onOpenFile(git.clone(file))
                                         fileMessage = OPENED
                                     } catch (e: Exception) {
-                                        fileFailed = true
-                                        // A server that does not know the key ends the connection without saying why.
-                                        val ownKey = runCatching(git::publicKey).getOrNull() != null
-                                        onCloneFailed(e)
-                                        fileMessage = "Not cloned: ${failureText(e)}" +
-                                            if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
+                                        gitFailed("Not cloned", "Clone failed", e)
                                     }
                                     cloning = false
                                     // The message stands at the file, far above the button that was clicked.

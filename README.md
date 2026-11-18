@@ -182,6 +182,7 @@ On the desktop, it uses the SSH configuration of the user for that; on Android, 
 A click on that key copies it.
 With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
 The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+With an address in the field, *Check connection* tells whether the server is reached and lets the device read the repository, without cloning it; if not, it shows the reason.
 On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it; a folder chosen with *Choose folder* has them.
 On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also where there is none yet: a folder that is the clone of a git repository is committed and synchronized.
 The dialogs are those of the platform, shown through [FileKit](https://github.com/vinceglb/FileKit) ([decision 0036](docs/decisions/0036-file-dialogs-and-document-access-through-filekit.md)).

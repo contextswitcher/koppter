@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - On Android, an image that another application shares to koppter becomes a task with that image in its note.
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
+- *Check connection* in the settings, next to *Choose folder*, tells whether the server of the git repository in the field of the file is reached and lets the device in, without cloning.
 - `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
 
 ### Changed
@@ -30,6 +31,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - *Copy link* in the menu of a label of the filter panel; the label of a task still offers it.
 - The line above the list that added a task as it was typed, with its completion of projects, contexts and hashtags and its names of priorities at the start of a line; a task is added in its dialog, which the button with the plus and Ctrl+N open.
+
+### Fixed
+
+- On Android, a clone over SSH no longer fails for the lack of a home folder of the user, which the SSH library asks for; every attempt ended with "remote hung up unexpectedly".
 
 ## [2026-11-16] - 2026-11-16
 

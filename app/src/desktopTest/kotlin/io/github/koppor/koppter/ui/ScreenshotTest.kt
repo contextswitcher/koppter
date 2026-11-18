@@ -109,6 +109,7 @@ class ScreenshotTest {
     private val git = object : GitSetupActions {
         override fun publicKey() = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBExampleKeyOfTheDemo= koppter"
         override suspend fun clone(url: String) = "todo.txt"
+        override suspend fun check(url: String) = Unit
     }
 
     private fun DesktopComposeUiTest.start(settings: Settings = Settings()) {
