@@ -1395,6 +1395,10 @@ class AppTest {
         onNodeWithText("Sweep the floor").performClick()
         onNodeWithTag("edit-dialog").assertExists()
         onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        // A task is completed where it is shown.
+        onAllNodesWithTag("task-done")[1].performClick()
+        assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Water the plants" in it })
+        onAllNodesWithTag("overview-task").assertCountEquals(1)
         onNodeWithTag("overview-back").performClick()
         onNodeWithTag("overview-phone").assertExists()
 
@@ -1533,8 +1537,9 @@ class AppTest {
 
         onNodeWithTag("agenda-day-2026-11-12").assertTextEquals("Today · Thu 2026-11-12")
         onNodeWithTag("agenda-day-2026-11-13").assertTextEquals("Tomorrow · Fri 2026-11-13")
-        // A day without a block is left out, as are the days after the week.
-        onNodeWithTag("agenda-day-2026-11-14").assertDoesNotExist()
+        // The day after tomorrow is shown without a block; a later day without a block is left out, as are the days after the week.
+        onNodeWithTag("agenda-day-2026-11-14").assertExists()
+        onNodeWithTag("agenda-day-2026-11-15").assertDoesNotExist()
         onAllNodesWithTag("agenda-block").assertCountEquals(3)
         // A block whose task is gone still tells what was planned.
         onNodeWithText("A task that is gone").assertExists()
@@ -1608,6 +1613,18 @@ class AppTest {
         onNodeWithText("Every task has a context.").assertExists()
     }
 
+    // [utest->dsn~inbox~1]
+    @Test
+    fun theInboxCompletesATask() = runComposeUiTest {
+        storage.text += "Sweep the floor\n"
+        start()
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (2)").performClick()
+        val done = storage.text.lines().count { it.startsWith("x ") }
+        onAllNodesWithTag("task-done")[0].performClick()
+        assertEquals(done + 1, storage.text.lines().count { it.startsWith("x ") })
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (1)")
+    }
+
     // [utest->dsn~unsaved-changes~1]
     @Test
     fun escAsksBeforeChangesAreLost() = runComposeUiTest {
@@ -1651,13 +1668,13 @@ class AppTest {
             withKeysDown(listOfNotNull(Key.CtrlLeft, Key.ShiftLeft.takeIf { shift })) { pressKey(key) }
         }
 
-        ctrl(Key.Four)
+        ctrl(Key.Two)
         onNodeWithTag("agenda").assertExists()
         ctrl(Key.C, shift = true)
         onNodeWithTag("week").assertExists()
         ctrl(Key.Six)
         onNodeWithTag("inbox").assertExists()
-        ctrl(Key.One)
+        ctrl(Key.Five)
         onNodeWithTag("inbox").assertDoesNotExist()
 
         ctrl(Key.F, shift = true)

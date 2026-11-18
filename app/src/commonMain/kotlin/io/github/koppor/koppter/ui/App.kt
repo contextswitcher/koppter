@@ -392,14 +392,14 @@ private fun MainScreen(
                         if (controller.view == View.OVERVIEW) {
                             // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
                             androidx.compose.runtime.key(controller.overviewKey) {
-                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), open, emptyText)
+                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
                             }
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked)
                         } else if (controller.view == View.WEEK) {
                             Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {
-                            Inbox(controller.inbox, controller.contexts, controller::assignContext, open)
+                            Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
                         } else if (controller.board) {
                             Board(
                                 controller.groups, controller.today(), controller::toggle, onOpen = { editing = Editing(it) },

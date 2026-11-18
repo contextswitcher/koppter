@@ -14,6 +14,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The agenda shows tomorrow and the day after it also when nothing is planned on them.
+- The switches of the views are in the order *Overview*, *Agenda*, *Week*, *Board*, *List*, *Inbox*; Ctrl+1 to Ctrl+6 follow that order.
+- The tasks of a tile of the overview and the tasks of the inbox have a box that completes them.
 - Planning moves a task that would be done after its due date before the tasks with a higher priority, the one due first first; the agenda and the week show it at its earlier times. A low priority thus counts until the due date comes close.
 - The inbox shows the hashtags of a task next to its text and puts *Give it:* before the contexts to choose from, so that they no longer look like contexts of the task.
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
