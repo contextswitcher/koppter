@@ -73,7 +73,8 @@ compose.desktop {
             packageName = "koppter"
             // A build that is not a release is below every release.
             packageVersion = desktopVersion ?: "0.1.0"
-            description = "Tasks in a todo.txt file"
+            // Windows shows the description as the name of the program, in the task manager for one.
+            description = "koppter"
             // What `suggestRuntimeModules` finds for JGit, its SSH client, JNA and the D-Bus client of FileKit, plus naming for Kerberos and the bridge for screen readers.
             // All modules cannot be included: that list contains jlink itself, which a JDK without packaged modules cannot link.
             modules("java.instrument", "java.management", "java.naming", "java.rmi", "java.security.jgss", "java.sql", "jdk.accessibility", "jdk.security.auth", "jdk.unsupported")
