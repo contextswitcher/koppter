@@ -12,6 +12,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. An item carries the hashtag `#outlook`, and its label *Outlook* opens it in Outlook. Giving an item a context or a project, or another change, writes it to the file with the hashtag and the tag `ol:`; completing it in koppter marks it done in Outlook.
 - Planning writes the blocks of the next three weeks into the main calendar of Outlook as private, tentative appointments whose subject ends with `[koppter]`, replaces them with each plan and takes the other appointments of that calendar as busy times; the settings name the account and the weeks. *Remove koppter's blocks from Outlook* in the settings deletes them after a confirmation of their number and leaves every other appointment alone.
 
+- A widget for the Android home screen shows the plan from now on by day, or the open tasks of the list if nothing is planned.
+
 ### Changed
 
 - Planning moves a task that would be done after its due date before the tasks with a higher priority, the one due first first; the agenda and the week show it at its earlier times. A low priority thus counts until the due date comes close.
