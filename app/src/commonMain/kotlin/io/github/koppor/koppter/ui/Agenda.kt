@@ -37,6 +37,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -70,6 +71,7 @@ private const val NO_PLAN = "Nothing is planned yet. Plan gives the open tasks t
 
 /**
  * What is up today and on the six days after it: the blocks of the plan by day, each with its task,
+ * today and the two days after it also without blocks,
  * and for today the tasks that are due but have no block today.
  */
 // [impl->dsn~agenda~1]
@@ -90,7 +92,7 @@ fun Agenda(
         for (offset in 0..6) {
             val day = today.plus(DatePeriod(days = offset))
             val ofDay = blocks.orEmpty().filter { it.date == day }
-            if (ofDay.isEmpty() && offset > 0) continue
+            if (ofDay.isEmpty() && offset > 2) continue
             Text(
                 listOfNotNull("Today".takeIf { offset == 0 }, "Tomorrow".takeIf { offset == 1 }, CalendarTxt.dayText(day)).joinToString(" · "),
                 style = MaterialTheme.typography.titleMedium,
@@ -228,7 +230,7 @@ internal fun matchingContexts(contexts: List<String>, typed: String): List<Strin
 // [impl->dsn~inbox~1]
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String) -> Unit, onOpen: (Entry) -> Unit) {
+fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String) -> Unit, onToggle: (Entry) -> Unit, onOpen: (Entry) -> Unit) {
     var typed by remember { mutableStateOf("") }
     var mark by remember { mutableStateOf(0) }
     // A task that got its context leaves the list, so the mark is then on the next one.
@@ -271,7 +273,9 @@ fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String
             ) {
                 Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     // The hashtags tell where a task comes from, such as #outlook; the task has no context and no project to show here.
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
+                        // A task that is done needs no context.
+                        Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, modifier = Modifier.testTag("task-done"))
                         Text(entry.task.description, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 4.dp))
                         entry.task.hashtags.forEach { HashtagLabel(it, Modifier.testTag("inbox-hashtag-$it")) }
                     }

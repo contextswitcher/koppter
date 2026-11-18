@@ -113,6 +113,17 @@ Covers:
 
 Needs: dsn
 
+### Version of the build
+`req~build-version~1`
+
+On Android, the settings show at their bottom the version and the commit the application was built from, so that the user tells which build runs on the device.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Links in the text of a task
 `req~links~1`
 
@@ -399,6 +410,19 @@ Covers:
 
 Needs: impl, utest
 
+### Line with the version of the build
+`dsn~build-version~1`
+
+`App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line, in a container that lets the user select and copy it.
+The build of `:android` writes the short hash and the date of the commit of `HEAD` into `BuildConfig.GIT_COMMIT_LINE`; `MainActivity` puts the version name of a release before it.
+The desktop application gives no text.
+
+Covers:
+
+* `req~build-version~1`
+
+Needs: impl, utest
+
 ### Links
 `dsn~links~1`
 
@@ -464,13 +488,12 @@ Needs: impl, utest
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
-A file that the user chooses with *Choose file* and the todo.txt file of a folder chosen with *Choose folder* is opened at once through `onOpenFile`, and the dialog stays open.
-A chooser that fails is reported at the field, in the color for errors, and the open file stays.
-The fields for the board columns, the names of the priorities, the links of the labels, what a new task starts with, the contexts of the projects and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
+A file that the user chooses with *Choose file* and the todo.txt file of a folder chosen with *Choose folder* becomes the file of the application through `onOpenFile`, and the dialog is left, so that the tasks of the file show.
+Nothing that stood in the dialog is written, neither to that file nor to the one from before: what was typed into the dialog is dropped.
+A chooser that fails is reported at the field, in the color for errors, and the dialog and the open file stay; a chooser that the user leaves without a choice changes nothing.
 The configuration of the dialog is thus written to the file it was read from, never to another one.
-A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
-Leaving the dialog without *Save* opens the file again that was open when the dialog was opened.
-A repository that the dialog clones is not opened this way: `dsn~git-setup-dialog~1` says what *Clone* does.
+A path typed into the field takes effect with *Save*, which writes the fields of the dialog to the file that is still open and then opens the other one.
+A repository that the dialog clones is opened the same way: `dsn~git-setup-dialog~1` says what *Clone* does.
 
 Covers:
 
@@ -763,7 +786,7 @@ Needs: impl
 `dsn~keyboard-shortcuts~1`
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
-With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
+With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the views in the order of their switches.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
 Where that field lies in the drawer, the drawer opens first.

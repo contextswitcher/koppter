@@ -284,7 +284,7 @@ Needs: impl, utest
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
 The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file.
-*Clone* clones the address, makes the todo.txt file of the clone the file of the application through `onCloned` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
+*Clone* clones the address, makes the todo.txt file of the clone the file of the application through `onOpenFile` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
 If the clone fails, the dialog stays and shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
 The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
 The dialog scrolls to the message of a clone or a check, which stands at the field, above the buttons.

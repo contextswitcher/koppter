@@ -25,6 +25,17 @@ class PlannerTest {
 
     private fun minutes(time: String) = time.substringBefore(':').toInt() * 60 + time.substringAfter(':').toInt()
 
+    // [utest->dsn~android-widget~1]
+    @Test
+    fun theBlocksAheadLeaveOutWhatHasEndedAndFollowTheTime() {
+        val blocks = CalendarTxt.blocks(
+            "2026-11-11 w46 Wed  09:00-10:00 Yesterday\n" +
+                "2026-11-13 w46 Fri  08:00-09:00 Tomorrow\n" +
+                "2026-11-12 w46 Thu  08:00-09:00 Done. 14:00-15:00 Later. 09:30-11:00 Running\n",
+        )
+        assertEquals(listOf("Running", "Later", "Tomorrow"), CalendarTxt.ahead(blocks, today, minutes("10:00")).map { it.text })
+    }
+
     // [utest->dsn~time-maps~1]
     @Test
     fun aTimeMapNamesTheTimesOfTheWeekAndIsRestrictedToTheMapItNames() {

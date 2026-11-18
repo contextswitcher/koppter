@@ -74,7 +74,8 @@ import kotlin.time.Duration.Companion.minutes
  */
 // ponytail: file access runs on the caller's thread; move it off the UI thread when a storage is slow (network).
 /** What the main screen shows of the tasks. */
-enum class View(val title: String) { LIST("List"), BOARD("Board"), OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), INBOX("Inbox") }
+// From the views that show what is up to those that change the tasks.
+enum class View(val title: String) { OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), LIST("List"), INBOX("Inbox") }
 
 class TodoController(
     settings: Settings,
