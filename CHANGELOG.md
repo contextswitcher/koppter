@@ -11,6 +11,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. An item carries the hashtag `#outlook`, and its label *Outlook* opens it in Outlook. Giving an item a context or a project, or another change, writes it to the file with the hashtag and the tag `ol:`; completing it in koppter marks it done in Outlook.
 - Planning writes the blocks of the next three weeks into the main calendar of Outlook as private, tentative appointments whose subject ends with `[koppter]`, replaces them with each plan and takes the other appointments of that calendar as busy times; the settings name the account and the weeks. *Remove koppter's blocks from Outlook* in the settings deletes them after a confirmation of their number and leaves every other appointment alone.
+- On Android, the last line of the settings shows the version and the commit of the build.
+
+- A widget for the Android home screen shows the plan from now on by day, or the open tasks of the list if nothing is planned.
 
 ### Changed
 
@@ -21,6 +24,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The inbox shows the hashtags of a task next to its text and puts *Give it:* before the contexts to choose from, so that they no longer look like contexts of the task.
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
 - The search fields are lower, and the field that searches labels in the filter panel stands at its top instead of below *Clear all filters*, where it was out of view.
+- *Choose file* and *Choose folder* in the settings close the settings and show the tasks of the chosen file, as *Clone* does; what was typed into the settings before is not written.
 - `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.
 - The Windows task manager names the desktop application *koppter* instead of *Tasks in a todo.txt file*.
 

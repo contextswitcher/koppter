@@ -91,6 +91,11 @@ object CalendarTxt {
     /** The times of a block as a text, such as `09:00-10:30`. */
     fun timesText(span: Span): String = "${time(span.start)}-${time(span.end)}"
 
+    /** The blocks that have not ended yet, by their start; [minute] is the minute of today. */
+    // [impl->dsn~android-widget~1]
+    fun ahead(blocks: List<TextBlock>, today: LocalDate, minute: Int): List<TextBlock> =
+        blocks.filter { it.date > today || it.date == today && it.span.end > minute }.sortedWith(compareBy({ it.date }, { it.span.start }))
+
     /** A day as a text, such as `Mon 2026-11-16`. */
     fun dayText(date: LocalDate): String = "${WEEKDAYS[date.dayOfWeek.isoDayNumber - 1]} $date"
 

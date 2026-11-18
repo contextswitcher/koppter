@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
@@ -99,8 +100,6 @@ internal fun deployKeyPage(address: String): String? =
     Regex("(?:ssh://)?git@github\\.com[:/]([\\w.-]+)/([\\w.-]+?)(?:\\.git)?/?").matchEntire(sshAddress(address.trim()))
         ?.let { "https://github.com/${it.groupValues[1]}/${it.groupValues[2]}/settings/keys/new" }
 
-private const val OPENED = "Opened. The fields below show the configuration of this file. Cancel returns to the file from before."
-
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
 private val PRIORITY_PRESETS = listOf(
     emptyList(),
@@ -123,6 +122,8 @@ fun SettingsDialog(
     git: GitSetupActions?,
     /** Passes the log to another application; `null` on a platform where the user reaches the log file. */
     shareLog: (() -> Unit)?,
+    /** The version and commit of the build, shown as the last line; `null` where the platform does not tell it. */
+    version: String? = null,
     /** The definitions of the board columns; `null` if the storage cannot keep them. */
     boardColumns: String?,
     /** The share actions; `null` if the storage cannot keep them. */
@@ -137,13 +138,8 @@ fun SettingsDialog(
     newTask: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
     onColors: (ColorTheme, Appearance) -> Unit,
-    /**
-     * Called with a file that the user chose or cloned: it is opened at once, so that the fields for its configuration
-     * show what the file brings along instead of what belonged to the file before.
-     */
+    /** Called with a file that the user chose or with the todo.txt file of a repository that was cloned: it becomes the file of the application, and the dialog is left. */
     onOpenFile: (String) -> Unit,
-    /** Called with the todo.txt file of a repository that was cloned: it becomes the file of the application, and the dialog is left. */
-    onCloned: (String) -> Unit = onOpenFile,
     /** Called with what failed with the repository, a clone or a check of the connection, for the log. */
     onGitFailed: (String, Exception) -> Unit = { _, _ -> },
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
@@ -157,19 +153,16 @@ fun SettingsDialog(
     val clipboard = LocalClipboardManager.current
     // That of the application, which reports a link that is not opened; taken outside the dialog as the clipboard is.
     val uriHandler = LocalUriHandler.current
-    // [impl->dsn~settings-open-file~1]
-    // What depends on the file starts anew when another file is opened from the dialog.
-    val openFile = settings.todoFile
-    var todoFile by remember(openFile) { mutableStateOf(openFile) }
+    var todoFile by remember { mutableStateOf(settings.todoFile) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
-    var columns by remember(openFile) { mutableStateOf(boardColumns) }
-    var actions by remember(openFile) { mutableStateOf(shareActions) }
-    var priorities by remember(openFile) { mutableStateOf(priorityNames) }
-    var links by remember(openFile) { mutableStateOf(labelLinks) }
-    var contexts by remember(openFile) { mutableStateOf(projectContexts) }
-    var newTaskDefaults by remember(openFile) { mutableStateOf(newTask) }
+    var columns by remember { mutableStateOf(boardColumns) }
+    var actions by remember { mutableStateOf(shareActions) }
+    var priorities by remember { mutableStateOf(priorityNames) }
+    var links by remember { mutableStateOf(labelLinks) }
+    var contexts by remember { mutableStateOf(projectContexts) }
+    var newTaskDefaults by remember { mutableStateOf(newTask) }
     var committerName by remember { mutableStateOf(settings.committerName) }
     var committerEmail by remember { mutableStateOf(settings.committerEmail) }
     var outlookCalendar by remember { mutableStateOf(settings.outlookCalendar) }
@@ -192,11 +185,9 @@ fun SettingsDialog(
     }
 
     val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks)
-    val initial = remember(openFile) { state }
-    val fileBefore = remember { openFile }
+    val initial = remember { state }
 
-    // Another file that was opened is a change as well: leaving the dialog without Save returns to the file from before.
-    GuardedDialog(changed = state != initial || openFile != fileBefore, onDismiss = onDismiss) {
+    GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
             Column(Modifier.verticalScroll(scroll).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)
@@ -235,11 +226,8 @@ fun SettingsDialog(
                                 onClick = {
                                     scope.launch {
                                         try {
-                                            choose()?.let {
-                                                onOpenFile(it)
-                                                fileFailed = false
-                                                fileMessage = OPENED
-                                            }
+                                            // [impl->dsn~settings-open-file~1]
+                                            choose()?.let(onOpenFile)
                                         } catch (e: Exception) {
                                             // A platform without a program that shows the dialog, or one that refuses it.
                                             fileFailed = true
@@ -284,7 +272,7 @@ fun SettingsDialog(
                                     fileMessage = "Cloning"
                                     scope.launch {
                                         try {
-                                            onCloned(git.clone(sshAddress(todoFile.trim())))
+                                            onOpenFile(git.clone(sshAddress(todoFile.trim())))
                                         } catch (e: Exception) {
                                             gitFailed("Not cloned", "Clone failed", e)
                                         }
@@ -426,6 +414,18 @@ fun SettingsDialog(
                         enabled = topCountValue != null && outlookWeeksValue != null && !cloning && !address,
                         modifier = Modifier.testTag("settings-save"),
                     ) { Text("Save") }
+                }
+                // [impl->dsn~build-version~1]
+                if (version != null) {
+                    // Selectable, so that the commit goes into a report of a problem.
+                    SelectionContainer {
+                        Text(
+                            version,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("settings-version"),
+                        )
+                    }
                 }
             }
         }
