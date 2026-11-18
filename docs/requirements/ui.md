@@ -299,6 +299,17 @@ Covers:
 
 Needs: dsn
 
+### Window after a change of the displays
+`req~display-change~1`
+
+When the desktop window moves to a display with another scale, such as when a laptop leaves its docking station, the content fills the window again.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -956,3 +967,16 @@ Covers:
 * `req~restart-to-update~1`
 
 Needs: impl, utest
+
+### Window after a change of the displays
+`dsn~display-change~1`
+
+On Windows, after a change of the scale of the display, the drawing surface of the window may keep the size of the old scale, so that the content covers only part of the window.
+Restoring and maximizing the window again, or resizing it, gives the surface its size.
+The desktop application does that itself: when the graphics configuration of the window changes, it waits half a second for the display change to settle, then restores and maximizes a maximized window again, or makes any other window one pixel wider and back.
+
+Covers:
+
+* `req~display-change~1`
+
+Needs: impl

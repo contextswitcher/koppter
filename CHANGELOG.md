@@ -14,6 +14,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.
 - The Windows task manager names the desktop application *koppter* instead of *Tasks in a todo.txt file*.
 
+### Fixed
+
+- The content of the desktop window fills it again after a change of the display scale, such as when a laptop leaves its docking station.
+
 ## [2026-11-17] - 2026-11-17
 
 ### Added
