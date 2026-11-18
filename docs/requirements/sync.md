@@ -119,7 +119,7 @@ Needs: impl, utest
 `GitStorage` reads and writes the file in the working tree and uses JGit for all git operations.
 A lock guards the working tree and the index against concurrent use by the user interface and by the synchronization.
 All synchronizations run one after the other on a single background thread.
-Commits are made in the name of the configured git user, or in the name of the application if none is configured.
+Commits are made in the name of the committer of the settings, else of the configured git user, else of the application (`dsn~committer~1`).
 
 Covers:
 
@@ -127,6 +127,19 @@ Covers:
 * `adr~jgit~1`
 
 Needs: impl
+
+### Committer
+`dsn~committer~1`
+
+The settings dialog has, under *Git repository*, the fields *Name of the commits* and *Email address of the commits*, which are settings of the device.
+An empty field stands for the value of the git configuration, `user.name` or `user.email`, and without one for `koppter` or `koppter@localhost`; the field names that default below it and shows it as its placeholder while it has the focus.
+`GitStorage` makes each commit in that name as author and committer; a change of either field opens the storage again, so that the next commit uses it.
+
+Covers:
+
+* `req~git-sync~1`
+
+Needs: impl, utest
 
 ### Commit per change
 `dsn~commit-per-change~1`

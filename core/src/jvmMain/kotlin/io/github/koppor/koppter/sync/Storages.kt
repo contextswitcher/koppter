@@ -10,8 +10,8 @@ import java.nio.file.Path
  * synchronized through git if the file lies in the working tree of a repository, a plain file otherwise.
  * SSH uses the configuration of the user (`~/.ssh`).
  */
-fun storageForFile(file: Path): TodoStorage = storageForFile(file, null)
+fun storageForFile(file: Path, committerName: String = "", committerEmail: String = ""): TodoStorage = storageForFile(file, null, committerName, committerEmail)
 
 // [impl->dsn~git-detection~1]
-internal fun storageForFile(file: Path, ssh: SshSessionFactory?): TodoStorage =
-    GitStorage.repositoryOf(file)?.let { GitStorage(file, it, ssh) } ?: FileStorage(file)
+internal fun storageForFile(file: Path, ssh: SshSessionFactory?, committerName: String = "", committerEmail: String = ""): TodoStorage =
+    GitStorage.repositoryOf(file)?.let { GitStorage(file, it, ssh, committerName, committerEmail) } ?: FileStorage(file)

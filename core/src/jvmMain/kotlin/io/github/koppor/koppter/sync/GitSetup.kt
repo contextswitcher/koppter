@@ -37,7 +37,7 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
     }
 
     /** The storage for the file, as [storageForFile], but with the SSH key and the known hosts of the application. */
-    fun storageFor(file: Path): TodoStorage = storageForFile(file, ssh)
+    fun storageFor(file: Path, committerName: String = "", committerEmail: String = ""): TodoStorage = storageForFile(file, ssh, committerName, committerEmail)
 
     /** SSH with the key and the known hosts of the application instead of those in `~/.ssh`. */
     internal val ssh: SshSessionFactory by lazy {

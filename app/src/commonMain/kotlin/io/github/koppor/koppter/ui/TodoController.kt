@@ -714,11 +714,13 @@ class TodoController(
     fun updateSettings(new: Settings) {
         if (new == settings) return
         val fileChanged = new.todoFile != settings.todoFile
+        // [impl->dsn~committer~1]
+        val committerChanged = new.committerName != settings.committerName || new.committerEmail != settings.committerEmail
         settings = new
         guarded { saveSettings(new) }
-        if (fileChanged) {
+        if (fileChanged || committerChanged) {
             // The filter names projects and contexts of the file that was open.
-            filter = Filter()
+            if (fileChanged) filter = Filter()
             storage = storageFor(new)
             open()
         }

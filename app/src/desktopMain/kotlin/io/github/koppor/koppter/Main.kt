@@ -114,7 +114,7 @@ fun main(args: Array<String>) {
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
     val controller = TodoController(
         settings = settingsFile.load(),
-        storageFor = { storageForFile(it.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile) },
+        storageFor = { storageForFile(it.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile, it.committerName, it.committerEmail) },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },
         minuteOfDay = { java.time.LocalTime.now().toSecondOfDay() / 60 },

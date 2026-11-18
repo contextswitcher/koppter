@@ -72,11 +72,11 @@ internal suspend fun noteImage(bytes: ByteArray): ByteArray = FileKit.compressIm
 
 // [impl->dsn~android-locations~1]
 internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
-    settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"))
+    settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"), settings.committerName, settings.committerEmail)
     // A folder comes from the picker as the root of a tree of documents.
     settings.todoFile.startsWith("content:") ->
         PlatformFile(settings.todoFile).let { if (DocumentsContract.isTreeUri(Uri.parse(settings.todoFile))) FolderStorage(it) else DocumentStorage(it) }
-    else -> gitSetup.storageFor(java.nio.file.Paths.get(settings.todoFile))
+    else -> gitSetup.storageFor(java.nio.file.Paths.get(settings.todoFile), settings.committerName, settings.committerEmail)
 }
 
 internal fun Context.todoController(gitSetup: GitSetup): TodoController {

@@ -46,7 +46,7 @@ import io.github.koppor.koppter.todotxt.isWithin
 
 /**
  * The filter criteria as a column: start date, priorities, projects, contexts, hashtags, completion.
- * The text of the filter is a field of the main screen, above the list.
+ * The text of the filter is a field of the main screen, above the list, or of this panel where it lies in a drawer.
  * Priorities, projects, contexts and hashtags offer the values that occur in the file, as the labels that the tasks carry.
  */
 // [impl->dsn~filter-panel~1]
@@ -69,6 +69,8 @@ fun FilterPanel(
     modifier: Modifier = Modifier,
     /** Closes the panel where it lies above the list; `null` where it stands beside the list. */
     onClose: (() -> Unit)? = null,
+    /** The field for the text of the filter, below the heading; `null` where the main screen shows it above the list. */
+    search: (@Composable () -> Unit)? = null,
 ) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp).testTag("filter-panel")) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
@@ -77,6 +79,7 @@ fun FilterPanel(
                 IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
             }
         }
+        search?.invoke()
         // [impl->dsn~filter-label-search~1]
         var labels by remember { mutableStateOf("") }
 

@@ -6,6 +6,10 @@ enum class ColorTheme(val title: String) { NORD("Nord"), EVERFOREST("Everforest"
 /** Whether the colors are light or dark. */
 enum class Appearance(val title: String) { SYSTEM("As the system"), LIGHT("Light"), DARK("Dark") }
 
+/** The name of the commits where neither the settings nor the git configuration name one, as on a phone. */
+const val DEFAULT_COMMITTER_NAME = "koppter"
+const val DEFAULT_COMMITTER_EMAIL = "koppter@localhost"
+
 data class Settings(
     /** Location of the todo.txt file; blank means the platform default. */
     val todoFile: String = "",
@@ -34,6 +38,10 @@ data class Settings(
     val overviewGroup: String = "CONTEXT",
     /** The width of the dialog of a task in dp, where the window allows it. */
     val editWidth: Int = 760,
+    /** The name in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_NAME]. */
+    val committerName: String = "",
+    /** The email address in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_EMAIL]. */
+    val committerEmail: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -50,6 +58,8 @@ data class Settings(
         BOARD_GROUP to boardGroup,
         OVERVIEW_GROUP to overviewGroup,
         EDIT_WIDTH to editWidth.toString(),
+        COMMITTER_NAME to committerName,
+        COMMITTER_EMAIL to committerEmail,
     )
 
     companion object {
@@ -66,6 +76,8 @@ data class Settings(
         private const val BOARD_GROUP = "boardGroup"
         private const val OVERVIEW_GROUP = "overviewGroup"
         private const val EDIT_WIDTH = "editWidth"
+        private const val COMMITTER_NAME = "committerName"
+        private const val COMMITTER_EMAIL = "committerEmail"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -82,6 +94,8 @@ data class Settings(
             boardGroup = properties[BOARD_GROUP] ?: Settings().boardGroup,
             overviewGroup = properties[OVERVIEW_GROUP] ?: Settings().overviewGroup,
             editWidth = properties[EDIT_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().editWidth,
+            committerName = properties[COMMITTER_NAME].orEmpty(),
+            committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
         )
     }
 }

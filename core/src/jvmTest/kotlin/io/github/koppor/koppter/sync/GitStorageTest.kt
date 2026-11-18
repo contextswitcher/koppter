@@ -43,6 +43,26 @@ class GitStorageTest {
         assertEquals(listOf("Complete task: Call Mom", "Add task: Call Mom"), messages("phone"))
     }
 
+    // [utest->dsn~committer~1]
+    @Test
+    fun theCommitterOfTheSettingsComesBeforeThatOfTheGitConfiguration() {
+        val directory = root.resolve("laptop")
+        Git.init().setInitialBranch("main").setDirectory(directory.toFile()).call().use { git ->
+            // Set in the repository, so that the configuration of the user who runs the test does not count.
+            git.repository.config.apply {
+                setString("user", null, "name", "Repo User")
+                setString("user", null, "email", "repo@example.org")
+            }.save()
+        }
+        val file = directory.resolve("todo.txt")
+        val repository = assertNotNull(GitStorage.repositoryOf(file))
+        GitStorage(file, repository).write("Call Mom\n", "Add task: Call Mom")
+        GitStorage(file, repository, committerName = "Ada").write("x Call Mom\n", "Complete task: Call Mom")
+
+        val idents = Git.open(directory.toFile()).use { git -> git.log().call().map { "${it.committerIdent.name} <${it.committerIdent.emailAddress}>" } }
+        assertEquals(listOf("Ada <repo@example.org>", "Repo User <repo@example.org>"), idents)
+    }
+
     // [utest->dsn~git-sync~1]
     @Test
     fun aSecondDeviceReceivesTheChanges() {

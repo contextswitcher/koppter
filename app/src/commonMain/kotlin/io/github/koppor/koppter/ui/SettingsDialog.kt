@@ -39,6 +39,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_EMAIL
+import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_NAME
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.ConfigFile
@@ -164,6 +166,8 @@ fun SettingsDialog(
     var links by remember(openFile) { mutableStateOf(labelLinks) }
     var contexts by remember(openFile) { mutableStateOf(projectContexts) }
     var newTaskDefaults by remember(openFile) { mutableStateOf(newTask) }
+    var committerName by remember { mutableStateOf(settings.committerName) }
+    var committerEmail by remember { mutableStateOf(settings.committerEmail) }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
@@ -180,7 +184,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults)
+    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail)
     val initial = remember(openFile) { state }
     val fileBefore = remember { openFile }
 
@@ -365,6 +369,10 @@ fun SettingsDialog(
                 RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
                 RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
                 if (git != null) {
+                    Text("Git repository", style = MaterialTheme.typography.titleMedium)
+                    // [impl->dsn~committer~1]
+                    CommitterField("Name of the commits", committerName, { committerName = it }, DEFAULT_COMMITTER_NAME, "settings-committer-name")
+                    CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, DEFAULT_COMMITTER_EMAIL, "settings-committer-email")
                     GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
                 }
                 Row(Modifier.fillMaxWidth()) {
@@ -375,7 +383,10 @@ fun SettingsDialog(
                     Spacer(Modifier.weight(1f))
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     fun save(file: String) = onSave(
-                        settings.copy(todoFile = file, writeDates = writeDates, topCount = topCountValue ?: settings.topCount),
+                        settings.copy(
+                            todoFile = file, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
+                            committerName = committerName.trim(), committerEmail = committerEmail.trim(),
+                        ),
                         columns?.trim(),
                         actions?.trim(),
                         priorities?.trim(),
@@ -417,13 +428,26 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
     }
 }
 
+/** A field whose [default], which applies while it is empty, stands in it as the placeholder. */
+@Composable
+private fun CommitterField(label: String, value: String, onChange: (String) -> Unit, default: String, tag: String) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        placeholder = { Text(default) },
+        supportingText = { Text("Empty: that of the git configuration, otherwise $default") },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth().testTag(tag),
+    )
+}
+
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
 private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: String?) {
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
-    Text("Git repository", style = MaterialTheme.typography.titleMedium)
     var copied by remember { mutableStateOf(false) }
     Text(
         "Public SSH key of this device. Register it with the git server, for GitHub as a deploy key with write access. " +

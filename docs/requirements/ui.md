@@ -645,7 +645,7 @@ Needs: impl, utest
 `dsn~filter-panel~1`
 
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
-The text of the filter is a field of the main screen above the list (`SearchField`), in a window of any width, so that a search needs no panel.
+The text of the filter is a field (`SearchField`) of the main screen above the list where the panel stands beside it; on a narrower screen, it is the first field of the panel in the drawer, and a search button to the left of the button for a new task opens the drawer and gives the field the focus.
 While the field has a text, a button at its end empties it; a text typed in the agenda or the week, which the filter does not apply to, shows the list.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
@@ -734,7 +734,7 @@ Needs: impl, utest
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them, the task list and a button for a new task, which opens the edit dialog.
+The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button to its left instead of the field.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
@@ -753,6 +753,7 @@ The main screen is focusable and takes the focus whenever none of its elements h
 With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
+Where that field lies in the drawer, the drawer opens first.
 With Ctrl and Shift: A opens the dialog for a new task, F gives the focus to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
 `LocalKeyboard` tells whether the device has a keyboard; with one, the description of the edit dialog and the field of the inbox get the focus when they appear.

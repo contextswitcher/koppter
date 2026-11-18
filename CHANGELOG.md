@@ -16,10 +16,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
 - *Check connection* in the settings, next to *Choose folder*, tells whether the server of the git repository in the field of the file is reached and lets the device in, without cloning.
+- *Name of the commits* and *Email address of the commits* in the git section of the settings set the committer of the commits of this device; empty, the git configuration applies, and without one `koppter` and `koppter@localhost`, which the fields name.
 - `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
 
 ### Changed
 
+- On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
 - *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
 - A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
 - The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.

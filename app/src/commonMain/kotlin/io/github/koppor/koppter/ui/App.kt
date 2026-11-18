@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -202,6 +205,14 @@ private fun MainScreen(
     // Keys reach the shortcuts only through a focused element, so the screen takes the focus whenever none of its elements has it:
     // at the start, after the element with the focus went away with its view, after a dialog closed, and after a touch took the focus away.
     var focused by remember { mutableStateOf(false) }
+    // Set by the layout: below its width, the field for the text of the filter lies in the drawer, which has to open first.
+    var wide by remember { mutableStateOf(true) }
+    fun focusSearch() {
+        if (wide) filterFocus.requestFocus() else scope.launch {
+            drawer.open()
+            filterFocus.requestFocus()
+        }
+    }
     val dialog = editing != null || showSettings || schedule != null || planning != null
     LaunchedEffect(focused, dialog) { if (!focused && !dialog) rootFocus.requestFocus() }
 
@@ -219,7 +230,7 @@ private fun MainScreen(
             }
             // The agenda and the week show the plan, which the filter does not apply to.
             if (controller.view == View.AGENDA || controller.view == View.WEEK) controller.view = View.LIST
-            filterFocus.requestFocus()
+            focusSearch()
         }
         when {
             !event.isShiftPressed && event.key == Key.N -> editing = Editing(null)
@@ -253,6 +264,18 @@ private fun MainScreen(
         }
     }
 
+    // [impl->dsn~filter-panel~1]
+    val searchField: @Composable (Modifier) -> Unit = { modifier ->
+        SearchField(
+            controller.filter.text,
+            { text ->
+                controller.filter = controller.filter.copy(text = text)
+                // The agenda and the week show the plan, which the filter does not apply to.
+                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
+            },
+            "Search text", "filter-text", modifier.focusRequester(filterFocus),
+        )
+    }
     val filterPanel: @Composable (Modifier, (() -> Unit)?) -> Unit = { modifier, onClose ->
         FilterPanel(
             filter = controller.filter,
@@ -269,6 +292,7 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             onClose = onClose,
+            search = if (onClose != null) ({ searchField(Modifier.padding(bottom = 8.dp)) }) else null,
         )
     }
 
@@ -294,18 +318,19 @@ private fun MainScreen(
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {
-        val wide = maxWidth >= WIDE
+        val wideNow = maxWidth >= WIDE
+        SideEffect { wide = wideNow }
         ModalNavigationDrawer(
             drawerState = drawer,
-            gesturesEnabled = !wide,
-            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
+            gesturesEnabled = !wideNow,
+            drawerContent = { if (!wideNow) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = { Text("koppter") },
                         navigationIcon = {
-                            if (!wide) {
+                            if (!wideNow) {
                                 IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                     Icon(Icons.Default.Menu, contentDescription = "Filter")
                                 }
@@ -326,29 +351,28 @@ private fun MainScreen(
                     )
                 },
                 floatingActionButton = {
-                    FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
-                        Icon(Icons.Default.Add, contentDescription = "New task")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!wideNow) {
+                            SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                        }
+                        FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
+                            Icon(Icons.Default.Add, contentDescription = "New task")
+                        }
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
                 Row(Modifier.padding(padding).fillMaxSize()) {
-                    if (wide) {
+                    if (wideNow) {
                         filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
                         ViewOptions(controller)
-                        // [impl->dsn~filter-panel~1]
-                        SearchField(
-                            controller.filter.text,
-                            { text ->
-                                controller.filter = controller.filter.copy(text = text)
-                                // The agenda and the week show the plan, which the filter does not apply to.
-                                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
-                            },
-                            "Search text", "filter-text", Modifier.padding(8.dp).focusRequester(filterFocus),
-                        )
+                        // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
+                        if (wideNow) searchField(Modifier.padding(8.dp))
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {

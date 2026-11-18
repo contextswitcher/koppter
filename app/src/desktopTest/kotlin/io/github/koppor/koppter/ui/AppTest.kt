@@ -933,14 +933,17 @@ class AppTest {
 
     // [utest->dsn~filter-panel~1]
     @Test
-    fun theTextOfTheFilterStandsAboveTheListOfANarrowWindowAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+    fun theTextOfTheFilterOfANarrowWindowLiesInTheDrawerThatTheSearchButtonOpensAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
-        // The panel with the other criteria is closed.
+        // The panel with the other criteria and the field are closed.
         onNodeWithTag("filter-heading").assertIsNotDisplayed()
+        onNodeWithTag("filter-text").assertIsNotDisplayed()
         controller.view = View.WEEK
         onNodeWithTag("week").assertExists()
-        onNodeWithTag("filter-text").assertIsDisplayed().performTextInput("mom")
+        onNodeWithTag("open-search").performClick()
+        onNodeWithTag("filter-heading").assertIsDisplayed()
+        onNodeWithTag("filter-text").assertIsDisplayed().assertIsFocused().performTextInput("mom")
         onNodeWithTag("week").assertDoesNotExist()
         onAllNodesWithTag("task").assertCountEquals(1)
     }
@@ -1735,6 +1738,30 @@ class AppTest {
     fun aPlainFileHasNoSynchronizationStatus() = runComposeUiTest {
         start()
         onNodeWithTag("sync-status").assertDoesNotExist()
+    }
+
+    // [utest->dsn~committer~1]
+    @Test
+    fun theCommitterIsSavedAndOpensTheStorageAgain() = runComposeUiTest {
+        val git = object : GitSetupActions {
+            override fun publicKey(): String? = null
+            override suspend fun clone(url: String) = url
+            override suspend fun check(url: String) = Unit
+        }
+        val opened = mutableListOf<Settings>()
+        val controller = TodoController(Settings(), { opened += it; storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", git = git) }
+
+        onNodeWithTag("open-settings").performClick()
+        // The default stands below the empty field, and in it while it has the focus.
+        onNodeWithTag("settings-committer-name").performScrollTo().assertTextEquals("Name of the commits", "Empty: that of the git configuration, otherwise koppter", "")
+        onNodeWithTag("settings-committer-name").performTextInput("Ada ")
+        onNodeWithTag("settings-committer-email").performScrollTo().performTextInput("ada@example.org")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals("Ada" to "ada@example.org", controller.settings.committerName to controller.settings.committerEmail)
+        // The storage commits in the new name from now on.
+        assertEquals(2, opened.size)
+        assertEquals("Ada", opened.last().committerName)
     }
 
     // [utest->dsn~git-setup-dialog~1]
