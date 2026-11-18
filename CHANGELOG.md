@@ -14,6 +14,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Changed
 
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
+- The search fields are lower, and the field that searches labels in the filter panel stands at its top instead of below *Clear all filters*, where it was out of view.
+- `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.
+- The Windows task manager names the desktop application *koppter* instead of *Tasks in a todo.txt file*.
 
 ## [2026-11-17] - 2026-11-17
 

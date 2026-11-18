@@ -11,6 +11,8 @@ while :; do
     KOPPTER_RUN_LOOP=$(git rev-parse HEAD)
     export KOPPTER_RUN_LOOP
     ./gradlew :app:createDistributable
+    # The window may open on another desktop; the line tells that the application runs.
+    echo "Running koppter..."
     set +e
     if [ "$(uname -s)" = Darwin ]; then
         app/build/compose/binaries/main/app/koppter.app/Contents/MacOS/koppter
@@ -19,5 +21,8 @@ while :; do
     fi
     code=$?
     set -e
-    [ "$code" -eq 55 ] || exit "$code"
+    if [ "$code" -ne 55 ]; then
+        echo "koppter finished"
+        exit "$code"
+    fi
 done

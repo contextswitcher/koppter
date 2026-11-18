@@ -676,7 +676,7 @@ Needs: impl, utest
 ### Search for labels in the filter panel
 `dsn~filter-label-search~1`
 
-Below *Clear all filters*, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+At its top, below the heading and the field for the text of the filter where the panel has one, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
 A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
 A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
 The field does not change the filter and is not kept.
@@ -740,6 +740,7 @@ A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
+The search fields (`SearchField`) have less space above and below their line than a text field of Material, which is at least 56 dp high.
 
 Covers:
 
@@ -943,6 +944,7 @@ A running application cannot replace its own classes, so the update is a restart
 `just run-loop`, also `just loop`, runs `scripts/run-loop.sh` or, on Windows, `scripts/run-loop.cmd`: in the checkout, it pulls, builds the application with its runtime (`:app:createDistributable`) and starts it, with the commit it built in the environment variable `KOPPTER_RUN_LOOP`.
 A pull that fails, such as without a network, does not stop the start.
 When the application ends with the exit code 55, the script does the same again; every other exit code ends it, so that closing the window stays a quit.
+The script prints `Running koppter...` before each start and `koppter finished` when it ends, as the window may open on another desktop.
 Started that way, the desktop application fetches at its start and every half hour and counts the commits of the upstream branch that the commit it runs lacks (`commitsBehind`).
 It counts from that commit and not from `HEAD`, as a pull outside the application moves `HEAD` while the old build keeps running.
 If there is one, the top bar shows the button *Restart to update*, which ends the application with the exit code 55.
