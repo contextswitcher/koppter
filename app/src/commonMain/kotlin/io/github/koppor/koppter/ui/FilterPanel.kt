@@ -1,6 +1,13 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -21,7 +28,6 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -81,7 +87,9 @@ fun FilterPanel(
         }
         search?.invoke()
         // [impl->dsn~filter-label-search~1]
+        // At the top: at the end of the panel, below the values, it lay out of view in a window of common height.
         var labels by remember { mutableStateOf("") }
+        SearchField(labels, { labels = it }, "Search labels", "filter-labels", Modifier.padding(bottom = 8.dp))
 
         Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
             onChange(filter.copy(hideFuture = !it))
@@ -159,27 +167,47 @@ fun FilterPanel(
         ) {
             Text("Clear all filters")
         }
-        SearchField(labels, { labels = it }, "Search labels", "filter-labels", Modifier.padding(top = 12.dp))
     }
 }
 
 /** A field of one line that has a button at its end, tagged [tag]`-clear`, which empties it. */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier) {
-    OutlinedTextField(
+    // Built from its parts, as `OutlinedTextField` has a height of at least 56 dp, much space around one line of text.
+    val interaction = remember { MutableInteractionSource() }
+    val colors = OutlinedTextFieldDefaults.colors()
+    BasicTextField(
         value = value,
         onValueChange = onChange,
-        placeholder = { Text(placeholder) },
         singleLine = true,
-        trailingIcon = {
-            if (value.isNotEmpty()) {
-                IconButton(onClick = { onChange("") }, modifier = Modifier.testTag("$tag-clear")) {
-                    Icon(Icons.Default.Close, contentDescription = "Clear the text")
-                }
-            }
-        },
+        textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        interactionSource = interaction,
         modifier = modifier.fillMaxWidth().testTag(tag),
-    )
+    ) { field ->
+        OutlinedTextFieldDefaults.DecorationBox(
+            value = value,
+            innerTextField = field,
+            enabled = true,
+            singleLine = true,
+            visualTransformation = VisualTransformation.None,
+            interactionSource = interaction,
+            placeholder = { Text(placeholder) },
+            // Not the slot of the trailing icon, which is at least 48 dp high.
+            suffix = {
+                if (value.isNotEmpty()) {
+                    Icon(
+                        Icons.Default.Close, contentDescription = "Clear the text",
+                        modifier = Modifier.size(20.dp).clickable(role = Role.Button) { onChange("") }.testTag("$tag-clear"),
+                    )
+                }
+            },
+            colors = colors,
+            contentPadding = OutlinedTextFieldDefaults.contentPadding(top = 8.dp, bottom = 8.dp),
+            container = { OutlinedTextFieldDefaults.Container(enabled = true, isError = false, interactionSource = interaction, colors = colors) },
+        )
+    }
 }
 
 /**

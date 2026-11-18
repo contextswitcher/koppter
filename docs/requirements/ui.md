@@ -676,7 +676,7 @@ Needs: impl, utest
 ### Search for labels in the filter panel
 `dsn~filter-label-search~1`
 
-Below *Clear all filters*, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+At its top, below the heading and the field for the text of the filter where the panel has one, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
 A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
 A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
 The field does not change the filter and is not kept.
@@ -740,6 +740,7 @@ A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
+The search fields (`SearchField`) have less space above and below their line than a text field of Material, which is at least 56 dp high.
 
 Covers:
 
