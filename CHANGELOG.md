@@ -13,6 +13,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- Planning moves a task that would be done after its due date before the tasks with a higher priority, the one due first first; the agenda and the week show it at its earlier times. A low priority thus counts until the due date comes close.
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
 - The search fields are lower, and the field that searches labels in the filter panel stands at its top instead of below *Clear all filters*, where it was out of view.
 - `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.

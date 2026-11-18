@@ -58,6 +58,18 @@ Covers:
 
 Needs: dsn
 
+### Due dates before priority
+`req~deadline-first~1`
+
+A task that would be done after its due date in the order of the priorities is planned before the tasks with a higher priority, so that it is done by its due date.
+Of several such tasks, the one due first is planned first.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Dependencies
 `req~dependencies~1`
 
@@ -286,6 +298,21 @@ Covers:
 * `req~due-time~1`
 * `adr~due-time-tag~1`
 * `adr~due-time-tag-name~1`
+
+Needs: impl, utest
+
+### Due dates before priority
+`dsn~deadline-first~1`
+
+`plan` plans in the order of the task list first.
+A task with a due date that the plan ends after its due date and the time of the tag `dueby:`, or does not plan, is moved to the front of the order, and `plan` plans again.
+The moved tasks stand in the order of their due dates, and the tasks they wait for are planned before them.
+This repeats until no further task ends late; a task that ends late although it was moved stays where it is, and its state of the plan shows that it is late.
+A task with a fixed time is not moved.
+
+Covers:
+
+* `req~deadline-first~1`
 
 Needs: impl, utest
 

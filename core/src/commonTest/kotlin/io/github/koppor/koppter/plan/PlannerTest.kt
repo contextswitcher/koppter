@@ -89,6 +89,34 @@ class PlannerTest {
         assertEquals(emptyList(), plan.unplaced)
     }
 
+    // [utest->dsn~deadline-first~1]
+    @Test
+    fun aTaskThatWouldEndAfterItsDueDateIsPlannedBeforeTasksWithAHigherPriority() {
+        val plan = plan(
+            """
+            (A) Write the book dur:18h
+            (C) Fill the form dur:1h due:2026-11-13
+            (C) Pay the bill dur:30m due:2026-11-12
+            (D) Tidy the desk dur:1h due:2026-11-30
+            """,
+        )
+        assertEquals(
+            listOf(
+                // Behind the book, both would be done on Monday: the one due first goes first.
+                "2026-11-12 8:00 30 Pay the bill",
+                "2026-11-12 8:30 60 Fill the form",
+                "2026-11-12 9:30 150 Write the book",
+                "2026-11-12 13:00 300 Write the book",
+                "2026-11-13 8:00 240 Write the book",
+                "2026-11-13 13:00 300 Write the book",
+                "2026-11-16 8:00 90 Write the book",
+                // Done by its due date in the order of the priorities, so it stays behind the book.
+                "2026-11-16 9:30 60 Tidy the desk",
+            ),
+            plan.lines(),
+        )
+    }
+
     // [utest->dsn~planner~1]
     @Test
     fun aTaskIsPlannedInTheMapOfItsContextAroundTakenTimesAndCutIfNeeded() {
