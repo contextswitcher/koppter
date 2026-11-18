@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
-## [Unreleased]
+## [2026-11-17] - 2026-11-17
 
 ### Added
 
@@ -22,6 +22,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Changed
 
 - On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
+- The heading of a group of the list, such as *Next (33)*, stays at the top while its tasks are scrolled.
 - *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
 - A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
 - The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.
@@ -210,7 +211,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
-[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-16...experimental
+[2026-11-17]: https://github.com/contextswitcher/koppter/compare/v2026-11-16...v2026-11-17
 [2026-11-16]: https://github.com/contextswitcher/koppter/compare/v2026-11-15...v2026-11-16
 [2026-11-15]: https://github.com/contextswitcher/koppter/compare/v2026-11-14...v2026-11-15
 [2026-11-14]: https://github.com/contextswitcher/koppter/compare/v2026-11-13...v2026-11-14

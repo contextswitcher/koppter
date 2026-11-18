@@ -348,6 +348,7 @@ Needs: impl, utest
 `TodoController.listGroups` divides the visible tasks by the attribute `listGroupKey` with `groupEntries`, as the board does for its columns.
 Without an attribute, `listParts` divides them into the overdue tasks, the other open tasks and the completed ones, with the titles *Overdue*, *Next* and *Done*; a part without tasks is left out.
 `TaskList` shows the groups one after the other, each below a heading with its title and the number of its tasks.
+The heading stays at the top of the list while the tasks of its group are scrolled, until the heading of the next group takes its place.
 The heading of a priority, there and above a column of the board, shows the label of the priority as the tasks have it: a priority may be named by a number, which next to the number of the tasks reads as a second count.
 A task with several values of the attribute stands in each of their groups.
 A step and a drag stay within a group; a task is given another value on the board or in the edit dialog.
