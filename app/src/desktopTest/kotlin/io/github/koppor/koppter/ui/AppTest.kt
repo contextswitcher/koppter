@@ -1754,8 +1754,8 @@ class AppTest {
         setContent { App(controller, "todo.txt", git = git) }
 
         onNodeWithTag("open-settings").performClick()
-        // The default stands below the empty field, and in it while it has the focus.
-        onNodeWithTag("settings-committer-name").performScrollTo().assertTextEquals("Name of the commits", "Empty: that of the git configuration, otherwise koppter", "")
+        // The default stands in the empty field in gray, whether or not it has the focus.
+        onNodeWithTag("settings-committer-name").performScrollTo().assertTextEquals("koppter", "Empty: that of the git configuration, otherwise the value in gray.", "")
         onNodeWithTag("settings-committer-name").performTextInput("Ada ")
         onNodeWithTag("settings-committer-email").performScrollTo().performTextInput("ada@example.org")
         onNodeWithTag("settings-save").performScrollTo().performClick()

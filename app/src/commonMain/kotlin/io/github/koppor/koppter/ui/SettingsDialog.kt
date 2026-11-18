@@ -428,18 +428,21 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
     }
 }
 
-/** A field whose [default], which applies while it is empty, stands in it as the placeholder. */
+/** A field whose [default], which applies while it is empty, stands in it in gray. */
 @Composable
-private fun CommitterField(label: String, value: String, onChange: (String) -> Unit, default: String, tag: String) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(label) },
-        placeholder = { Text(default) },
-        supportingText = { Text("Empty: that of the git configuration, otherwise $default") },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().testTag(tag),
-    )
+private fun CommitterField(title: String, value: String, onChange: (String) -> Unit, default: String, tag: String) {
+    Column {
+        // The title stands above the field: as a label in it, it would hide the default until the field has the focus.
+        Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
+        OutlinedTextField(
+            value = value,
+            onValueChange = onChange,
+            placeholder = { Text(default, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
+            supportingText = { Text("Empty: that of the git configuration, otherwise the value in gray.") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().testTag(tag),
+        )
+    }
 }
 
 /** The public key of the device, where the application has a key of its own. */

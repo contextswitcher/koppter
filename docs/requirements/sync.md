@@ -132,7 +132,7 @@ Needs: impl
 `dsn~committer~1`
 
 The settings dialog has, under *Git repository*, the fields *Name of the commits* and *Email address of the commits*, which are settings of the device.
-An empty field stands for the value of the git configuration, `user.name` or `user.email`, and without one for `koppter` or `koppter@localhost`; the field names that default below it and shows it as its placeholder while it has the focus.
+An empty field stands for the value of the git configuration, `user.name` or `user.email`, and without one for `koppter` or `koppter@localhost`; the empty field shows that default in gray, with the title above the field so that it does not hide the default.
 `GitStorage` makes each commit in that name as author and committer; a change of either field opens the storage again, so that the next commit uses it.
 
 Covers:
