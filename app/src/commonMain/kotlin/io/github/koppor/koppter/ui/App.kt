@@ -114,6 +114,8 @@ fun App(
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
+    /** The version and commit of the build, shown at the bottom of the settings; `null` where the platform does not tell it. */
+    version: String? = null,
     chooseFileNote: String? = null,
     /** Lets the user choose an image for a note and gives its bytes, scaled down; `null` on a platform without that. */
     pickImage: (suspend () -> ByteArray?)? = null,
@@ -162,7 +164,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, update, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave)
         }
     }
 }
@@ -201,6 +203,7 @@ private fun MainScreen(
     chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    version: String?,
     pickImage: (suspend () -> ByteArray?)?,
     takePhoto: (suspend () -> ByteArray?)?,
     update: (() -> Unit)?,
@@ -474,6 +477,7 @@ private fun MainScreen(
             chooseFileNote = chooseFileNote,
             git = git,
             shareLog = shareLog,
+            version = version,
             boardColumns = controller.boardColumnsText,
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,

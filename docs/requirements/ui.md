@@ -113,6 +113,17 @@ Covers:
 
 Needs: dsn
 
+### Version of the build
+`req~build-version~1`
+
+On Android, the settings show at their bottom the version and the commit the application was built from, so that the user tells which build runs on the device.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Links in the text of a task
 `req~links~1`
 
@@ -396,6 +407,19 @@ The desktop application gives no function: its log directory is reached with the
 Covers:
 
 * `req~share-log~1`
+
+Needs: impl, utest
+
+### Line with the version of the build
+`dsn~build-version~1`
+
+`App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line, in a container that lets the user select and copy it.
+The build of `:android` writes the short hash and the date of the commit of `HEAD` into `BuildConfig.GIT_COMMIT_LINE`; `MainActivity` puts the version name of a release before it.
+The desktop application gives no text.
+
+Covers:
+
+* `req~build-version~1`
 
 Needs: impl, utest
 

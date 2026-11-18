@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
@@ -123,6 +124,8 @@ fun SettingsDialog(
     git: GitSetupActions?,
     /** Passes the log to another application; `null` on a platform where the user reaches the log file. */
     shareLog: (() -> Unit)?,
+    /** The version and commit of the build, shown as the last line; `null` where the platform does not tell it. */
+    version: String? = null,
     /** The definitions of the board columns; `null` if the storage cannot keep them. */
     boardColumns: String?,
     /** The share actions; `null` if the storage cannot keep them. */
@@ -426,6 +429,18 @@ fun SettingsDialog(
                         enabled = topCountValue != null && outlookWeeksValue != null && !cloning && !address,
                         modifier = Modifier.testTag("settings-save"),
                     ) { Text("Save") }
+                }
+                // [impl->dsn~build-version~1]
+                if (version != null) {
+                    // Selectable, so that the commit goes into a report of a problem.
+                    SelectionContainer {
+                        Text(
+                            version,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testTag("settings-version"),
+                        )
+                    }
                 }
             }
         }

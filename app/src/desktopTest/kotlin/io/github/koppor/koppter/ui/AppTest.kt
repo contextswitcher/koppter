@@ -1793,6 +1793,18 @@ class AppTest {
         onNodeWithTag("settings-dialog").assertExists()
     }
 
+    // [utest->dsn~build-version~1]
+    @Test
+    fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {
+        var version by mutableStateOf<String?>(null)
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", version = version) }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-version").assertDoesNotExist()
+        version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
+        onNodeWithTag("settings-version").performScrollTo().assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
+    }
+
     // [utest->dsn~failure-log~1]
     @Test
     fun whatFailsIsShownAndPassedToTheLog() {
