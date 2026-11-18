@@ -707,6 +707,20 @@ class AppTest {
         assertEquals(narrow, width())
     }
 
+    // [utest->dsn~restart-to-update~1]
+    @Test
+    fun anUpdateThatWaitsIsOfferedInTheTopBar() = runComposeUiTest {
+        var update by mutableStateOf<(() -> Unit)?>(null)
+        var restarted = false
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", update = update) }
+        onNodeWithTag("restart-to-update").assertDoesNotExist()
+
+        update = { restarted = true }
+        onNodeWithTag("restart-to-update").assertTextEquals("Restart to update").performClick()
+        assertEquals(true, restarted)
+    }
+
     // [utest->dsn~note-images~1]
     @Test
     fun anImageIsAttachedToTheNoteOfATaskAndShownInItsDialog() = runComposeUiTest {

@@ -1,6 +1,10 @@
 package io.github.koppor.koppter
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.decodeToImageBitmap
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.unit.dp
@@ -29,13 +33,17 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
 import net.harawata.appdirs.AppDirsFactory
 import org.tinylog.Logger
+import java.io.File
 import java.nio.file.Path
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
 import kotlin.io.path.exists
+import kotlin.system.exitProcess
+import kotlin.time.Duration.Companion.minutes
 
 // [impl->adr~desktop-locations-from-appdirs~1]
 private val directories = AppDirsFactory.getInstance()
@@ -63,6 +71,28 @@ private suspend fun chooseFolder(owner: java.awt.Window): String? =
 private suspend fun pickImage(owner: java.awt.Window): ByteArray? =
     FileKit.openFilePicker(type = FileKitType.Image, dialogSettings = FileKitDialogSettings(title = "Image for the note", parent = FileKitDialogParent.awt(owner)))
         ?.let { FileKit.compressImage(it.readBytes(), maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE) }
+
+/** The exit code that `scripts/run-loop` answers by pulling, building and starting the application again; far from the codes of a JVM or a shell. */
+private const val RESTART_EXIT_CODE = 55
+
+/** What git prints for [arguments] in [directory], or `null` when it fails or is missing. */
+// ponytail: no timeout, a git that hangs holds one thread and the update is not offered; add one if that is seen.
+internal fun git(directory: File, vararg arguments: String): String? = runCatching {
+    val process = ProcessBuilder("git", *arguments).directory(directory).redirectError(ProcessBuilder.Redirect.DISCARD).start()
+    val output = process.inputStream.bufferedReader().readText().trim()
+    output.takeIf { process.waitFor() == 0 }
+}.getOrNull()
+
+/**
+ * How many commits the upstream branch of [checkout] has that the commit [running] lacks, after a fetch.
+ * Counted from the commit that runs and not from `HEAD`, which a pull outside the application moves while the old build keeps running.
+ * 0 whenever git cannot tell: the update is an offer, not an error.
+ */
+// [impl->dsn~restart-to-update~1]
+internal fun commitsBehind(checkout: File, running: String): Int {
+    git(checkout, "fetch", "--quiet") ?: return 0
+    return git(checkout, "rev-list", "--count", "$running..@{u}")?.toIntOrNull() ?: 0
+}
 
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
@@ -104,7 +134,28 @@ fun main(args: Array<String>) {
             icon = icon,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
-            App(controller, defaultTodoFile.toString(), chooseFile = { chooseFile(window) }, chooseFolder = { chooseFolder(window) }, git = git, pickImage = { pickImage(window) })
+            // [impl->dsn~restart-to-update~1]
+            var updateWaits by remember { mutableStateOf(false) }
+            LaunchedEffect(Unit) {
+                // Set by `scripts/run-loop` to the commit it built, with the checkout as the working directory.
+                val running = System.getenv("KOPPTER_RUN_LOOP")?.ifBlank { null } ?: return@LaunchedEffect
+                withContext(Dispatchers.IO) {
+                    while (!updateWaits) {
+                        updateWaits = commitsBehind(File("."), running) > 0
+                        delay(30.minutes)
+                    }
+                }
+            }
+            App(
+                controller,
+                defaultTodoFile.toString(),
+                chooseFile = { chooseFile(window) },
+                chooseFolder = { chooseFolder(window) },
+                git = git,
+                pickImage = { pickImage(window) },
+                // Every change is in the file already, as on closing the window.
+                update = if (updateWaits) ({ exitProcess(RESTART_EXIT_CODE) }) else null,
+            )
             // [impl->dsn~link-single-instance~1]
             LaunchedEffect(Unit) {
                 for (received in links) {

@@ -42,6 +42,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
@@ -114,6 +115,8 @@ fun App(
     pickImage: (suspend () -> ByteArray?)? = null,
     /** As [pickImage], with the camera of the device. */
     takePhoto: (suspend () -> ByteArray?)? = null,
+    /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
+    update: (() -> Unit)? = null,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
 ) {
@@ -145,7 +148,7 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, update, backHandler, leave)
         }
     }
 }
@@ -183,6 +186,7 @@ private fun MainScreen(
     shareLog: (() -> Unit)?,
     pickImage: (suspend () -> ByteArray?)?,
     takePhoto: (suspend () -> ByteArray?)?,
+    update: (() -> Unit)?,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
 ) {
@@ -308,6 +312,9 @@ private fun MainScreen(
                             }
                         },
                         actions = {
+                            // [impl->dsn~restart-to-update~1]
+                            // Words, as no icon tells that the application ends and comes back.
+                            update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text("Restart to update") } }
                             controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
                             if (controller.canSchedule) {
                                 // [impl->dsn~plan-dialog~1]

@@ -288,6 +288,17 @@ Covers:
 
 Needs: dsn
 
+### Restart to update
+`req~restart-to-update~1`
+
+A user who runs the desktop application from a checkout of its sources gets a newer version without leaving the application for a terminal: the application tells that there is one, and one click starts it.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -919,5 +930,24 @@ In the filter panel, a finger that stays on a label opens the menu as well, and 
 Covers:
 
 * `req~app-links~1`
+
+Needs: impl, utest
+
+### Restart to update
+`dsn~restart-to-update~1`
+
+A running application cannot replace its own classes, so the update is a restart.
+`just run-loop`, also `just loop`, runs `scripts/run-loop.sh` or, on Windows, `scripts/run-loop.cmd`: in the checkout, it pulls, builds the application with its runtime (`:app:createDistributable`) and starts it, with the commit it built in the environment variable `KOPPTER_RUN_LOOP`.
+A pull that fails, such as without a network, does not stop the start.
+When the application ends with the exit code 55, the script does the same again; every other exit code ends it, so that closing the window stays a quit.
+Started that way, the desktop application fetches at its start and every half hour and counts the commits of the upstream branch that the commit it runs lacks (`commitsBehind`).
+It counts from that commit and not from `HEAD`, as a pull outside the application moves `HEAD` while the old build keeps running.
+If there is one, the top bar shows the button *Restart to update*, which ends the application with the exit code 55.
+Whenever git cannot tell, nothing is shown.
+Without the variable, the application neither fetches nor shows the button, as nothing would start it again.
+
+Covers:
+
+* `req~restart-to-update~1`
 
 Needs: impl, utest

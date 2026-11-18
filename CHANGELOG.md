@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - On Android, an image that another application shares to koppter becomes a task with that image in its note.
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
+- `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
 
 ### Changed
 

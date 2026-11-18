@@ -829,6 +829,16 @@ On Android, the log is in `Android/data/io.github.koppor.koppter/files/logs` of 
 A log can name the address of the git repository: look at it before passing it on.
 
 ```shell
+just run-loop
+```
+
+runs the desktop application from the checkout and keeps it current; it needs [just](https://just.systems), and `just loop` does the same.
+It pulls, builds the application and starts it.
+The application then looks every half hour whether the repository has newer commits and, if so, shows *Restart to update* in its top bar.
+A click ends it with the exit code 55, on which the loop pulls, builds and starts it again; closing the window ends the loop.
+Without just, `scripts/run-loop.sh` or `scripts\run-loop.cmd` does the same.
+
+```shell
 ./gradlew :android:assembleDebug
 ```
 
