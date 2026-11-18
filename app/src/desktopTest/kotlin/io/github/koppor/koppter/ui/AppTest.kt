@@ -5,6 +5,7 @@ import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotDisplayed
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
@@ -1777,9 +1778,10 @@ class AppTest {
             "Not connected: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
                 "Is the public SSH key of this device, shown below, registered with the server?",
         )
-        // With an address in the field of the file, the button clones.
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone").performClick()
-        // The reason is scrolled into view, with what most often is the cause on a device with a key of its own.
+        // An address is cloned, not saved as a file.
+        onNodeWithTag("settings-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("settings-clone").performScrollTo().performClick()
+        // The reason, with what most often is the cause on a device with a key of its own.
         onNodeWithTag("settings-file-message").assertIsDisplayed()
             .assertTextEquals(
                 "Not cloned: remote hung up unexpectedly\nCause: NoSuchMethodError: no such repository\n" +
@@ -1789,20 +1791,20 @@ class AppTest {
         assertEquals(listOf("Connection check failed: remote hung up unexpectedly", "Clone failed: remote hung up unexpectedly"), logged)
         assertEquals("", controller.settings.todoFile)
 
-        // [utest->dsn~settings-open-file~1]
-        // The clone is opened at once, and the dialog stays open with the configuration that the repository brings along.
-        onNodeWithTag("settings-file").performTextReplacement("git@example.org:todo.git")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
-        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
-        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
-        onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
-        // What is changed now belongs to the repository, and the file that was open before stays as it was.
-        onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nHome = @home")
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Save").performClick()
+        // The clone shows its tasks at once: the dialog is left, and what stood in it is written nowhere.
+        onNodeWithTag("settings-board-columns").performScrollTo().performTextReplacement("Home = @home")
+        onNodeWithTag("settings-file").performScrollTo().performTextReplacement("git@example.org:todo.git")
+        onNodeWithTag("settings-clone").performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
-        assertEquals(true, cloned.companions.getValue("koppter.yml").contains("\"Home\": \"@home\""))
-        assertNull(storage.companions["koppter.yml"])
         onNodeWithText("Read the paper").assertExists()
+        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+        assertEquals("board-columns:\n  Phone: \"@phone\"\n", cloned.companions["koppter.yml"])
+        assertNull(storage.companions["koppter.yml"])
+
+        // The settings then show the configuration that the repository brings along.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
+        onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
     }
 
     // [utest->dsn~settings-open-file~1]
@@ -1881,7 +1883,7 @@ class AppTest {
         // Pasted text arrives at once.
         onNodeWithTag("settings-file").performScrollTo().performTextInput("https://github.com/demo-user/todo/tree/main")
         onNodeWithTag("settings-file").assertTextContains("git@github.com:demo-user/todo.git")
-        onNodeWithTag("settings-save").performScrollTo().assertTextEquals("Clone")
+        onNodeWithTag("settings-clone").assertIsEnabled()
 
         // The page for a deploy key of that repository, with the key in the clipboard.
         copied = null

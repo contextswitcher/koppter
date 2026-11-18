@@ -448,6 +448,12 @@ private fun MainScreen(
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             // [impl->dsn~settings-open-file~1]
             onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
+            // [impl->dsn~git-setup-dialog~1]
+            // The user wants the tasks of the repository; nothing of the dialog is written to it.
+            onCloned = {
+                controller.updateSettings(controller.settings.copy(todoFile = it))
+                showSettings = false
+            },
             onSave = { settings, boardColumns, shareActions, priorityNames, labelLinks, projectContexts, newTask ->
                 // The columns, share actions, names and links belong to the file that is open, not to one whose path was typed into the field.
                 boardColumns?.let(controller::updateBoardColumns)

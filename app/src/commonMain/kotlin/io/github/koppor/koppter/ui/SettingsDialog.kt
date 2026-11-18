@@ -138,6 +138,8 @@ fun SettingsDialog(
      * show what the file brings along instead of what belonged to the file before.
      */
     onOpenFile: (String) -> Unit,
+    /** Called with the todo.txt file of a repository that was cloned: it becomes the file of the application, and the dialog is left. */
+    onCloned: (String) -> Unit = onOpenFile,
     /** Called with what failed with the repository, a clone or a check of the connection, for the log. */
     onGitFailed: (String, Exception) -> Unit = { _, _ -> },
     onSave: (Settings, boardColumns: String?, shareActions: String?, priorityNames: String?, labelLinks: String?, projectContexts: String?, newTask: String?) -> Unit,
@@ -196,7 +198,7 @@ fun SettingsDialog(
                     supportingText = {
                         Text(
                             "Empty: $defaultTodoFile" +
-                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, and the todo.txt file of the clone is opened. The address of a page of a repository of GitHub becomes that form.") +
+                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub becomes that form.") +
                                 "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
                                 "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
                         )
@@ -254,12 +256,35 @@ fun SettingsDialog(
                                             gitFailed("Not connected", "Connection check failed", e)
                                         }
                                         cloning = false
+                                        // The message stands above the buttons and may be out of view.
+                                        scroll.animateScrollTo(0)
                                     }
                                 },
                                 enabled = address && !cloning,
                                 modifier = Modifier.testTag("settings-check-connection"),
                             ) {
                                 Text("Check connection")
+                            }
+                            // At the address and not at the end of the dialog, where Save stands: a clone saves nothing of the dialog.
+                            Button(
+                                onClick = {
+                                    cloning = true
+                                    fileFailed = false
+                                    fileMessage = "Cloning"
+                                    scope.launch {
+                                        try {
+                                            onCloned(git.clone(sshAddress(todoFile.trim())))
+                                        } catch (e: Exception) {
+                                            gitFailed("Not cloned", "Clone failed", e)
+                                        }
+                                        cloning = false
+                                        scroll.animateScrollTo(0)
+                                    }
+                                },
+                                enabled = address && !cloning,
+                                modifier = Modifier.testTag("settings-clone"),
+                            ) {
+                                Text("Clone")
                             }
                         }
                     }
@@ -359,31 +384,11 @@ fun SettingsDialog(
                         newTaskDefaults?.trim(),
                     )
                     Button(
-                        onClick = {
-                            val file = todoFile.trim().let { if (git != null) sshAddress(it) else it }
-                            if (git != null && address) {
-                                cloning = true
-                                fileFailed = false
-                                fileMessage = "Cloning"
-                                scope.launch {
-                                    try {
-                                        onOpenFile(git.clone(file))
-                                        fileMessage = OPENED
-                                    } catch (e: Exception) {
-                                        gitFailed("Not cloned", "Clone failed", e)
-                                    }
-                                    cloning = false
-                                    // The message stands at the file, far above the button that was clicked.
-                                    scroll.animateScrollTo(0)
-                                }
-                            } else {
-                                save(file)
-                            }
-                        },
-                        enabled = topCountValue != null && !cloning,
+                        onClick = { save(todoFile.trim()) },
+                        // An address is no file to save: it is cloned first.
+                        enabled = topCountValue != null && !cloning && !address,
                         modifier = Modifier.testTag("settings-save"),
-                        // The dialog stays open after cloning, so the button says what it does.
-                    ) { Text(if (address) "Clone" else "Save") }
+                    ) { Text("Save") }
                 }
             }
         }

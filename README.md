@@ -176,7 +176,8 @@ Changes of two devices are merged without a conflict to resolve: `todo.txt` and 
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
-A cloned repository, a file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
+*Clone*, below the field, does that, closes the settings and shows the tasks of the repository; it writes nothing that stood in the settings.
+A file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
 *Cancel* returns to the file that was open before.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.

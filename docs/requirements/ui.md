@@ -452,12 +452,13 @@ Needs: impl, utest
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
-A file that the user chooses with *Choose file*, the todo.txt file of a folder chosen with *Choose folder*, and the todo.txt file of a repository that the dialog cloned, is opened at once through `onOpenFile`, and the dialog stays open.
+A file that the user chooses with *Choose file* and the todo.txt file of a folder chosen with *Choose folder* is opened at once through `onOpenFile`, and the dialog stays open.
 A chooser that fails is reported at the field, in the color for errors, and the open file stays.
 The fields for the board columns, the names of the priorities, the links of the labels, what a new task starts with, the contexts of the projects and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
 The configuration of the dialog is thus written to the file it was read from, never to another one.
 A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
-Leaving the dialog without *Save* opens the file again that was open when the dialog was opened; a clone stays in the data directory.
+Leaving the dialog without *Save* opens the file again that was open when the dialog was opened.
+A repository that the dialog clones is not opened this way: `dsn~git-setup-dialog~1` says what *Clone* does.
 
 Covers:
 

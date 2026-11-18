@@ -270,10 +270,12 @@ Needs: impl, utest
 `dsn~git-setup-dialog~1`
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
-With such an address in the field, the button of the dialog reads *Clone*: it clones the address and opens the todo.txt file of the clone as `dsn~settings-open-file~1` says; if the clone fails, the dialog shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
+The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file.
+*Clone* clones the address, makes the todo.txt file of the clone the file of the application through `onCloned` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
+If the clone fails, the dialog stays and shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
 The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
-The dialog scrolls to that message, which stands at the field and not at the button.
-The button *Check connection* below the field, next to those that choose a file or a folder, is enabled while the field holds such an address: it asks the server for the repository without cloning it and shows *Connected*, or *Not connected* with the reason as for a clone that fails.
+The dialog scrolls to the message of a clone or a check, which stands at the field, above the buttons.
+The button *Check connection* below the field, next to those that choose a file or a folder and before *Clone*, is enabled while the field holds such an address: it asks the server for the repository without cloning it and shows *Connected*, or *Not connected* with the reason as for a clone that fails.
 The address of a page of a repository of GitHub, as the browser has it, becomes the address for SSH of that repository (`sshAddress`) when it is pasted and before it is cloned: the application has an SSH key and no password for HTTPS.
 The dialog shows the public key of the device where the actions have one; a click on the key copies it to the clipboard.
 While the field holds the address of a repository of GitHub, a button below the key copies the key and opens the page of that repository that adds a deploy key (`deployKeyPage`) in the browser.

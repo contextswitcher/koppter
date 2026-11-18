@@ -20,6 +20,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
 - A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
 - The repository moved to `contextswitcher/koppter`: a file is checked with `jbang lint@contextswitcher/koppter todo.txt`.
 - A new task starts with the priority C and the due date of the next weekend; *New task* in the settings states another priority and day, or none.
