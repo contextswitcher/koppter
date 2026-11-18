@@ -59,7 +59,9 @@ jobs:
           fi
 
           git switch main
-          git merge --no-ff --no-edit -m "Merge experimental${tag:+: release $d}" experimental
+          # Fast-forward only: a merge commit would exist only on main and leave
+          # experimental "behind" it forever.
+          git merge --ff-only experimental
           git push origin main
           if [ -n "$tag" ]; then
             git tag "$tag" main
