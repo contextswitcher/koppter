@@ -109,9 +109,10 @@ class MainActivity : ComponentActivity() {
         intent.dataString?.let(controller::openLink)
     }
 
-    // The share actions may have been edited in the settings.
+    // The share actions may have been edited in the settings, and the tasks or the plan changed.
     override fun onStop() {
         super.onStop()
         publishShareTargets(controller.shareActions)
+        updateAgendaWidgets()
     }
 }

@@ -75,6 +75,19 @@ Covers:
 
 Needs: dsn
 
+### Widget for the home screen
+`req~android-widget~1`
+
+On Android, the user places a widget on the home screen that shows what is planned from now on, by day, with the time of each block.
+When nothing is planned from now on, it shows the open tasks as the list of the application does.
+
+Covers:
+
+* `feat~platforms~1`
+* `feat~planning~1`
+
+Needs: dsn
+
 ## Design
 
 ### Shared UI as an Android library
@@ -219,3 +232,18 @@ Covers:
 * `req~app-links~1`
 
 Needs: impl
+
+### Widget on Android
+`dsn~android-widget~1`
+
+`AgendaWidget` shows today's date as its title and a list that `AgendaWidgetService` fills through a controller of its own.
+`CalendarTxt.ahead` gives the blocks of `calendar.txt` that have not ended, in the order of time; the list shows them under a heading per day, each with the text of its task and its times.
+Without such a block, the list shows the open tasks of the filtered list.
+The widget is refreshed every half hour and when `MainActivity` stops; a click on it opens the application.
+Its colors are those of the system theme from Android 12 on.
+
+Covers:
+
+* `req~android-widget~1`
+
+Needs: impl, utest

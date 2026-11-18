@@ -1969,28 +1969,28 @@ class AppTest {
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFileIsOpenedAtOnceWithItsConfiguration() = runComposeUiTest {
+    fun aChosenFileIsOpenedAndTheSettingsAreLeftWithoutWritingThem() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "share-actions:\n  later: \"{} due:1w\"\n" }
         val controller = TodoController(Settings(), { if (it.todoFile == "/data/other/todo.txt") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { "/data/other/todo.txt" }) }
+        val before = storage.companions["koppter.yml"]
 
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} +research @reading due:2w dur:1h")
+        onNodeWithTag("settings-share-actions").performScrollTo().performTextReplacement("typed = {} due:1d")
         onNodeWithTag("settings-choose-file").performScrollTo().performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
-        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
-        onNodeWithTag("settings-file-message").assertExists()
-        // Without Save, the file from before is open again.
-        onNodeWithText("Cancel").performScrollTo().performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
-        assertEquals("", controller.settings.todoFile)
-        onNodeWithText("Thank Mom").assertExists()
-        onNodeWithText("Read the paper").assertDoesNotExist()
+        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
+        onNodeWithText("Read the paper").assertExists()
+        assertEquals(before, storage.companions["koppter.yml"])
+        assertEquals("share-actions:\n  later: \"{} due:1w\"\n", chosen.companions["koppter.yml"])
+        // The settings show the configuration that the file brings along.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
     }
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFolderIsOpenedAtOnceAndAChooserThatFailsIsReported() = runComposeUiTest {
+    fun aChosenFolderIsOpenedAndAChooserThatFailsIsReported() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n")
         val controller = TodoController(Settings(), { if (it.todoFile == "content://documents/tree/todo") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { error("No program shows the dialog") }, chooseFolder = { "content://documents/tree/todo" }) }
@@ -2001,9 +2001,8 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
 
         onNodeWithTag("settings-choose-folder").performScrollTo().performClick()
-        onNodeWithTag("settings-file-message").assertTextContains("Opened.", substring = true)
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
         assertEquals("content://documents/tree/todo", controller.settings.todoFile)
-        onNodeWithTag("settings-save").performScrollTo().performClick()
         onNodeWithText("Read the paper").assertExists()
     }
 
