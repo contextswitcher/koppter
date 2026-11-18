@@ -94,6 +94,26 @@ internal fun commitsBehind(checkout: File, running: String): Int {
     return git(checkout, "rev-list", "--count", "$running..@{u}")?.toIntOrNull() ?: 0
 }
 
+/**
+ * Gives the drawing surface of [window] its size again after the scale of its display changed, which on Windows it keeps from the old scale.
+ * Restoring and maximizing, or resizing, is what the user would do by hand.
+ */
+// [impl->dsn~display-change~1]
+private fun refitAfterDisplayChange(window: java.awt.Frame) {
+    // A display change arrives as several events; act once after they settled.
+    val refit = javax.swing.Timer(500) {
+        val state = window.extendedState
+        if (state and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH) {
+            window.extendedState = state and java.awt.Frame.MAXIMIZED_BOTH.inv()
+            window.extendedState = state
+        } else {
+            window.setSize(window.width + 1, window.height)
+            window.setSize(window.width - 1, window.height)
+        }
+    }.apply { isRepeats = false }
+    window.addPropertyChangeListener("graphicsConfiguration") { refit.restart() }
+}
+
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
     // Before anything else: a start that only hands its link on ends at once.
@@ -136,6 +156,7 @@ fun main(args: Array<String>) {
             icon = icon,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
+            LaunchedEffect(Unit) { refitAfterDisplayChange(window) }
             // [impl->dsn~restart-to-update~1]
             var updateWaits by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
