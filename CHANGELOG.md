@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. The label *Outlook* opens an item in Outlook. Giving an item a context or a project, or another change, writes it to the file with the tag `ol:`; completing it in koppter marks it done in Outlook.
+
 ### Changed
 
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.

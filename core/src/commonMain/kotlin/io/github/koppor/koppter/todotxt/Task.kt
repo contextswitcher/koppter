@@ -241,6 +241,7 @@ data class Task(
         const val PRIORITY = "pri"
         const val NOTE = "note"
         const val CONTEXT_SWITCHER = "cs"
+        const val OUTLOOK = "ol"
         const val DURATION = "dur"
         const val AT = "at"
         const val BY = "dueby"

@@ -5,6 +5,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
+import io.github.koppor.koppter.outlook.Outlook
+import io.github.koppor.koppter.outlook.OutlookItem
+import io.github.koppor.koppter.outlook.OutlookTodos
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.plan.PlanState
@@ -78,6 +83,8 @@ class TodoController(
     private val fetch: (suspend (String) -> String)? = null,
     /** Takes what failed, with its cause if there is one, for the log of the platform. */
     private val log: (message: String, cause: Throwable?) -> Unit = { _, _ -> },
+    /** The To-Do list of Outlook; `null` where the platform has none. */
+    private val outlook: OutlookTodos? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -228,10 +235,43 @@ class TodoController(
         null
     }
 
-    /** The tasks to show, filtered and in list order. */
+    /** The open items of the To-Do list of Outlook as it was read last. */
+    private var outlookItems by mutableStateOf<List<OutlookItem>>(emptyList())
+
+    /** Whether the To-Do list of Outlook is read. */
+    val readsOutlook: Boolean get() = outlook != null
+
+    /**
+     * Reads the To-Do list of Outlook again; what fails is logged and leaves the list as it was,
+     * as Outlook may just not be running.
+     */
+    // [impl->dsn~outlook-items~1]
+    suspend fun refreshOutlook() {
+        val source = outlook ?: return
+        try {
+            outlookItems = withContext(Dispatchers.Default) { source.items() }
+        } catch (e: Exception) {
+            log("The To-Do list of Outlook was not read: ${e.message}", e)
+        }
+    }
+
+    /** Opens the item of Outlook that a link of [Outlook.anchor] names; returns whether the link was one. */
+    // [impl->dsn~outlook-tag~1]
+    fun openOutlook(link: String): Boolean {
+        val entryId = Outlook.entryIdOfAnchor(link) ?: return false
+        val source = outlook ?: run {
+            error = "Outlook is not reachable on this device."
+            return true
+        }
+        guarded { source.open(entryId) }
+        return true
+    }
+
+    /** The tasks to show, filtered and in list order: the lines of the file and the items of Outlook that no line names. */
     // [impl->dsn~visible-tasks~1]
+    // [impl->dsn~outlook-items~1]
     val visible: List<Entry>
-        get() = file.entries.filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
@@ -603,6 +643,14 @@ class TodoController(
     }
 
     fun toggle(entry: Entry) {
+        // [impl->dsn~outlook-complete~1]
+        if (Outlook.isItem(entry)) {
+            entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId ->
+                guarded { outlook?.complete(entryId) }
+                outlookItems = outlookItems.filterNot { it.entryId.equals(entryId, ignoreCase = true) }
+            }
+            return
+        }
         val index = locate(entry) ?: return
         if (entry.task.completed) {
             write(file.replace(index, entry.task.reopen()), "Reopen task: ${entry.task.description}")
@@ -611,10 +659,17 @@ class TodoController(
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
             write(new, "Complete task: ${entry.task.description}")
+            // [impl->dsn~outlook-complete~1]
+            entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId -> guarded { outlook?.complete(entryId) } }
         }
     }
 
     fun replace(entry: Entry, task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
+        // [impl->dsn~outlook-items~1]
+        if (Outlook.isItem(entry)) {
+            if (task != entry.task) add(task, note, images)
+            return
+        }
         val index = locate(entry) ?: return
         var noteChanged = false
         guarded { noteChanged = saveNote(task, note, images) }
@@ -648,6 +703,11 @@ class TodoController(
     // [impl->dsn~board-drag-position~1]
     fun move(entry: Entry, from: Group, to: Group, at: Entry? = null, before: Boolean = false) {
         val task = moved(entry, from, to)
+        // [impl->dsn~outlook-items~1]
+        if (Outlook.isItem(entry)) {
+            task?.let(::add)
+            return
+        }
         if (task == null && (from.title != to.title || at == null)) return
         val index = locate(entry) ?: return
         var new = task?.let { file.replace(index, it) } ?: file
@@ -731,6 +791,8 @@ class TodoController(
      * The file may have been reloaded since the entry was shown, so the index is checked against the content.
      */
     private fun locate(entry: Entry): Int? {
+        // An item of Outlook has no line to change: the operations that write one handle it before.
+        if (Outlook.isItem(entry)) return null
         val current = file.entries
         val found = current.firstOrNull { it == entry } ?: current.firstOrNull { it.task == entry.task }
         if (found == null) error = "The task was changed by another program. Nothing was written."

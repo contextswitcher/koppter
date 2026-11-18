@@ -137,6 +137,20 @@ Covers:
 
 Needs: dsn
 
+### Items of Outlook
+`req~outlook-items~1`
+
+The list shows the open items of the To-Do list of the classic desktop Outlook, flagged mails and tasks of all accounts, next to the tasks of the file, without writing them to the file.
+A click opens an item in Outlook.
+When the user gives an item a context or a project, or changes it otherwise, it is written to the file as a task that refers to the item.
+Completing an item, or a task that refers to one, marks it done in Outlook.
+
+Covers:
+
+* `feat~outlook~1`
+
+Needs: dsn
+
 ### Scheduled tasks
 `req~scheduled-tasks~1`
 
@@ -622,6 +636,49 @@ Covers:
 
 * `req~context-switcher-link~1`
 * `adr~context-switcher-tag~1`
+
+Needs: impl, utest
+
+### Items of Outlook in the list
+`dsn~outlook-items~1`
+
+`OutlookTodos` reads the items; on the desktop, `AnchorHubOutlook` runs `ankd outlook-todos` of AnchorHub, installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and reads the JSON array it prints (`parseOutlookTodos`).
+`App` has `TodoController.refreshOutlook` read them at the start and every two minutes; a failure is logged and keeps the items read before.
+`Outlook.entries` makes each item an entry with a negative index, whose task has the subject, `due:` and the tag `ol:` (`Outlook.task`); an item that the tag `ol:` of a line names, open or completed, is left out.
+`TodoController.visible` adds them to the lines of the file, so that filter, order, groups and inbox treat them as tasks.
+`replace` and `move` add the changed task of an item to the file as a new line, with the creation date if dates are written; the other operations that need a line do nothing for an item.
+A subject that would read as the completion mark, a priority or a date at the start of a line gets a hyphen and a blank in front.
+
+Covers:
+
+* `req~outlook-items~1`
+* `adr~outlook-through-anchorhub~1`
+
+Needs: impl, utest
+
+### Tag for an item of Outlook
+`dsn~outlook-tag~1`
+
+The tag `ol:` holds the EntryID of an item of Outlook as its bytes in Base64 for URLs, without padding (`Outlook.tag`, `Outlook.entryId`).
+`TaskLabels` shows the tag as the label *Outlook*, which opens the link `anchor://outlook/message/<EntryID>?v=1` (`Outlook.anchor`); `App` hands such a link to `TodoController.openOutlook`, which runs `ankd outlook-open` with it.
+The link names no store: AnchorHub looks for the EntryID in all of them.
+
+Covers:
+
+* `req~outlook-items~1`
+* `adr~outlook-tag~1`
+
+Needs: impl, utest
+
+### Completion in Outlook
+`dsn~outlook-complete~1`
+
+`TodoController.toggle` of an item runs `ankd outlook-complete` with its link and drops the item from the list until it is read again.
+Completing a task of the file with the tag `ol:` does the same after the line is written; reopening it changes nothing in Outlook.
+
+Covers:
+
+* `req~outlook-items~1`
 
 Needs: impl, utest
 

@@ -58,6 +58,9 @@ import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.todotxt.GroupKey
+import io.github.koppor.koppter.outlook.Outlook
+import io.github.koppor.koppter.outlook.OutlookItem
+import io.github.koppor.koppter.outlook.OutlookTodos
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
@@ -993,6 +996,51 @@ class AppTest {
         onNodeWithTag("settings-save").performScrollTo().performClick()
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
+    }
+
+    // [utest->dsn~outlook-items~1]
+    // [utest->dsn~outlook-tag~1]
+    // [utest->dsn~outlook-complete~1]
+    @Test
+    fun theItemsOfOutlookAreShownAndBecomeALineWhenOneGetsAContext() = runComposeUiTest {
+        val mail = "00000000A1B2C3D4"
+        val task = "00000000E5F60718"
+        val opened = mutableListOf<String>()
+        val completed = mutableListOf<String>()
+        val outlook = object : OutlookTodos {
+            override fun items() = listOf(OutlookItem(mail, "Answer the invitation", LocalDate(2026, 11, 12)), OutlookItem(task, "Book the hotel", null))
+            override fun open(entryId: String) {
+                opened += entryId
+            }
+            override fun complete(entryId: String) {
+                completed += entryId
+            }
+        }
+        val before = storage.text
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithText("Book the hotel", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Answer the invitation", useUnmergedTree = true).assertExists()
+        assertEquals(before, storage.text)
+
+        // The label opens the item in Outlook, not the task.
+        onAllNodesWithTag("label-outlook", useUnmergedTree = true)[0].performClick()
+        assertEquals(1, opened.size)
+        assertTrue(opened.single() in setOf(mail, task))
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // A context writes the item as a line, which then stands for it.
+        runOnIdle { controller.assignContext(controller.inbox.first { it.task.description == "Answer the invitation" }, "phone") }
+        assertEquals("Answer the invitation @phone due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
+        assertEquals(listOf(false), controller.visible.filter { it.task.description == "Answer the invitation" }.map(Outlook::isItem))
+
+        // Completing an item or a line that names one marks it done in Outlook.
+        runOnIdle { controller.toggle(controller.visible.first { it.task.description == "Book the hotel" }) }
+        assertEquals(listOf(task), completed)
+        assertTrue(controller.visible.none { it.task.description == "Book the hotel" })
+        runOnIdle { controller.toggle(controller.visible.first { it.task.description == "Answer the invitation" }) }
+        assertEquals(listOf(task, mail), completed)
+        assertTrue(storage.text.trim().lines().last().startsWith("x "))
     }
 
     // [utest->dsn~context-switcher-tag~1]

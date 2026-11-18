@@ -121,6 +121,7 @@ fun main(args: Array<String>) {
         fetch = { address -> withContext(Dispatchers.IO) { fetchCalendar(address) } },
         // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
         log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
+        outlook = AnchorHubOutlook.installed(),
     )
     val links = Channel<String>(Channel.UNLIMITED)
     link?.let(links::trySend)

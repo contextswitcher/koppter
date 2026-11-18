@@ -241,6 +241,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
+| `ol:AAAAAKGyw9Q` | An item of the To-Do list of the classic Outlook: a flagged mail or a task | This application | Written when an [item of Outlook](#tasks-of-outlook) gets a context, a project or another change. A click on the label *Outlook* opens the item in Outlook ([decision 0040](docs/decisions/0040-tag-for-an-item-of-outlook-with-its-entryid-in-base64.md)). |
 | `pri:A` | The priority a completed task had | [todo.txt format](https://github.com/todotxt/todo.txt#complete-tasks-2-format-rules) | Written when a task with a priority is completed, as the format has no priority for completed tasks; reopening the task restores the priority. |
 
 The option *Only the first 10 tasks* of the filter panel restricts the list to the first tasks, whose number is a setting, as the add-on [top](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#top-see-the-top-tasks) of the todo.txt command line does.
@@ -682,6 +683,19 @@ reading = {} +research @reading due:2w dur:1h
 * The actions are kept in `koppter.yml` next to the `todo.txt` file, so that they can be edited on the desktop.
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
+
+## Tasks of Outlook
+
+On Windows, the list shows the open items of the To-Do list of the classic Outlook next to the tasks of the file: the flagged mails and the tasks of all accounts.
+They are read through [AnchorHub](https://github.com/contextswitcher/anchorhub), which has to be installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and read again every two minutes while Outlook is running ([decision 0039](docs/decisions/0039-outlook-through-anchorhub.md)).
+The file stays as it is until an item is changed.
+
+* An item shows its subject, its due date and the label *Outlook*; a click on the label opens the item in Outlook.
+* An item has no context, so it stands in the [inbox](#inbox) as well.
+* Giving an item a context or a project, in the inbox, on the board or in the edit dialog, writes it to the file as a task with the tag `ol:`, which names the item; so does any other change, such as a due date.
+  From then on, the line stands for the item.
+* Completing an item, or a task whose tag `ol:` names one, marks the flag or the task done in Outlook.
+* An item without a line has no place in the order of the file: it cannot be moved up or down within its group or deleted.
 
 ## Links to koppter
 

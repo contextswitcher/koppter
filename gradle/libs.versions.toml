@@ -12,6 +12,7 @@ appdirs = "1.5.0"
 filekit = "0.17.0"
 compose-pickers = "0.7.0"
 tinylog = "2.8.1"
+kotlinx-serialization = "1.12.0"
 openfasttrace = "3.5.0"
 
 [libraries]
@@ -32,6 +33,7 @@ appdirs = { module = "net.harawata:appdirs", version.ref = "appdirs" }
 compose-pickers = { module = "io.github.kez-lab:compose-pickers", version.ref = "compose-pickers" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
 tinylog-api = { module = "org.tinylog:tinylog-api", version.ref = "tinylog" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 tinylog-impl = { module = "org.tinylog:tinylog-impl", version.ref = "tinylog" }
 tinylog-slf4j = { module = "org.tinylog:slf4j-tinylog", version.ref = "tinylog" }
 jgit-junit-ssh = { module = "org.eclipse.jgit:org.eclipse.jgit.junit.ssh", version.ref = "jgit" }
