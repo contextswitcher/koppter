@@ -126,6 +126,8 @@ fun App(
     takePhoto: (suspend () -> List<ByteArray>)? = null,
     /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
     update: (() -> Unit)? = null,
+    /** Gives the parts of the window that the platform draws, such as the title bar on Windows, the dark or the light variant. */
+    windowVariant: (dark: Boolean) -> Unit = {},
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
 ) {
@@ -134,6 +136,8 @@ fun App(
         Appearance.LIGHT -> false
         Appearance.DARK -> true
     }
+    // [impl->dsn~title-bar-theme~1]
+    LaunchedEffect(dark) { windowVariant(dark) }
     // A link without a program that handles it, such as one of ContextSwitcher on a device without it, is reported.
     val platform = LocalUriHandler.current
     val uriHandler = remember(platform) {
@@ -397,6 +401,16 @@ private fun MainScreen(
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
+                        // The line of the current time and the clock of the running task move on once a minute.
+                        val minute by androidx.compose.runtime.produceState(controller.minuteOfDay()) {
+                            while (true) {
+                                delay(60_000)
+                                value = controller.minuteOfDay()
+                            }
+                        }
+                        val running = controller.running
+                        val clock: (Entry) -> Unit = { if (it == running) controller.stop(it) else controller.start(it) }
+                        running?.let { RunningClock(it, kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60)), onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }) }
                         ViewOptions(controller)
                         // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
                         if (wideNow) searchField(Modifier.padding(8.dp))
@@ -408,16 +422,9 @@ private fun MainScreen(
                                 Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
                             }
                         } else if (controller.view == View.AGENDA) {
-                            Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked)
+                            Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
                         } else if (controller.view == View.TODAY) {
-                            // The line of the current time moves on once a minute.
-                            val now by androidx.compose.runtime.produceState(controller.minuteOfDay()) {
-                                while (true) {
-                                    delay(60_000)
-                                    value = controller.minuteOfDay()
-                                }
-                            }
-                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), now, controller::toggle, open, controller::worked)
+                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock)
                         } else if (controller.view == View.WEEK) {
                             Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {

@@ -1066,6 +1066,8 @@ class AppTest {
         waitUntil { onAllNodesWithText("Book the hotel", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Answer the invitation", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
+        // The agenda lists the item that is due as well.
+        assertTrue(controller.dueUnplanned.any { it.task.description == "Answer the invitation" })
 
         // The label opens the item in Outlook, not the task.
         onAllNodesWithTag("label-outlook", useUnmergedTree = true)[0].performClick()
@@ -1596,6 +1598,33 @@ class AppTest {
         // The tasks are completed where they are shown.
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Schedule pickup" in it })
+    }
+
+    // [utest->dsn~time-tracking~1]
+    @Test
+    fun theClockOfATaskRunsUntilItIsStoppedOrAnotherOneStarts() = runComposeUiTest {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  09:30-10:00 Post signs +GarageSale
+        """.trimIndent() + "\n"
+        var minute = 9 * 60
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { minute })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("agenda-switch").performClick()
+
+        onAllNodesWithTag("clock-start")[0].performClick()
+        assertTrue(storage.text.lines().any { "Schedule pickup" in it && "started:2026-11-12T09:00" in it })
+        onNodeWithTag("running-clock").assertExists()
+        // Starting another task stops the first one, which gets its time.
+        minute = 9 * 60 + 25
+        onAllNodesWithTag("clock-start")[0].performClick()
+        assertTrue(storage.text.lines().any { "Schedule pickup" in it && "spent:25m" in it && "started:" !in it })
+        assertEquals(1, storage.text.lines().count { "started:2026-11-12T09:25" in it })
+        minute = 10 * 60
+        onNodeWithTag("running-clock-stop").performClick()
+        assertTrue("started:" !in storage.text)
+        assertTrue(storage.text.lines().any { "spent:35m" in it })
+        onNodeWithTag("running-clock").assertDoesNotExist()
     }
 
     // [utest->dsn~today~1]

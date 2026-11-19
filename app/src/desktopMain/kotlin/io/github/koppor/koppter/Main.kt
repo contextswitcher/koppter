@@ -116,6 +116,18 @@ private fun refitAfterDisplayChange(window: java.awt.Frame) {
     window.addPropertyChangeListener("graphicsConfiguration") { refit.restart() }
 }
 
+/** Lets Windows draw the title bar of [window] dark or light; other systems keep theirs. */
+// [impl->dsn~title-bar-theme~1]
+private fun titleBarVariant(window: java.awt.Window, dark: Boolean) {
+    // The window is displayable once Compose draws into it, which is when this is called.
+    if (!System.getProperty("os.name").startsWith("Windows") || !window.isDisplayable) return
+    runCatching {
+        // 20 is DWMWA_USE_IMMERSIVE_DARK_MODE, known to Windows 10 since 20H1; older versions return an error, which is ignored.
+        com.sun.jna.Function.getFunction("dwmapi", "DwmSetWindowAttribute")
+            .invokeInt(arrayOf(com.sun.jna.Native.getWindowPointer(window), 20, com.sun.jna.ptr.IntByReference(if (dark) 1 else 0), 4))
+    }.onFailure { Logger.warn(it, "The title bar keeps its colors") }
+}
+
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
     // Before anything else: a start that only hands its link on ends at once.
@@ -196,6 +208,7 @@ fun main(args: Array<String>) {
                 version = remember { ClassLoader.getSystemResource("koppter-version.txt")?.readText()?.ifBlank { null } },
                 // Every change is in the file already, as on closing the window.
                 update = if (updateWaits) ({ exitProcess(RESTART_EXIT_CODE) }) else null,
+                windowVariant = { titleBarVariant(window, it) },
             )
             // [impl->dsn~link-single-instance~1]
             LaunchedEffect(Unit) {

@@ -183,7 +183,7 @@ class TodoController(
         get() {
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
-            return file.entries.filter { entry ->
+            return tasks.filter { entry ->
                 !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
             }.sortedWith(listOrder(today))
         }
@@ -279,8 +279,12 @@ class TodoController(
     private val searched: Filter
         get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
 
+    /** The lines of the file and the items of Outlook that no line names, unfiltered. */
+    // [impl->dsn~outlook-items~1]
+    private val tasks: List<Entry> get() = file.entries + Outlook.entries(outlookItems, file.entries)
+
     val visible: List<Entry>
-        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = tasks.filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
@@ -708,7 +712,10 @@ class TodoController(
         if (entry.task.completed) {
             write(file.replace(index, entry.task.reopen()), "Reopen task: ${entry.task.description}")
         } else {
-            var new = file.replace(index, entry.task.complete(today(), settings.writeDates))
+            // [impl->dsn~time-tracking~1]
+            // A task that is completed while its clock runs gets the time of the clock.
+            val task = if (entry.task.started != null) entry.task.stop(now()) else entry.task
+            var new = file.replace(index, task.complete(today(), settings.writeDates))
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
             write(new, "Complete task: ${entry.task.description}")
@@ -819,6 +826,27 @@ class TodoController(
 
     /** Adds the minutes of a block of the plan to the time spent on its task. */
     // [impl->dsn~time-spent~1]
+    /** The current minute, as the clocks of tasks are written. */
+    fun now(): LocalDateTime = LocalDateTime(today(), LocalTime(minuteOfDay() / 60, minuteOfDay() % 60))
+
+    /** The open task whose clock runs; one at a time. */
+    // [impl->dsn~time-tracking~1]
+    val running: Entry? get() = file.entries.firstOrNull { !it.task.completed && it.task.started != null }
+
+    /** Starts the clock of the task and stops the one that ran, which gets its time. */
+    fun start(entry: Entry) {
+        val index = locate(entry) ?: return
+        var new = file
+        running?.takeIf { it.index != index }?.let { new = new.replace(it.index, it.task.stop(now())) }
+        write(new.replace(index, entry.task.start(now())), "Start working on: ${entry.task.description}")
+    }
+
+    /** Stops the clock of the task and adds its time to the time spent. */
+    fun stop(entry: Entry) {
+        val index = locate(entry) ?: return
+        write(file.replace(index, entry.task.stop(now())), "Stop working on: ${entry.task.description}")
+    }
+
     fun worked(entry: Entry, minutes: Int) {
         val index = locate(entry) ?: return
         write(file.replace(index, entry.task.withSpent(minutes.minutes)), "Note the time spent: ${entry.task.description}")
