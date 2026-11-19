@@ -821,7 +821,8 @@ class TodoController(
 
     fun updateSettings(new: Settings) {
         if (new == settings) return
-        val fileChanged = new.todoFile != settings.todoFile
+        // [impl->dsn~shared-lists-setting~1]
+        val fileChanged = new.todoFile != settings.todoFile || new.sharedLists != settings.sharedLists
         // [impl->dsn~committer~1]
         val committerChanged = new.committerName != settings.committerName || new.committerEmail != settings.committerEmail
         settings = new

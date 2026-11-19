@@ -13,6 +13,8 @@ const val DEFAULT_COMMITTER_EMAIL = "koppter@localhost"
 data class Settings(
     /** Location of the todo.txt file; blank means the platform default. */
     val todoFile: String = "",
+    /** The todo.txt files of the shared lists, one per line; see [SharedLists]. */
+    val sharedLists: String = "",
     /** Write the creation date when a task is added and the completion date when it is completed. */
     val writeDates: Boolean = false,
     /** The number of tasks the *Top* view shows. */
@@ -50,6 +52,7 @@ data class Settings(
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
         TODO_FILE to todoFile,
+        SHARED_LISTS to sharedLists,
         WRITE_DATES to writeDates.toString(),
         TOP_COUNT to topCount.toString(),
         ICE_RECUR_LAST_RUN to iceRecurLastRun,
@@ -70,6 +73,7 @@ data class Settings(
 
     companion object {
         private const val TODO_FILE = "todoFile"
+        private const val SHARED_LISTS = "sharedLists"
         private const val WRITE_DATES = "writeDates"
         private const val TOP_COUNT = "topCount"
         private const val ICE_RECUR_LAST_RUN = "iceRecurLastRun"
@@ -90,6 +94,7 @@ data class Settings(
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
             todoFile = properties[TODO_FILE].orEmpty(),
+            sharedLists = properties[SHARED_LISTS].orEmpty(),
             writeDates = properties[WRITE_DATES].toBoolean(),
             topCount = properties[TOP_COUNT]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().topCount,
             iceRecurLastRun = properties[ICE_RECUR_LAST_RUN].orEmpty(),

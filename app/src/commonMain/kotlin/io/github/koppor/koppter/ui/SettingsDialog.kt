@@ -154,6 +154,7 @@ fun SettingsDialog(
     // That of the application, which reports a link that is not opened; taken outside the dialog as the clipboard is.
     val uriHandler = LocalUriHandler.current
     var todoFile by remember { mutableStateOf(settings.todoFile) }
+    var sharedLists by remember { mutableStateOf(settings.sharedLists) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
@@ -184,7 +185,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks)
+    val state = listOf(todoFile, sharedLists, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -289,6 +290,20 @@ fun SettingsDialog(
                     }
                     if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
                 }
+                // [impl->dsn~shared-lists-setting~1]
+                OutlinedTextField(
+                    value = sharedLists,
+                    onValueChange = { sharedLists = it },
+                    label = { Text("Shared lists") },
+                    supportingText = {
+                        Text(
+                            "The todo.txt files of further lists, such as the clone of a repository shared with other people, one per line." +
+                                " Their tasks are shown with the name of their directory as context, such as @household; a task with that context is written into that file, together with its note.",
+                        )
+                    },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth().testTag("settings-shared-lists"),
+                )
                 Row(
                     Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
                         .testTag("settings-write-dates"),
@@ -397,7 +412,7 @@ fun SettingsDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     fun save(file: String) = onSave(
                         settings.copy(
-                            todoFile = file, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
+                            todoFile = file, sharedLists = sharedLists.trim(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
                             outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks,
                         ),

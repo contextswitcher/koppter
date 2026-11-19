@@ -14,6 +14,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/TimeMaps.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/ConfigFile.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/Settings.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/SharedLists.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/TodoStorage.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/sync/LineMerge.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/sync/TaskHistory.kt

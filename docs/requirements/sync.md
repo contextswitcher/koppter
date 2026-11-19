@@ -86,6 +86,20 @@ Covers:
 
 Needs: dsn
 
+### Shared lists
+`req~shared-lists~1`
+
+The settings name further todo.txt files, such as those of clones of repositories shared with other people.
+Their tasks are shown together with those of the main file, each with a context named after the directory of its file.
+A new task with that context, or with a level below it, is written into that file, a task without such a context into the main file; changing the context moves the task with its note.
+A line of a file is written back unchanged unless the user edited it; the context of the list is not written into the file of the list.
+
+Covers:
+
+* `feat~shared-lists~1`
+
+Needs: dsn
+
 ## Design
 
 ### Detection of the repository
@@ -301,3 +315,34 @@ Covers:
 * `req~clone-in-app~1`
 
 Needs: impl, utest
+
+### Shared lists in one storage
+`dsn~shared-lists~1`
+
+`SharedLists` is a storage that combines the storage of the main file with one storage per shared list, each a `GitStorage` or a `FileStorage` as for the main file.
+It reads the lines of the main file, followed by those of each list with the context of the list appended (`SharedLists.shown`), unless the line has that context or a level below it.
+On a write, it gives each line that has the context of a list, or a level below it, to the first such list without the context (`SharedLists.stripped`), every other line to the main file, and a blank line to the file of the line above it.
+It writes only the files whose lines changed or whose companion files were written.
+A note that does not exist yet waits until the line that names it is written and goes to the file of that line, with the images that it shows; the note of a line that is new in a file is copied there from the file that has it.
+A note is read from the first file that has it; the other companion files are those of the main file.
+The synchronization status is the first failure of a storage, prefixed with the name of its list, else the first running one.
+Without a shared list, and for a main storage without companion files, the main storage is used alone (`SharedLists.of`).
+
+Covers:
+
+* `req~shared-lists~1`
+* `adr~shared-lists~1`
+
+Needs: impl, utest
+
+### Setting of the shared lists
+`dsn~shared-lists-setting~1`
+
+The settings dialog has the field *Shared lists* below the field of the file, with one todo.txt file per line.
+A change of the field opens the files anew, as a change of the file does.
+
+Covers:
+
+* `req~shared-lists~1`
+
+Needs: impl

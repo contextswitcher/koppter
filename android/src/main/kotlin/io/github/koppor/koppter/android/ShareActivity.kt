@@ -12,6 +12,7 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.plan.fetchCalendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -71,7 +72,13 @@ class ShareActivity : Activity() {
 internal suspend fun noteImage(bytes: ByteArray): ByteArray = FileKit.compressImage(bytes, maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE)
 
 // [impl->dsn~android-locations~1]
-internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
+// [impl->dsn~shared-lists~1]
+internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage =
+    SharedLists.of(mainStorage(settings, gitSetup), settings.sharedLists) {
+        gitSetup.storageFor(java.nio.file.Paths.get(it), settings.committerName, settings.committerEmail)
+    }
+
+private fun Context.mainStorage(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
     settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"), settings.committerName, settings.committerEmail)
     // A folder comes from the picker as the root of a tree of documents.
     settings.todoFile.startsWith("content:") ->

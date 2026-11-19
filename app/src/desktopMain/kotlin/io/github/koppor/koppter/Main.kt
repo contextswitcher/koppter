@@ -15,6 +15,7 @@ import io.github.koppor.koppter.plan.fetchCalendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.storage.SettingsFile
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.logToFile
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.sync.storageForFile
@@ -134,7 +135,11 @@ fun main(args: Array<String>) {
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
     val controller = TodoController(
         settings = settingsFile.load(),
-        storageFor = { storageForFile(it.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile, it.committerName, it.committerEmail) },
+        storageFor = { settings ->
+            fun storageOf(file: Path) = storageForFile(file, settings.committerName, settings.committerEmail)
+            // [impl->dsn~shared-lists~1]
+            SharedLists.of(storageOf(settings.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile), settings.sharedLists) { storageOf(Path(it)) }
+        },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },
         minuteOfDay = { java.time.LocalTime.now().toSecondOfDay() / 60 },
