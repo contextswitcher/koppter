@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- A time map can have its own times on dates, such as `General 2026-12-24..2027-01-06 = 10:00-12:00` for a vacation or `General 2026-12-25 2026-12-26 = none` for holidays; on these dates they replace the times of the map.
 - *Start* beside a task of today in the agenda and in *Today* starts a clock on it, written as `started:` into the task; a bar above every view shows the task and the time since its start, and *Stop* adds that time to `spent:`.
 - *Today* shows the agenda of today beside the day as a calendar with a line at the current time and the sum of the planned time; Ctrl+7 opens it.
 - The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.

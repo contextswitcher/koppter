@@ -93,7 +93,8 @@ fun PlanDialog(
                     "When tasks are planned, one map per line: General = Mon-Fri 08:00-12:00 13:00-18:00. " +
                         "A map that starts with the name of another one is restricted to its times: Morning-Focus = General 08:00-11:00. " +
                         "The first map is for tasks whose contexts name none. Without a map: Mon-Fri 09:00-17:00. " +
-                        "A rule may end with yellow, red or black: Mon-Fri 07:00-08:00 yellow; Paint shows the map on a week.",
+                        "A rule may end with yellow, red or black: Mon-Fri 07:00-08:00 yellow; Paint shows the map on a week. " +
+                        "Dates after the name replace the map on these dates: General 2026-12-24..2027-01-06 = 10:00-12:00, or none for no time.",
                     "plan-time-maps",
                 )
                 // [impl->dsn~time-map-editor~1]

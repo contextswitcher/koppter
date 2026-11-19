@@ -270,6 +270,22 @@ Covers:
 
 Needs: impl, utest
 
+### Time maps on dates
+`dsn~time-maps-on-dates~1`
+
+A name of a time map followed by dates, such as `General 2026-12-24..2027-01-06 2027-04-03`, gives a definition of that map on these dates, for example for a vacation or for holidays.
+On such a date it replaces the definition without dates; of two entries with the date, the later one holds.
+The definition `none` leaves no time on these dates.
+A map that has only entries with dates has no time on the other dates.
+What is not a date is reported and otherwise ignored.
+*Paint* edits each entry by itself.
+
+Covers:
+
+* `req~time-maps~1`
+
+Needs: impl, utest
+
 ### Configuration of planning
 `dsn~plan-configuration~1`
 

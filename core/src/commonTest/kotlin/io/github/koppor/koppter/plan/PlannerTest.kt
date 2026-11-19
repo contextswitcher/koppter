@@ -52,6 +52,34 @@ class PlannerTest {
         assertEquals(emptyList(), maps.problems)
     }
 
+    // [utest->dsn~time-maps-on-dates~1]
+    @Test
+    fun aMapOnDatesReplacesItsDefinitionOnTheseDates() {
+        val dated = TimeMaps(
+            listOf(
+                "General" to "Mon-Fri 08:00-18:00",
+                "Focus" to "General 07:00-10:00",
+                "General 2026-11-13..2026-11-20" to "10:00-12:00",
+                "General 2026-11-16" to "none",
+                "Trip 2026-11-14" to "Sat 09:00-11:00",
+                "Typo 2026-13-01" to "Mon",
+            ),
+        )
+        assertEquals(listOf(span("08:00", "18:00")), dated.spans("General", today))
+        assertEquals(listOf(span("10:00", "12:00")), dated.spans("General", friday))
+        assertEquals(listOf(span("10:00", "12:00")), dated.spans("General", saturday))
+        // The later entry wins, and a map restricted to General follows it.
+        assertEquals(emptyList(), dated.spans("General", monday))
+        assertEquals(emptyList(), dated.spans("Focus", monday))
+        assertEquals(emptyList(), dated.spans("Focus", friday))
+        assertEquals(listOf(span("08:00", "10:00")), dated.spans("Focus", today))
+        // A map with dates only has no time on the other dates.
+        assertEquals(listOf(span("09:00", "11:00")), dated.spans("Trip", saturday))
+        assertEquals(emptyList(), dated.spans("Trip", today))
+        assertEquals(true, "Trip" in dated)
+        assertEquals(listOf("Typo 2026-13-01: \"2026-13-01\" is not a date"), dated.problems)
+    }
+
     // [utest->dsn~time-maps~1]
     @Test
     fun withoutMapsTheTimesAreOfficeHoursAndWhatIsNotUnderstoodIsReported() {

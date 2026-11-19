@@ -51,21 +51,35 @@ enum class Paint {
  * A rule without days holds on every day, and a rule without times for the whole day.
  * A rule may name its color: `yellow`, `red` or `black`; without, its times are green. A later rule paints over an earlier one.
  * A definition that starts with the name of another map is restricted to the times of that map: `General 08:00-11:00`.
+ * A name followed by dates, such as `General 2026-12-24..2027-01-06 2027-04-03`, gives the map on these dates instead of its definition;
+ * the later of two such entries wins, and `none` as definition leaves no time on these dates.
  */
 // [impl->dsn~time-maps~1]
 class TimeMaps(definitions: List<Pair<String, String>>) {
     private class Rule(val days: Set<Int>, val spans: List<Span>, val paint: Paint)
 
-    private class Definition(val parent: String?, val rules: List<Rule>)
+    private class Definition(val map: String, val dates: List<ClosedRange<LocalDate>>, val parent: String?, val rules: List<Rule>)
 
     /** What was not understood, as texts for the user. */
     val problems = mutableListOf<String>()
 
-    private val maps: Map<String, Definition> = definitions.associate { (name, text) ->
-        val names = definitions.map { it.first }.toSet() - name
+    /** The definitions by the names in the field, which for a map on dates carry these dates. */
+    private val entries: Map<String, Definition> = definitions.associate { (key, text) ->
+        val name = key.trim().substringBefore(' ')
+        // [impl->dsn~time-maps-on-dates~1]
+        val dates = key.trim().substringAfter(' ', "").split(WHITESPACE).filter(String::isNotEmpty).mapNotNull { token ->
+            try {
+                LocalDate.parse(token.substringBefore(".."))..LocalDate.parse(token.substringAfter(".."))
+            } catch (_: IllegalArgumentException) {
+                problems += "$key: \"$token\" is not a date"
+                null
+            }
+        }
+        val names = definitions.map { it.first.trim().substringBefore(' ') }.toSet() - name
         val first = text.trim().substringBefore(' ')
         val parent = first.takeIf { it in names }
-        val rules = (if (parent == null) text else text.trim().removePrefix(first)).split(',').map(String::trim).filter(String::isNotEmpty).map { rule ->
+        val none = dates.isNotEmpty() && text.trim() == "none"
+        val rules = (if (none) "" else if (parent == null) text else text.trim().removePrefix(first)).split(',').map(String::trim).filter(String::isNotEmpty).map { rule ->
             val days = mutableSetOf<Int>()
             val spans = mutableListOf<Span>()
             var paint = Paint.GREEN
@@ -83,16 +97,23 @@ class TimeMaps(definitions: List<Pair<String, String>>) {
             }
             Rule(days.ifEmpty { (1..7).toSet() }, spans.ifEmpty { listOf(Span(0, MINUTES_PER_DAY)) }, paint)
         }
-        name to Definition(parent, rules.ifEmpty { listOf(Rule((1..7).toSet(), listOf(Span(0, MINUTES_PER_DAY)), Paint.GREEN)) })
+        key to Definition(name, dates, parent, if (none) emptyList() else rules.ifEmpty { listOf(Rule((1..7).toSet(), listOf(Span(0, MINUTES_PER_DAY)), Paint.GREEN)) })
     }
 
+    private val maps: Set<String> = entries.values.map { it.map }.toSet()
+
     /** The map for tasks whose contexts name none: the first one. */
-    val default: String? = definitions.firstOrNull()?.first
+    val default: String? = entries.values.firstOrNull()?.map
 
     operator fun contains(name: String): Boolean = name in maps
 
-    /** The map whose times restrict those of the map, if its definition names one. */
-    fun parentOf(name: String): String? = maps[name]?.parent
+    /** The map whose times restrict those of the entry of the field, if its definition names one. */
+    fun parentOf(name: String): String? = entries[name]?.parent
+
+    /** The definition of the map on the date: that of the last entry with the date, else the one without dates; `null` if neither exists. */
+    // [impl->dsn~time-maps-on-dates~1]
+    private fun on(name: String, date: LocalDate): Definition? =
+        entries.values.lastOrNull { it.map == name && it.dates.any { range -> date in range } } ?: entries[name]?.takeIf { it.dates.isEmpty() }
 
     /**
      * The times of the map on the day; those of the [default] map for `null` or a name that no map has.
@@ -100,23 +121,25 @@ class TimeMaps(definitions: List<Pair<String, String>>) {
      */
     fun spans(name: String?, date: LocalDate, paint: Paint = Paint.GREEN): List<Span> {
         val map = name?.takeIf { it in maps } ?: default
-        val day = date.dayOfWeek.isoDayNumber
-        val own = generateSequence(map) { maps[it]?.parent }.take(maps.size + 1).toSet()
-        val exclusive = (maps.keys - own).flatMap { other -> painted(other, day).filter { it.second == Paint.BLACK }.map { it.first } }
-        return spans(map, day, paint, emptySet()).without(exclusive)
+        val own = generateSequence(map) { on(it, date)?.parent }.take(maps.size + 1).toSet()
+        val exclusive = (maps - own).flatMap { other -> on(other, date)?.let { painted(it, date) }.orEmpty().filter { it.second == Paint.BLACK }.map { it.first } }
+        return spans(map, date, paint, emptySet()).without(exclusive)
     }
 
-    private fun spans(name: String?, day: Int, paint: Paint, seen: Set<String>): List<Span> {
+    private fun spans(name: String?, date: LocalDate, paint: Paint, seen: Set<String>): List<Span> {
         // Without any map, the working hours of an office.
-        val map = maps[name] ?: return if (day <= 5) listOf(Span(9 * 60, 17 * 60)) else emptyList()
-        val own = painted(name!!, day).filter { it.second.rank <= paint.rank }.map { it.first }.joined()
+        if (name == null) return if (date.dayOfWeek.isoDayNumber <= 5) listOf(Span(9 * 60, 17 * 60)) else emptyList()
+        val map = on(name, date) ?: return emptyList()
+        val own = painted(map, date).filter { it.second.rank <= paint.rank }.map { it.first }.joined()
         // A map that is restricted to itself over other maps is not restricted; the times of the map it names count in all colors.
-        return if (map.parent == null || map.parent in seen) own else own.within(spans(map.parent, day, Paint.RED, seen + name))
+        return if (map.parent == null || map.parent in seen) own else own.within(spans(map.parent, date, Paint.RED, seen + name))
     }
+
+    private fun painted(map: Definition, date: LocalDate) = painted(map, date.dayOfWeek.isoDayNumber)
 
     /** The times that the rules of the map paint on the day, a later rule over an earlier one. */
-    private fun painted(name: String, day: Int): List<Pair<Span, Paint>> =
-        maps.getValue(name).rules.filter { day in it.days }.fold(emptyList()) { result, rule ->
+    private fun painted(map: Definition, day: Int): List<Pair<Span, Paint>> =
+        map.rules.filter { day in it.days }.fold(emptyList()) { result, rule ->
             result.flatMap { (span, paint) -> listOf(span).without(rule.spans).map { it to paint } } + rule.spans.map { it to rule.paint }
         }
 
@@ -126,7 +149,7 @@ class TimeMaps(definitions: List<Pair<String, String>>) {
      */
     // [impl->dsn~time-map-editor~1]
     fun cells(name: String): List<Paint?> = (1..7).flatMap { day ->
-        val painted = if (name in maps) painted(name, day) else emptyList()
+        val painted = entries[name]?.let { painted(it, day) }.orEmpty()
         (0 until CELLS_PER_DAY).map { cell ->
             val middle = cell * CELL + CELL / 2
             painted.lastOrNull { (span, _) -> middle in span.start until span.end }?.second
