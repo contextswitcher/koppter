@@ -48,6 +48,7 @@ import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.storage.SharedLists
 import kotlinx.coroutines.launch
 import io.github.koppor.koppter.outlook.OutlookCalendar
 
@@ -77,6 +78,9 @@ interface GitSetupActions {
 
     /** Clones the repository and returns the location of its todo.txt file. */
     suspend fun clone(url: String): String
+
+    /** Clones the repository of a shared list next to the other clones and returns the location of its todo.txt file. */
+    suspend fun cloneShared(url: String): String
 
     /** Fails as [clone] would if the server is not reached or does not let this device in; clones nothing. */
     suspend fun check(url: String)
@@ -155,6 +159,9 @@ fun SettingsDialog(
     val uriHandler = LocalUriHandler.current
     var todoFile by remember { mutableStateOf(settings.todoFile) }
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
+    var sharedAddress by remember { mutableStateOf("") }
+    var sharedMessage by remember { mutableStateOf("") }
+    var sharedFailed by remember { mutableStateOf(false) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
@@ -304,6 +311,48 @@ fun SettingsDialog(
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth().testTag("settings-shared-lists"),
                 )
+                if (git != null) {
+                    // [impl->dsn~shared-list-clone~1]
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        OutlinedTextField(
+                            value = sharedAddress,
+                            onValueChange = { sharedAddress = if (it.length > sharedAddress.length + 1) sshAddress(it) else it },
+                            label = { Text("Address of a shared repository") },
+                            singleLine = true,
+                            modifier = Modifier.weight(1f).testTag("settings-shared-address"),
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                cloning = true
+                                sharedFailed = false
+                                sharedMessage = "Cloning"
+                                scope.launch {
+                                    try {
+                                        val file = git.cloneShared(sshAddress(sharedAddress.trim()))
+                                        if (file !in sharedLists.lines().map(String::trim)) sharedLists = (sharedLists.trimEnd().lines().filter(String::isNotBlank) + file).joinToString("\n")
+                                        sharedAddress = ""
+                                        sharedMessage = "Cloned. After Save, its tasks show with the context @${SharedLists.name(file)}."
+                                    } catch (e: Exception) {
+                                        sharedFailed = true
+                                        onGitFailed("Clone of a shared list failed", e)
+                                        sharedMessage = "Not cloned: ${failureText(e)}"
+                                    }
+                                    cloning = false
+                                }
+                            },
+                            enabled = isGitAddress(sharedAddress.trim()) && !cloning,
+                            modifier = Modifier.testTag("settings-clone-shared"),
+                        ) { Text("Clone") }
+                    }
+                    if (sharedMessage.isNotEmpty()) {
+                        Text(
+                            sharedMessage,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (sharedFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
+                            modifier = Modifier.testTag("settings-shared-message"),
+                        )
+                    }
+                }
                 Row(
                     Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
                         .testTag("settings-write-dates"),

@@ -53,4 +53,31 @@ class GitSetupTest {
         assertEquals("Call Mom\n", GitSetup(root.resolve("desktop"), ownKey = false).clone(url).readText())
         assertFalse(root.resolve("desktop/ssh").exists())
     }
+
+    // [utest->dsn~shared-list-clone~1]
+    @Test
+    fun clonesASharedListIntoADirectoryNamedAfterTheRepository() {
+        fun origin(name: String) = root.resolve(name).resolve("household.git").also { origin ->
+            Git.init().setInitialBranch("main").setDirectory(origin.toFile()).call().use { git ->
+                origin.resolve("todo.txt").writeText("Buy milk\n")
+                git.add().addFilepattern("todo.txt").call()
+                git.commit().setMessage("Add task: Buy milk").call()
+            }
+        }
+        val first = origin("a").toUri().toString()
+        val second = origin("b").toUri().toString()
+
+        val file = setup.cloneShared(first)
+        assertEquals(setup.sharedDirectory.resolve("household/todo.txt"), file)
+        file.writeText("Buy milk\nNot yet committed\n")
+        assertEquals(file, setup.cloneShared(first))
+        assertEquals("Buy milk\nNot yet committed\n", file.readText())
+
+        // Another repository of the same name does not replace the clone.
+        assertEquals(setup.sharedDirectory.resolve("household-2/todo.txt"), setup.cloneShared(second))
+        assertEquals("Buy milk\nNot yet committed\n", file.readText())
+        // The main clone is another directory.
+        assertEquals("Buy milk\n", setup.clone(first).readText())
+        assertEquals("Buy milk\nNot yet committed\n", file.readText())
+    }
 }
