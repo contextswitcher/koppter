@@ -183,7 +183,7 @@ class TodoController(
         get() {
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
-            return file.entries.filter { entry ->
+            return tasks.filter { entry ->
                 !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
             }.sortedWith(listOrder(today))
         }
@@ -279,8 +279,12 @@ class TodoController(
     private val searched: Filter
         get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
 
+    /** The lines of the file and the items of Outlook that no line names, unfiltered. */
+    // [impl->dsn~outlook-items~1]
+    private val tasks: List<Entry> get() = file.entries + Outlook.entries(outlookItems, file.entries)
+
     val visible: List<Entry>
-        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = tasks.filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]

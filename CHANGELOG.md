@@ -19,6 +19,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
 - On Android, commits without a configured name are made in the name of the device and with the email address `koppter@android<version>`, such as `koppter@android14`, instead of `koppter` and `koppter@localhost`.
 
+### Fixed
+
+- The agenda lists the due items of the To-Do list of Outlook below today, as the list and the inbox do.
+
 ## [2026-11-18] - 2026-11-18
 
 ### Added

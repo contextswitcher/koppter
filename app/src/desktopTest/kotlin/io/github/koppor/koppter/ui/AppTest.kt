@@ -1064,6 +1064,8 @@ class AppTest {
         waitUntil { onAllNodesWithText("Book the hotel", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Answer the invitation", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
+        // The agenda lists the item that is due as well.
+        assertTrue(controller.dueUnplanned.any { it.task.description == "Answer the invitation" })
 
         // The label opens the item in Outlook, not the task.
         onAllNodesWithTag("label-outlook", useUnmergedTree = true)[0].performClick()
