@@ -153,6 +153,18 @@ Covers:
 
 Needs: dsn
 
+### Time tracking
+`req~time-tracking~1`
+
+The user starts a clock on a task when beginning to work on it and stops it when pausing or done; the time in between adds to the time spent.
+One clock runs at a time, and the task whose clock runs is always visible.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan as a file
 `req~plan-file~1`
 
@@ -553,6 +565,34 @@ Needs: impl, utest
 Below the blocks of today, it lists the open tasks that are due today or earlier and have no block today (`TodoController.dueUnplanned`).
 `Week` shows the seven days of a week from Monday as columns with the hours running down, at least from 08:00 to 18:00, and each block at its time; the hours share the height of the window, so that the whole week is seen without scrolling also on a phone that is held upright, and are at least 20 dp high; buttons move by a week, and a click on a block opens its task.
 Both views show what the file says and do not plan.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### Clock of a task
+`dsn~time-tracking~1`
+
+The tag `started:` holds the local date and minute of the start of the clock, such as `started:2026-11-19T16:50`; `Task.started` reads it.
+`Task.stop` adds the minutes since then to `spent:` through `Task.withSpent` and removes the tag; a start after the current time adds nothing.
+`TodoController.start` stops the clock that runs, in the same write, and `TodoController.toggle` stops the clock of a task that is completed; the next occurrence of a recurring task has no clock.
+The agenda and today have *Start* or *Stop* beside each task of today, and a bar above every view shows the task whose clock runs, its start and the time since it, with *Stop*.
+
+Covers:
+
+* `req~time-tracking~1`
+* `adr~clock-tag~1`
+
+Needs: impl, utest
+
+### Today
+`dsn~today~1`
+
+`Today` shows the agenda of today on the left and the blocks of today as a calendar on the right, as a column of `Week`, with a line at the current minute, which moves on once a minute.
+Above them, it shows the sum of the planned time of the blocks of today whose task is open.
+The calendar is 260 dp wide; below a width of 760 dp, it is left out.
 
 Covers:
 

@@ -9,12 +9,15 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- *Start* beside a task of today in the agenda and in *Today* starts a clock on it, written as `started:` into the task; a bar above every view shows the task and the time since its start, and *Stop* adds that time to `spent:`.
+- *Today* shows the agenda of today beside the day as a calendar with a line at the current time and the sum of the planned time; Ctrl+7 opens it.
 - The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.
 - The `ice_recur.txt` of a shared list schedules tasks into that list.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
 
 ### Changed
 
+- On Windows, the title bar of the window follows the light or dark variant of the colors.
 - The note of a task that moves between the main list and a shared list moves with its images and is deleted where it was.
 - The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
 - On Android, commits without a configured name are made in the name of the device and with the email address `koppter@android<version>`, such as `koppter@android14`, instead of `koppter` and `koppter@localhost`.

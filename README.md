@@ -241,6 +241,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `deadline:2026-11-30` | The day that others set for the task, next to the day to have it done by | This application | Field *Deadline* in the edit dialog, or typed into the task; see [Deadline next to the due date](#deadline-next-to-the-due-date) ([decision 0028](docs/decisions/0028-tag-for-the-deadline-next-to-the-due-date.md)). |
 | `at:12:00` | The time of the day at which the task takes place | This application | Field *Fixed time* in the edit dialog, or typed into the task. [Planning](#fixed-times) gives the task that time and plans the others around it ([decision 0021](docs/decisions/0021-tag-for-the-fixed-time-of-a-task.md)). |
 | `spent:1h30m` | The time that was worked on the task so far | This application | Field *Time spent* in the edit dialog, the button of a block in the agenda, or typed into the task. [Planning](#time-spent) gives the task the rest of its duration ([decision 0034](docs/decisions/0034-tag-for-the-time-spent-on-a-task.md)). |
+| `started:2026-11-19T16:50` | The start of the clock of the task, while it runs | This application | *Start* beside a task of today in the agenda or in *Today*; *Stop* adds the time since then to `spent:` and removes the tag ([decision 0044](docs/decisions/0044-clock-of-a-task-as-a-tag-with-its-start.md)). |
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
@@ -583,6 +584,10 @@ A task with the tag `spent:` was worked on already: the plan gives it the rest o
 * The field *Time spent* of the edit dialog holds the sum and corrects it.
 * A completed task keeps both tags and tells what it was estimated at and what it took; the next occurrence of a recurring task starts without time spent.
 
+*Start* beside a task of today in the agenda and in *Today* starts its clock, and writes the start into the task, such as `started:2026-11-19T16:50`.
+A bar above every view then shows the task, the start and the time since it.
+*Stop* there or beside the task adds that time to `spent:` and removes the start; starting another task stops the clock that runs, and completing the task stops its own ([decision 0044](docs/decisions/0044-clock-of-a-task-as-a-tag-with-its-start.md)).
+
 ### Travel time
 
 A task with the tag `tt:` takes place somewhere else: the plan keeps the stated time free before and after it, for the way there and the way back.
@@ -606,6 +611,11 @@ Below the blocks of today are the tasks that are due today or overdue and have n
 *Week* shows the blocks of a week as a calendar; a click on a block opens its task.
 
 ![Plan of a week as a calendar](docs/screenshots/week.png)
+
+*Today* shows the agenda of today beside the day as a calendar, with a line at the current time, and the sum of the time planned for today.
+On a narrow screen, it shows the agenda of today only.
+
+![Today beside its calendar](docs/screenshots/today.png)
 
 Both show what `calendar.txt` says: after tasks changed, *Plan* brings it up to date.
 A block whose task was completed, deleted or edited since shows the text it was planned with.
@@ -677,8 +687,8 @@ Do not enter the published address of the same calendar under *Calendars with bu
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
-| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
-| Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
+| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda, the week and today, this shows the list |
+| Ctrl+1 to Ctrl+7 | Overview, agenda, week, board, list, inbox, today |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
 

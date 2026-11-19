@@ -75,7 +75,7 @@ import kotlin.time.Duration.Companion.minutes
 // ponytail: file access runs on the caller's thread; move it off the UI thread when a storage is slow (network).
 /** What the main screen shows of the tasks. */
 // From the views that show what is up to those that change the tasks.
-enum class View(val title: String) { OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), LIST("List"), INBOX("Inbox") }
+enum class View(val title: String) { OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), LIST("List"), INBOX("Inbox"), TODAY("Today") }
 
 class TodoController(
     settings: Settings,
@@ -83,7 +83,7 @@ class TodoController(
     private val saveSettings: (Settings) -> Unit = {},
     val today: () -> LocalDate,
     /** The minutes of today that have passed. */
-    private val minuteOfDay: () -> Int = { 0 },
+    val minuteOfDay: () -> Int = { 0 },
     /** Reads the file at an address of the web; `null` if the platform cannot. */
     private val fetch: (suspend (String) -> String)? = null,
     /** Takes what failed, with its cause if there is one, for the log of the platform. */
@@ -712,7 +712,10 @@ class TodoController(
         if (entry.task.completed) {
             write(file.replace(index, entry.task.reopen()), "Reopen task: ${entry.task.description}")
         } else {
-            var new = file.replace(index, entry.task.complete(today(), settings.writeDates))
+            // [impl->dsn~time-tracking~1]
+            // A task that is completed while its clock runs gets the time of the clock.
+            val task = if (entry.task.started != null) entry.task.stop(now()) else entry.task
+            var new = file.replace(index, task.complete(today(), settings.writeDates))
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
             write(new, "Complete task: ${entry.task.description}")
@@ -823,6 +826,27 @@ class TodoController(
 
     /** Adds the minutes of a block of the plan to the time spent on its task. */
     // [impl->dsn~time-spent~1]
+    /** The current minute, as the clocks of tasks are written. */
+    fun now(): LocalDateTime = LocalDateTime(today(), LocalTime(minuteOfDay() / 60, minuteOfDay() % 60))
+
+    /** The open task whose clock runs; one at a time. */
+    // [impl->dsn~time-tracking~1]
+    val running: Entry? get() = file.entries.firstOrNull { !it.task.completed && it.task.started != null }
+
+    /** Starts the clock of the task and stops the one that ran, which gets its time. */
+    fun start(entry: Entry) {
+        val index = locate(entry) ?: return
+        var new = file
+        running?.takeIf { it.index != index }?.let { new = new.replace(it.index, it.task.stop(now())) }
+        write(new.replace(index, entry.task.start(now())), "Start working on: ${entry.task.description}")
+    }
+
+    /** Stops the clock of the task and adds its time to the time spent. */
+    fun stop(entry: Entry) {
+        val index = locate(entry) ?: return
+        write(file.replace(index, entry.task.stop(now())), "Stop working on: ${entry.task.description}")
+    }
+
     fun worked(entry: Entry, minutes: Int) {
         val index = locate(entry) ?: return
         write(file.replace(index, entry.task.withSpent(minutes.minutes)), "Note the time spent: ${entry.task.description}")
