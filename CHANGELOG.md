@@ -13,11 +13,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. An item carries the hashtag `#outlook`, and its label *Outlook* opens it in Outlook. Giving an item a context or a project, or another change, writes it to the file with the hashtag and the tag `ol:`; completing it in koppter marks it done in Outlook.
 - Planning writes the blocks of the next three weeks into the main calendar of Outlook as private, tentative appointments whose subject ends with `[koppter]`, replaces them with each plan and takes the other appointments of that calendar as busy times; the settings name the account and the weeks. *Remove koppter's blocks from Outlook* in the settings deletes them after a confirmation of their number and leaves every other appointment alone.
 - On Android, the last line of the settings shows the version and the commit of the build; a long press on it copies the hash of the commit.
-
 - A widget for the Android home screen shows the plan from now on by day, or the open tasks of the list if nothing is planned.
+- *Name of the commits* and *Email address of the commits* in the git section of the settings set the committer of the commits of this device; empty, the git configuration applies, and without one `koppter` and `koppter@localhost`, which the fields name.
 
 ### Changed
 
+- On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
 - A search in the list or the inbox also finds the tasks before their start date.
 - The agenda shows tomorrow and the day after it also when nothing is planned on them.
 - The switches of the views are in the order *Overview*, *Agenda*, *Week*, *Board*, *List*, *Inbox*; Ctrl+1 to Ctrl+6 follow that order.
@@ -45,12 +46,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
 - *Check connection* in the settings, next to *Choose folder*, tells whether the server of the git repository in the field of the file is reached and lets the device in, without cloning.
-- *Name of the commits* and *Email address of the commits* in the git section of the settings set the committer of the commits of this device; empty, the git configuration applies, and without one `koppter` and `koppter@localhost`, which the fields name.
 - `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
 
 ### Changed
 
-- On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
 - The heading of a group of the list, such as *Next (33)*, stays at the top while its tasks are scrolled.
 - *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
 - A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.
