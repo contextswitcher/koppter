@@ -147,5 +147,5 @@ internal fun parseOutlookBusy(json: String): List<OutlookBusy> =
             "elsewhere" -> BusyStatus.ELSEWHERE
             else -> BusyStatus.BUSY
         }
-        OutlookBusy(time("start") ?: return@mapNotNull null, time("end") ?: return@mapNotNull null, item["allDay"]?.jsonPrimitive?.booleanOrNull ?: false, status)
+        OutlookBusy(time("start") ?: return@mapNotNull null, time("end") ?: return@mapNotNull null, item["allDay"]?.jsonPrimitive?.booleanOrNull ?: false, status, item["subject"]?.jsonPrimitive?.contentOrNull.orEmpty())
     }

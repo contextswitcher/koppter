@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- *Sideline* in the plan dialog names words: an event of the calendars with busy times whose title contains one of them, such as a regular appointment of someone else, stays in the calendar, but tasks are planned into its time; a repeating event with all its occurrences.
 - *Shared lists* in the settings names further todo.txt files, such as clones of repositories shared with a household or a shared flat. Their tasks are shown with the name of their directory as context, such as `@household`; a task with that context is written into that file together with its note, any other task into the main file.
 - The times of a time map can be green, yellow, red or black, as in SkedPal: tasks are planned in green times; yellow and then red times are taken only for a task that would otherwise be done after its due date or not before its barrier; black times are left to the tasks of their own map. *Paint* in the plan dialog paints a time map on the days of a week.
 - On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. An item carries the hashtag `#outlook`, and its label *Outlook* opens it in Outlook. Giving an item a context or a project, or another change, writes it to the file with the hashtag and the tag `ol:`; completing it in koppter marks it done in Outlook.

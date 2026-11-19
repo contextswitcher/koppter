@@ -3,6 +3,7 @@ package io.github.koppor.koppter.outlook
 import io.github.koppor.koppter.plan.Block
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.plan.Span
+import io.github.koppor.koppter.plan.sidelined
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -16,7 +17,7 @@ data class OutlookBlock(val id: String, val start: LocalDateTime, val end: Local
 enum class BusyStatus { FREE, TENTATIVE, BUSY, OOF, ELSEWHERE }
 
 /** An appointment of Outlook as far as planning needs it. */
-data class OutlookBusy(val start: LocalDateTime, val end: LocalDateTime, val allDay: Boolean, val status: BusyStatus)
+data class OutlookBusy(val start: LocalDateTime, val end: LocalDateTime, val allDay: Boolean, val status: BusyStatus, val subject: String = "")
 
 // [impl->dsn~outlook-blocks~1]
 object OutlookCalendar {
@@ -42,12 +43,14 @@ object OutlookCalendar {
     /**
      * The times that the appointments take, by day: those that are not free and have a start time.
      * Whole-day appointments are left out, as [io.github.koppor.koppter.plan.busyTimes] does for an iCalendar file.
-     * The blocks of koppter are not among them: AnchorHub leaves them out.
+     * The blocks of koppter are not among them: AnchorHub leaves them out. Nor are the [sidelined] ones.
      */
-    fun busyTimes(appointments: List<OutlookBusy>): Map<LocalDate, List<Span>> {
+    fun busyTimes(appointments: List<OutlookBusy>, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> {
         val result = mutableMapOf<LocalDate, MutableList<Span>>()
         for (appointment in appointments) {
             if (appointment.allDay || appointment.status == BusyStatus.FREE || appointment.end <= appointment.start) continue
+            // [impl->dsn~sideline~1]
+            if (sidelined(appointment.subject, sideline)) continue
             var date = appointment.start.date
             while (date <= appointment.end.date) {
                 val start = if (date == appointment.start.date) minuteOf(appointment.start) else 0

@@ -17,14 +17,14 @@ import kotlin.time.Duration
  * The times that the events of an iCalendar file take, by day, in the given time zone.
  *
  * Counted are events with a start time that are neither canceled nor marked as free.
- * Events that last whole days are left out, as are the blocks that [Ics] wrote itself.
+ * Events that last whole days are left out, as are the blocks that [Ics] wrote itself and the [sidelined] ones.
  * Repeating events are followed for the frequencies daily, weekly, monthly and yearly with interval, end, count,
  * days of the week, days of the month and excluded dates.
  */
 // ponytail: a moved occurrence of a repeating event counts at its old and its new time, and a time zone that the platform
 // does not know by its name, such as those Outlook writes, is taken as the given zone. A library for iCalendar if that shows.
 // [impl->dsn~busy-times~1]
-fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone): Map<LocalDate, List<Span>> {
+fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> {
     val result = mutableMapOf<LocalDate, MutableList<Span>>()
     // A line that starts with a blank continues the line before it.
     val lines = ics.replace("\r\n", "\n").replace(Regex("\n[ \t]"), "").lines()
@@ -33,7 +33,7 @@ fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone): Map<
         when {
             line == "BEGIN:VEVENT" -> event = mutableMapOf()
             line == "END:VEVENT" -> {
-                event?.let { addEvent(it, from, to, zone, result) }
+                event?.let { addEvent(it, from, to, zone, sideline, result) }
                 event = null
             }
             event != null -> {
@@ -70,10 +70,19 @@ private fun dateTime(parameters: String, value: String, zone: TimeZone): LocalDa
     return if (source == zone) local else local.toInstant(source).toLocalDateTime(zone)
 }
 
-private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, result: MutableMap<LocalDate, MutableList<Span>>) {
+/**
+ * Whether an event with the title stays in the calendar but leaves its time to planning:
+ * the title contains one of the words of [sideline], ignoring case.
+ */
+// [impl->dsn~sideline~1]
+fun sidelined(title: String, sideline: List<String>): Boolean = sideline.any { it.isNotBlank() && title.contains(it.trim(), ignoreCase = true) }
+
+private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String>, result: MutableMap<LocalDate, MutableList<Span>>) {
     fun value(name: String) = event[name]?.second?.trim()
     if (value("STATUS") == "CANCELLED" || value("TRANSP") == "TRANSPARENT" || value("X-MICROSOFT-CDO-BUSYSTATUS") == "FREE") return
     if (value("UID").orEmpty().endsWith("@koppter")) return
+    // A repeating event is one entry, so all its occurrences are sidelined together.
+    if (sidelined(value("SUMMARY").orEmpty(), sideline)) return
     val start = event["DTSTART"]?.let { dateTime(it.first, it.second, zone) } ?: return
     val minutes = event["DTEND"]?.let { dateTime(it.first, it.second, zone) }?.let { end ->
         start.date.daysUntil(end.date) * MINUTES_PER_DAY + end.time.toSecondOfDay() / 60 - start.time.toSecondOfDay() / 60

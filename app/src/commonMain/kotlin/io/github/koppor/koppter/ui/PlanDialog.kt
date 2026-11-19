@@ -32,7 +32,7 @@ import io.github.koppor.koppter.storage.ConfigFile
 import kotlinx.coroutines.launch
 
 /** The parts of the configuration for planning, each as lines of the form `name = value`. */
-data class PlanSettings(val timeMaps: String, val contextMaps: String, val barriers: String, val limits: String = "")
+data class PlanSettings(val timeMaps: String, val contextMaps: String, val barriers: String, val limits: String = "", val sideline: String = "")
 
 /** What a run of the planner did, as texts for the user. */
 data class PlanResult(val summary: String, val problems: List<String>, val unplaced: List<String>)
@@ -54,6 +54,7 @@ fun PlanDialog(
     var contextMaps by remember { mutableStateOf(settings.contextMaps) }
     var barriers by remember { mutableStateOf(settings.barriers) }
     var limits by remember { mutableStateOf(settings.limits) }
+    var sideline by remember { mutableStateOf(settings.sideline) }
     var addresses by remember { mutableStateOf(calendars) }
     var result by remember { mutableStateOf<PlanResult?>(null) }
     var running by remember { mutableStateOf(false) }
@@ -74,7 +75,7 @@ fun PlanDialog(
         )
     }
 
-    val state = listOf(timeMaps, contextMaps, barriers, limits, addresses)
+    val state = listOf(timeMaps, contextMaps, barriers, limits, sideline, addresses)
     // Planning saves what the fields hold.
     var saved by remember { mutableStateOf(state) }
 
@@ -144,6 +145,13 @@ fun PlanDialog(
                         "plan-calendars",
                     )
                 }
+                // [impl->dsn~sideline~1]
+                field(
+                    "Sideline", sideline, { sideline = it },
+                    "Events of the calendars whose title contains one of these words, one per line, stay in the calendar, " +
+                        "but tasks are planned into their time. A repeating event counts with all its occurrences.",
+                    "plan-sideline",
+                )
                 result?.let { shown ->
                     Text(shown.summary, modifier = Modifier.testTag("plan-summary"))
                     for (problem in shown.problems) {
@@ -165,7 +173,7 @@ fun PlanDialog(
                             saved = state
                             scope.launch {
                                 try {
-                                    result = onPlan(PlanSettings(timeMaps, contextMaps, barriers, limits), addresses)
+                                    result = onPlan(PlanSettings(timeMaps, contextMaps, barriers, limits, sideline), addresses)
                                 } finally {
                                     running = false
                                 }

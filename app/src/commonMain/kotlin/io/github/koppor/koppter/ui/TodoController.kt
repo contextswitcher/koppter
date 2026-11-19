@@ -427,6 +427,7 @@ class TodoController(
                 ConfigFile.toLines(ConfigFile.entries(text, ConfigFile.CONTEXT_TIME_MAPS)),
                 ConfigFile.toLines(ConfigFile.entries(text, ConfigFile.BARRIERS)),
                 ConfigFile.toLines(ConfigFile.entries(text, ConfigFile.LIMITS)),
+                ConfigFile.entries(text, ConfigFile.SIDELINE).joinToString("\n") { it.first },
             )
         }
 
@@ -441,11 +442,13 @@ class TodoController(
     suspend fun planWithCalendars(settings: PlanSettings, calendars: String?): PlanResult? {
         val busy = mutableMapOf<LocalDate, List<Span>>()
         val problems = mutableListOf<String>()
+        // [impl->dsn~sideline~1]
+        val sideline = settings.sideline.lines().map(String::trim).filter(String::isNotEmpty)
         val fetch = fetch
         if (calendars != null && fetch != null) updateSettings(this.settings.copy(calendars = calendars.trim()))
         if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter(String::isNotEmpty)) {
             try {
-                busyTimes(fetch(address), today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault())
+                busyTimes(fetch(address), today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline)
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 // The address is a secret: only its host is shown.
@@ -460,7 +463,7 @@ class TodoController(
         if (bridge != null) {
             try {
                 val appointments = withContext(Dispatchers.Default) { bridge.busy(outlookCalendar, today(), today().plus(DatePeriod(years = 1))) }
-                OutlookCalendar.busyTimes(appointments).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
+                OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 problems += "The calendar of Outlook was not read: ${e.message ?: e}"
                 log("The calendar of Outlook was not read", e)
@@ -513,7 +516,9 @@ class TodoController(
                 ConfigFile.CONTEXT_TIME_MAPS to settings.contextMaps,
                 ConfigFile.BARRIERS to settings.barriers,
                 ConfigFile.LIMITS to settings.limits,
-            ).fold(config.orEmpty()) { text, (key, lines) -> ConfigFile.withEntries(text, key, ConfigFile.parseLines(lines)) }
+            ).fold(config.orEmpty()) { text, (key, lines) -> ConfigFile.withEntries(text, key, ConfigFile.parseLines(lines)) }.let { text ->
+                ConfigFile.withEntries(text, ConfigFile.SIDELINE, settings.sideline.lines().map(String::trim).filter(String::isNotEmpty).map { it to "" })
+            }
             if (newConfig != config.orEmpty()) files.writeCompanion(ConfigFile.NAME, newConfig)
             val planConfig = ConfigFile.planConfig(newConfig)
             // A block does not start at an odd minute.

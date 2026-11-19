@@ -190,6 +190,18 @@ Covers:
 
 Needs: dsn
 
+### Sideline events of the calendars
+`req~sideline~1`
+
+The user names words; an event of the calendars whose title contains one of them stays in the calendar, but tasks are planned into its time.
+For a repeating event, this holds for all its occurrences.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan in the calendar of Outlook
 `req~outlook-calendar~1`
 
@@ -459,6 +471,19 @@ The addresses of the calendars are a setting of the device, as they are secrets;
 Covers:
 
 * `req~busy-times~1`
+
+Needs: impl, utest
+
+### Sideline
+`dsn~sideline~1`
+
+`koppter.yml` lists the words under the key `sideline`, each as a key with an empty value; the plan dialog edits them one per line.
+`sidelined` compares them with the title of an event ignoring case; `busyTimes` leaves out an event whose `SUMMARY` matches, and with it all occurrences of its rule.
+`OutlookCalendar.busyTimes` does the same with the subject of an appointment, as far as AnchorHub passes it in the field `subject`.
+
+Covers:
+
+* `req~sideline~1`
 
 Needs: impl, utest
 
