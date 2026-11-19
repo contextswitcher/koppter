@@ -32,6 +32,30 @@ Covers:
 
 Needs: dsn
 
+### Colors of the times of a time map
+`req~time-map-colors~1`
+
+The times of a time map are green, yellow, red or black.
+A task is planned in green times; a task that would otherwise be done after its due date or not before its barrier is planned in yellow times as well, and then in red ones.
+Black times are green for the tasks of their map and are not used for the tasks of other maps.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Painting a time map
+`req~time-map-editor~1`
+
+The user paints a time map on the days of a week, from 00:00 to 24:00 in quarters of an hour, with green, yellow, red, black or the eraser, and saves or reverts what was painted.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Barriers
 `req~barriers~1`
 
@@ -51,6 +75,18 @@ Needs: dsn
 
 The user limits the time that is planned for the tasks of a project or a context: not more than a time per day or per week, and at least a time per week, which is then planned before tasks with a higher priority.
 The user states the shortest part a task of a project or a context is cut into; without that, it is an hour.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Due dates before priority
+`req~deadline-first~1`
+
+A task that would be done after its due date in the order of the priorities is planned before the tasks with a higher priority, so that it is done by its due date.
+Of several such tasks, the one due first is planned first.
 
 Covers:
 
@@ -154,6 +190,34 @@ Covers:
 
 Needs: dsn
 
+### Sideline events of the calendars
+`req~sideline~1`
+
+The user names words; an event of the calendars whose title contains one of them stays in the calendar, but tasks are planned into its time.
+For a repeating event, this holds for all its occurrences.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Plan in the calendar of Outlook
+`req~outlook-calendar~1`
+
+The plan of the next weeks, three unless configured otherwise, is written into the main calendar of an account of the classic desktop Outlook, the default account unless configured otherwise.
+The appointments are private and tentative, and their subjects end with `[koppter]`.
+A new plan replaces the appointments that koppter wrote before; appointments that koppter did not write are never changed or deleted.
+Planning takes the appointments of that calendar as busy times.
+The user removes all appointments that koppter wrote with one action, after confirming their number.
+
+Covers:
+
+* `feat~planning~1`
+* `feat~outlook~1`
+
+Needs: dsn
+
 ### Views of the plan
 `req~agenda~1`
 
@@ -227,6 +291,37 @@ Covers:
 
 Needs: impl, utest
 
+### Colors of the times of a time map
+`dsn~time-map-colors~1`
+
+A rule of a time map definition may name a color with the word `yellow`, `red`, `black` or `green`; without one, its times are green, so that the definitions before the colors keep their meaning.
+A later rule paints over the times of an earlier one on the days that both name.
+`TimeMaps.spans` gives the times up to a color: green and black, then yellow as well, then red as well; it leaves out the black times of all maps other than the map and the maps it is restricted to.
+A map restricted to another one takes the times of that map in all its colors.
+`plan` plans with green times first; a task that ends after its due date although it was moved to the front, or a task that is not planned, gets the yellow times as well and the plan is made again, and then the red times.
+
+Covers:
+
+* `req~time-map-colors~1`
+* `adr~time-map-colors~1`
+
+Needs: impl, utest
+
+### Painting a time map
+`dsn~time-map-editor~1`
+
+The plan dialog has a button *Paint* for each map of the field of the time maps.
+`TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the cells that a press or a drag touches with the chosen color, or clears them with the eraser.
+`TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
+A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved; a map restricted to another one keeps the name of that map in front.
+Saving replaces the line of the map in the field and leaves the other lines as they were typed; the field is saved with the next planning.
+
+Covers:
+
+* `req~time-map-editor~1`
+
+Needs: impl, utest
+
 ### Limits
 `dsn~plan-limits~1`
 
@@ -286,6 +381,21 @@ Covers:
 * `req~due-time~1`
 * `adr~due-time-tag~1`
 * `adr~due-time-tag-name~1`
+
+Needs: impl, utest
+
+### Due dates before priority
+`dsn~deadline-first~1`
+
+`plan` plans in the order of the task list first.
+A task with a due date that the plan ends after its due date and the time of the tag `dueby:`, or does not plan, is moved to the front of the order, and `plan` plans again.
+The moved tasks stand in the order of their due dates, and the tasks they wait for are planned before them.
+This repeats until no further task ends late; a task that ends late although it was moved stays where it is, and its state of the plan shows that it is late.
+A task with a fixed time is not moved.
+
+Covers:
+
+* `req~deadline-first~1`
 
 Needs: impl, utest
 
@@ -364,6 +474,61 @@ Covers:
 
 Needs: impl, utest
 
+### Sideline
+`dsn~sideline~1`
+
+`koppter.yml` lists the words under the key `sideline`, each as a key with an empty value; the plan dialog edits them one per line.
+`sidelined` compares them with the title of an event ignoring case; `busyTimes` leaves out an event whose `SUMMARY` matches, and with it all occurrences of its rule.
+`OutlookCalendar.busyTimes` does the same with the subject of an appointment, as far as AnchorHub passes it in the field `subject`.
+
+Covers:
+
+* `req~sideline~1`
+
+Needs: impl, utest
+
+### Blocks in the calendar of Outlook
+`dsn~outlook-blocks~1`
+
+`TodoController.planWithCalendars` passes the blocks of the plan that start between now and the end of the day before today plus `outlookWeeks` weeks (`OutlookCalendar.window`, `OutlookCalendar.blocks`) to `OutlookBridge.syncBlocks`, for the account `outlookCalendar` of the settings; 0 weeks writes nothing.
+A block has the id of its event in `calendar.ics` (`Ics.id`), its subject is its text followed by ` [koppter]`, and its text starts with `[koppter]`.
+On the desktop, `AnchorHubOutlook` passes them as JSON on the standard input of `ankd outlook-blocks-sync`, which creates them as private, tentative appointments without reminder and replaces those of its own in the window.
+The summary of the plan tells what changed in Outlook; a failure is shown as a problem of the plan.
+The settings dialog has the fields for the account and the weeks where Outlook is reached.
+
+Covers:
+
+* `req~outlook-calendar~1`
+* `adr~plan-in-outlook~1`
+
+Needs: impl, utest
+
+### Busy times of Outlook
+`dsn~outlook-busy~1`
+
+Before planning, `TodoController.planWithCalendars` reads the appointments of the same calendar for a year through `ankd outlook-busy`, which leaves out the blocks of koppter.
+`OutlookCalendar.busyTimes` takes those that are not free and not whole-day appointments, split at midnight, as busy times in addition to those of the iCalendar files.
+
+Covers:
+
+* `req~outlook-calendar~1`
+
+Needs: impl, utest
+
+### Removing the blocks from Outlook
+`dsn~outlook-clear~1`
+
+The button *Remove koppter's blocks from Outlook* of the settings dialog asks `ankd outlook-blocks-clear --dry-run` for the number of blocks in the calendar of the account in the field and shows it in a confirmation; only after the confirmation does `ankd outlook-blocks-clear` delete them.
+AnchorHub counts an appointment as a block of koppter only if it has both the user property `KoppterBlockId`, which only AnchorHub sets, and the category `koppter`, and is neither recurring nor a meeting; the subject is not considered.
+Deleted appointments go to the deleted items of Outlook.
+
+Covers:
+
+* `req~outlook-calendar~1`
+* `adr~plan-in-outlook~1`
+
+Needs: impl, utest
+
 ### Plan dialog
 `dsn~plan-dialog~1`
 
@@ -384,7 +549,7 @@ Needs: impl, utest
 `dsn~agenda~1`
 
 `CalendarTxt.blocks` reads the blocks of `calendar.txt`; `TodoController.entryOf` finds the open task of a block by its text.
-`Agenda` shows today and the six days after it, each day that has blocks with its blocks in the order of time; a block shows its task as in the list, or its text if the task is no longer open under that text.
+`Agenda` shows today and the two days after it, and of the four days after them each day that has blocks, each day with its blocks in the order of time; a block shows its task as in the list, or its text if the task is no longer open under that text.
 Below the blocks of today, it lists the open tasks that are due today or earlier and have no block today (`TodoController.dueUnplanned`).
 `Week` shows the seven days of a week from Monday as columns with the hours running down, at least from 08:00 to 18:00, and each block at its time; the hours share the height of the window, so that the whole week is seen without scrolling also on a phone that is held upright, and are at least 20 dp high; buttons move by a week, and a click on a block opens its task.
 Both views show what the file says and do not plan.

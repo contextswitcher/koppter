@@ -67,7 +67,7 @@ Needs: dsn
 `req~filter-criteria~1`
 
 The user restricts the list by completion state (all, completed, open), by a text, by priorities, by projects and by contexts.
-Tasks with a start date (`t:`) in the future are hidden unless the user asks for them.
+Tasks with a start date (`t:`) in the future are hidden unless the user asks for them or searches for a text in the list or the inbox.
 
 Covers:
 

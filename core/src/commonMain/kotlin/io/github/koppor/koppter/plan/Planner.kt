@@ -196,7 +196,7 @@ private val MOMENTS = compareBy<Pair<LocalDate, Int>>({ it.first }, { it.second 
  * As topydo writes it, a task with the tag `id:` waits for the tasks whose tag `p:` has the same value.
  */
 // [impl->dsn~dependencies~1]
-private class Dependencies(open: List<Entry>, today: LocalDate) {
+private class Dependencies(open: List<Entry>, today: LocalDate, promoted: List<Entry> = emptyList()) {
     val problems = mutableListOf<String>()
 
     /** The open tasks a task waits for. */
@@ -204,7 +204,7 @@ private class Dependencies(open: List<Entry>, today: LocalDate) {
     val order: List<Entry>
 
     init {
-        val sorted = open.sortedWith(listOrder(today))
+        val sorted = promoted + open.filter { it !in promoted }.sortedWith(listOrder(today))
         val parts = sorted.flatMap { entry -> entry.task.tags.filter { it.first == Task.PARENT }.map { it.second to entry } }.groupBy({ it.first }, { it.second })
         val result = LinkedHashSet<Entry>()
         val visiting = mutableSetOf<Entry>()
@@ -236,6 +236,8 @@ private class Planning(
     now: Int,
     private val dependencies: Dependencies,
     fixed: List<Block>,
+    /** The worst color of the time map that a task may take, for the tasks that take more than green. */
+    private val paints: Map<Entry, Paint> = emptyMap(),
 ) {
     private val busy = busy + (today to busy[today].orEmpty() + Span(0, now))
     private val taken = mutableMapOf<LocalDate, MutableList<Span>>()
@@ -299,7 +301,7 @@ private class Planning(
         var date = from.first
         while (missing > 0 && left.getValue(entry) > 0 && date <= until) {
             // After a meeting, a block starts on the grid; after another block, it starts at once.
-            for (free in config.maps.spans(map, date).without(busy[date].orEmpty()).aligned().without(taken[date].orEmpty())) {
+            for (free in config.maps.spans(map, date, paints[entry] ?: Paint.GREEN).without(busy[date].orEmpty()).aligned().without(taken[date].orEmpty())) {
                 val rest = left.getValue(entry)
                 if (missing <= 0 || rest == 0) break
                 val start = if (date == from.first) maxOf(free.start, from.second) else free.start
@@ -373,6 +375,8 @@ private class Planning(
 /**
  * Plans the open tasks: each gets the earliest free times of its time map, in the order of the task list,
  * so that a task with a higher priority is planned before the others. A task is planned after the tasks it waits for.
+ * A task that would end after its due date in that order is planned first, the one due first before the others.
+ * A task is planned in the green times of its time map; one that still ends late or does not fit takes the yellow times as well, and then the red ones.
  *
  * A task is not planned before its threshold date, and not behind its barrier: if its duration does not fit before, it is not planned at all.
  * A task whose threshold date lies behind its barrier is not due for planning: it is left out without being returned as not planned.
@@ -395,15 +399,55 @@ fun plan(
     now: Int,
     upcoming: List<Pair<LocalDate, Task>> = emptyList(),
 ): Plan {
-    val dependencies = Dependencies(entries.filterNot { it.task.completed }, today)
+    val open = entries.filterNot { it.task.completed }
+    // [impl->dsn~deadline-first~1]
+    var promoted = emptyList<Entry>()
+    // [impl->dsn~time-map-colors~1]
+    val paints = mutableMapOf<Entry, Paint>()
+    while (true) {
+        val plan = planInOrder(Dependencies(open, today, promoted), config, busy, today, now, upcoming, paints)
+        val ending = open.filter { endsLate(it, plan) }
+        val late = ending.filter { it.task.due != null && it !in promoted }
+        // A task that ends late although it comes first takes the yellow times as well, and then the red ones.
+        // ponytail: it then takes the earliest of all these times, not only as many worse ones as it needs; take them one day after another if that is too eager.
+        val widened = (ending - late.toSet()).filter { (paints[it] ?: Paint.GREEN) != Paint.RED }
+        if (late.isEmpty() && widened.isEmpty()) return named(plan, entries)
+        widened.forEach { paints[it] = if (paints[it] == Paint.YELLOW) Paint.RED else Paint.YELLOW }
+        // Of the tasks that would end after their due date, the one due first gets the first times: earliest deadline first.
+        // ponytail: a promoted task gets the earliest times, not the latest that still keep its due date; plan backwards from the due date if that moves too much.
+        promoted = (promoted + late).sortedWith(compareBy<Entry>({ it.task.due }, { it.task.by ?: (24 * 60) }).then(listOrder(today)))
+    }
+}
+
+/** Whether the plan does not plan the task although it is due for planning, or ends it after its due date. */
+private fun endsLate(entry: Entry, plan: Plan): Boolean {
+    if (entry.task.at != null) return false
+    if (entry in plan.unplaced) return true
+    val due = entry.task.due ?: return false
+    val last = plan.blocks.filter { it.entry == entry && !it.travel }.maxWithOrNull(compareBy({ it.date }, { it.span.end })) ?: return false
+    return MOMENTS.compare(last.date to last.span.end, due to (entry.task.by ?: (24 * 60))) > 0
+}
+
+private fun planInOrder(
+    dependencies: Dependencies,
+    config: PlanConfig,
+    busy: Map<LocalDate, List<Span>>,
+    today: LocalDate,
+    now: Int,
+    upcoming: List<Pair<LocalDate, Task>>,
+    paints: Map<Entry, Paint>,
+): Plan {
     val fixed = fixedBlocks(dependencies.order, upcoming, today, now)
-    val plain = Planning(config, busy, today, now, dependencies, fixed).run(emptyMap())
+    val plain = Planning(config, busy, today, now, dependencies, fixed, paints).run(emptyMap())
     val reserveUntil = config.minimums.mapNotNull { limit ->
         val days = plain.blocks.filter { limit.names(it.entry.task) }.map { it.date } +
             plain.unplaced.filter { limit.names(it.task) }.map { config.barrierOf(it.task, today) }
         days.maxOrNull()?.let { limit.key to it }
     }.toMap()
-    val plan = if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed).run(reserveUntil)
+    return if (reserveUntil.isEmpty()) plain else Planning(config, busy, today, now, dependencies, fixed, paints).run(reserveUntil)
+}
+
+private fun named(plan: Plan, entries: List<Entry>): Plan {
     // [impl->dsn~plan-names~1]
     val names = CalendarTxt.names(entries)
     return plan.copy(blocks = plan.blocks.map { block -> names[block.entry]?.takeIf { it != CalendarTxt.text(block.entry.task) }?.let { block.copy(name = it) } ?: block })

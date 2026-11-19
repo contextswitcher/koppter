@@ -22,6 +22,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -33,6 +34,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -58,6 +60,13 @@ import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.todotxt.GroupKey
+import io.github.koppor.koppter.outlook.Outlook
+import io.github.koppor.koppter.outlook.OutlookItem
+import io.github.koppor.koppter.outlook.BusyStatus
+import io.github.koppor.koppter.outlook.OutlookBlock
+import io.github.koppor.koppter.outlook.OutlookBridge
+import io.github.koppor.koppter.outlook.OutlookBusy
+import kotlinx.datetime.LocalDateTime
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
@@ -87,6 +96,31 @@ private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
         changes += change
     }
     override fun version(): Any? = text
+}
+
+/** Outlook as AnchorHub would show it, with what was asked of it. */
+private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appointments: List<OutlookBusy> = emptyList(), var blocks: Int = 0) : OutlookBridge {
+    val opened = mutableListOf<String>()
+    val completed = mutableListOf<String>()
+    var synced: Pair<ClosedRange<LocalDateTime>, List<OutlookBlock>>? = null
+    var cleared = 0
+    override fun items() = items
+    override fun open(entryId: String) {
+        opened += entryId
+    }
+    override fun complete(entryId: String) {
+        completed += entryId
+    }
+    override fun syncBlocks(calendar: String?, window: ClosedRange<LocalDateTime>, blocks: List<OutlookBlock>): String {
+        synced = window to blocks
+        return "${blocks.size} blocks added, 0 deleted, 0 kept"
+    }
+    override fun countBlocks(calendar: String?) = blocks
+    override fun clearBlocks(calendar: String?): Int {
+        cleared++
+        return blocks.also { blocks = 0 }
+    }
+    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments
 }
 
 @OptIn(ExperimentalTestApi::class)
@@ -133,6 +167,21 @@ class AppTest {
         onAllNodes(hasText("+GarageSale") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertCountEquals(2)
         onNode(hasText("2026-11-20") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
         onNodeWithTag("overdue-separator").assertDoesNotExist()
+    }
+
+    // [utest->dsn~visible-tasks~1]
+    @Test
+    fun searchInListAndInboxFindsTasksBeforeTheirStartDate() = runComposeUiTest {
+        storage.text = "JavaLand talk +Talks due:2027-09-01 t:2027-07-01\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
+        controller.filter = controller.filter.copy(text = "javaland")
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.INBOX
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.BOARD
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
     }
 
     // [utest->dsn~overdue-separator~1]
@@ -934,14 +983,17 @@ class AppTest {
 
     // [utest->dsn~filter-panel~1]
     @Test
-    fun theTextOfTheFilterStandsAboveTheListOfANarrowWindowAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+    fun theTextOfTheFilterOfANarrowWindowLiesInTheDrawerThatTheSearchButtonOpensAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
-        // The panel with the other criteria is closed.
+        // The panel with the other criteria and the field are closed.
         onNodeWithTag("filter-heading").assertIsNotDisplayed()
+        onNodeWithTag("filter-text").assertIsNotDisplayed()
         controller.view = View.WEEK
         onNodeWithTag("week").assertExists()
-        onNodeWithTag("filter-text").assertIsDisplayed().performTextInput("mom")
+        onNodeWithTag("open-search").performClick()
+        onNodeWithTag("filter-heading").assertIsDisplayed()
+        onNodeWithTag("filter-text").assertIsDisplayed().assertIsFocused().performTextInput("mom")
         onNodeWithTag("week").assertDoesNotExist()
         onAllNodesWithTag("task").assertCountEquals(1)
     }
@@ -992,8 +1044,96 @@ class AppTest {
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
     }
 
-    // [utest->dsn~context-switcher-tag~1]
+    // [utest->dsn~outlook-items~1]
+    // [utest->dsn~outlook-tag~1]
+    // [utest->dsn~outlook-complete~1]
     @Test
+    fun theItemsOfOutlookAreShownAndBecomeALineWhenOneGetsAContext() = runComposeUiTest {
+        val mail = "00000000A1B2C3D4"
+        val task = "00000000E5F60718"
+        val outlook = FakeOutlook(listOf(OutlookItem(mail, "Answer the invitation", LocalDate(2026, 11, 12)), OutlookItem(task, "Book the hotel", null)))
+        val opened = outlook.opened
+        val completed = outlook.completed
+        val before = storage.text
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithText("Book the hotel", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Answer the invitation", useUnmergedTree = true).assertExists()
+        assertEquals(before, storage.text)
+
+        // The label opens the item in Outlook, not the task.
+        onAllNodesWithTag("label-outlook", useUnmergedTree = true)[0].performClick()
+        assertEquals(1, opened.size)
+        assertTrue(opened.single() in setOf(mail, task))
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // In the inbox, the item shows where it comes from, and the contexts below it are choices.
+        controller.view = View.INBOX
+        onAllNodesWithTag("inbox-hashtag-outlook", useUnmergedTree = true).assertCountEquals(2)
+        // The task "Post signs" of the file has no context either.
+        onAllNodesWithText("Give it:", useUnmergedTree = true).assertCountEquals(3)
+        controller.view = View.LIST
+
+        // A context writes the item as a line, which then stands for it.
+        runOnIdle { controller.assignContext(controller.inbox.first { it.task.description == "Answer the invitation" }, "phone") }
+        assertEquals("Answer the invitation @phone #outlook due:2026-11-12 ol:${Outlook.tag(mail)}", storage.text.trim().lines().last())
+        assertEquals(listOf(false), controller.visible.filter { it.task.description == "Answer the invitation" }.map(Outlook::isItem))
+
+        // Completing an item or a line that names one marks it done in Outlook.
+        runOnIdle { controller.toggle(controller.visible.first { it.task.description == "Book the hotel" }) }
+        assertEquals(listOf(task), completed)
+        assertTrue(controller.visible.none { it.task.description == "Book the hotel" })
+        runOnIdle { controller.toggle(controller.visible.first { it.task.description == "Answer the invitation" }) }
+        assertEquals(listOf(task, mail), completed)
+        assertTrue(storage.text.trim().lines().last().startsWith("x "))
+    }
+
+    // [utest->dsn~outlook-blocks~1]
+    // [utest->dsn~outlook-busy~1]
+    @Test
+    fun planningAvoidsTheAppointmentsOfOutlookAndWritesTheBlocksOfTheWeeksToIt() {
+        val meeting = OutlookBusy(LocalDateTime(2026, 11, 12, 0, 0), LocalDateTime(2026, 11, 26, 0, 0), false, BusyStatus.BUSY)
+        val outlook = FakeOutlook(appointments = listOf(meeting))
+        val controller = TodoController(Settings(outlookWeeks = 4), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 }, outlook = outlook)
+        val result = runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }!!
+        val (window, blocks) = outlook.synced!!
+        assertEquals(LocalDateTime(2026, 11, 12, 8, 0)..LocalDateTime(2026, 12, 10, 0, 0), window)
+        assertTrue(blocks.isNotEmpty(), result.summary)
+        assertTrue(blocks.all { it.subject.endsWith(" [koppter]") && it.start >= window.start && it.start < window.endInclusive })
+        // The busy weeks of Outlook stay free of blocks.
+        assertTrue(blocks.all { it.start >= meeting.end }, blocks.toString())
+        assertTrue(result.summary.endsWith("Outlook: ${blocks.size} blocks added, 0 deleted, 0 kept."), result.summary)
+
+        // With 0 weeks, nothing is written.
+        outlook.synced = null
+        controller.updateSettings(controller.settings.copy(outlookWeeks = 0))
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
+        assertNull(outlook.synced)
+    }
+
+    // [utest->dsn~outlook-clear~1]
+    @Test
+    fun theBlocksOfKoppterAreRemovedFromOutlookAfterTheUserConfirmedTheirNumber() = runComposeUiTest {
+        val outlook = FakeOutlook(blocks = 7)
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-outlook-clear").performScrollTo().performClick()
+        waitUntil { onAllNodesWithTag("settings-outlook-clear-confirm").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Remove 7 blocks?").assertExists()
+        assertEquals(0, outlook.cleared)
+        onNodeWithTag("settings-outlook-clear-confirm").performClick()
+        waitUntil { onAllNodesWithTag("settings-outlook-message").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, outlook.cleared)
+        onNodeWithTag("settings-outlook-message").assertTextEquals("Removed 7 blocks from the calendar of the default account.")
+
+        // Without blocks, there is nothing to confirm.
+        onNodeWithTag("settings-outlook-clear").performScrollTo().performClick()
+        waitUntil { onAllNodesWithText("There are no blocks of koppter in the calendar of the default account.").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(1, outlook.cleared)
+    }
+
+    // [utest->dsn~context-switcher-tag~1]    @Test
     fun theLabelOfAContextSwitcherTaskSwitchesToItAndAPastedLinkBecomesTheTag() = runComposeUiTest {
         val opened = mutableListOf<String>()
         val links = object : UriHandler {
@@ -1272,6 +1412,10 @@ class AppTest {
         onNodeWithText("Sweep the floor").performClick()
         onNodeWithTag("edit-dialog").assertExists()
         onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        // A task is completed where it is shown.
+        onAllNodesWithTag("task-done")[1].performClick()
+        assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Water the plants" in it })
+        onAllNodesWithTag("overview-task").assertCountEquals(1)
         onNodeWithTag("overview-back").performClick()
         onNodeWithTag("overview-phone").assertExists()
 
@@ -1318,6 +1462,29 @@ class AppTest {
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-barriers").assertTextContains("default = month")
         onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00")
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aTimeMapIsPaintedOnTheDaysOfAWeek() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00\nEvenings = Mon-Thu 19:00-21:00")
+        onNodeWithTag("plan-edit-map-General").performClick()
+        onNodeWithTag("time-map-paint-yellow").performClick()
+        // Down on Monday from eight o'clock to a quarter to ten: the quarters of an hour that the drag touches.
+        onNodeWithTag("time-map-grid").performTouchInput {
+            swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
+        }
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
+        onNodeWithTag("time-map-revert").performClick()
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("time-map-paint-black").performClick()
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
+        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-editor").assertDoesNotExist()
+        // The other map stays as it was typed.
+        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black\nEvenings = Mon-Thu 19:00-21:00")
     }
 
     // [utest->dsn~plan-dialog~1]
@@ -1410,8 +1577,9 @@ class AppTest {
 
         onNodeWithTag("agenda-day-2026-11-12").assertTextEquals("Today · Thu 2026-11-12")
         onNodeWithTag("agenda-day-2026-11-13").assertTextEquals("Tomorrow · Fri 2026-11-13")
-        // A day without a block is left out, as are the days after the week.
-        onNodeWithTag("agenda-day-2026-11-14").assertDoesNotExist()
+        // The day after tomorrow is shown without a block; a later day without a block is left out, as are the days after the week.
+        onNodeWithTag("agenda-day-2026-11-14").assertExists()
+        onNodeWithTag("agenda-day-2026-11-15").assertDoesNotExist()
         onAllNodesWithTag("agenda-block").assertCountEquals(3)
         // A block whose task is gone still tells what was planned.
         onNodeWithText("A task that is gone").assertExists()
@@ -1485,6 +1653,18 @@ class AppTest {
         onNodeWithText("Every task has a context.").assertExists()
     }
 
+    // [utest->dsn~inbox~1]
+    @Test
+    fun theInboxCompletesATask() = runComposeUiTest {
+        storage.text += "Sweep the floor\n"
+        start()
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (2)").performClick()
+        val done = storage.text.lines().count { it.startsWith("x ") }
+        onAllNodesWithTag("task-done")[0].performClick()
+        assertEquals(done + 1, storage.text.lines().count { it.startsWith("x ") })
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (1)")
+    }
+
     // [utest->dsn~unsaved-changes~1]
     @Test
     fun escAsksBeforeChangesAreLost() = runComposeUiTest {
@@ -1528,13 +1708,13 @@ class AppTest {
             withKeysDown(listOfNotNull(Key.CtrlLeft, Key.ShiftLeft.takeIf { shift })) { pressKey(key) }
         }
 
-        ctrl(Key.Four)
+        ctrl(Key.Two)
         onNodeWithTag("agenda").assertExists()
         ctrl(Key.C, shift = true)
         onNodeWithTag("week").assertExists()
         ctrl(Key.Six)
         onNodeWithTag("inbox").assertExists()
-        ctrl(Key.One)
+        ctrl(Key.Five)
         onNodeWithTag("inbox").assertDoesNotExist()
 
         ctrl(Key.F, shift = true)
@@ -1670,6 +1850,28 @@ class AppTest {
         onNodeWithTag("settings-dialog").assertExists()
     }
 
+    // [utest->dsn~build-version~1]
+    @Test
+    fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {
+        var version by mutableStateOf<String?>(null)
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", version = version) } }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-version").assertDoesNotExist()
+        version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
+        onNodeWithTag("settings-version").performScrollTo().assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
+        onNodeWithTag("settings-version").performTouchInput { longClick() }
+        assertEquals("1234abc", copied)
+        onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30) · Copied 1234abc")
+    }
+
     // [utest->dsn~failure-log~1]
     @Test
     fun whatFailsIsShownAndPassedToTheLog() {
@@ -1738,6 +1940,58 @@ class AppTest {
         onNodeWithTag("sync-status").assertDoesNotExist()
     }
 
+    // [utest->dsn~committer~1]
+    @Test
+    fun theCommitterIsSavedAndOpensTheStorageAgain() = runComposeUiTest {
+        val git = object : GitSetupActions {
+            override fun publicKey(): String? = null
+            override suspend fun clone(url: String) = url
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
+            override suspend fun check(url: String) = Unit
+        }
+        val opened = mutableListOf<Settings>()
+        val controller = TodoController(Settings(), { opened += it; storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", git = git) }
+
+        onNodeWithTag("open-settings").performClick()
+        // The default stands in the empty field in gray, whether or not it has the focus.
+        onNodeWithTag("settings-committer-name").performScrollTo().assertTextEquals("koppter", "Empty: that of the git configuration, otherwise the value in gray.", "")
+        onNodeWithTag("settings-committer-name").performTextInput("Ada ")
+        onNodeWithTag("settings-committer-email").performScrollTo().performTextInput("ada@example.org")
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals("Ada" to "ada@example.org", controller.settings.committerName to controller.settings.committerEmail)
+        // The storage commits in the new name from now on.
+        assertEquals(2, opened.size)
+        assertEquals("Ada", opened.last().committerName)
+    }
+
+    // [utest->dsn~shared-list-clone~1]
+    @Test
+    fun aClonedSharedListIsAddedToTheSharedListsAndSaved() = runComposeUiTest {
+        val git = object : GitSetupActions {
+            override fun publicKey(): String? = null
+            override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun cloneShared(url: String) = if (url == "git@example.org:household.git") "/data/shared/household/todo.txt" else error("no such repository")
+            override suspend fun check(url: String) = Unit
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", git = git) }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-clone-shared").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("settings-shared-address").performTextInput("git@example.org:other.git")
+        onNodeWithTag("settings-clone-shared").performClick()
+        waitUntil { onAllNodesWithTag("settings-shared-message").fetchSemanticsNodes().isNotEmpty() && !onAllNodesWithText("Cloning").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("settings-shared-message").assertTextEquals("Not cloned: no such repository")
+
+        onNodeWithTag("settings-shared-address").performTextClearance()
+        onNodeWithTag("settings-shared-address").performTextInput("git@example.org:household.git")
+        onNodeWithTag("settings-clone-shared").performClick()
+        waitUntil { onAllNodesWithText("Cloned. After Save, its tasks show with the context @household.").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals("/data/shared/household/todo.txt", controller.settings.sharedLists)
+    }
+
     // [utest->dsn~git-setup-dialog~1]
     @Test
     fun theSettingsShowThePublicKeyAndCloneARepository() = runComposeUiTest {
@@ -1752,6 +2006,8 @@ class AppTest {
                 throw IllegalStateException("remote hung up unexpectedly", IllegalStateException("remote hung up unexpectedly", NoSuchMethodError("no such repository")))
             }
 
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
+
             override suspend fun check(url: String) {
                 clone(url)
             }
@@ -1759,7 +2015,7 @@ class AppTest {
         val logged = mutableListOf<String>()
         val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
         val controller = TodoController(
-            Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) },
+            Settings(), { if (it.todoFile == "git@example.org:todo.git") cloned else storage }, today = { LocalDate(2026, 11, 12) },
             log = { message, cause -> logged += "$message: ${cause?.message}" },
         )
         setContent { App(controller, "todo.txt", git = git) }
@@ -1798,40 +2054,44 @@ class AppTest {
         onNodeWithTag("settings-clone").performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
         onNodeWithText("Read the paper").assertExists()
-        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+        // [utest->dsn~clone-by-address~1]
+        // The settings keep the address, from which a clone that is gone is cloned again.
+        assertEquals("git@example.org:todo.git", controller.settings.todoFile)
         assertEquals("board-columns:\n  Phone: \"@phone\"\n", cloned.companions["koppter.yml"])
         assertNull(storage.companions["koppter.yml"])
 
         // The settings then show the configuration that the repository brings along.
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
+        onNodeWithTag("settings-file").assertTextContains("git@example.org:todo.git")
         onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
+        // The address of the open repository is no new one to clone: the other settings are saved.
+        onNodeWithTag("settings-save").performScrollTo().assertIsEnabled()
     }
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFileIsOpenedAtOnceWithItsConfiguration() = runComposeUiTest {
+    fun aChosenFileIsOpenedAndTheSettingsAreLeftWithoutWritingThem() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "share-actions:\n  later: \"{} due:1w\"\n" }
         val controller = TodoController(Settings(), { if (it.todoFile == "/data/other/todo.txt") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { "/data/other/todo.txt" }) }
+        val before = storage.companions["koppter.yml"]
 
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} +research @reading due:2w dur:1h")
+        onNodeWithTag("settings-share-actions").performScrollTo().performTextReplacement("typed = {} due:1d")
         onNodeWithTag("settings-choose-file").performScrollTo().performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
-        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
-        onNodeWithTag("settings-file-message").assertExists()
-        // Without Save, the file from before is open again.
-        onNodeWithText("Cancel").performScrollTo().performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
-        assertEquals("", controller.settings.todoFile)
-        onNodeWithText("Thank Mom").assertExists()
-        onNodeWithText("Read the paper").assertDoesNotExist()
+        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
+        onNodeWithText("Read the paper").assertExists()
+        assertEquals(before, storage.companions["koppter.yml"])
+        assertEquals("share-actions:\n  later: \"{} due:1w\"\n", chosen.companions["koppter.yml"])
+        // The settings show the configuration that the file brings along.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
     }
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFolderIsOpenedAtOnceAndAChooserThatFailsIsReported() = runComposeUiTest {
+    fun aChosenFolderIsOpenedAndAChooserThatFailsIsReported() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n")
         val controller = TodoController(Settings(), { if (it.todoFile == "content://documents/tree/todo") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { error("No program shows the dialog") }, chooseFolder = { "content://documents/tree/todo" }) }
@@ -1842,9 +2102,8 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
 
         onNodeWithTag("settings-choose-folder").performScrollTo().performClick()
-        onNodeWithTag("settings-file-message").assertTextContains("Opened.", substring = true)
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
         assertEquals("content://documents/tree/todo", controller.settings.todoFile)
-        onNodeWithTag("settings-save").performScrollTo().performClick()
         onNodeWithText("Read the paper").assertExists()
     }
 
@@ -1861,6 +2120,7 @@ class AppTest {
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
             override suspend fun check(url: String) = error("not checked in this test")
         }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })

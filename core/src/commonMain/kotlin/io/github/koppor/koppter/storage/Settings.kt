@@ -6,9 +6,15 @@ enum class ColorTheme(val title: String) { NORD("Nord"), EVERFOREST("Everforest"
 /** Whether the colors are light or dark. */
 enum class Appearance(val title: String) { SYSTEM("As the system"), LIGHT("Light"), DARK("Dark") }
 
+/** The name of the commits where neither the settings nor the git configuration name one, as on a phone. */
+const val DEFAULT_COMMITTER_NAME = "koppter"
+const val DEFAULT_COMMITTER_EMAIL = "koppter@localhost"
+
 data class Settings(
     /** Location of the todo.txt file; blank means the platform default. */
     val todoFile: String = "",
+    /** The todo.txt files of the shared lists, one per line; see [SharedLists]. */
+    val sharedLists: String = "",
     /** Write the creation date when a task is added and the completion date when it is completed. */
     val writeDates: Boolean = false,
     /** The number of tasks the *Top* view shows. */
@@ -34,10 +40,19 @@ data class Settings(
     val overviewGroup: String = "CONTEXT",
     /** The width of the dialog of a task in dp, where the window allows it. */
     val editWidth: Int = 760,
+    /** The name in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_NAME]. */
+    val committerName: String = "",
+    /** The email address in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_EMAIL]. */
+    val committerEmail: String = "",
+    /** The account whose main calendar takes the plan, by its name in Outlook; blank for the default account. */
+    val outlookCalendar: String = "",
+    /** For how many weeks from today the plan is written to the calendar of Outlook; 0 writes nothing. */
+    val outlookWeeks: Int = 3,
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
         TODO_FILE to todoFile,
+        SHARED_LISTS to sharedLists,
         WRITE_DATES to writeDates.toString(),
         TOP_COUNT to topCount.toString(),
         ICE_RECUR_LAST_RUN to iceRecurLastRun,
@@ -50,10 +65,15 @@ data class Settings(
         BOARD_GROUP to boardGroup,
         OVERVIEW_GROUP to overviewGroup,
         EDIT_WIDTH to editWidth.toString(),
+        COMMITTER_NAME to committerName,
+        COMMITTER_EMAIL to committerEmail,
+        OUTLOOK_CALENDAR to outlookCalendar,
+        OUTLOOK_WEEKS to outlookWeeks.toString(),
     )
 
     companion object {
         private const val TODO_FILE = "todoFile"
+        private const val SHARED_LISTS = "sharedLists"
         private const val WRITE_DATES = "writeDates"
         private const val TOP_COUNT = "topCount"
         private const val ICE_RECUR_LAST_RUN = "iceRecurLastRun"
@@ -66,10 +86,15 @@ data class Settings(
         private const val BOARD_GROUP = "boardGroup"
         private const val OVERVIEW_GROUP = "overviewGroup"
         private const val EDIT_WIDTH = "editWidth"
+        private const val COMMITTER_NAME = "committerName"
+        private const val COMMITTER_EMAIL = "committerEmail"
+        private const val OUTLOOK_CALENDAR = "outlookCalendar"
+        private const val OUTLOOK_WEEKS = "outlookWeeks"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
             todoFile = properties[TODO_FILE].orEmpty(),
+            sharedLists = properties[SHARED_LISTS].orEmpty(),
             writeDates = properties[WRITE_DATES].toBoolean(),
             topCount = properties[TOP_COUNT]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().topCount,
             iceRecurLastRun = properties[ICE_RECUR_LAST_RUN].orEmpty(),
@@ -82,6 +107,10 @@ data class Settings(
             boardGroup = properties[BOARD_GROUP] ?: Settings().boardGroup,
             overviewGroup = properties[OVERVIEW_GROUP] ?: Settings().overviewGroup,
             editWidth = properties[EDIT_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().editWidth,
+            committerName = properties[COMMITTER_NAME].orEmpty(),
+            committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
+            outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
+            outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
         )
     }
 }

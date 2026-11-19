@@ -42,6 +42,13 @@ Adding and completing a task each create a commit, so that the dates of both eve
 
 Needs: req
 
+## Shared lists
+`feat~shared-lists~1`
+
+Lists of tasks that the user shares with other people, such as those of a household, are kept in repositories of their own and shown together with the own tasks.
+
+Needs: req
+
 ## Synchronization through a local folder
 `feat~sync-local-folder~1`
 
@@ -81,5 +88,12 @@ Needs: req
 `feat~platforms~1`
 
 The application runs on Android and on Windows and Linux desktops.
+
+Needs: req
+
+## Tasks of Outlook
+`feat~outlook~1`
+
+The application shows the open items of the To-Do list of the classic desktop Outlook next to the tasks of the file.
 
 Needs: req

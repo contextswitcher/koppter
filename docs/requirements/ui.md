@@ -113,6 +113,17 @@ Covers:
 
 Needs: dsn
 
+### Version of the build
+`req~build-version~1`
+
+The settings show at their bottom the version and the commit the application was built from, so that the user tells which build runs.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Links in the text of a task
 `req~links~1`
 
@@ -299,6 +310,17 @@ Covers:
 
 Needs: dsn
 
+### Window after a change of the displays
+`req~display-change~1`
+
+When the desktop window moves to a display with another scale, such as when a laptop leaves its docking station, the content fills the window again.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ## Design
 
 ### Controller
@@ -320,6 +342,7 @@ Needs: impl, utest
 `dsn~visible-tasks~1`
 
 `TodoController.visible` is the list of entries that match the filter, in list order.
+With a search text, the list and the inbox also show the tasks before their start date.
 
 Covers:
 
@@ -388,6 +411,19 @@ Covers:
 
 Needs: impl, utest
 
+### Line with the version of the build
+`dsn~build-version~1`
+
+`App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line; a long press on it copies the hash of the commit to the clipboard and adds *Copied* with the hash to the line.
+The build of `:android` writes the short hash and the date of the commit of `HEAD` into `BuildConfig.GIT_COMMIT_LINE`; `MainActivity` puts the version name of a release before it.
+The build of `:app` writes the version of a release and the same commit line into the resource `koppter-version.txt`, which the desktop application reads.
+
+Covers:
+
+* `req~build-version~1`
+
+Needs: impl, utest
+
 ### Links
 `dsn~links~1`
 
@@ -453,13 +489,12 @@ Needs: impl, utest
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
-A file that the user chooses with *Choose file* and the todo.txt file of a folder chosen with *Choose folder* is opened at once through `onOpenFile`, and the dialog stays open.
-A chooser that fails is reported at the field, in the color for errors, and the open file stays.
-The fields for the board columns, the names of the priorities, the links of the labels, what a new task starts with, the contexts of the projects and the share actions then start anew with the configuration that this file brings along, and what was typed into them for the file before is dropped.
+A file that the user chooses with *Choose file* and the todo.txt file of a folder chosen with *Choose folder* becomes the file of the application through `onOpenFile`, and the dialog is left, so that the tasks of the file show.
+Nothing that stood in the dialog is written, neither to that file nor to the one from before: what was typed into the dialog is dropped.
+A chooser that fails is reported at the field, in the color for errors, and the dialog and the open file stay; a chooser that the user leaves without a choice changes nothing.
 The configuration of the dialog is thus written to the file it was read from, never to another one.
-A path typed into the field takes effect with *Save*, which writes these fields to the file that is still open and then opens the other one.
-Leaving the dialog without *Save* opens the file again that was open when the dialog was opened.
-A repository that the dialog clones is not opened this way: `dsn~git-setup-dialog~1` says what *Clone* does.
+A path typed into the field takes effect with *Save*, which writes the fields of the dialog to the file that is still open and then opens the other one.
+A repository that the dialog clones is opened the same way: `dsn~git-setup-dialog~1` says what *Clone* does.
 
 Covers:
 
@@ -646,7 +681,7 @@ Needs: impl, utest
 `dsn~filter-panel~1`
 
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
-The text of the filter is a field of the main screen above the list (`SearchField`), in a window of any width, so that a search needs no panel.
+The text of the filter is a field (`SearchField`) of the main screen above the list where the panel stands beside it; on a narrower screen, it is the first field of the panel in the drawer, and a search button to the left of the button for a new task opens the drawer and gives the field the focus.
 While the field has a text, a button at its end empties it; a text typed in the agenda or the week, which the filter does not apply to, shows the list.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
 The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
@@ -676,7 +711,7 @@ Needs: impl, utest
 ### Search for labels in the filter panel
 `dsn~filter-label-search~1`
 
-Below *Clear all filters*, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+At its top, below the heading and the field for the text of the filter where the panel has one, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
 A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
 A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
 The field does not change the filter and is not kept.
@@ -735,11 +770,12 @@ Needs: impl, utest
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them, the task list and a button for a new task, which opens the edit dialog.
+The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button to its left instead of the field.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
+The search fields (`SearchField`) have less space above and below their line than a text field of Material, which is at least 56 dp high.
 
 Covers:
 
@@ -751,9 +787,10 @@ Needs: impl
 `dsn~keyboard-shortcuts~1`
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
-With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the list and the views in the order of their switches.
+With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 6 show the views in the order of their switches.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 The agenda and the week, which the filter does not apply to, give way to the list when the text of the filter gets the focus.
+Where that field lies in the drawer, the drawer opens first.
 With Ctrl and Shift: A opens the dialog for a new task, F gives the focus to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.
 In the edit dialog, Ctrl and Enter save if *Save* is enabled.
 `LocalKeyboard` tells whether the device has a keyboard; with one, the description of the edit dialog and the field of the inbox get the focus when they appear.
@@ -942,6 +979,7 @@ A running application cannot replace its own classes, so the update is a restart
 `just run-loop`, also `just loop`, runs `scripts/run-loop.sh` or, on Windows, `scripts/run-loop.cmd`: in the checkout, it pulls, builds the application with its runtime (`:app:createDistributable`) and starts it, with the commit it built in the environment variable `KOPPTER_RUN_LOOP`.
 A pull that fails, such as without a network, does not stop the start.
 When the application ends with the exit code 55, the script does the same again; every other exit code ends it, so that closing the window stays a quit.
+The script prints `Running koppter...` before each start and `koppter finished` when it ends, as the window may open on another desktop.
 Started that way, the desktop application fetches at its start and every half hour and counts the commits of the upstream branch that the commit it runs lacks (`commitsBehind`).
 It counts from that commit and not from `HEAD`, as a pull outside the application moves `HEAD` while the old build keeps running.
 If there is one, the top bar shows the button *Restart to update*, which ends the application with the exit code 55.
@@ -953,3 +991,16 @@ Covers:
 * `req~restart-to-update~1`
 
 Needs: impl, utest
+
+### Window after a change of the displays
+`dsn~display-change~1`
+
+On Windows, after a change of the scale of the display, the drawing surface of the window may keep the size of the old scale, so that the content covers only part of the window.
+Restoring and maximizing the window again, or resizing it, gives the surface its size.
+The desktop application does that itself: when the graphics configuration of the window changes, it waits half a second for the display change to settle, then restores and maximizes a maximized window again, or makes any other window one pixel wider and back.
+
+Covers:
+
+* `req~display-change~1`
+
+Needs: impl

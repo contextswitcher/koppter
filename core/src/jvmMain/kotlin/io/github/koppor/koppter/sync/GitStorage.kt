@@ -13,6 +13,8 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.api.TransportCommand
 import org.eclipse.jgit.lib.ObjectId
+import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_EMAIL
+import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_NAME
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
@@ -41,6 +43,10 @@ class GitStorage(
     private val file: Path,
     private val repository: Repository,
     private val ssh: SshSessionFactory? = null,
+    /** Blank for the name of the git configuration. */
+    private val committerName: String = "",
+    /** Blank for the email address of the git configuration. */
+    private val committerEmail: String = "",
 ) : SyncingStorage, CompanionFiles {
     private val git = Git(repository)
     private val files = FileStorage(file)
@@ -229,12 +235,15 @@ class GitStorage(
 
     private fun String?.toLines(): List<String> = orEmpty().lines().dropLastWhile { it.isEmpty() }
 
-    /** Without a configured user, as on a phone, the commits are made in the name of the application. */
+    // [impl->dsn~committer~1]
+    /** The settings come first; without them and without a configured user, as on a phone, the commits are made in the name of the application. */
     private fun org.eclipse.jgit.api.CommitCommand.setIdent() = apply {
-        if (repository.config.getString("user", null, "name") == null) {
-            val ident = PersonIdent("koppter", "koppter@localhost")
-            setAuthor(ident).setCommitter(ident)
-        }
+        val config = repository.config
+        val ident = PersonIdent(
+            committerName.ifBlank { config.getString("user", null, "name") ?: DEFAULT_COMMITTER_NAME },
+            committerEmail.ifBlank { config.getString("user", null, "email") ?: DEFAULT_COMMITTER_EMAIL },
+        )
+        setAuthor(ident).setCommitter(ident)
     }
 
     private fun <C : TransportCommand<C, *>> C.withSsh(): C = setTransportConfigCallback { transport ->

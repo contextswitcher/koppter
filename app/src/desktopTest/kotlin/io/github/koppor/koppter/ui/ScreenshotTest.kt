@@ -6,6 +6,8 @@ import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.swipe
+import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -109,6 +111,7 @@ class ScreenshotTest {
     private val git = object : GitSetupActions {
         override fun publicKey() = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBExampleKeyOfTheDemo= koppter"
         override suspend fun clone(url: String) = "todo.txt"
+        override suspend fun cloneShared(url: String) = error("not cloned in this test")
         override suspend fun check(url: String) = Unit
     }
 
@@ -148,6 +151,16 @@ class ScreenshotTest {
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-update").performScrollTo().performClick()
         save("plan.png")
+        onNodeWithTag("plan-edit-map-General").performScrollTo().performClick()
+        // Early mornings and late afternoons only if needed, Friday afternoon as the last resort.
+        onNodeWithTag("time-map-paint-yellow").performClick()
+        for (day in 0..4) {
+            onNodeWithTag("time-map-grid").performTouchInput { swipe(Offset(width * (2 * day + 1) / 14f, height * 28.5f / 96), Offset(width * (2 * day + 1) / 14f, height * 31.5f / 96)) }
+            onNodeWithTag("time-map-grid").performTouchInput { swipe(Offset(width * (2 * day + 1) / 14f, height * 68.5f / 96), Offset(width * (2 * day + 1) / 14f, height * 71.5f / 96)) }
+        }
+        onNodeWithTag("time-map-paint-red").performClick()
+        onNodeWithTag("time-map-grid").performTouchInput { swipe(Offset(width * 9 / 14f, height * 52.5f / 96), Offset(width * 9 / 14f, height * 67.5f / 96)) }
+        save("time-map.png")
     }
 
     @Test

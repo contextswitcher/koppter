@@ -15,11 +15,12 @@ import io.github.koppor.koppter.plan.fetchCalendar
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.storage.SettingsFile
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.logToFile
 import io.github.koppor.koppter.sync.GitSetup
-import io.github.koppor.koppter.sync.storageForFile
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
+import io.github.koppor.koppter.ui.isGitAddress
 import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.ui.TodoController
@@ -94,6 +95,26 @@ internal fun commitsBehind(checkout: File, running: String): Int {
     return git(checkout, "rev-list", "--count", "$running..@{u}")?.toIntOrNull() ?: 0
 }
 
+/**
+ * Gives the drawing surface of [window] its size again after the scale of its display changed, which on Windows it keeps from the old scale.
+ * Restoring and maximizing, or resizing, is what the user would do by hand.
+ */
+// [impl->dsn~display-change~1]
+private fun refitAfterDisplayChange(window: java.awt.Frame) {
+    // A display change arrives as several events; act once after they settled.
+    val refit = javax.swing.Timer(500) {
+        val state = window.extendedState
+        if (state and java.awt.Frame.MAXIMIZED_BOTH == java.awt.Frame.MAXIMIZED_BOTH) {
+            window.extendedState = state and java.awt.Frame.MAXIMIZED_BOTH.inv()
+            window.extendedState = state
+        } else {
+            window.setSize(window.width + 1, window.height)
+            window.setSize(window.width - 1, window.height)
+        }
+    }.apply { isRepeats = false }
+    window.addPropertyChangeListener("graphicsConfiguration") { refit.restart() }
+}
+
 fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
     // Before anything else: a start that only hands its link on ends at once.
@@ -109,18 +130,33 @@ fun main(args: Array<String>) {
     val git = object : GitSetupActions {
         override fun publicKey(): String? = null
         override suspend fun clone(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).clone(url).toString() }
+        override suspend fun cloneShared(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).cloneShared(url).toString() }
         override suspend fun check(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).check(url) }
     }
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
+    val gitSetup = GitSetup(dataDirectory(), ownKey = false)
     val controller = TodoController(
-        settings = settingsFile.load(),
-        storageFor = { storageForFile(it.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile) },
+        // [impl->dsn~clone-by-address~1]
+        // Settings of an earlier version name the clone instead of the address of its repository.
+        settings = settingsFile.load().let { settings -> gitSetup.addressOf(settings.todoFile)?.let { settings.copy(todoFile = it).also(settingsFile::save) } ?: settings },
+        storageFor = { settings ->
+            fun storageOf(file: Path) = gitSetup.storageFor(file, settings.committerName, settings.committerEmail)
+            val main = when {
+                settings.todoFile.isBlank() -> storageOf(defaultTodoFile)
+                // [impl->dsn~clone-by-address~1]
+                isGitAddress(settings.todoFile) -> gitSetup.storageForAddress(settings.todoFile, settings.committerName, settings.committerEmail)
+                else -> storageOf(Path(settings.todoFile))
+            }
+            // [impl->dsn~shared-lists~1]
+            SharedLists.of(main, settings.sharedLists) { storageOf(Path(it)) }
+        },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },
         minuteOfDay = { java.time.LocalTime.now().toSecondOfDay() / 60 },
         fetch = { address -> withContext(Dispatchers.IO) { fetchCalendar(address) } },
         // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
         log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
+        outlook = AnchorHubOutlook.installed(),
     )
     val links = Channel<String>(Channel.UNLIMITED)
     link?.let(links::trySend)
@@ -135,6 +171,7 @@ fun main(args: Array<String>) {
             icon = icon,
             state = rememberWindowState(width = 1100.dp, height = 760.dp),
         ) {
+            LaunchedEffect(Unit) { refitAfterDisplayChange(window) }
             // [impl->dsn~restart-to-update~1]
             var updateWaits by remember { mutableStateOf(false) }
             LaunchedEffect(Unit) {
@@ -154,6 +191,8 @@ fun main(args: Array<String>) {
                 chooseFolder = { chooseFolder(window) },
                 git = git,
                 pickImage = { pickImage(window) },
+                // [impl->dsn~build-version~1]
+                version = remember { ClassLoader.getSystemResource("koppter-version.txt")?.readText()?.ifBlank { null } },
                 // Every change is in the file already, as on closing the window.
                 update = if (updateWaits) ({ exitProcess(RESTART_EXIT_CODE) }) else null,
             )

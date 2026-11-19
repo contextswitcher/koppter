@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -59,6 +60,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -83,6 +86,7 @@ import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
 import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.launch
 
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
@@ -110,6 +114,8 @@ fun App(
     git: GitSetupActions? = null,
     keyboard: Boolean = true,
     shareLog: (() -> Unit)? = null,
+    /** The version and commit of the build, shown at the bottom of the settings; `null` where the platform does not tell it. */
+    version: String? = null,
     chooseFileNote: String? = null,
     /** Lets the user choose an image for a note and gives its bytes, scaled down; `null` on a platform without that. */
     pickImage: (suspend () -> ByteArray?)? = null,
@@ -130,9 +136,19 @@ fun App(
     val uriHandler = remember(platform) {
         object : UriHandler {
             override fun openUri(uri: String) = try {
-                platform.openUri(uri)
+                // [impl->dsn~outlook-tag~1]
+                if (!controller.openOutlook(uri)) platform.openUri(uri) else Unit
             } catch (e: Exception) {
                 controller.error = "Not opened: $uri"
+            }
+        }
+    }
+    // [impl->dsn~outlook-items~1]
+    if (controller.readsOutlook) {
+        LaunchedEffect(controller) {
+            while (true) {
+                controller.refreshOutlook()
+                delay(OUTLOOK_REFRESH)
             }
         }
     }
@@ -148,12 +164,15 @@ fun App(
             LocalLabelLinks provides controller.labelLinks,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, pickImage, takePhoto, update, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave)
         }
     }
 }
 
 internal const val LEAVE_WARNING = "Back again leaves koppter."
+
+/** How often the To-Do list of Outlook is read again: each reading starts a process that asks Outlook. */
+private val OUTLOOK_REFRESH = 2.minutes
 
 /** What the list is without groups. */
 internal const val NO_GROUPS = "no groups: by priority, then due date"
@@ -184,6 +203,7 @@ private fun MainScreen(
     chooseFileNote: String?,
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
+    version: String?,
     pickImage: (suspend () -> ByteArray?)?,
     takePhoto: (suspend () -> ByteArray?)?,
     update: (() -> Unit)?,
@@ -202,6 +222,14 @@ private fun MainScreen(
     // Keys reach the shortcuts only through a focused element, so the screen takes the focus whenever none of its elements has it:
     // at the start, after the element with the focus went away with its view, after a dialog closed, and after a touch took the focus away.
     var focused by remember { mutableStateOf(false) }
+    // Set by the layout: below its width, the field for the text of the filter lies in the drawer, which has to open first.
+    var wide by remember { mutableStateOf(true) }
+    fun focusSearch() {
+        if (wide) filterFocus.requestFocus() else scope.launch {
+            drawer.open()
+            filterFocus.requestFocus()
+        }
+    }
     val dialog = editing != null || showSettings || schedule != null || planning != null
     LaunchedEffect(focused, dialog) { if (!focused && !dialog) rootFocus.requestFocus() }
 
@@ -219,7 +247,7 @@ private fun MainScreen(
             }
             // The agenda and the week show the plan, which the filter does not apply to.
             if (controller.view == View.AGENDA || controller.view == View.WEEK) controller.view = View.LIST
-            filterFocus.requestFocus()
+            focusSearch()
         }
         when {
             !event.isShiftPressed && event.key == Key.N -> editing = Editing(null)
@@ -253,6 +281,18 @@ private fun MainScreen(
         }
     }
 
+    // [impl->dsn~filter-panel~1]
+    val searchField: @Composable (Modifier) -> Unit = { modifier ->
+        SearchField(
+            controller.filter.text,
+            { text ->
+                controller.filter = controller.filter.copy(text = text)
+                // The agenda and the week show the plan, which the filter does not apply to.
+                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
+            },
+            "Search text", "filter-text", modifier.focusRequester(filterFocus),
+        )
+    }
     val filterPanel: @Composable (Modifier, (() -> Unit)?) -> Unit = { modifier, onClose ->
         FilterPanel(
             filter = controller.filter,
@@ -269,6 +309,7 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             onClose = onClose,
+            search = if (onClose != null) ({ searchField(Modifier.padding(bottom = 8.dp)) }) else null,
         )
     }
 
@@ -294,18 +335,19 @@ private fun MainScreen(
     }
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {
-        val wide = maxWidth >= WIDE
+        val wideNow = maxWidth >= WIDE
+        SideEffect { wide = wideNow }
         ModalNavigationDrawer(
             drawerState = drawer,
-            gesturesEnabled = !wide,
-            drawerContent = { if (!wide) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
+            gesturesEnabled = !wideNow,
+            drawerContent = { if (!wideNow) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
             Scaffold(
                 topBar = {
                     TopAppBar(
                         title = { Text("koppter") },
                         navigationIcon = {
-                            if (!wide) {
+                            if (!wideNow) {
                                 IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                     Icon(Icons.Default.Menu, contentDescription = "Filter")
                                 }
@@ -326,42 +368,41 @@ private fun MainScreen(
                     )
                 },
                 floatingActionButton = {
-                    FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
-                        Icon(Icons.Default.Add, contentDescription = "New task")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (!wideNow) {
+                            SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
+                            }
+                        }
+                        FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
+                            Icon(Icons.Default.Add, contentDescription = "New task")
+                        }
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
                 Row(Modifier.padding(padding).fillMaxSize()) {
-                    if (wide) {
+                    if (wideNow) {
                         filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
                         VerticalDivider()
                     }
                     Column(Modifier.weight(1f)) {
                         ViewOptions(controller)
-                        // [impl->dsn~filter-panel~1]
-                        SearchField(
-                            controller.filter.text,
-                            { text ->
-                                controller.filter = controller.filter.copy(text = text)
-                                // The agenda and the week show the plan, which the filter does not apply to.
-                                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
-                            },
-                            "Search text", "filter-text", Modifier.padding(8.dp).focusRequester(filterFocus),
-                        )
+                        // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
+                        if (wideNow) searchField(Modifier.padding(8.dp))
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
                             // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
                             androidx.compose.runtime.key(controller.overviewKey) {
-                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), open, emptyText)
+                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
                             }
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked)
                         } else if (controller.view == View.WEEK) {
                             Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {
-                            Inbox(controller.inbox, controller.contexts, controller::assignContext, open)
+                            Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
                         } else if (controller.board) {
                             Board(
                                 controller.groups, controller.today(), controller::toggle, onOpen = { editing = Editing(it) },
@@ -427,7 +468,6 @@ private fun MainScreen(
         )
     }
     if (showSettings) {
-        val fileBefore = remember { controller.settings.todoFile }
         SettingsDialog(
             settings = controller.settings,
             defaultTodoFile = defaultTodoFile,
@@ -436,6 +476,7 @@ private fun MainScreen(
             chooseFileNote = chooseFileNote,
             git = git,
             shareLog = shareLog,
+            version = version,
             boardColumns = controller.boardColumnsText,
             shareActions = controller.shareActionsText,
             priorityNames = controller.priorityNamesText,
@@ -447,10 +488,9 @@ private fun MainScreen(
             // [impl->dsn~color-themes~1]
             onColors = { theme, appearance -> controller.updateSettings(controller.settings.copy(theme = theme, appearance = appearance)) },
             // [impl->dsn~settings-open-file~1]
-            onOpenFile = { controller.updateSettings(controller.settings.copy(todoFile = it)) },
             // [impl->dsn~git-setup-dialog~1]
-            // The user wants the tasks of the repository; nothing of the dialog is written to it.
-            onCloned = {
+            // The user wants the tasks of the file or repository; nothing of the dialog is written to it.
+            onOpenFile = {
                 controller.updateSettings(controller.settings.copy(todoFile = it))
                 showSettings = false
             },
@@ -465,11 +505,12 @@ private fun MainScreen(
                 controller.updateSettings(settings)
                 showSettings = false
             },
-            onDismiss = {
-                // A file opened from the dialog was a look at it: without Save, the file from before is open again.
-                controller.updateSettings(controller.settings.copy(todoFile = fileBefore))
-                showSettings = false
+            // [impl->dsn~outlook-clear~1]
+            outlookBlocks = if (!controller.readsOutlook) null else object : OutlookBlockActions {
+                override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
+                override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)
             },
+            onDismiss = { showSettings = false },
         )
     }
 }

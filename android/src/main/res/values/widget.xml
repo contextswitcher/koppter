@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_description">The plan from now on, or the list of tasks if nothing is planned</string>
+    <string name="widget_empty">No open task</string>
+    <!-- Before Android 12, there are no colors of the system theme. -->
+    <color name="widget_background">#FF1E2433</color>
+    <color name="widget_item">#FF5B6BC0</color>
+    <color name="widget_on_item">#FFFFFFFF</color>
+    <color name="widget_on_background">#FFE3E3E8</color>
+</resources>

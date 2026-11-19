@@ -86,6 +86,21 @@ Covers:
 
 Needs: dsn
 
+### Shared lists
+`req~shared-lists~1`
+
+The settings name further todo.txt files, such as those of clones of repositories shared with other people.
+Their tasks are shown together with those of the main file, each with a context named after the directory of its file.
+A new task with that context, or with a level below it, is written into that file, a task without such a context into the main file; changing the context moves the task with its note.
+A line of a file is written back unchanged unless the user edited it; the context of the list is not written into the file of the list.
+Where the application clones a repository, it clones the repository of a shared list as well and adds its todo.txt file to the shared lists.
+
+Covers:
+
+* `feat~shared-lists~1`
+
+Needs: dsn
+
 ## Design
 
 ### Detection of the repository
@@ -119,7 +134,7 @@ Needs: impl, utest
 `GitStorage` reads and writes the file in the working tree and uses JGit for all git operations.
 A lock guards the working tree and the index against concurrent use by the user interface and by the synchronization.
 All synchronizations run one after the other on a single background thread.
-Commits are made in the name of the configured git user, or in the name of the application if none is configured.
+Commits are made in the name of the committer of the settings, else of the configured git user, else of the application (`dsn~committer~1`).
 
 Covers:
 
@@ -127,6 +142,19 @@ Covers:
 * `adr~jgit~1`
 
 Needs: impl
+
+### Committer
+`dsn~committer~1`
+
+The settings dialog has, under *Git repository*, the fields *Name of the commits* and *Email address of the commits*, which are settings of the device.
+An empty field stands for the value of the git configuration, `user.name` or `user.email`, and without one for `koppter` or `koppter@localhost`; the empty field shows that default in gray, with the title above the field so that it does not hide the default.
+`GitStorage` makes each commit in that name as author and committer; a change of either field opens the storage again, so that the next commit uses it.
+
+Covers:
+
+* `req~git-sync~1`
+
+Needs: impl, utest
 
 ### Commit per change
 `dsn~commit-per-change~1`
@@ -253,6 +281,32 @@ Covers:
 
 Needs: impl, utest
 
+### Clone by its address
+`dsn~clone-by-address~1`
+
+The settings keep the address of a repository that the application cloned, not the location of the clone.
+`GitSetup.storageForAddress` is the storage of the todo.txt file in the clone of that repository; without a clone of it, as after a new installation that restored the settings but not the clone, its first synchronization clones the repository again in the background.
+Until the clone is done, the storage has no tasks and writing fails.
+`GitSetup.addressOf` names the repository of the clone for settings that name the todo.txt file of the clone, as those of earlier versions; the application replaces such a file in the settings by the address when it starts.
+
+Covers:
+
+* `req~clone-in-app~1`
+
+Needs: impl, utest
+
+### Missing clone
+`dsn~missing-clone~1`
+
+A file in a clone of the application whose repository is gone, and the todo.txt file of a clone that has none, cannot be read: the application reports that instead of showing no tasks.
+`GitSetup.storageFor` gives such a file a storage that fails to read and to write; any other file that does not exist is a new, empty file.
+
+Covers:
+
+* `req~clone-in-app~1`
+
+Needs: impl, utest
+
 ### Home folder for SSH
 `dsn~ssh-home~1`
 
@@ -270,8 +324,8 @@ Needs: impl, utest
 `dsn~git-setup-dialog~1`
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
-The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file.
-*Clone* clones the address, makes the todo.txt file of the clone the file of the application through `onCloned` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
+The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file; the address of the repository that is open is saved as it is.
+*Clone* clones the address, makes the address the file of the application through `onOpenFile` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
 If the clone fails, the dialog stays and shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
 The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
 The dialog scrolls to the message of a clone or a check, which stands at the field, above the buttons.
@@ -286,5 +340,51 @@ Covers:
 
 * `req~ssh-key~1`
 * `req~clone-in-app~1`
+
+Needs: impl, utest
+
+### Shared lists in one storage
+`dsn~shared-lists~1`
+
+`SharedLists` is a storage that combines the storage of the main file with one storage per shared list, each a `GitStorage` or a `FileStorage` as for the main file.
+It reads the lines of the main file, followed by those of each list with the context of the list appended (`SharedLists.shown`), unless the line has that context or a level below it.
+On a write, it gives each line that has the context of a list, or a level below it, to the first such list without the context (`SharedLists.stripped`), every other line to the main file, and a blank line to the file of the line above it.
+It writes only the files whose lines changed or whose companion files were written.
+A note that does not exist yet waits until the line that names it is written and goes to the file of that line, with the images that it shows; the note of a line that is new in a file is copied there from the file that has it.
+A note is read from the first file that has it; the other companion files are those of the main file.
+The synchronization status is the first failure of a storage, prefixed with the name of its list, else the first running one.
+Without a shared list, and for a main storage without companion files, the main storage is used alone (`SharedLists.of`).
+
+Covers:
+
+* `req~shared-lists~1`
+* `adr~shared-lists~1`
+
+Needs: impl, utest
+
+### Setting of the shared lists
+`dsn~shared-lists-setting~1`
+
+The settings dialog has the field *Shared lists* below the field of the file, with one todo.txt file per line.
+A change of the field opens the files anew, as a change of the file does.
+
+Covers:
+
+* `req~shared-lists~1`
+
+Needs: impl
+
+### Clone of a shared list
+`dsn~shared-list-clone~1`
+
+Below the field *Shared lists*, where the platform passes `GitSetupActions`, the settings dialog has a field for the address of a shared repository and the button *Clone*, enabled while the field holds an address (`isGitAddress`).
+*Clone* clones the repository with `GitSetup.cloneShared` and adds its todo.txt file to the field; *Save* then opens it, and the dialog says with which context its tasks show.
+If the clone fails, the dialog shows the reason in the color for errors, and the failure goes to the log.
+`GitSetup.cloneShared` clones into a directory of `shared` next to the main clone that is named after the repository, as the name of that directory is the context of the list.
+A clone of the same repository is kept; a directory that holds anything else, such as the clone of another repository of the same name, is not replaced, and the name takes a number, as in `household-2`.
+
+Covers:
+
+* `req~shared-lists~1`
 
 Needs: impl, utest

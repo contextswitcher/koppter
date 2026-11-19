@@ -92,4 +92,15 @@ class BusyTimesTest {
             days,
         )
     }
+
+    // [utest->dsn~sideline~1]
+    @Test
+    fun sidelinedEventsAreLeftOutWithAllTheirOccurrences() {
+        val ics = "BEGIN:VCALENDAR\r\n" +
+            "BEGIN:VEVENT\r\nDTSTART:20261112T090000\r\nDTEND:20261112T100000\r\nSUMMARY:Lunch with muggi\r\nRRULE:FREQ=DAILY;COUNT=3\r\nEND:VEVENT\r\n" +
+            "BEGIN:VEVENT\r\nDTSTART:20261112T110000\r\nDTEND:20261112T120000\r\nSUMMARY:Review\r\nEND:VEVENT\r\n" +
+            "END:VCALENDAR\r\n"
+        assertEquals(listOf(LocalDate(2026, 11, 12)), busyTimes(ics, from, to, berlin, listOf("Muggi", " ")).keys.toList())
+        assertEquals(listOf(Span(660, 720)), busyTimes(ics, from, to, berlin, listOf("Muggi")).getValue(from))
+    }
 }

@@ -71,6 +71,7 @@ import io.github.koppor.koppter.todotxt.LINK_CONTEXT
 import io.github.koppor.koppter.todotxt.LINK_HASHTAG
 import io.github.koppor.koppter.todotxt.LINK_PROJECT
 import io.github.koppor.koppter.todotxt.PriorityNames
+import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.lastLevel
 import io.github.koppor.koppter.todotxt.linkTo
@@ -287,6 +288,19 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-cs"),
                 key = "$key:",
             )
+            // [impl->dsn~outlook-tag~1]
+            // The value is an EntryID of almost a hundred characters, which says nothing to the user.
+            key == Task.OUTLOOK -> Outlook.entryId(value)?.let { entryId ->
+                Label(
+                    "Outlook",
+                    colors.tertiaryContainer,
+                    colors.onTertiaryContainer,
+                    Modifier.clip(RoundedCornerShape(percent = 50))
+                        .clickable(onClickLabel = "Open the item in Outlook", role = Role.Button) { uriHandler.openUri(Outlook.anchor(entryId)) }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .testTag("label-outlook"),
+                )
+            }
             else -> {
                 val (container, content) = when {
                     overdue -> colors.errorContainer to colors.onErrorContainer

@@ -2,6 +2,7 @@ package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -26,11 +27,12 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.storage.ConfigFile
 import kotlinx.coroutines.launch
 
 /** The parts of the configuration for planning, each as lines of the form `name = value`. */
-data class PlanSettings(val timeMaps: String, val contextMaps: String, val barriers: String, val limits: String = "")
+data class PlanSettings(val timeMaps: String, val contextMaps: String, val barriers: String, val limits: String = "", val sideline: String = "")
 
 /** What a run of the planner did, as texts for the user. */
 data class PlanResult(val summary: String, val problems: List<String>, val unplaced: List<String>)
@@ -52,9 +54,11 @@ fun PlanDialog(
     var contextMaps by remember { mutableStateOf(settings.contextMaps) }
     var barriers by remember { mutableStateOf(settings.barriers) }
     var limits by remember { mutableStateOf(settings.limits) }
+    var sideline by remember { mutableStateOf(settings.sideline) }
     var addresses by remember { mutableStateOf(calendars) }
     var result by remember { mutableStateOf<PlanResult?>(null) }
     var running by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     @Composable
@@ -71,7 +75,7 @@ fun PlanDialog(
         )
     }
 
-    val state = listOf(timeMaps, contextMaps, barriers, limits, addresses)
+    val state = listOf(timeMaps, contextMaps, barriers, limits, sideline, addresses)
     // Planning saves what the fields hold.
     var saved by remember { mutableStateOf(state) }
 
@@ -88,9 +92,31 @@ fun PlanDialog(
                     "Time maps", timeMaps, { timeMaps = it },
                     "When tasks are planned, one map per line: General = Mon-Fri 08:00-12:00 13:00-18:00. " +
                         "A map that starts with the name of another one is restricted to its times: Morning-Focus = General 08:00-11:00. " +
-                        "The first map is for tasks whose contexts name none. Without a map: Mon-Fri 09:00-17:00.",
+                        "The first map is for tasks whose contexts name none. Without a map: Mon-Fri 09:00-17:00. " +
+                        "A rule may end with yellow, red or black: Mon-Fri 07:00-08:00 yellow; Paint shows the map on a week.",
                     "plan-time-maps",
                 )
+                // [impl->dsn~time-map-editor~1]
+                val maps = ConfigFile.parseLines(timeMaps)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for ((name, _) in maps) {
+                        TextButton(onClick = { editing = name }, modifier = Modifier.testTag("plan-edit-map-$name")) { Text("Paint $name") }
+                    }
+                }
+                editing?.let { name ->
+                    TimeMapEditor(
+                        name,
+                        TimeMaps(maps),
+                        onSave = { definition ->
+                            // Only the line of the map changes; the others stay as they were typed.
+                            timeMaps = timeMaps.lines().joinToString("\n") { line ->
+                                if (ConfigFile.parseLines(line).firstOrNull()?.first == name) "$name = $definition" else line
+                            }
+                            editing = null
+                        },
+                        onDismiss = { editing = null },
+                    )
+                }
                 field(
                     "Time maps of contexts", contextMaps, { contextMaps = it },
                     "One context per line: @research = Morning-Focus. It holds for the contexts below it.",
@@ -119,6 +145,13 @@ fun PlanDialog(
                         "plan-calendars",
                     )
                 }
+                // [impl->dsn~sideline~1]
+                field(
+                    "Sideline", sideline, { sideline = it },
+                    "Events of the calendars whose title contains one of these words, one per line, stay in the calendar, " +
+                        "but tasks are planned into their time. A repeating event counts with all its occurrences.",
+                    "plan-sideline",
+                )
                 result?.let { shown ->
                     Text(shown.summary, modifier = Modifier.testTag("plan-summary"))
                     for (problem in shown.problems) {
@@ -140,7 +173,7 @@ fun PlanDialog(
                             saved = state
                             scope.launch {
                                 try {
-                                    result = onPlan(PlanSettings(timeMaps, contextMaps, barriers, limits), addresses)
+                                    result = onPlan(PlanSettings(timeMaps, contextMaps, barriers, limits, sideline), addresses)
                                 } finally {
                                     running = false
                                 }

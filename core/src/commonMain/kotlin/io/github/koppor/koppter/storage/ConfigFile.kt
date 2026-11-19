@@ -25,6 +25,7 @@ import kotlinx.datetime.LocalDate
  *
  * The key `share-actions` maps the title of each share action to its template in the same way,
  * and so do the keys `time-maps`, `context-time-maps` and `barriers` for planning.
+ * The key `sideline` lists the words, each as a key with an empty value, whose events of the calendars planning ignores.
  * The key `priorities` maps the letter of a priority to the name it is shown with.
  * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
  * The key `new-task` holds what a new task starts with, under `priority` and `due`.
@@ -43,6 +44,9 @@ object ConfigFile {
     const val CONTEXT_TIME_MAPS = "context-time-maps:"
     const val BARRIERS = "barriers:"
     const val LIMITS = "limits:"
+
+    /** The words whose events leave their time to planning, each as a key without value. */
+    const val SIDELINE = "sideline:"
     const val PRIORITIES = "priorities:"
     const val LINKS = "links:"
     const val PROJECT_CONTEXTS = "project-contexts:"

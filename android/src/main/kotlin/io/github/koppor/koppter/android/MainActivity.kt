@@ -51,6 +51,8 @@ class MainActivity : ComponentActivity() {
 
         override suspend fun clone(url: String): String = withContext(Dispatchers.IO) { gitSetup.clone(url).toString() }
 
+        override suspend fun cloneShared(url: String): String = withContext(Dispatchers.IO) { gitSetup.cloneShared(url).toString() }
+
         override suspend fun check(url: String) = withContext(Dispatchers.IO) { gitSetup.check(url) }
     }
 
@@ -86,6 +88,9 @@ class MainActivity : ComponentActivity() {
             App(
                 controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, chooseFolder = ::chooseFolder, git = gitActions, keyboard = keyboard,
                 shareLog = ::shareLog,
+                // [impl->dsn~build-version~1]
+                // A build outside the release workflow has the version name "0", which tells nothing.
+                version = listOf(BuildConfig.VERSION_NAME.takeIf { it != "0" }, BuildConfig.GIT_COMMIT_LINE).filterNot { it.isNullOrEmpty() }.joinToString(" · ").ifEmpty { null },
                 pickImage = ::pickImage,
                 takePhoto = ::takePhoto,
                 // [impl->dsn~choose-file~1]
@@ -106,9 +111,10 @@ class MainActivity : ComponentActivity() {
         intent.dataString?.let(controller::openLink)
     }
 
-    // The share actions may have been edited in the settings.
+    // The share actions may have been edited in the settings, and the tasks or the plan changed.
     override fun onStop() {
         super.onStop()
         publishShareTargets(controller.shareActions)
+        updateAgendaWidgets()
     }
 }

@@ -9,6 +9,10 @@ call git pull --no-rebase || echo run-loop: not pulled, starting what is here
 rem Tells the application which commit it runs, and that its exit with 55 starts it again.
 for /f %%c in ('git rev-parse HEAD') do set KOPPTER_RUN_LOOP=%%c
 call gradlew.bat :app:createDistributable || exit /b 1
+rem The window may open on another desktop; the line tells that the application runs.
+echo Running koppter...
 app\build\compose\binaries\main\app\koppter\koppter.exe
 if %errorlevel% equ 55 goto loop
-exit /b %errorlevel%
+set code=%errorlevel%
+echo koppter finished
+exit /b %code%

@@ -79,6 +79,10 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 ![Plan dialog with time maps and barriers](docs/screenshots/plan.png)
 
+*Paint* shows a time map on a week: green times are for planning, yellow and red ones only for a task that would otherwise be late, black ones for the tasks of that map alone.
+
+![Time map painted green, yellow and red](docs/screenshots/time-map.png)
+
 The edit dialog: the description without metadata at the top, the metadata below, then the note, the resulting line of the `todo.txt` file, and the date the task was added according to the git history.
 The line can be edited as text as well: the fields follow what is typed there.
 The dialog offers all known projects, contexts and hashtags, and typing into *Add project* and the like narrows them.
@@ -177,8 +181,7 @@ A note or `koppter.yml` that two devices changed at the same place stops the syn
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
 *Clone*, below the field, does that, closes the settings and shows the tasks of the repository; it writes nothing that stood in the settings.
-A file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
-*Cancel* returns to the file that was open before.
+*Choose file* and *Choose folder* do the same with a file and with the `todo.txt` file of a folder: the settings close and show its tasks.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
 With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
@@ -241,6 +244,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
+| `ol:AAAAAKGyw9Q` | An item of the To-Do list of the classic Outlook: a flagged mail or a task | This application | Written when an [item of Outlook](#tasks-of-outlook) gets a context, a project or another change. A click on the label *Outlook* opens the item in Outlook ([decision 0040](docs/decisions/0040-tag-for-an-item-of-outlook-with-its-entryid-in-base64.md)). |
 | `pri:A` | The priority a completed task had | [todo.txt format](https://github.com/todotxt/todo.txt#complete-tasks-2-format-rules) | Written when a task with a priority is completed, as the format has no priority for completed tasks; reopening the task restores the priority. |
 
 The option *Only the first 10 tasks* of the filter panel restricts the list to the first tasks, whose number is a setting, as the add-on [top](https://github.com/todotxt/todo.txt-cli/wiki/Todo.sh-Add-on-Directory#top-see-the-top-tasks) of the todo.txt command line does.
@@ -618,6 +622,24 @@ Such an address lets everyone who has it read the calendar.
 It is therefore kept in the settings of the device and not in `koppter.yml`; each device needs it entered once.
 The application only reads the calendars and writes nothing to them.
 
+### Calendar of Outlook
+
+On Windows with the classic Outlook and [AnchorHub](#tasks-of-outlook), planning also works with the main calendar of an Outlook account ([decision 0041](docs/decisions/0041-plan-in-the-main-calendar-of-outlook.md)):
+
+* Its appointments are busy times, as those of the calendars above; whole-day appointments and those marked as free do not count.
+* The plan of the next three weeks goes into it as appointments that are private and tentative, without reminder, whose subject ends with `[koppter]`.
+  Colleagues see the time as tentatively taken, not the task.
+* Each plan replaces the appointments that koppter wrote before; a block that is still in the plan stays as it is.
+* *Account of the calendar* in the settings names the account as Outlook shows it, such as its email address; empty for the default account.
+  *Weeks of the plan in Outlook* sets the three weeks; 0 writes nothing.
+* *Remove koppter's blocks from Outlook* in the settings shows the number of the appointments that koppter wrote and deletes them after a confirmation.
+  They go to the deleted items of Outlook.
+
+An appointment counts as koppter's only if AnchorHub created it: it carries a hidden property and the category `koppter`, which AnchorHub sets.
+An appointment of the user is never changed or deleted, whatever its subject says, and neither is a recurring appointment or a meeting.
+
+Do not enter the published address of the same calendar under *Calendars with busy times*: the published file has the blocks without their marks, so that the next plan would avoid them as busy times.
+
 ### Limits of planning
 
 * A budget counts what is planned from now on: what was planned earlier in the running week is not counted.
@@ -682,6 +704,20 @@ reading = {} +research @reading due:2w dur:1h
 * The actions are kept in `koppter.yml` next to the `todo.txt` file, so that they can be edited on the desktop.
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
+
+## Tasks of Outlook
+
+On Windows, the list shows the open items of the To-Do list of the classic Outlook next to the tasks of the file: the flagged mails and the tasks of all accounts.
+They are read through [AnchorHub](https://github.com/contextswitcher/anchorhub), which has to be installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and read again every two minutes while Outlook is running ([decision 0039](docs/decisions/0039-outlook-through-anchorhub.md)).
+The file stays as it is until an item is changed.
+
+* An item shows its subject, the hashtag `#outlook`, its due date and the label *Outlook*; a click on the label opens the item in Outlook.
+  The hashtag stays in the line that is written for the item, so that a filter for `#outlook` shows the items and the tasks that came from them.
+* An item has no context, so it stands in the [inbox](#inbox) as well.
+* Giving an item a context or a project, in the inbox, on the board or in the edit dialog, writes it to the file as a task with the tag `ol:`, which names the item; so does any other change, such as a due date.
+  From then on, the line stands for the item.
+* Completing an item, or a task whose tag `ol:` names one, marks the flag or the task done in Outlook.
+* An item without a line has no place in the order of the file: it cannot be moved up or down within its group or deleted.
 
 ## Links to koppter
 

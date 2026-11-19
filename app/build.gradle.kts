@@ -41,6 +41,9 @@ kotlin {
                 implementation(libs.appdirs)
                 // [impl->adr~file-dialogs-of-filekit~1]
                 implementation(libs.filekit.dialogs)
+                // [impl->adr~outlook-through-anchorhub~1]
+                // Reads what AnchorHub prints; the JSON elements need no compiler plugin.
+                implementation(libs.kotlinx.serialization.json)
                 // [impl->adr~log-messages-through-tinylog~1]
                 // JGit and its SSH client log through SLF4J, which complains at the start if nothing takes the messages.
                 implementation(libs.tinylog.api)
@@ -56,6 +59,26 @@ kotlin {
         }
     }
 }
+
+// [impl->dsn~build-version~1]
+// The line of the settings: the day of a release, if it is one, and the commit as `<short sha> (<yyyy-MM-dd HH:mm>)`; empty outside a git checkout.
+val gitCommitLine: String = runCatching {
+    providers.exec {
+        commandLine("git", "show", "--no-patch", "--date=format:%Y-%m-%d %H:%M", "--format=%h (%cd)", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+}.getOrDefault("")
+val versionLine = listOfNotNull(providers.environmentVariable("KOPPTER_VERSION").orNull, gitCommitLine.ifEmpty { null }).joinToString(" · ")
+val versionResources = layout.buildDirectory.dir("generated/version")
+val writeVersion by tasks.registering {
+    // Locals: the configuration cache cannot keep references to the script.
+    val line = versionLine
+    val file = versionResources.map { it.file("koppter-version.txt") }
+    inputs.property("line", line)
+    outputs.dir(versionResources)
+    doLast { file.get().asFile.writeText(line) }
+}
+kotlin.sourceSets.named("desktopMain") { resources.srcDir(writeVersion) }
 
 // The version of a package is the day of the release as YY.M.D:
 // the formats of Windows and macOS take three numbers, of which the first is above 0 and below 256.
@@ -73,7 +96,8 @@ compose.desktop {
             packageName = "koppter"
             // A build that is not a release is below every release.
             packageVersion = desktopVersion ?: "0.1.0"
-            description = "Tasks in a todo.txt file"
+            // Windows shows the description as the name of the program, in the task manager for one.
+            description = "koppter"
             // What `suggestRuntimeModules` finds for JGit, its SSH client, JNA and the D-Bus client of FileKit, plus naming for Kerberos and the bridge for screen readers.
             // All modules cannot be included: that list contains jlink itself, which a JDK without packaged modules cannot link.
             modules("java.instrument", "java.management", "java.naming", "java.rmi", "java.security.jgss", "java.sql", "jdk.accessibility", "jdk.security.auth", "jdk.unsupported")

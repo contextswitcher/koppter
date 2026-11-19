@@ -59,7 +59,9 @@ jobs:
           fi
 
           git switch main
-          git merge --no-ff --no-edit -m "Merge experimental${tag:+: release $d}" experimental
+          # Fast-forward only: a merge commit would exist only on main and leave
+          # experimental "behind" it forever.
+          git merge --ff-only experimental
           git push origin main
           if [ -n "$tag" ]; then
             git tag "$tag" main
@@ -101,6 +103,8 @@ jobs:
             cp android/build/outputs/apk/release/android-release.apk "$RUNNER_TEMP/koppter-$d.apk"
             if ! gh release view "$tag" >/dev/null 2>&1; then
               jbang heylogs@nbbrd extract --ref "$d" --output "$RUNNER_TEMP/notes.md" CHANGELOG.md
+              # The release title already names the date; the heading "[d] - d" would repeat it twice more.
+              sed -i '/^## \[/d' "$RUNNER_TEMP/notes.md"
               gh release create "$tag" --verify-tag --title "$d" --notes-file "$RUNNER_TEMP/notes.md"
             fi
             gh release upload "$tag" "$RUNNER_TEMP/koppter-$d.apk" --clobber

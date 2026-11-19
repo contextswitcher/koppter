@@ -1,5 +1,9 @@
 package io.github.koppor.koppter.sync
 
+import io.github.koppor.koppter.storage.CompanionFiles
+import io.github.koppor.koppter.storage.SyncState
+import io.github.koppor.koppter.storage.SyncStatus
+import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.storage.TodoStorage
 import org.apache.sshd.common.config.keys.KeyUtils
 import org.apache.sshd.common.config.keys.writer.openssh.OpenSSHKeyPairResourceWriter
@@ -12,6 +16,7 @@ import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.transport.sshd.SshdSessionFactoryBuilder
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.Executors
 import kotlin.io.path.exists
 import kotlin.io.path.listDirectoryEntries
 import kotlin.io.path.outputStream
@@ -36,8 +41,32 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
         if (System.getProperty("user.home").isNullOrEmpty()) PathUtils.setUserHomeFolderResolver { directory }
     }
 
-    /** The storage for the file, as [storageForFile], but with the SSH key and the known hosts of the application. */
-    fun storageFor(file: Path): TodoStorage = storageForFile(file, ssh)
+    /**
+     * The storage for the file, as [storageForFile], but with the SSH key and the known hosts of the application where it has one.
+     * A file in a clone of the application whose clone is gone cannot be read: the address to clone it again is not known.
+     */
+    // [impl->dsn~missing-clone~1]
+    fun storageFor(file: Path, committerName: String = "", committerEmail: String = ""): TodoStorage {
+        val absolute = file.toAbsolutePath().normalize()
+        val inClone = listOf(repositoryDirectory, sharedDirectory).any { absolute.startsWith(it.toAbsolutePath().normalize()) }
+        if (inClone && GitStorage.repositoryOf(absolute) == null) return MissingClone(absolute)
+        return storageForFile(file, if (ownKey) ssh else null, committerName, committerEmail)
+    }
+
+    /**
+     * The storage of the todo.txt file of the repository at the address, in the clone of the application.
+     * The settings keep the address, not the location of the clone, so that a clone that is gone, as after a new installation, is cloned again:
+     * in the background, with the first synchronization; until then there are no tasks, and writing fails.
+     */
+    // [impl->dsn~clone-by-address~1]
+    fun storageForAddress(url: String, committerName: String = "", committerEmail: String = ""): TodoStorage =
+        ClonedStorage(url) { storageForFile(repositoryDirectory.resolve(TODO_FILE), if (ownKey) ssh else null, committerName, committerEmail) }
+
+    /** The address of the repository whose clone of the application holds the file; `null` for any other file. */
+    // [impl->dsn~clone-by-address~1]
+    fun addressOf(file: String): String? =
+        file.takeIf { it.isNotBlank() && Path.of(it).toAbsolutePath().normalize() == repositoryDirectory.resolve(TODO_FILE).toAbsolutePath().normalize() }
+            ?.let { remoteOf(repositoryDirectory) }
 
     /** SSH with the key and the known hosts of the application instead of those in `~/.ssh`. */
     internal val ssh: SshSessionFactory by lazy {
@@ -90,24 +119,117 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
      * A previous clone is kept if it is of the same repository and replaced otherwise.
      */
     // [impl->dsn~clone~1]
-    fun clone(url: String, fileName: String = "todo.txt"): Path {
-        val existing = GitStorage.repositoryOf(repositoryDirectory.resolve(fileName))
-        val sameRemote = existing?.use { it.config.getString("remote", "origin", "url") == url } ?: false
-        if (!sameRemote) {
+    fun clone(url: String, fileName: String = TODO_FILE): Path = synchronized(cloning) {
+        if (remoteOf(repositoryDirectory) != url) {
             if (repositoryDirectory.exists() && repositoryDirectory.listDirectoryEntries().isNotEmpty()) {
                 repositoryDirectory.toFile().deleteRecursively()
             }
-            Git.cloneRepository()
-                .setURI(url)
-                .setDirectory(repositoryDirectory.toFile())
-                .setTransportConfigCallback(transport)
-                .call()
-                .close()
+            cloneInto(repositoryDirectory, url)
         }
-        return repositoryDirectory.resolve(fileName)
+        repositoryDirectory.resolve(fileName)
+    }
+
+    /**
+     * Clones the repository of a shared list and returns the location of its todo.txt file.
+     * The clone lies in a directory named after the repository, as that name is the context of the list;
+     * a clone of the same repository is kept, and a directory that holds something else gets a number appended instead of being replaced.
+     */
+    // [impl->dsn~shared-list-clone~1]
+    fun cloneShared(url: String): Path {
+        val name = url.trimEnd('/').substringAfterLast('/').substringAfterLast(':').removeSuffix(".git").ifEmpty { "list" }
+        val target = generateSequence(1) { it + 1 }.map { sharedDirectory.resolve(if (it == 1) name else "$name-$it") }
+            .first { !it.exists() || it.listDirectoryEntries().isEmpty() || remoteOf(it) == url }
+        if (remoteOf(target) != url) cloneInto(target, url)
+        return target.resolve("todo.txt")
+    }
+
+    /** The directory of the clones of shared lists, next to that of the main repository. */
+    val sharedDirectory: Path = directory.resolve("shared")
+
+    private fun remoteOf(clone: Path): String? = GitStorage.repositoryOf(clone.resolve("todo.txt"))?.use { it.config.getString("remote", "origin", "url") }
+
+    private fun cloneInto(target: Path, url: String) {
+        Git.cloneRepository()
+            .setURI(url)
+            .setDirectory(target.toFile())
+            .setTransportConfigCallback(transport)
+            .call()
+            .close()
+    }
+
+    /**
+     * The clone of the repository at the address, cloned first if it is not there.
+     * The file of a clone that has no todo.txt file is not read as empty: the repository is then not that of a list of tasks.
+     */
+    private inner class ClonedStorage(private val url: String, private val open: () -> TodoStorage) : SyncingStorage, CompanionFiles {
+        @Volatile private var clone: TodoStorage? = if (remoteOf(repositoryDirectory) == url) open() else null
+        private val background = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "koppter-clone").apply { isDaemon = true } }
+
+        override var onStatus: (SyncStatus) -> Unit = {}
+            set(value) {
+                field = value
+                (clone as? SyncingStorage)?.onStatus = value
+            }
+
+        private fun cloned(): TodoStorage = clone ?: error("The repository $url is not cloned yet.")
+
+        private fun files(): CompanionFiles? = clone as? CompanionFiles
+
+        // [impl->dsn~missing-clone~1]
+        override fun read(): String {
+            val storage = clone ?: return ""
+            if (!repositoryDirectory.resolve(TODO_FILE).exists()) error("The repository $url has no file $TODO_FILE.")
+            return storage.read()
+        }
+
+        override fun write(text: String, change: String) = cloned().write(text, change)
+
+        override fun version(): Any? = clone?.version()
+
+        override fun sync() {
+            (clone as? SyncingStorage)?.let { return it.sync() }
+            background.execute {
+                // A second synchronization that waited for the clone synchronizes it.
+                clone?.let { return@execute (it as? SyncingStorage)?.sync() ?: Unit }
+                onStatus(SyncStatus(SyncState.RUNNING, "Cloning $url"))
+                try {
+                    this@GitSetup.clone(url)
+                    clone = open().also { (it as? SyncingStorage)?.onStatus = onStatus }
+                    onStatus(SyncStatus(SyncState.IDLE))
+                } catch (e: Exception) {
+                    onStatus(SyncStatus(SyncState.FAILED, "Not cloned: ${e.message ?: e}", e))
+                }
+            }
+        }
+
+        override fun dates() = (clone as? SyncingStorage)?.dates().orEmpty()
+
+        override fun readCompanion(path: String) = files()?.readCompanion(path)
+
+        override fun writeCompanion(path: String, text: String) = (cloned() as CompanionFiles).writeCompanion(path, text)
+
+        override fun readCompanionBytes(path: String) = files()?.readCompanionBytes(path)
+
+        override fun writeCompanionBytes(path: String, bytes: ByteArray) = (cloned() as CompanionFiles).writeCompanionBytes(path, bytes)
+    }
+
+    /** The file of a clone that is gone: reading it fails instead of showing no tasks, and writing does not start a file outside of a repository. */
+    // [impl->dsn~missing-clone~1]
+    private class MissingClone(private val file: Path) : TodoStorage {
+        private fun missing(): Nothing = error("The clone of the repository of $file is missing: enter the address of the repository in the settings and clone it.")
+
+        override fun read(): String = missing()
+
+        override fun write(text: String, change: String) = missing()
+
+        override fun version(): Any? = null
     }
 
     private companion object {
         const val COMMENT = "koppter"
+        const val TODO_FILE = "todo.txt"
+
+        /** Clones in the same process, such as those of the application and of its widget, would replace one another's directory. */
+        val cloning = Any()
     }
 }
