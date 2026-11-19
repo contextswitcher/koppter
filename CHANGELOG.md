@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The tail rotor in the icon shows its crossed blades instead of a single line.
 - On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
 - A search in the list or the inbox also finds the tasks before their start date.
 - The agenda shows tomorrow and the day after it also when nothing is planned on them.
