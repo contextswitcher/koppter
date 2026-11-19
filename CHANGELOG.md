@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- On Windows, the title bar of the window follows the light or dark variant of the colors.
 - The note of a task that moves between the main list and a shared list moves with its images and is deleted where it was.
 - The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
 - On Android, commits without a configured name are made in the name of the device and with the email address `koppter@android<version>`, such as `koppter@android14`, instead of `koppter` and `koppter@localhost`.
