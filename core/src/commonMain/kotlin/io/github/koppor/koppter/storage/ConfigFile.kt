@@ -30,6 +30,7 @@ import kotlinx.datetime.LocalDate
  * The key `links` maps a project, a context or a hashtag, written with its sign, to a link.
  * The key `new-task` holds what a new task starts with, under `priority` and `due`.
  * The key `project-contexts` maps a project, written with its sign, to the contexts that a task takes with it.
+ * The key `latex` maps a project, written with its sign, to the main file of a LaTeX document, whose TODOs are shown as its tasks.
  */
 // ponytail: reads the subset of YAML that it writes (one line per column, plain or quoted scalars, the escapes \" and \\);
 // a YAML library when the file gets nested content.
@@ -50,6 +51,7 @@ object ConfigFile {
     const val PRIORITIES = "priorities:"
     const val LINKS = "links:"
     const val PROJECT_CONTEXTS = "project-contexts:"
+    const val LATEX = "latex:"
     private const val NEW_TASK = "new-task:"
     private const val HEADER = "# Configuration of koppter for the todo.txt file in this directory"
 
@@ -145,6 +147,29 @@ object ConfigFile {
     fun contextsOf(entries: Map<String, String>, project: String): List<String> =
         project.withAncestors().flatMap { entries["+$it"].orEmpty().split(' ', ',') }.map { it.removePrefix("@") }.filter { it.isNotEmpty() }.distinct()
 
+    /** What the configuration keeps of a project, each value as the settings show it; empty for what it does not have. */
+    data class ProjectProperties(val link: String = "", val contexts: String = "", val latex: String = "")
+
+    // [impl->dsn~project-properties~1]
+    fun projectProperties(config: String, project: String): ProjectProperties {
+        fun of(key: String) = entries(config, key).firstOrNull { it.first == "+$project" }?.second.orEmpty()
+        return ProjectProperties(of(LINKS), of(PROJECT_CONTEXTS), of(LATEX))
+    }
+
+    /** The configuration with the properties of the project replaced; an empty value removes its entry, and the other entries keep their order. */
+    // [impl->dsn~project-properties~1]
+    fun withProjectProperties(config: String, project: String, properties: ProjectProperties): String =
+        listOf(LINKS to properties.link, PROJECT_CONTEXTS to properties.contexts, LATEX to properties.latex).fold(config) { text, (key, value) ->
+            val before = entries(text, key)
+            val label = "+$project"
+            val after = when {
+                value.isBlank() -> before.filter { it.first != label }
+                before.any { it.first == label } -> before.map { if (it.first == label) label to value.trim() else it }
+                else -> before + (label to value.trim())
+            }
+            if (after == before) text else withEntries(text, key, after)
+        }
+
     /**
      * The configuration with the label renamed in the links and in the contexts of projects, as [renameLabel] renames it in a task;
      * the configuration itself if it has the label in neither.
@@ -154,7 +179,7 @@ object ConfigFile {
         fun String.renamed() = renameLabel(this, sign, from, to)
         fun String.with(key: String, rename: (Pair<String, String>) -> Pair<String, String>) =
             entries(this, key).let { before -> before.map(rename).let { if (it == before) this else withEntries(this, key, it) } }
-        return config.with(LINKS) { (label, link) -> label.renamed() to link }.with(PROJECT_CONTEXTS) { (project, contexts) ->
+        return config.with(LINKS) { (label, link) -> label.renamed() to link }.with(LATEX) { (label, path) -> label.renamed() to path }.with(PROJECT_CONTEXTS) { (project, contexts) ->
             // The contexts with their sign and separated by blanks, which is how a task has them; as they were typed if none is renamed.
             val written = contexts.split(' ', ',').filter { it.isNotEmpty() }.joinToString(" ") { "@" + it.removePrefix("@") }
             project.renamed() to written.renamed().let { if (it == written) contexts else it }

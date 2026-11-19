@@ -97,3 +97,10 @@ Needs: req
 The application shows the open items of the To-Do list of the classic desktop Outlook next to the tasks of the file.
 
 Needs: req
+
+## TODOs of LaTeX documents
+`feat~latex~1`
+
+The application shows the TODOs of a LaTeX document as tasks of a project next to the tasks of the file.
+
+Needs: req

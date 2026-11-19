@@ -87,6 +87,16 @@ val LocalPriorityNames = staticCompositionLocalOf { PriorityNames() }
 /** The links of projects, contexts and hashtags, each under its name with its sign; see [ConfigFile.link]. */
 val LocalLabelLinks = staticCompositionLocalOf { emptyMap<String, String>() }
 
+/** Reads and changes what the configuration keeps of a project. */
+interface ProjectEditor {
+    /** `null` if the storage keeps no configuration file. */
+    fun properties(project: String): ConfigFile.ProjectProperties?
+    fun save(project: String, properties: ConfigFile.ProjectProperties)
+}
+
+/** The editor of the properties of projects; `null` where the menu of a project does not offer it. */
+val LocalProjectEditor = staticCompositionLocalOf<ProjectEditor?> { null }
+
 val LocalShowContext = staticCompositionLocalOf<(String) -> Unit> { {} }
 
 val LocalShowProject = staticCompositionLocalOf<(String) -> Unit> { {} }
@@ -301,6 +311,9 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                         .testTag("label-outlook"),
                 )
             }
+            // [impl->dsn~latex-todos~1]
+            // The value is a hash, which says nothing to the user.
+            key == Task.LATEX -> Label("LaTeX", colors.tertiaryContainer, colors.onTertiaryContainer, Modifier.testTag("label-latex"))
             else -> {
                 val (container, content) = when {
                     overdue -> colors.errorContainer to colors.onErrorContainer
@@ -376,6 +389,8 @@ fun WithLinkMenu(
 ) {
     var open by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf<ConfigFile.ProjectProperties?>(null) }
+    val projectEditor = LocalProjectEditor.current.takeIf { key == LINK_PROJECT }
     // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
@@ -451,6 +466,18 @@ fun WithLinkMenu(
                     modifier = Modifier.testTag("rename-label"),
                 )
             }
+            // [impl->dsn~project-properties~1]
+            if (projectEditor != null) {
+                DropdownMenuItem(
+                    text = { Text("Edit\u2026") },
+                    onClick = {
+                        open = false
+                        editing = projectEditor.properties(name)
+                    },
+                    enabled = projectEditor.properties(name) != null,
+                    modifier = Modifier.testTag("edit-project"),
+                )
+            }
             // [impl->dsn~filter-exclusion~1]
             if (onExclude != null) {
                 DropdownMenuItem(
@@ -462,6 +489,32 @@ fun WithLinkMenu(
                     modifier = Modifier.testTag("exclude-label"),
                 )
             }
+        }
+        // [impl->dsn~project-properties~1]
+        editing?.let { before ->
+            var properties by remember { mutableStateOf(before) }
+            AlertDialog(
+                onDismissRequest = { editing = null },
+                confirmButton = {
+                    TextButton(onClick = { projectEditor?.save(name, properties); editing = null }, modifier = Modifier.testTag("project-ok")) { Text("Save") }
+                },
+                dismissButton = { TextButton(onClick = { editing = null }, modifier = Modifier.testTag("project-cancel")) { Text("Cancel") } },
+                title = { Text("+$name") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(properties.link, { properties = properties.copy(link = it) }, label = { Text("Link") }, singleLine = true, modifier = Modifier.testTag("project-link"))
+                        OutlinedTextField(
+                            properties.contexts, { properties = properties.copy(contexts = it) }, label = { Text("Contexts of its tasks") },
+                            placeholder = { Text("@office") }, singleLine = true, modifier = Modifier.testTag("project-contexts"),
+                        )
+                        OutlinedTextField(
+                            properties.latex, { properties = properties.copy(latex = it) }, label = { Text("Main file of a LaTeX document") },
+                            placeholder = { Text("~/papers/fair/main.tex") }, singleLine = true, modifier = Modifier.testTag("project-latex"),
+                        )
+                        Text("Its TODOs are shown as tasks of the project on this computer.", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+            )
         }
         if (renaming && onRename != null) {
             var to by remember { mutableStateOf(name) }

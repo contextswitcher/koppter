@@ -5,6 +5,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
+import io.github.koppor.koppter.latex.Latex
+import io.github.koppor.koppter.latex.LatexTodo
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
 import io.github.koppor.koppter.outlook.OutlookBridge
@@ -90,6 +92,8 @@ class TodoController(
     private val log: (message: String, cause: Throwable?) -> Unit = { _, _ -> },
     /** The To-Do list and the calendar of Outlook; `null` where the platform has none. */
     private val outlook: OutlookBridge? = null,
+    /** Reads a file of the device by its path, `null` if there is none; `null` where the platform cannot, as on Android. */
+    private val readFile: ((String) -> String?)? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -260,6 +264,36 @@ class TodoController(
         }
     }
 
+    /** The TODOs of the LaTeX documents of the projects as they were read last, by project. */
+    private var latexTodos by mutableStateOf<Map<String, List<LatexTodo>>>(emptyMap())
+
+    /** The projects with their LaTeX document, with sign, as the configuration names them. */
+    val latexDocuments: List<Pair<String, String>>
+        get() = ConfigFile.entries(config.orEmpty(), ConfigFile.LATEX).filter { it.first.startsWith("+") && it.second.isNotBlank() }
+
+    /** Whether the LaTeX documents of the projects are read. */
+    val readsLatex: Boolean get() = readFile != null
+
+    /**
+     * Reads the LaTeX documents that the configuration names for projects again.
+     * A document that is missing, as on a device where it lies elsewhere, has no TODOs; what fails is logged.
+     */
+    // [impl->dsn~latex-todos~1]
+    suspend fun refreshLatex() {
+        val read = readFile ?: return
+        val documents = latexDocuments
+        latexTodos = withContext(Dispatchers.Default) {
+            documents.associate { (project, path) ->
+                project.drop(1) to try {
+                    Latex.todos(path) { read(it) }
+                } catch (e: Exception) {
+                    log("The LaTeX document $path was not read: ${e.message}", e)
+                    emptyList()
+                }
+            }
+        }
+    }
+
     /** Opens the item of Outlook that a link of [Outlook.anchor] names; returns whether the link was one. */
     // [impl->dsn~outlook-tag~1]
     fun openOutlook(link: String): Boolean {
@@ -280,7 +314,10 @@ class TodoController(
         get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
 
     val visible: List<Entry>
-        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = Outlook.entries(outlookItems, file.entries).let { items ->
+            // [impl->dsn~latex-todos~1]
+            file.entries + items + Latex.entries(latexTodos, file.entries, -1 - items.size)
+        }.filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
@@ -406,6 +443,16 @@ class TodoController(
         val contexts = ConfigFile.parseLines(text)
         if (contexts == ConfigFile.entries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS)) return
         writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.PROJECT_CONTEXTS, contexts), "Edit contexts of projects")
+    }
+
+    /** What the configuration keeps of the project; `null` if the storage keeps no configuration file. */
+    // [impl->dsn~project-properties~1]
+    fun projectProperties(project: String): ConfigFile.ProjectProperties? = config?.let { ConfigFile.projectProperties(it, project) }
+
+    // [impl->dsn~project-properties~1]
+    fun updateProjectProperties(project: String, properties: ConfigFile.ProjectProperties) {
+        val text = ConfigFile.withProjectProperties(config.orEmpty(), project, properties)
+        if (text != config.orEmpty()) writeConfig(text, "Edit project +$project")
     }
 
     /** The state of the plan of an open task and a text that tells its start; `null` if nothing was planned yet. */
@@ -696,6 +743,12 @@ class TodoController(
     }
 
     fun toggle(entry: Entry) {
+        // [impl->dsn~latex-todos~1]
+        // The document is not changed: the completed line hides the TODO until its text changes.
+        if (Outlook.isItem(entry) && entry.task.tag(Task.LATEX) != null) {
+            write(file.add(entry.task.complete(today(), settings.writeDates)), "Complete task: ${entry.task.description}")
+            return
+        }
         // [impl->dsn~outlook-complete~1]
         if (Outlook.isItem(entry)) {
             entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId ->

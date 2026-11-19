@@ -169,4 +169,16 @@ class ConfigFileTest {
         // The other key is still missing.
         assertEquals(ConfigFile.DEFAULT_SHARE_ACTIONS, ConfigFile.shareActions(none))
     }
+
+    // [utest->dsn~project-properties~1]
+    @Test
+    fun thePropertiesOfAProjectAreItsEntriesUnderThreeKeys() {
+        val config = "links:\n  \"@phone\": \"tel:1\"\n  \"+Fair\": \"https://example.org\"\n"
+        assertEquals(ConfigFile.ProjectProperties(link = "https://example.org"), ConfigFile.projectProperties(config, "Fair"))
+        val changed = ConfigFile.withProjectProperties(config, "Fair", ConfigFile.ProjectProperties("", "@booth", "~/paper/main.tex"))
+        assertEquals(ConfigFile.ProjectProperties("", "@booth", "~/paper/main.tex"), ConfigFile.projectProperties(changed, "Fair"))
+        assertEquals(listOf("@phone" to "tel:1"), ConfigFile.entries(changed, ConfigFile.LINKS))
+        assertEquals("+Market", ConfigFile.entries(ConfigFile.renamed(changed, '+', "Fair", "Market"), ConfigFile.LATEX).single().first)
+        assertEquals(config, ConfigFile.withProjectProperties(config, "Fair", ConfigFile.projectProperties(config, "Fair")))
+    }
 }

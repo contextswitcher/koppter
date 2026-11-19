@@ -64,6 +64,7 @@ koppter writes tasks in that order, so a line written the same way does not chan
 | `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter or a currency sign. `#someday` marks a task that is not decided yet: it is not a next action of its project either. |
 | `id:1`, `p:1` | Order between tasks | The task with `id:1` waits for the tasks with `p:1`. Pick a value that the file does not use yet: `grep -o ' id:[^ ]*' todo.txt`. |
 | `ol:AAAAAKGyw9Q` | The item of Outlook that the task stands for | Written by koppter together with `#outlook`; keep both as they are. A line with it hides the item of Outlook in koppter, and completing the task marks the item done there. |
+| `tex:1x2y3z` | The TODO of a LaTeX document that the task stands for | Written by koppter together with `#latex`; keep both as they are. A line with it hides the TODO in koppter; the document is not changed. |
 | `note:k3f.md` | Details of several lines | Write them to `notes/k3f.md` (three characters, a name not in use) and name the file in the tag. |
 
 Dates are absolute, `YYYY-MM-DD`: work them out from today's date, and tell the user which date "next Friday" became.

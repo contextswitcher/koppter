@@ -151,6 +151,20 @@ Covers:
 
 Needs: dsn
 
+### TODOs of a LaTeX document
+`req~latex-todos~1`
+
+The user gives a project the main file of a LaTeX document.
+On the desktop, the list shows the TODOs of that file and of the files it takes in as tasks of the project, without writing them to the file, and shows new and removed TODOs while the application is open.
+When the user changes a TODO, such as by giving it a priority, or completes it, it is written to the file as a task that refers to the TODO, which is then no longer shown on its own.
+The document is not changed.
+
+Covers:
+
+* `feat~latex~1`
+
+Needs: dsn
+
 ### Scheduled tasks
 `req~scheduled-tasks~1`
 
@@ -654,6 +668,25 @@ Covers:
 
 * `req~outlook-items~1`
 * `adr~outlook-through-anchorhub~1`
+
+Needs: impl, utest
+
+### TODOs of a LaTeX document in the list
+`dsn~latex-todos~1`
+
+The key `latex` of `koppter.yml` maps a project, written with its sign, to the path of the main file of a LaTeX document; `~` at its start stands for the home directory.
+`Latex.todos` reads the file through the function `readFile` of `TodoController`, which only the desktop has, and follows `\input`, `\include` and `\subfile`, resolved against the directory of the main file, each file once.
+Comments are left out.
+A TODO is the argument of one of the commands `\todo`, `\Todo`, `\TODO`, `\FIXME`, `\missingfigure`, `\zebratodo`, `\snaptodo`, `\fxnote`, `\fxwarning`, `\fxerror`, `\fxfatal`, `\draftnote`, `\pdfcomment`, `\commentatside` and the second one of `\commentontext`: the packages compared in `gadr-latex-packages`, without those with generic names such as `\note` and `\comment`.
+`App` has `TodoController.refreshLatex` read the documents at the start, after a change of the key, and every minute.
+`Latex.entries` makes each TODO an entry with a negative index below those of the items of Outlook, whose task has the text, the project, the hashtag `#latex` and the tag `tex:`, a hash of the file and the text in base 36 (`Latex.tag`); a TODO that the tag `tex:` of a line names, open or completed, is left out.
+`TodoController.visible` adds them to the lines of the file; `replace` and `move` add the changed task as a new line, as for an item of Outlook, and `toggle` adds it completed.
+`TaskLabels` shows the tag as the label *LaTeX*.
+
+Covers:
+
+* `req~latex-todos~1`
+* `adr~latex-tag~1`
 
 Needs: impl, utest
 

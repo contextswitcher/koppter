@@ -50,6 +50,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
+import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.CompanionFiles
@@ -1090,6 +1091,31 @@ class AppTest {
         runOnIdle { controller.toggle(controller.visible.first { it.task.description == "Answer the invitation" }) }
         assertEquals(listOf(task, mail), completed)
         assertTrue(storage.text.trim().lines().last().startsWith("x "))
+    }
+
+    // [utest->dsn~latex-todos~1]
+    // [utest->dsn~project-properties~1]
+    @Test
+    fun aProjectGetsALatexDocumentWhoseTodosAreShownUntilALineStandsForThem() = runComposeUiTest {
+        val documents = mapOf("/papers/fair/main.tex" to "Text\\todo{Cite the study}\\input{intro}", "/papers/fair/intro.tex" to "\\TODO{Add the outline}")
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, readFile = documents::get)
+        setContent { App(controller, "todo.txt") }
+        onAllNodesWithTag("label-project-GarageSale", useUnmergedTree = true)[0].performMouseInput { rightClick() }
+        onNodeWithTag("edit-project").assertTextEquals("Edit\u2026").performClick()
+        onNodeWithTag("project-latex").performTextInput("/papers/fair/main.tex")
+        onNodeWithTag("project-ok").performClick()
+        assertEquals("/papers/fair/main.tex", ConfigFile.projectProperties(storage.companions[ConfigFile.NAME]!!, "GarageSale").latex)
+
+        val before = storage.text
+        waitUntil { onAllNodesWithText("Add the outline", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithText("Cite the study", useUnmergedTree = true).assertExists()
+        assertEquals(before, storage.text)
+
+        // Completing a TODO writes a completed line, which hides it; the document stays as it is.
+        runOnIdle { controller.toggle(controller.visible.first { it.task.description.startsWith("Cite the study") }) }
+        assertTrue(storage.text.trim().lines().last().matches(Regex("x (\\S+ )?Cite the study \\+GarageSale #latex tex:\\w+")), storage.text)
+        assertTrue(controller.visible.none { it.task.description.startsWith("Cite the study") })
+        assertEquals(1, controller.visible.count { it.task.description.startsWith("Add the outline") })
     }
 
     // [utest->dsn~outlook-blocks~1]

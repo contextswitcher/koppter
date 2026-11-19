@@ -277,6 +277,17 @@ Covers:
 
 Needs: dsn
 
+### Properties of a project
+`req~project-properties~1`
+
+The user edits what the configuration keeps of a project, such as its link, from the label of the project.
+
+Covers:
+
+* `feat~task-list~1`
+
+Needs: dsn
+
 ### What a new task starts with
 `req~new-task-defaults~1`
 
@@ -452,6 +463,19 @@ Covers:
 
 * `req~label-links~1`
 * `adr~label-links~1`
+
+Needs: impl, utest
+
+### Properties of a project
+`dsn~project-properties~1`
+
+The menu of a project label, at a task and in the filter panel, has *Edit…*, which opens a dialog with the link, the contexts of the tasks and the LaTeX document of the project.
+They are the entries of the project under the keys `links`, `project-contexts` and `latex` of `koppter.yml` (`ConfigFile.projectProperties`, `ConfigFile.withProjectProperties`); an empty field removes the entry.
+Without a configuration file, as for a file chosen through the document picker of Android, the item is disabled.
+
+Covers:
+
+* `req~project-properties~1`
 
 Needs: impl, utest
 

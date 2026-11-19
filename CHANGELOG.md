@@ -12,6 +12,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Today* shows the agenda of today beside the day as a calendar with a line at the current time and the sum of the planned time; Ctrl+7 opens it.
 - The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.
 - The `ice_recur.txt` of a shared list schedules tasks into that list.
+- *Edit…* in the menu of a project label edits its link, the contexts of its tasks and the main file of a LaTeX document.
+- On the desktop, the TODOs of the LaTeX document of a project, from the main file and the files it takes in with `\input` and `\include`, are shown as tasks of the project with the hashtag `#latex`, without writing them to the file.
+  `\todo` of `todonotes` and the commands of `fixme`, `zebra`, `snaptodo`, `fixmetodonotes` and `pdfcomment` count.
+  Giving a TODO a priority or another change writes it to the file with the tag `tex:`; completing it in koppter hides it; the document is not changed.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
 
 ### Changed

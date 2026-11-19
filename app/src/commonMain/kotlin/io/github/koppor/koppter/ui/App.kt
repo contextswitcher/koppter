@@ -75,6 +75,7 @@ import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
@@ -159,6 +160,22 @@ fun App(
             }
         }
     }
+    val projectEditor = remember(controller) {
+        object : ProjectEditor {
+            override fun properties(project: String) = controller.projectProperties(project)
+            override fun save(project: String, properties: ConfigFile.ProjectProperties) = controller.updateProjectProperties(project, properties)
+        }
+    }
+    // [impl->dsn~latex-todos~1]
+    // Again at once when a project gets another document.
+    if (controller.readsLatex) {
+        LaunchedEffect(controller, controller.latexDocuments) {
+            while (true) {
+                controller.refreshLatex()
+                delay(LATEX_REFRESH)
+            }
+        }
+    }
     MaterialTheme(colorScheme = colorScheme(controller.settings.theme, dark), typography = compactTypography) {
         CompositionLocalProvider(
             LocalUriHandler provides uriHandler,
@@ -169,6 +186,7 @@ fun App(
             LocalKeyboard provides keyboard,
             LocalPriorityNames provides controller.priorityNames,
             LocalLabelLinks provides controller.labelLinks,
+            LocalProjectEditor provides projectEditor,
             LocalSetDue provides controller::setDue,
         ) {
             MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave)
@@ -180,6 +198,9 @@ internal const val LEAVE_WARNING = "Back again leaves koppter."
 
 /** How often the To-Do list of Outlook is read again: each reading starts a process that asks Outlook. */
 private val OUTLOOK_REFRESH = 2.minutes
+
+/** How often the LaTeX documents are read again, so that a TODO written in the editor shows up while koppter is open. */
+private val LATEX_REFRESH = 1.minutes
 
 /** What the list is without groups. */
 internal const val NO_GROUPS = "no groups: by priority, then due date"
