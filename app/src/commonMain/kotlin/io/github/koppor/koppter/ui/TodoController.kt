@@ -58,6 +58,11 @@ import io.github.koppor.koppter.todotxt.hierarchyOrder
 import io.github.koppor.koppter.todotxt.withAncestors
 import io.github.koppor.koppter.todotxt.TodoFile
 import io.github.koppor.koppter.todotxt.filterOfLink
+import io.github.koppor.koppter.todotxt.SyncGuard
+import io.github.koppor.koppter.todotxt.contextSwitcherLink
+import io.github.koppor.koppter.todotxt.selection
+import io.github.koppor.koppter.todotxt.syncOfLink
+import io.github.koppor.koppter.todotxt.with
 import io.github.koppor.koppter.todotxt.listOrder
 import io.github.koppor.koppter.todotxt.nextActions
 import io.github.koppor.koppter.todotxt.toLink
@@ -96,12 +101,18 @@ class TodoController(
     private val readFile: ((String) -> String?)? = null,
     /** Opens a file of the device at a line, with the program of the template of [Latex.command], or as the system opens it for a blank one; `null` where the platform cannot. */
     private val openFile: ((template: String, path: String, line: Int) -> Unit)? = null,
+    /** Opens a link of ContextSwitcher, which takes the projects and contexts of the filter; `null` where the platform has none, as on Android. */
+    private val openContextSwitcher: ((String) -> Unit)? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
     var file by mutableStateOf(TodoFile())
         private set
     private var shownFilter by mutableStateOf(filterOfLink(settings.filter) ?: Filter())
+
+    /** What ContextSwitcher knows of the projects and contexts, so that a selection is neither sent twice nor sent back. */
+    // [impl->dsn~contextswitcher-sync~1]
+    private val syncGuard = SyncGuard(shownFilter.selection)
 
     /** The filter of the task list, which the settings keep so that it is there again after a restart. */
     // ponytail: the settings are saved with every change of the filter, also with every typed character of its text; delay the saving if that is felt.
@@ -111,7 +122,29 @@ class TodoController(
         set(value) {
             shownFilter = value
             updateSettings(settings.copy(filter = if (value.isDefault) "" else value.toLink()))
+            // [impl->dsn~contextswitcher-sync~1]
+            val send = openContextSwitcher.takeIf { settings.contextSwitcherSync }
+            if (send != null && syncGuard.send(value.selection)) send(contextSwitcherLink(value.selection))
         }
+
+    /** Whether the platform can send the filter to ContextSwitcher, which the settings then offer. */
+    val syncsContextSwitcher: Boolean get() = openContextSwitcher != null
+
+    /**
+     * Takes the projects and contexts that ContextSwitcher sent with a link such as `koppter://sync?project=Fair&context=desk`;
+     * the other criteria of the filter, the view and the window stay, and nothing is sent back.
+     * A text that is no such link changes nothing, and so does the link while the settings do not ask for it.
+     *
+     * @return whether the text is such a link
+     */
+    // [impl->dsn~contextswitcher-sync~1]
+    fun applySync(link: String): Boolean {
+        val selection = syncOfLink(link) ?: return false
+        if (!settings.contextSwitcherSync) return true
+        syncGuard.received(selection)
+        filter = filter.with(selection)
+        return true
+    }
     var error by mutableStateOf<String?>(null)
 
     /**

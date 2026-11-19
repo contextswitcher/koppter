@@ -264,6 +264,21 @@ Covers:
 
 Needs: dsn
 
+### Filter shared with ContextSwitcher
+`req~contextswitcher-sync~1`
+
+On the desktop, the user lets koppter and ContextSwitcher share the projects and contexts of their filters.
+When the projects or the contexts of the filter change in koppter, ContextSwitcher shows the categories of these projects and contexts; when ContextSwitcher changes its project or context, the filter of koppter follows.
+A change that came from ContextSwitcher is not sent back to it.
+A selection that comes from ContextSwitcher changes neither the view nor the other criteria of the filter, and does not bring the window to the front, as the user works in ContextSwitcher.
+The sharing is off until the user turns it on in the settings.
+
+Covers:
+
+* `feat~filtering~1`
+
+Needs: dsn
+
 ### Links of projects and contexts
 `req~label-links~1`
 
@@ -990,6 +1005,25 @@ A start from the build registers nothing.
 Covers:
 
 * `req~app-links~1`
+
+Needs: impl, utest
+
+### Filter shared with ContextSwitcher
+`dsn~contextswitcher-sync~1`
+
+The setting `contextSwitcherSync` turns the sharing on; the settings dialog offers it where the platform opens links of other programs, which on the desktop it does through `java.awt.Desktop.browse`.
+When the setter of `TodoController.filter` changes the projects or the contexts (`SyncSelection`), it opens `contextswitcher://filter?project=…&context=…` with the names encoded as in a link of koppter; a link without either key clears the filter of ContextSwitcher.
+ContextSwitcher sends `koppter://sync?project=…&context=…`, which `syncOfLink` reads; a key it does not name is cleared.
+`TodoController.applySync` puts these into the filter and keeps its other criteria, the view and the options of the list.
+The desktop application takes such a link through the port of `dsn~link-single-instance~1` but does not bring its window to the front.
+Without a running application, the start that got the link writes the filter into the settings and ends without a window, as ContextSwitcher sends a link at every change and would otherwise open koppter each time.
+`SyncGuard` remembers the last selection that was sent or received and sends only one that differs from it, so a selection that came from ContextSwitcher does not go back and the two applications do not answer each other without end.
+With the setting off, a received link changes nothing.
+Android has no ContextSwitcher and sends nothing; a sync link there is no link of `filterOfLink` and changes nothing.
+
+Covers:
+
+* `req~contextswitcher-sync~1`
 
 Needs: impl, utest
 

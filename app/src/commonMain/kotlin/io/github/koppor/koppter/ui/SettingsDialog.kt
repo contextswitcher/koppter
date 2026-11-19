@@ -152,6 +152,8 @@ fun SettingsDialog(
     outlookBlocks: OutlookBlockActions? = null,
     /** Whether the device opens the TODOs of LaTeX documents, with the program that the settings name. */
     opensLatex: Boolean = false,
+    /** Whether the device can send the filter to ContextSwitcher. */
+    syncsContextSwitcher: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
@@ -162,6 +164,7 @@ fun SettingsDialog(
     var todoFile by remember { mutableStateOf(settings.todoFile) }
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
+    var contextSwitcherSync by remember { mutableStateOf(settings.contextSwitcherSync) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
     var columns by remember { mutableStateOf(boardColumns) }
@@ -192,7 +195,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor)
+    val state = listOf(todoFile, sharedLists, writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -402,6 +405,18 @@ fun SettingsDialog(
                     )
                     OutlookClearButton(outlookBlocks, outlookCalendar)
                 }
+                if (syncsContextSwitcher) {
+                    // [impl->dsn~contextswitcher-sync~1]
+                    Text("ContextSwitcher", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        Modifier.fillMaxWidth().toggleable(value = contextSwitcherSync, onValueChange = { contextSwitcherSync = it }, role = Role.Checkbox)
+                            .testTag("settings-contextswitcher-sync"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = contextSwitcherSync, onCheckedChange = null, modifier = Modifier.padding(6.dp))
+                        Text("Send the projects and contexts of the filter to ContextSwitcher, and take those it sends")
+                    }
+                }
                 if (opensLatex) {
                     // [impl->dsn~latex-open~1]
                     Text("LaTeX", style = MaterialTheme.typography.titleMedium)
@@ -422,6 +437,7 @@ fun SettingsDialog(
                             todoFile = file, sharedLists = sharedLists.trim(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
                             outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
+                            contextSwitcherSync = contextSwitcherSync,
                         ),
                         columns?.trim(),
                         actions?.trim(),

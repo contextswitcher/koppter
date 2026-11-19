@@ -22,7 +22,11 @@ import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.isGitAddress
 import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
+import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.filterOfLink
+import io.github.koppor.koppter.todotxt.syncOfLink
+import io.github.koppor.koppter.todotxt.toLink
+import io.github.koppor.koppter.todotxt.with
 import io.github.koppor.koppter.ui.TodoController
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.absolutePath
@@ -133,8 +137,19 @@ fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
     // Before anything else: a start that only hands its link on ends at once.
     val port = LinkPort(dataDirectory().resolve("link.port"))
-    val link = args.firstOrNull { filterOfLink(it) != null }
+    val link = args.firstOrNull { filterOfLink(it) != null || syncOfLink(it) != null }
     if (link != null && port.pass(link)) return
+    // [impl->dsn~contextswitcher-sync~1]
+    // ContextSwitcher sends its selection at every change; with no window open, the next start shows it instead of a window opening now.
+    val sync = link?.let(::syncOfLink)
+    if (sync != null) {
+        val file = SettingsFile(configDirectory().resolve("settings.properties"))
+        val settings = file.load()
+        if (!settings.contextSwitcherSync) return
+        val filter = (filterOfLink(settings.filter) ?: Filter()).with(sync)
+        file.save(settings.copy(filter = if (filter.isDefault) "" else filter.toLink()))
+        return
+    }
     logToFile(dataDirectory().resolve("logs"))
     // [impl->dsn~failure-log~1]
     Thread.setDefaultUncaughtExceptionHandler { _, e -> Logger.error(e, "The application failed") }
@@ -179,6 +194,13 @@ fun main(args: Array<String>) {
             if (template.isBlank()) thread(isDaemon = true) { java.awt.Desktop.getDesktop().open(file) }
             else ProcessBuilder(Latex.command(template, file.path, line)).start()
         },
+        // [impl->dsn~contextswitcher-sync~1]
+        openContextSwitcher = { url ->
+            thread(isDaemon = true) {
+                runCatching { java.awt.Desktop.getDesktop().browse(java.net.URI(url)) }
+                    .onFailure { Logger.warn(it, "ContextSwitcher did not take the filter") }
+            }
+        },
     )
     val links = Channel<String>(Channel.UNLIMITED)
     link?.let(links::trySend)
@@ -222,6 +244,9 @@ fun main(args: Array<String>) {
             // [impl->dsn~link-single-instance~1]
             LaunchedEffect(Unit) {
                 for (received in links) {
+                    // [impl->dsn~contextswitcher-sync~1]
+                    // The selection of ContextSwitcher changes the filter only: the user works in ContextSwitcher.
+                    if (controller.applySync(received)) continue
                     controller.openLink(received)
                     // The window may be minimized or behind the program in which the link was clicked.
                     window.extendedState = window.extendedState and java.awt.Frame.ICONIFIED.inv()

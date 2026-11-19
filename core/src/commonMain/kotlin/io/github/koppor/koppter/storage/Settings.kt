@@ -53,6 +53,8 @@ data class Settings(
     val outlookWeeks: Int = 3,
     /** The program that opens a TODO of a LaTeX document, as a template of [io.github.koppor.koppter.latex.Latex.command]; blank for the program of the system. */
     val latexEditor: String = "",
+    /** Whether the projects and contexts of the filter are sent to ContextSwitcher, on the desktop; see [io.github.koppor.koppter.todotxt.SyncSelection]. */
+    val contextSwitcherSync: Boolean = false,
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -75,6 +77,7 @@ data class Settings(
         OUTLOOK_CALENDAR to outlookCalendar,
         OUTLOOK_WEEKS to outlookWeeks.toString(),
         LATEX_EDITOR to latexEditor,
+        CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
     )
 
     companion object {
@@ -97,6 +100,7 @@ data class Settings(
         private const val OUTLOOK_CALENDAR = "outlookCalendar"
         private const val OUTLOOK_WEEKS = "outlookWeeks"
         private const val LATEX_EDITOR = "latexEditor"
+        private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -119,6 +123,7 @@ data class Settings(
             outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
             outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
             latexEditor = properties[LATEX_EDITOR].orEmpty(),
+            contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),
         )
     }
 }

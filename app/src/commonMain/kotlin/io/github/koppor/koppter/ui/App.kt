@@ -560,6 +560,7 @@ private fun MainScreen(
             },
             // [impl->dsn~outlook-clear~1]
             opensLatex = controller.opensLatex,
+            syncsContextSwitcher = controller.syncsContextSwitcher,
             outlookBlocks = if (!controller.readsOutlook) null else object : OutlookBlockActions {
                 override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
                 override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)

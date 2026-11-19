@@ -64,6 +64,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
+import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
@@ -2422,6 +2423,43 @@ class AppTest {
         onNodeWithTag("group-PROJECT").performClick()
         onAllNodesWithTag("overview-stuck", useUnmergedTree = true).assertCountEquals(1)
         onNodeWithText("No next action: survey", useUnmergedTree = true).assertExists()
+    }
+
+    // [utest->dsn~contextswitcher-sync~1]
+    @Test
+    fun theFilterReachesContextSwitcherAndComesBackWithoutAnEcho() {
+        val sent = mutableListOf<String>()
+        val controller = TodoController(
+            Settings(contextSwitcherSync = true, filter = "koppter://filter?hashtag=quick"), { storage },
+            today = { LocalDate(2026, 11, 12) }, openContextSwitcher = { sent += it },
+        )
+        assertTrue(controller.syncsContextSwitcher)
+
+        // A change of the projects or contexts is sent, one of the text is not.
+        controller.filter = controller.filter.copy(projects = setOf("GarageSale"))
+        controller.filter = controller.filter.copy(text = "signs")
+        assertEquals(listOf("contextswitcher://filter?project=GarageSale"), sent)
+
+        // What ContextSwitcher sends changes projects and contexts only, and is not sent back.
+        assertTrue(controller.applySync("koppter://sync?context=phone"))
+        assertEquals(Filter(text = "signs", contexts = setOf("phone"), hashtags = setOf("quick")), controller.filter)
+        assertEquals(1, sent.size)
+        assertFalse(controller.applySync("koppter://filter?project=Family"))
+
+        controller.filter = controller.filter.copy(contexts = emptySet())
+        assertEquals("contextswitcher://filter", sent.last())
+    }
+
+    // [utest->dsn~contextswitcher-sync~1]
+    @Test
+    fun withoutTheSettingNothingIsSentOrTaken() {
+        val sent = mutableListOf<String>()
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, openContextSwitcher = { sent += it })
+        controller.filter = controller.filter.copy(projects = setOf("GarageSale"))
+        assertTrue(controller.applySync("koppter://sync?context=phone"))
+        assertEquals(setOf("GarageSale"), controller.filter.projects)
+        assertEquals(emptySet(), controller.filter.contexts)
+        assertEquals(emptyList(), sent)
     }
 
     // [utest->dsn~app-links~1]

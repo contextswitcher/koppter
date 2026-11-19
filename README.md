@@ -750,6 +750,16 @@ koppter://filter?project=Fair&context=phone
 * On Android, the installed application opens the links.
 * The packages for Linux and macOS do not register the links yet.
 
+## Filter shared with ContextSwitcher
+
+On the desktop, koppter and [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) can share the projects and contexts of their filters.
+*Send the projects and contexts of the filter to ContextSwitcher* in the settings turns it on; ContextSwitcher needs `koppterSync: true` in its `settings.yaml`.
+
+* Selecting a project or a context in the filter panel shows the categories of ContextSwitcher that name it.
+* Switching to a task of a category with `project:` in ContextSwitcher, or a change of its context (the environment profile that the screens or the override chose), sets the projects and contexts of the filter of koppter; the other criteria, the view and the window stay as they are.
+* A change that came from the other application is not sent back.
+* Without a running koppter, the next start shows what ContextSwitcher sent last.
+
 ## Links of projects and contexts
 
 A project, a context or a hashtag has a link of its own, for example to the section of a notebook that holds its material.

@@ -146,7 +146,7 @@ const val LINK_HASHTAG = "hashtag"
 // [impl->dsn~app-link-copy~1]
 fun linkTo(key: String, name: String): String = "koppter://filter?$key=${encoded(name)}"
 
-private fun encoded(name: String): String = name.encodeToByteArray().joinToString("") { byte ->
+internal fun encoded(name: String): String = name.encodeToByteArray().joinToString("") { byte ->
     val char = byte.toInt().toChar()
     if (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in "-._~") char.toString() else "%" + (byte.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0')
 }
