@@ -37,6 +37,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- The settings keep the address of a cloned repository instead of the location of its clone, and a clone that is gone, as after a new installation, is cloned again at the start; a missing clone or a repository without a todo.txt file is reported instead of showing no tasks.
 - The content of the desktop window fills it again after a change of the display scale, such as when a laptop leaves its docking station.
 
 ## [2026-11-17] - 2026-11-17

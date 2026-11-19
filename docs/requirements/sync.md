@@ -281,6 +281,32 @@ Covers:
 
 Needs: impl, utest
 
+### Clone by its address
+`dsn~clone-by-address~1`
+
+The settings keep the address of a repository that the application cloned, not the location of the clone.
+`GitSetup.storageForAddress` is the storage of the todo.txt file in the clone of that repository; without a clone of it, as after a new installation that restored the settings but not the clone, its first synchronization clones the repository again in the background.
+Until the clone is done, the storage has no tasks and writing fails.
+`GitSetup.addressOf` names the repository of the clone for settings that name the todo.txt file of the clone, as those of earlier versions; the application replaces such a file in the settings by the address when it starts.
+
+Covers:
+
+* `req~clone-in-app~1`
+
+Needs: impl, utest
+
+### Missing clone
+`dsn~missing-clone~1`
+
+A file in a clone of the application whose repository is gone, and the todo.txt file of a clone that has none, cannot be read: the application reports that instead of showing no tasks.
+`GitSetup.storageFor` gives such a file a storage that fails to read and to write; any other file that does not exist is a new, empty file.
+
+Covers:
+
+* `req~clone-in-app~1`
+
+Needs: impl, utest
+
 ### Home folder for SSH
 `dsn~ssh-home~1`
 
@@ -298,8 +324,8 @@ Needs: impl, utest
 `dsn~git-setup-dialog~1`
 
 Where the platform passes `GitSetupActions` to `App`, the field for the file in the settings dialog also takes the address of a repository: a URL with the scheme `ssh`, `git`, `http` or `https`, or the form `user@host:path` (`isGitAddress`).
-The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file.
-*Clone* clones the address, makes the todo.txt file of the clone the file of the application through `onOpenFile` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
+The button *Clone* below the field is enabled while the field holds such an address, and *Save* is not, as an address is no file; the address of the repository that is open is saved as it is.
+*Clone* clones the address, makes the address the file of the application through `onOpenFile` and leaves the dialog, so that the tasks of the repository show; nothing that stood in the dialog is written, neither to the repository nor to the file from before.
 If the clone fails, the dialog stays and shows the reason in the color for errors and, where the application has a key of its own, asks whether that key is registered.
 The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
 The dialog scrolls to the message of a clone or a check, which stands at the field, above the buttons.

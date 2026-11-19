@@ -18,9 +18,9 @@ import io.github.koppor.koppter.storage.SettingsFile
 import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.logToFile
 import io.github.koppor.koppter.sync.GitSetup
-import io.github.koppor.koppter.sync.storageForFile
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
+import io.github.koppor.koppter.ui.isGitAddress
 import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.ui.TodoController
@@ -134,12 +134,21 @@ fun main(args: Array<String>) {
         override suspend fun check(url: String) = withContext(Dispatchers.IO) { GitSetup(dataDirectory(), ownKey = false).check(url) }
     }
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
+    val gitSetup = GitSetup(dataDirectory(), ownKey = false)
     val controller = TodoController(
-        settings = settingsFile.load(),
+        // [impl->dsn~clone-by-address~1]
+        // Settings of an earlier version name the clone instead of the address of its repository.
+        settings = settingsFile.load().let { settings -> gitSetup.addressOf(settings.todoFile)?.let { settings.copy(todoFile = it).also(settingsFile::save) } ?: settings },
         storageFor = { settings ->
-            fun storageOf(file: Path) = storageForFile(file, settings.committerName, settings.committerEmail)
+            fun storageOf(file: Path) = gitSetup.storageFor(file, settings.committerName, settings.committerEmail)
+            val main = when {
+                settings.todoFile.isBlank() -> storageOf(defaultTodoFile)
+                // [impl->dsn~clone-by-address~1]
+                isGitAddress(settings.todoFile) -> gitSetup.storageForAddress(settings.todoFile, settings.committerName, settings.committerEmail)
+                else -> storageOf(Path(settings.todoFile))
+            }
             // [impl->dsn~shared-lists~1]
-            SharedLists.of(storageOf(settings.todoFile.takeIf(String::isNotBlank)?.let(::Path) ?: defaultTodoFile), settings.sharedLists) { storageOf(Path(it)) }
+            SharedLists.of(main, settings.sharedLists) { storageOf(Path(it)) }
         },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },

@@ -2015,7 +2015,7 @@ class AppTest {
         val logged = mutableListOf<String>()
         val cloned = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "board-columns:\n  Phone: \"@phone\"\n" }
         val controller = TodoController(
-            Settings(), { if (it.todoFile == "/data/repository/todo.txt") cloned else storage }, today = { LocalDate(2026, 11, 12) },
+            Settings(), { if (it.todoFile == "git@example.org:todo.git") cloned else storage }, today = { LocalDate(2026, 11, 12) },
             log = { message, cause -> logged += "$message: ${cause?.message}" },
         )
         setContent { App(controller, "todo.txt", git = git) }
@@ -2054,14 +2054,18 @@ class AppTest {
         onNodeWithTag("settings-clone").performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
         onNodeWithText("Read the paper").assertExists()
-        assertEquals("/data/repository/todo.txt", controller.settings.todoFile)
+        // [utest->dsn~clone-by-address~1]
+        // The settings keep the address, from which a clone that is gone is cloned again.
+        assertEquals("git@example.org:todo.git", controller.settings.todoFile)
         assertEquals("board-columns:\n  Phone: \"@phone\"\n", cloned.companions["koppter.yml"])
         assertNull(storage.companions["koppter.yml"])
 
         // The settings then show the configuration that the repository brings along.
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-file").assertTextContains("/data/repository/todo.txt")
+        onNodeWithTag("settings-file").assertTextContains("git@example.org:todo.git")
         onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
+        // The address of the open repository is no new one to clone: the other settings are saved.
+        onNodeWithTag("settings-save").performScrollTo().assertIsEnabled()
     }
 
     // [utest->dsn~settings-open-file~1]

@@ -21,6 +21,7 @@ import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.todotxt.ShareAction
 import io.github.koppor.koppter.ui.TodoController
+import io.github.koppor.koppter.ui.isGitAddress
 import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.PlatformFile
@@ -80,16 +81,23 @@ internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoSto
 
 private fun Context.mainStorage(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
     settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"), settings.committerName, settings.committerEmail)
+    // [impl->dsn~clone-by-address~1]
+    isGitAddress(settings.todoFile) -> gitSetup.storageForAddress(settings.todoFile, settings.committerName, settings.committerEmail)
     // A folder comes from the picker as the root of a tree of documents.
     settings.todoFile.startsWith("content:") ->
         PlatformFile(settings.todoFile).let { if (DocumentsContract.isTreeUri(Uri.parse(settings.todoFile))) FolderStorage(it) else DocumentStorage(it) }
     else -> gitSetup.storageFor(java.nio.file.Paths.get(settings.todoFile), settings.committerName, settings.committerEmail)
 }
 
+/** Settings of an earlier version name the clone instead of the address of its repository; they get the address, which survives the clone. */
+// [impl->dsn~clone-by-address~1]
+internal fun Settings.withAddress(gitSetup: GitSetup, file: SettingsFile): Settings =
+    gitSetup.addressOf(todoFile)?.let { copy(todoFile = it).also(file::save) } ?: this
+
 internal fun Context.todoController(gitSetup: GitSetup): TodoController {
     val settingsFile = SettingsFile(filesDir.toPath().resolve("settings.properties"))
     return TodoController(
-        settings = settingsFile.load(),
+        settings = settingsFile.load().withAddress(gitSetup, settingsFile),
         storageFor = { storageFor(it, gitSetup) },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },

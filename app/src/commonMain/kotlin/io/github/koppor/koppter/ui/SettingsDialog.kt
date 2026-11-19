@@ -87,7 +87,7 @@ interface GitSetupActions {
 }
 
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
-internal fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
+fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
 
 /**
  * The address for SSH of a repository of GitHub that is given as the address of one of its pages, which is what the browser offers to copy;
@@ -280,7 +280,11 @@ fun SettingsDialog(
                                     fileMessage = "Cloning"
                                     scope.launch {
                                         try {
-                                            onOpenFile(git.clone(sshAddress(todoFile.trim())))
+                                            // [impl->dsn~clone-by-address~1]
+                                            // The settings keep the address: a clone that is gone is cloned again from it.
+                                            val cloned = sshAddress(todoFile.trim())
+                                            git.clone(cloned)
+                                            onOpenFile(cloned)
                                         } catch (e: Exception) {
                                             gitFailed("Not cloned", "Clone failed", e)
                                         }
@@ -474,8 +478,8 @@ fun SettingsDialog(
                     )
                     Button(
                         onClick = { save(todoFile.trim()) },
-                        // An address is no file to save: it is cloned first.
-                        enabled = topCountValue != null && outlookWeeksValue != null && !cloning && !address,
+                        // A new address is no file to save: it is cloned first. The address of the open repository stays.
+                        enabled = topCountValue != null && outlookWeeksValue != null && !cloning && (!address || todoFile.trim() == settings.todoFile),
                         modifier = Modifier.testTag("settings-save"),
                     ) { Text("Save") }
                 }
