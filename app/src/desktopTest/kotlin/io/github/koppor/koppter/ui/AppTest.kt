@@ -1,5 +1,9 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.withKeysDown
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
@@ -785,7 +789,7 @@ class AppTest {
         storage.text = "Post signs +GarageSale note:abc.md\nSchedule pickup\n"
         storage.companions["notes/abc.md"] = "Bring tape\n"
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        var picked: () -> ByteArray? = { png }
+        var picked: () -> List<ByteArray> = { listOf(png) }
         setContent { App(controller, "todo.txt", pickImage = { picked() }) }
 
         openTask("Post signs")
@@ -794,20 +798,24 @@ class AppTest {
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-abc-1.jpg").assertExists()
         onNodeWithTag("edit-note").assertTextContains("Bring tape\n\n![](abc-1.jpg)\n")
+        // The cursor stands behind the image, in the focused note.
+        onNodeWithTag("edit-note").assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange("Bring tape\n\n![](abc-1.jpg)\n".length)))
         // A chooser that is left without an image, and one that fails.
-        picked = { null }
+        picked = { emptyList() }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         picked = { error("the file is no image") }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-message").assertTextEquals("Not attached: the file is no image")
-        picked = { png }
+        // Several images chosen at once.
+        picked = { listOf(png, png) }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-message").assertDoesNotExist()
-        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-image-abc-3.jpg").assertExists()
+        picked = { listOf(png) }
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg"), storage.images.keys)
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg"), storage.images.keys)
         assertEquals(png.toList(), storage.images.getValue("notes/abc-1.jpg").toList())
-        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n", storage.companions["notes/abc.md"])
+        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n\n![](abc-3.jpg)\n", storage.companions["notes/abc.md"])
 
         // The dialog shows the images that the storage has, and names one that it has not.
         openTask("Post signs")
@@ -825,13 +833,13 @@ class AppTest {
         onNodeWithTag("edit-save").performScrollTo().performClick()
         val note = Regex("Schedule pickup note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
         assertEquals("Ask for a box\n\n![]($note-2.jpg)\n", storage.companions["notes/$note.md"])
-        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/$note-2.jpg"), storage.images.keys)
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg", "notes/$note-2.jpg"), storage.images.keys)
 
-        // An image that is shared becomes a task of its own.
-        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, png) })
+        // Images that are shared become a task of their own.
+        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, listOf(png, png)) })
         val shared = Regex("Image note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
-        assertEquals("![]($shared-1.jpg)\n", storage.companions["notes/$shared.md"])
-        assertEquals(png.toList(), storage.images.getValue("notes/$shared-1.jpg").toList())
+        assertEquals("![]($shared-1.jpg)\n\n![]($shared-2.jpg)\n", storage.companions["notes/$shared.md"])
+        assertEquals(png.toList(), storage.images.getValue("notes/$shared-2.jpg").toList())
     }
 
     // [utest->dsn~new-task-defaults~1]
@@ -1065,6 +1073,8 @@ class AppTest {
         waitUntil { onAllNodesWithText("Book the hotel", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Answer the invitation", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
+        // The agenda lists the item that is due as well.
+        assertTrue(controller.dueUnplanned.any { it.task.description == "Answer the invitation" })
 
         // The label opens the item in Outlook, not the task.
         onAllNodesWithTag("label-outlook", useUnmergedTree = true)[0].performClick()
@@ -1620,6 +1630,33 @@ class AppTest {
         // The tasks are completed where they are shown.
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Schedule pickup" in it })
+    }
+
+    // [utest->dsn~time-tracking~1]
+    @Test
+    fun theClockOfATaskRunsUntilItIsStoppedOrAnotherOneStarts() = runComposeUiTest {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  09:30-10:00 Post signs +GarageSale
+        """.trimIndent() + "\n"
+        var minute = 9 * 60
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { minute })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("agenda-switch").performClick()
+
+        onAllNodesWithTag("clock-start")[0].performClick()
+        assertTrue(storage.text.lines().any { "Schedule pickup" in it && "started:2026-11-12T09:00" in it })
+        onNodeWithTag("running-clock").assertExists()
+        // Starting another task stops the first one, which gets its time.
+        minute = 9 * 60 + 25
+        onAllNodesWithTag("clock-start")[0].performClick()
+        assertTrue(storage.text.lines().any { "Schedule pickup" in it && "spent:25m" in it && "started:" !in it })
+        assertEquals(1, storage.text.lines().count { "started:2026-11-12T09:25" in it })
+        minute = 10 * 60
+        onNodeWithTag("running-clock-stop").performClick()
+        assertTrue("started:" !in storage.text)
+        assertTrue(storage.text.lines().any { "spent:35m" in it })
+        onNodeWithTag("running-clock").assertDoesNotExist()
     }
 
     // [utest->dsn~today~1]

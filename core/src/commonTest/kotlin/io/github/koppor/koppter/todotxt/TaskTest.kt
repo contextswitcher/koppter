@@ -324,4 +324,20 @@ class TaskTest {
         assertEquals("spent:2h", Task.parse("Call Mom spent:1h").withSpent(1.hours).toLine().substringAfter("Mom "))
         assertEquals("Prepare the lecture @work due:2026-11-23 rec:+1w dur:4h", worked.nextOccurrence(today)?.toLine())
     }
+
+    // [utest->dsn~time-tracking~1]
+    @Test
+    fun theClockAddsTheTimeSinceItsStartToTheTimeSpent() {
+        val start = kotlinx.datetime.LocalDateTime(2026, 11, 19, 16, 50)
+        val running = Task.parse("Write the report dur:4h spent:1h").start(start)
+        assertEquals("Write the report dur:4h spent:1h started:2026-11-19T16:50", running.toLine())
+        assertEquals(start, running.started)
+        assertEquals(40.minutes, running.runningFor(kotlinx.datetime.LocalDateTime(2026, 11, 19, 17, 30)))
+        assertEquals("Write the report dur:4h spent:1h40m", running.stop(kotlinx.datetime.LocalDateTime(2026, 11, 19, 17, 30)).toLine())
+        // Over midnight.
+        assertEquals("Write the report dur:4h spent:8h20m", running.stop(kotlinx.datetime.LocalDateTime(2026, 11, 20, 0, 10)).toLine())
+        // A clock of the device that was set back adds nothing.
+        assertEquals("Write the report dur:4h spent:1h", running.stop(kotlinx.datetime.LocalDateTime(2026, 11, 19, 16, 0)).toLine())
+        assertEquals(null, Task.parse("Write the report rec:1w started:2026-11-19T16:50").nextOccurrence(today)!!.started)
+    }
 }

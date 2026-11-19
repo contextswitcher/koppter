@@ -187,7 +187,7 @@ class TodoController(
         get() {
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
-            return file.entries.filter { entry ->
+            return tasks.filter { entry ->
                 !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
             }.sortedWith(listOrder(today))
         }
@@ -313,11 +313,14 @@ class TodoController(
     private val searched: Filter
         get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
 
+    /** The lines of the file and the items of Outlook and TODOs of LaTeX documents that no line names, unfiltered. */
+    // [impl->dsn~outlook-items~1]
+    // [impl->dsn~latex-todos~1]
+    private val tasks: List<Entry>
+        get() = Outlook.entries(outlookItems, file.entries).let { items -> file.entries + items + Latex.entries(latexTodos, file.entries, -1 - items.size) }
+
     val visible: List<Entry>
-        get() = Outlook.entries(outlookItems, file.entries).let { items ->
-            // [impl->dsn~latex-todos~1]
-            file.entries + items + Latex.entries(latexTodos, file.entries, -1 - items.size)
-        }.filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = tasks.filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
@@ -610,20 +613,20 @@ class TodoController(
     /**
      * Adds the text that another application shared as a task.
      * [action] is the title of the share action to apply; without it or if there is none with this title, the first one is applied.
-     * A shared [image] becomes the note of the task; without a text, the task is called after it.
+     * Shared [images] become the note of the task; without a text, the task is called after them.
      * Returns what to tell the user.
      */
     // [impl->dsn~note-images~1]
-    fun share(text: String, action: String? = null, image: ByteArray? = null): String {
-        if (image != null && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
+    fun share(text: String, action: String? = null, images: List<ByteArray> = emptyList()): String {
+        if (images.isNotEmpty() && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
         val chosen = shareActions.firstOrNull { it.title == action } ?: shareActions.firstOrNull()
-        val shared = text.ifBlank { if (image == null) text else "Image" }
+        val shared = text.ifBlank { if (images.isEmpty()) text else "Image" }
         val plain = chosen?.task(shared, today()) ?: Task(body = shared.trim().replace(Regex("\\s+"), " "))
         val noteName = newNoteName()
-        val imageFile = imageName(noteName) { false }
-        val task = if (image == null) plain else plain.withTag(Task.NOTE, noteName)
+        val files = buildMap { images.forEach { put(imageName(noteName) { name -> name in this }, it) } }
+        val task = if (images.isEmpty()) plain else plain.withTag(Task.NOTE, noteName)
         error = null
-        if (image == null) add(task) else add(task, "![]($imageFile)\n", mapOf(imageFile to image))
+        if (images.isEmpty()) add(task) else add(task, files.keys.joinToString("\n") { "![]($it)\n" }, files)
         return error ?: "Added${chosen?.let { " (${it.title})" }.orEmpty()}: ${task.description}"
     }
 
@@ -761,7 +764,10 @@ class TodoController(
         if (entry.task.completed) {
             write(file.replace(index, entry.task.reopen()), "Reopen task: ${entry.task.description}")
         } else {
-            var new = file.replace(index, entry.task.complete(today(), settings.writeDates))
+            // [impl->dsn~time-tracking~1]
+            // A task that is completed while its clock runs gets the time of the clock.
+            val task = if (entry.task.started != null) entry.task.stop(now()) else entry.task
+            var new = file.replace(index, task.complete(today(), settings.writeDates))
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
             write(new, "Complete task: ${entry.task.description}")
@@ -872,6 +878,27 @@ class TodoController(
 
     /** Adds the minutes of a block of the plan to the time spent on its task. */
     // [impl->dsn~time-spent~1]
+    /** The current minute, as the clocks of tasks are written. */
+    fun now(): LocalDateTime = LocalDateTime(today(), LocalTime(minuteOfDay() / 60, minuteOfDay() % 60))
+
+    /** The open task whose clock runs; one at a time. */
+    // [impl->dsn~time-tracking~1]
+    val running: Entry? get() = file.entries.firstOrNull { !it.task.completed && it.task.started != null }
+
+    /** Starts the clock of the task and stops the one that ran, which gets its time. */
+    fun start(entry: Entry) {
+        val index = locate(entry) ?: return
+        var new = file
+        running?.takeIf { it.index != index }?.let { new = new.replace(it.index, it.task.stop(now())) }
+        write(new.replace(index, entry.task.start(now())), "Start working on: ${entry.task.description}")
+    }
+
+    /** Stops the clock of the task and adds its time to the time spent. */
+    fun stop(entry: Entry) {
+        val index = locate(entry) ?: return
+        write(file.replace(index, entry.task.stop(now())), "Stop working on: ${entry.task.description}")
+    }
+
     fun worked(entry: Entry, minutes: Int) {
         val index = locate(entry) ?: return
         write(file.replace(index, entry.task.withSpent(minutes.minutes)), "Note the time spent: ${entry.task.description}")

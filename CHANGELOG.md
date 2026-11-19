@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- *Start* beside a task of today in the agenda and in *Today* starts a clock on it, written as `started:` into the task; a bar above every view shows the task and the time since its start, and *Stop* adds that time to `spent:`.
 - *Today* shows the agenda of today beside the day as a calendar with a line at the current time and the sum of the planned time; Ctrl+7 opens it.
 - The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.
 - The `ice_recur.txt` of a shared list schedules tasks into that list.
@@ -16,6 +17,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - On the desktop, the TODOs of the LaTeX document of a project, from the main file and the files it takes in with `\input` and `\include`, are shown as tasks of the project with the hashtag `#latex`, without writing them to the file.
   `\todo` of `todonotes` and the commands of `fixme`, `zebra`, `snaptodo`, `fixmetodonotes` and `pdfcomment` count.
   Giving a TODO a priority or another change writes it to the file with the tag `tex:`; completing it in koppter hides it; the document is not changed.
+- *Add image* attaches several images chosen at once, and on Android several images shared together become one task with all of them in its note.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
 
 ### Changed
@@ -24,6 +26,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The note of a task that moves between the main list and a shared list moves with its images and is deleted where it was.
 - The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
 - On Android, commits without a configured name are made in the name of the device and with the email address `koppter@android<version>`, such as `koppter@android14`, instead of `koppter` and `koppter@localhost`.
+
+### Fixed
+
+- After an image is attached, the note of the task has the focus with the cursor behind the image, instead of where a tap into the note puts it.
+- The agenda lists the due items of the To-Do list of Outlook below today, as the list and the inbox do.
 
 ## [2026-11-18] - 2026-11-18
 

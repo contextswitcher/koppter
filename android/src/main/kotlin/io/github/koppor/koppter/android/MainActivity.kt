@@ -15,6 +15,7 @@ import io.github.koppor.koppter.ui.TodoController
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.bookmarkData
 import io.github.vinceglb.filekit.delete
+import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openCameraPicker
 import io.github.vinceglb.filekit.readBytes
@@ -38,10 +39,11 @@ class MainActivity : ComponentActivity() {
     private suspend fun chooseFolder(): String? = FileKit.openDirectoryPicker()?.also { it.bookmarkData() }?.path
 
     // [impl->dsn~note-images~1]
-    private suspend fun pickImage(): ByteArray? = FileKit.openFilePicker(type = FileKitType.Image)?.let { noteImage(it.readBytes()) }
+    private suspend fun pickImage(): List<ByteArray> =
+        FileKit.openFilePicker(type = FileKitType.Image, mode = FileKitMode.Multiple()).orEmpty().map { noteImage(it.readBytes()) }
 
     // The camera writes into the cache of the application, where the photo is not needed once it is read.
-    private suspend fun takePhoto(): ByteArray? = FileKit.openCameraPicker()?.let { photo -> noteImage(photo.readBytes()).also { photo.delete() } }
+    private suspend fun takePhoto(): List<ByteArray> = listOfNotNull(FileKit.openCameraPicker()?.let { photo -> noteImage(photo.readBytes()).also { photo.delete() } })
 
     private val gitSetup by lazy { GitSetup(filesDir.toPath().resolve("git")) }
 

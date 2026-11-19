@@ -12,6 +12,7 @@ import kotlinx.datetime.plus
 import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * One task line of a todo.txt file.
@@ -101,6 +102,23 @@ data class Task(
 
     /** This task with [worked] added to the time spent on it. */
     fun withSpent(worked: Duration): Task = withTag(SPENT, durationText((spent ?: Duration.ZERO) + worked))
+
+    /** When the work on the task was started, while its clock runs; `null` if it does not run. */
+    // [impl->dsn~time-tracking~1]
+    val started: LocalDateTime? get() = tag(STARTED)?.let { runCatching { LocalDateTime.parse(it) }.getOrNull() }
+
+    /** This task with its clock running from [now]. */
+    fun start(now: LocalDateTime): Task = withTag(STARTED, now.toString())
+
+    /** The time since the start of the clock; zero if it does not run, or if [now] lies before the start, as after a change of the clock of the device. */
+    fun runningFor(now: LocalDateTime): Duration {
+        val started = started ?: return Duration.ZERO
+        val minutes = started.date.daysUntil(now.date) * 24 * 60 + (now.hour * 60 + now.minute) - (started.hour * 60 + started.minute)
+        return maxOf(0, minutes).minutes
+    }
+
+    /** This task with its clock stopped at [now] and the time since its start added to the time spent. */
+    fun stop(now: LocalDateTime): Task = withSpent(runningFor(now)).withTag(STARTED, null)
 
     /** The minutes of the day at which the task takes place, for a task with a fixed time. */
     // [impl->dsn~fixed-time~1]
@@ -210,7 +228,7 @@ data class Task(
         val from = if (recurrence.strict) due ?: threshold ?: today else today
         val next = recurrence.next(from)
         // The next occurrence starts anew: nothing was worked on it.
-        val open = (if (completed) reopen() else this).withTag(SPENT, null)
+        val open = (if (completed) reopen() else this).withTag(SPENT, null).withTag(STARTED, null)
         return when {
             due != null && threshold != null ->
                 open.withTag(DUE, next.toString()).withTag(THRESHOLD, next.minus(threshold.daysUntil(due), DateTimeUnit.DAY).toString())
@@ -248,6 +266,7 @@ data class Task(
         const val BY = "dueby"
         const val TRAVEL = "tt"
         const val SPENT = "spent"
+        const val STARTED = "started"
 
         /** As topydo writes dependencies: a task with [ID] waits for the tasks whose [PARENT] has the same value. */
         const val ID = "id"
