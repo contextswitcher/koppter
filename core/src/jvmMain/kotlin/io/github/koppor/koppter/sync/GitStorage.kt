@@ -13,8 +13,8 @@ import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.api.TransportCommand
 import org.eclipse.jgit.lib.ObjectId
-import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_EMAIL
-import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_NAME
+import io.github.koppor.koppter.storage.defaultCommitterEmail
+import io.github.koppor.koppter.storage.defaultCommitterName
 import org.eclipse.jgit.lib.PersonIdent
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.revwalk.RevCommit
@@ -240,8 +240,8 @@ class GitStorage(
     private fun org.eclipse.jgit.api.CommitCommand.setIdent() = apply {
         val config = repository.config
         val ident = PersonIdent(
-            committerName.ifBlank { config.getString("user", null, "name") ?: DEFAULT_COMMITTER_NAME },
-            committerEmail.ifBlank { config.getString("user", null, "email") ?: DEFAULT_COMMITTER_EMAIL },
+            committerName.ifBlank { config.getString("user", null, "name") ?: defaultCommitterName },
+            committerEmail.ifBlank { config.getString("user", null, "email") ?: defaultCommitterEmail },
         )
         setAuthor(ident).setCommitter(ident)
     }

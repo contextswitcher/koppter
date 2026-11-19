@@ -41,8 +41,8 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_EMAIL
-import io.github.koppor.koppter.storage.DEFAULT_COMMITTER_NAME
+import io.github.koppor.koppter.storage.defaultCommitterEmail
+import io.github.koppor.koppter.storage.defaultCommitterName
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.ConfigFile
@@ -434,8 +434,8 @@ fun SettingsDialog(
                 if (git != null) {
                     Text("Git repository", style = MaterialTheme.typography.titleMedium)
                     // [impl->dsn~committer~1]
-                    CommitterField("Name of the commits", committerName, { committerName = it }, DEFAULT_COMMITTER_NAME, "settings-committer-name")
-                    CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, DEFAULT_COMMITTER_EMAIL, "settings-committer-email")
+                    CommitterField("Name of the commits", committerName, { committerName = it }, defaultCommitterName, "settings-committer-name")
+                    CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, defaultCommitterEmail, "settings-committer-email")
                     GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
                 }
                 if (outlookBlocks != null) {

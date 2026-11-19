@@ -6,9 +6,12 @@ enum class ColorTheme(val title: String) { NORD("Nord"), EVERFOREST("Everforest"
 /** Whether the colors are light or dark. */
 enum class Appearance(val title: String) { SYSTEM("As the system"), LIGHT("Light"), DARK("Dark") }
 
-/** The name of the commits where neither the settings nor the git configuration name one, as on a phone. */
-const val DEFAULT_COMMITTER_NAME = "koppter"
-const val DEFAULT_COMMITTER_EMAIL = "koppter@localhost"
+/**
+ * The name of the commits where neither the settings nor the git configuration name one, as on a phone.
+ * The Android application replaces both at its start by the device, so that the history tells the phones apart.
+ */
+var defaultCommitterName = "koppter"
+var defaultCommitterEmail = "koppter@localhost"
 
 data class Settings(
     /** Location of the todo.txt file; blank means the platform default. */
@@ -40,9 +43,9 @@ data class Settings(
     val overviewGroup: String = "CONTEXT",
     /** The width of the dialog of a task in dp, where the window allows it. */
     val editWidth: Int = 760,
-    /** The name in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_NAME]. */
+    /** The name in which git commits are made on this device; blank for that of the git configuration, or [defaultCommitterName]. */
     val committerName: String = "",
-    /** The email address in which git commits are made on this device; blank for that of the git configuration, or [DEFAULT_COMMITTER_EMAIL]. */
+    /** The email address in which git commits are made on this device; blank for that of the git configuration, or [defaultCommitterEmail]. */
     val committerEmail: String = "",
     /** The account whose main calendar takes the plan, by its name in Outlook; blank for the default account. */
     val outlookCalendar: String = "",
