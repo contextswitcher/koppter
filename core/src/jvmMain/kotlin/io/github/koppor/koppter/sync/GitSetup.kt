@@ -91,20 +91,41 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
      */
     // [impl->dsn~clone~1]
     fun clone(url: String, fileName: String = "todo.txt"): Path {
-        val existing = GitStorage.repositoryOf(repositoryDirectory.resolve(fileName))
-        val sameRemote = existing?.use { it.config.getString("remote", "origin", "url") == url } ?: false
-        if (!sameRemote) {
+        if (remoteOf(repositoryDirectory) != url) {
             if (repositoryDirectory.exists() && repositoryDirectory.listDirectoryEntries().isNotEmpty()) {
                 repositoryDirectory.toFile().deleteRecursively()
             }
-            Git.cloneRepository()
-                .setURI(url)
-                .setDirectory(repositoryDirectory.toFile())
-                .setTransportConfigCallback(transport)
-                .call()
-                .close()
+            cloneInto(repositoryDirectory, url)
         }
         return repositoryDirectory.resolve(fileName)
+    }
+
+    /**
+     * Clones the repository of a shared list and returns the location of its todo.txt file.
+     * The clone lies in a directory named after the repository, as that name is the context of the list;
+     * a clone of the same repository is kept, and a directory that holds something else gets a number appended instead of being replaced.
+     */
+    // [impl->dsn~shared-list-clone~1]
+    fun cloneShared(url: String): Path {
+        val name = url.trimEnd('/').substringAfterLast('/').substringAfterLast(':').removeSuffix(".git").ifEmpty { "list" }
+        val target = generateSequence(1) { it + 1 }.map { sharedDirectory.resolve(if (it == 1) name else "$name-$it") }
+            .first { !it.exists() || it.listDirectoryEntries().isEmpty() || remoteOf(it) == url }
+        if (remoteOf(target) != url) cloneInto(target, url)
+        return target.resolve("todo.txt")
+    }
+
+    /** The directory of the clones of shared lists, next to that of the main repository. */
+    val sharedDirectory: Path = directory.resolve("shared")
+
+    private fun remoteOf(clone: Path): String? = GitStorage.repositoryOf(clone.resolve("todo.txt"))?.use { it.config.getString("remote", "origin", "url") }
+
+    private fun cloneInto(target: Path, url: String) {
+        Git.cloneRepository()
+            .setURI(url)
+            .setDirectory(target.toFile())
+            .setTransportConfigCallback(transport)
+            .call()
+            .close()
     }
 
     private companion object {

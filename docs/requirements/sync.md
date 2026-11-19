@@ -93,6 +93,7 @@ The settings name further todo.txt files, such as those of clones of repositorie
 Their tasks are shown together with those of the main file, each with a context named after the directory of its file.
 A new task with that context, or with a level below it, is written into that file, a task without such a context into the main file; changing the context moves the task with its note.
 A line of a file is written back unchanged unless the user edited it; the context of the list is not written into the file of the list.
+Where the application clones a repository, it clones the repository of a shared list as well and adds its todo.txt file to the shared lists.
 
 Covers:
 
@@ -346,3 +347,18 @@ Covers:
 * `req~shared-lists~1`
 
 Needs: impl
+
+### Clone of a shared list
+`dsn~shared-list-clone~1`
+
+Below the field *Shared lists*, where the platform passes `GitSetupActions`, the settings dialog has a field for the address of a shared repository and the button *Clone*, enabled while the field holds an address (`isGitAddress`).
+*Clone* clones the repository with `GitSetup.cloneShared` and adds its todo.txt file to the field; *Save* then opens it, and the dialog says with which context its tasks show.
+If the clone fails, the dialog shows the reason in the color for errors, and the failure goes to the log.
+`GitSetup.cloneShared` clones into a directory of `shared` next to the main clone that is named after the repository, as the name of that directory is the context of the list.
+A clone of the same repository is kept; a directory that holds anything else, such as the clone of another repository of the same name, is not replaced, and the name takes a number, as in `household-2`.
+
+Covers:
+
+* `req~shared-lists~1`
+
+Needs: impl, utest

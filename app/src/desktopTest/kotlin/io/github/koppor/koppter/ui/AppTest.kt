@@ -22,6 +22,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -1945,6 +1946,7 @@ class AppTest {
         val git = object : GitSetupActions {
             override fun publicKey(): String? = null
             override suspend fun clone(url: String) = url
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
             override suspend fun check(url: String) = Unit
         }
         val opened = mutableListOf<Settings>()
@@ -1963,6 +1965,33 @@ class AppTest {
         assertEquals("Ada", opened.last().committerName)
     }
 
+    // [utest->dsn~shared-list-clone~1]
+    @Test
+    fun aClonedSharedListIsAddedToTheSharedListsAndSaved() = runComposeUiTest {
+        val git = object : GitSetupActions {
+            override fun publicKey(): String? = null
+            override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun cloneShared(url: String) = if (url == "git@example.org:household.git") "/data/shared/household/todo.txt" else error("no such repository")
+            override suspend fun check(url: String) = Unit
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", git = git) }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-clone-shared").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("settings-shared-address").performTextInput("git@example.org:other.git")
+        onNodeWithTag("settings-clone-shared").performClick()
+        waitUntil { onAllNodesWithTag("settings-shared-message").fetchSemanticsNodes().isNotEmpty() && !onAllNodesWithText("Cloning").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("settings-shared-message").assertTextEquals("Not cloned: no such repository")
+
+        onNodeWithTag("settings-shared-address").performTextClearance()
+        onNodeWithTag("settings-shared-address").performTextInput("git@example.org:household.git")
+        onNodeWithTag("settings-clone-shared").performClick()
+        waitUntil { onAllNodesWithText("Cloned. After Save, its tasks show with the context @household.").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("settings-save").performScrollTo().performClick()
+        assertEquals("/data/shared/household/todo.txt", controller.settings.sharedLists)
+    }
+
     // [utest->dsn~git-setup-dialog~1]
     @Test
     fun theSettingsShowThePublicKeyAndCloneARepository() = runComposeUiTest {
@@ -1976,6 +2005,8 @@ class AppTest {
                 // As a library reports it: the same message twice, and the reason below them.
                 throw IllegalStateException("remote hung up unexpectedly", IllegalStateException("remote hung up unexpectedly", NoSuchMethodError("no such repository")))
             }
+
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
 
             override suspend fun check(url: String) {
                 clone(url)
@@ -2085,6 +2116,7 @@ class AppTest {
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = error("not cloned in this test")
+            override suspend fun cloneShared(url: String) = error("not cloned in this test")
             override suspend fun check(url: String) = error("not checked in this test")
         }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
