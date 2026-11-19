@@ -4,6 +4,7 @@ import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.createDirectories
+import io.github.vinceglb.filekit.delete
 import io.github.vinceglb.filekit.exists
 import io.github.vinceglb.filekit.lastModified
 import io.github.vinceglb.filekit.path
@@ -15,6 +16,7 @@ import kotlinx.io.readByteArray
 import kotlinx.io.readString
 import kotlinx.io.writeString
 import java.io.FileNotFoundException
+import kotlinx.coroutines.runBlocking
 
 /** The name of the todo.txt file in a folder that the user chose. */
 private const val TODO_FILE = "todo.txt"
@@ -69,5 +71,10 @@ class FolderStorage(private val folder: PlatformFile) : TodoStorage, CompanionFi
     override fun writeCompanionBytes(path: String, bytes: ByteArray) {
         path.substringBeforeLast('/', "").ifEmpty { null }?.let { resolve(it).createDirectories() }
         resolve(path).sink().buffered().use { it.write(bytes) }
+    }
+
+    override fun deleteCompanion(path: String) {
+        // The deletion of FileKit suspends; the other operations of a storage block the caller as well.
+        resolve(path).takeIf { it.exists() }?.let { runBlocking { it.delete() } }
     }
 }

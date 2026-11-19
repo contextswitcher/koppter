@@ -94,6 +94,9 @@ private val WIDE = 840.dp
 
 private const val RELOAD_INTERVAL_MILLIS = 2_000L
 
+/** Short enough that a device left open sees the changes of others before the user edits the same task. */
+private val SYNC_INTERVAL = 5.minutes
+
 /**
  * @param chooseFile lets the user pick the todo.txt file with the file dialog of the platform and returns its location,
  *   or `null` if the user canceled.
@@ -272,6 +275,13 @@ private fun MainScreen(
         while (true) {
             delay(RELOAD_INTERVAL_MILLIS)
             controller.reloadIfChanged()
+        }
+    }
+    // [impl->dsn~periodic-sync~1]
+    LaunchedEffect(controller) {
+        while (true) {
+            delay(SYNC_INTERVAL)
+            controller.sync()
         }
     }
     LaunchedEffect(controller.error) {

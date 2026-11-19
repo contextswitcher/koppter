@@ -88,6 +88,7 @@ class ScreenshotTest {
         override fun writeCompanion(path: String, text: String) = Unit
         override fun readCompanionBytes(path: String): ByteArray? = null
         override fun writeCompanionBytes(path: String, bytes: ByteArray) = Unit
+        override fun deleteCompanion(path: String) = Unit
 
         override fun read() = """
             (A) Call the landlord about the heating @phone due:2026-11-12

@@ -138,7 +138,7 @@ fun main(args: Array<String>) {
     val controller = TodoController(
         // [impl->dsn~clone-by-address~1]
         // Settings of an earlier version name the clone instead of the address of its repository.
-        settings = settingsFile.load().let { settings -> gitSetup.addressOf(settings.todoFile)?.let { settings.copy(todoFile = it).also(settingsFile::save) } ?: settings },
+        settings = settingsFile.load().let { settings -> gitSetup.withAddresses(settings).also { if (it !== settings) settingsFile.save(it) } },
         storageFor = { settings ->
             fun storageOf(file: Path) = gitSetup.storageFor(file, settings.committerName, settings.committerEmail)
             val main = when {
@@ -148,7 +148,7 @@ fun main(args: Array<String>) {
                 else -> storageOf(Path(settings.todoFile))
             }
             // [impl->dsn~shared-lists~1]
-            SharedLists.of(main, settings.sharedLists) { storageOf(Path(it)) }
+            SharedLists.of(main, settings.sharedLists) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
         },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },

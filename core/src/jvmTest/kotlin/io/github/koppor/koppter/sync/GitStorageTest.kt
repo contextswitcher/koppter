@@ -236,4 +236,23 @@ class GitStorageTest {
         assertEquals("Ask about the recipe\n", desktop.readCompanion("notes/abc.txt"))
         assertEquals(listOf("Add task: Call Mom"), messages("desktop"))
     }
+
+    // [utest->dsn~companion-files~1]
+    @Test
+    fun aDeletedCompanionFileIsDeletedOnTheOtherDevice() {
+        val phone = device("phone")
+        phone.writeCompanion("notes/abc.md", "Oat milk\n")
+        phone.write("Buy milk note:abc.md\n", "Add task: Buy milk")
+        phone.synchronizeNow()
+        val desktop = device("desktop")
+        desktop.synchronizeNow()
+
+        phone.deleteCompanion("notes/abc.md")
+        phone.write("Buy milk\n", "Move task: Buy milk")
+        phone.synchronizeNow()
+        desktop.synchronizeNow()
+
+        assertNull(desktop.readCompanion("notes/abc.md"))
+        assertEquals("Buy milk\n", desktop.read())
+    }
 }

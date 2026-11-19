@@ -79,6 +79,12 @@ class GitStorage(
         Unit
     }
 
+    override fun deleteCompanion(path: String) = synchronized(lock) {
+        files.deleteCompanion(path)
+        companions += inRepository(path)
+        Unit
+    }
+
     private fun inRepository(companion: String) = path.substringBeforeLast('/', "").let { if (it.isEmpty()) companion else "$it/$companion" }
 
     override fun read(): String = synchronized(lock) { files.read() }
@@ -200,6 +206,8 @@ class GitStorage(
     private fun commit(message: String) {
         val paths = listOf(path) + companions
         git.add().apply { paths.forEach(::addFilepattern) }.call()
+        // Without the update, adding does not stage a deleted file.
+        git.add().setUpdate(true).apply { paths.forEach(::addFilepattern) }.call()
         val status = git.status().apply { paths.forEach(::addPath) }.call()
         val changed = status.added + status.changed + status.removed
         if (changed.isEmpty()) return

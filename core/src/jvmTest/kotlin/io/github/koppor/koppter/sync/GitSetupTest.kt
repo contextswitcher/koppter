@@ -8,7 +8,9 @@ import java.nio.file.Files
 import kotlin.io.path.exists
 import kotlin.io.path.readText
 import kotlin.io.path.writeText
+import io.github.koppor.koppter.storage.Settings
 import kotlin.test.Test
+import kotlin.test.assertSame
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
@@ -135,5 +137,27 @@ class GitSetupTest {
         // The main clone is another directory.
         assertEquals("Buy milk\n", setup.clone(first).readText())
         assertEquals("Buy milk\nNot yet committed\n", file.readText())
+    }
+
+    // [utest->dsn~clone-by-address~1]
+    // [utest->dsn~shared-list-clone~1]
+    @Test
+    fun settingsThatNameTheCloneOfASharedListGetItsAddress() {
+        val origin = root.resolve("household")
+        Git.init().setInitialBranch("main").setDirectory(origin.toFile()).call().use { git ->
+            origin.resolve("todo.txt").writeText("Buy milk\n")
+            git.add().addFilepattern("todo.txt").call()
+            git.commit().setMessage("Add task: Buy milk").call()
+        }
+        val url = origin.toUri().toString()
+        val file = setup.cloneShared(url).toString()
+
+        val settings = Settings(sharedLists = "$file\n/elsewhere/todo.txt")
+        assertEquals("$url\n/elsewhere/todo.txt", setup.withAddresses(settings).sharedLists)
+        val unchanged = Settings(sharedLists = "/elsewhere/todo.txt")
+        assertSame(unchanged, setup.withAddresses(unchanged))
+
+        // The storage of the address reads the clone.
+        assertEquals("Buy milk\n", setup.sharedListStorage(url).read())
     }
 }
