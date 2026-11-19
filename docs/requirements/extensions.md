@@ -494,7 +494,7 @@ Needs: impl, utest
 ### View options
 `dsn~view-options~1`
 
-A row of switches above the tasks selects the view: list, board, overview, agenda, week or inbox.
+A row of switches above the tasks selects the view: overview, agenda, week, board, list or inbox, from the views that show what is up to those that change the tasks.
 One of them is always selected.
 For the list and the board, a second row below it selects the attribute of the groups of the list, which a second click switches off, or of the columns of the board, for which the columns defined by filters are a choice as well.
 While the list has no groups, a text at the end of that row tells its order: by priority, then by due date.
@@ -598,7 +598,7 @@ Needs: impl, utest
 `overviewStates` groups the open tasks by their contexts of the outermost level, a context including the contexts below it, and sorts the tasks of each by urgency; the tasks without context form a group of their own.
 It groups by the projects of the outermost level or by the hashtags in the same way.
 The state of a group is that of its most urgent task: overdue, due today, or neither.
-`Overview` shows the groups of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that group with a progress bar and the text of their urgency.
+`Overview` shows the groups of the visible tasks as tiles with a dot in the color of the state, and after a click on a tile the tasks of that group with a box that completes the task, a progress bar and the text of their urgency.
 The second row of the view options selects contexts, projects or hashtags; contexts are selected at the start, and another choice shows the tiles again.
 A switch above the tasks turns the overview on; it and the other views that replace the list exclude each other.
 
@@ -612,7 +612,7 @@ Needs: impl, utest
 `dsn~inbox~1`
 
 `TodoController.inbox` gives the visible open tasks without context.
-`Inbox` shows each of them with its hashtags next to its text and, after *Give it:*, the contexts of the file as labels with all their levels; a click on a label gives the task that context through `Task.edit`, and a click on the task opens the edit dialog.
+`Inbox` shows each of them with a box that completes it, and its hashtags next to its text and, after *Give it:*, the contexts of the file as labels with all their levels; a click on a label gives the task that context through `Task.edit`, and a click on the task opens the edit dialog.
 One task is marked, at first the first one.
 A field takes typed text: the marked task then shows the contexts that contain the text, those first of which a level starts with it.
 Enter gives the marked task the first of them, or the typed text as a new context if no context contains it; the arrow keys up and down move the mark.

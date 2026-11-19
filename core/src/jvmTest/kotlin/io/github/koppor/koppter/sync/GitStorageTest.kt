@@ -56,7 +56,8 @@ class GitStorageTest {
         }
         val file = directory.resolve("todo.txt")
         val repository = assertNotNull(GitStorage.repositoryOf(file))
-        GitStorage(file, repository).write("Call Mom\n", "Add task: Call Mom")
+        // Two storages of one repository do not share a lock: the background sync of the first must end before the second writes.
+        GitStorage(file, repository).apply { write("Call Mom\n", "Add task: Call Mom") }.synchronizeNow()
         GitStorage(file, repository, committerName = "Ada").write("x Call Mom\n", "Complete task: Call Mom")
 
         val idents = Git.open(directory.toFile()).use { git -> git.log().call().map { "${it.committerIdent.name} <${it.committerIdent.emailAddress}>" } }

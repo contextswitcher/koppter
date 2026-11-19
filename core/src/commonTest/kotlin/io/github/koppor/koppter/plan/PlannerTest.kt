@@ -25,6 +25,17 @@ class PlannerTest {
 
     private fun minutes(time: String) = time.substringBefore(':').toInt() * 60 + time.substringAfter(':').toInt()
 
+    // [utest->dsn~android-widget~1]
+    @Test
+    fun theBlocksAheadLeaveOutWhatHasEndedAndFollowTheTime() {
+        val blocks = CalendarTxt.blocks(
+            "2026-11-11 w46 Wed  09:00-10:00 Yesterday\n" +
+                "2026-11-13 w46 Fri  08:00-09:00 Tomorrow\n" +
+                "2026-11-12 w46 Thu  08:00-09:00 Done. 14:00-15:00 Later. 09:30-11:00 Running\n",
+        )
+        assertEquals(listOf("Running", "Later", "Tomorrow"), CalendarTxt.ahead(blocks, today, minutes("10:00")).map { it.text })
+    }
+
     // [utest->dsn~time-maps~1]
     @Test
     fun aTimeMapNamesTheTimesOfTheWeekAndIsRestrictedToTheMapItNames() {
@@ -54,6 +65,65 @@ class PlannerTest {
         // A range of days may run over the end of the week.
         assertEquals(listOf(span("22:00", "24:00")), odd.spans("Night", saturday))
         assertEquals(emptyList(), odd.spans("Night", today))
+    }
+
+    // [utest->dsn~time-map-colors~1]
+    @Test
+    fun theColorsOfATimeMapAreTakenUpToTheWorstOneAndBlackTimesAreForTheirMapOnly() {
+        val painted = TimeMaps(
+            listOf(
+                "Work" to "Mon-Fri 08:00-17:00, Mon-Fri 07:00-08:00 16:00-17:00 yellow, Fri 13:00-17:00 Red",
+                "Calls" to "Mon-Fri 11:00-12:00 black",
+                "Late" to "Work 12:00-18:00",
+            ),
+        )
+        // The later rules paint over the green times; the hour of the calls is theirs alone.
+        assertEquals(listOf(span("08:00", "11:00"), span("12:00", "16:00")), painted.spans("Work", today))
+        assertEquals(listOf(span("07:00", "11:00"), span("12:00", "17:00")), painted.spans("Work", today, Paint.YELLOW))
+        assertEquals(listOf(span("08:00", "11:00"), span("12:00", "13:00")), painted.spans("Work", friday))
+        assertEquals(listOf(span("07:00", "11:00"), span("12:00", "17:00")), painted.spans("Work", friday, Paint.RED))
+        assertEquals(listOf(span("11:00", "12:00")), painted.spans("Calls", today))
+        // A map restricted to another one takes the times of that map in all its colors.
+        assertEquals(listOf(span("12:00", "17:00")), painted.spans("Late", today))
+        assertEquals(emptyList(), painted.problems)
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun theCellsOfATimeMapGiveItsDefinitionBack() {
+        val painted = TimeMaps(listOf("Work" to "Mon-Fri 08:00-12:00, Mon-Wed Fri 07:00-08:00 yellow, Sun 20:00-24:00 black", "Late" to "Work 13:00-17:00"))
+        val cells = painted.cells("Work")
+        assertEquals(7 * TimeMaps.CELLS_PER_DAY, cells.size)
+        assertEquals(Paint.YELLOW, cells[7 * 4])
+        assertEquals(null, cells[3 * TimeMaps.CELLS_PER_DAY + 7 * 4])
+        assertEquals("Mon-Fri 08:00-12:00, Mon-Wed Fri 07:00-08:00 yellow, Sun 20:00-24:00 black", TimeMaps.definition(null, cells))
+        assertEquals("Work 13:00-17:00", TimeMaps.definition(painted.parentOf("Late"), painted.cells("Late")))
+        // A map without times has no definition; with the name of another map, it has all of its times.
+        assertEquals(null, TimeMaps.definition(null, List(7 * TimeMaps.CELLS_PER_DAY) { null }))
+        assertEquals("Work", TimeMaps.definition("Work", List(7 * TimeMaps.CELLS_PER_DAY) { null }))
+    }
+
+    // [utest->dsn~time-map-colors~1]
+    @Test
+    fun aTaskTakesTheYellowTimesOnlyIfItWouldEndAfterItsDueDateInTheGreenOnes() {
+        val config = PlanConfig(TimeMaps(listOf("Work" to "Thu-Fri 08:00-10:00, Thu-Fri 18:00-20:00 yellow")))
+        val plan = plan(
+            """
+            (A) Write the report dur:3h
+            (B) Send the invoice dur:3h due:2026-11-12
+            """,
+            config,
+        )
+        assertEquals(
+            listOf(
+                // In front of the report, the invoice still does not fit into the green times of today; it takes the yellow ones of today, the report does not.
+                "2026-11-12 8:00 120 Send the invoice",
+                "2026-11-12 18:00 60 Send the invoice",
+                "2026-11-13 8:00 120 Write the report",
+                "2026-11-19 8:00 60 Write the report",
+            ),
+            plan.lines(),
+        )
     }
 
     private fun plan(todo: String, config: PlanConfig = PlanConfig(maps), busy: Map<LocalDate, List<Span>> = emptyMap(), now: String = "07:00") =

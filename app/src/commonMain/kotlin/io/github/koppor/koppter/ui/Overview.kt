@@ -19,6 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -55,7 +56,7 @@ private fun UrgencyState.color(): Color = when (this) {
 // [impl->dsn~overview~1]
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun Overview(states: List<OverviewState>, today: LocalDate, onOpen: (Entry) -> Unit, emptyText: String) {
+fun Overview(states: List<OverviewState>, today: LocalDate, onToggle: (Entry) -> Unit, onOpen: (Entry) -> Unit, emptyText: String) {
     var selected by remember { mutableStateOf<String?>(null) }
     var showing by remember { mutableStateOf(false) }
     val shown = states.firstOrNull { it.name == selected }.takeIf { showing }
@@ -112,6 +113,7 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onOpen: (Entry) -> U
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
+                    Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, modifier = Modifier.testTag("task-done"))
                     LinkedText(entry.task.description, Modifier.weight(1f))
                     if (urgency != null) {
                         Column(Modifier.width(150.dp), horizontalAlignment = Alignment.CenterHorizontally) {

@@ -74,7 +74,8 @@ import kotlin.time.Duration.Companion.minutes
  */
 // ponytail: file access runs on the caller's thread; move it off the UI thread when a storage is slow (network).
 /** What the main screen shows of the tasks. */
-enum class View(val title: String) { LIST("List"), BOARD("Board"), OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), INBOX("Inbox") }
+// From the views that show what is up to those that change the tasks.
+enum class View(val title: String) { OVERVIEW("Overview"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), LIST("List"), INBOX("Inbox") }
 
 class TodoController(
     settings: Settings,
@@ -274,8 +275,12 @@ class TodoController(
     /** The tasks to show, filtered and in list order: the lines of the file and the items of Outlook that no line names. */
     // [impl->dsn~visible-tasks~1]
     // [impl->dsn~outlook-items~1]
+    /** The filter that [visible] applies: a search in the list or the inbox also finds the tasks before their start date, to add a note to one of them. */
+    private val searched: Filter
+        get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
+
     val visible: List<Entry>
-        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]

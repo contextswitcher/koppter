@@ -33,6 +33,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -165,6 +166,21 @@ class AppTest {
         onAllNodes(hasText("+GarageSale") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertCountEquals(2)
         onNode(hasText("2026-11-20") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
         onNodeWithTag("overdue-separator").assertDoesNotExist()
+    }
+
+    // [utest->dsn~visible-tasks~1]
+    @Test
+    fun searchInListAndInboxFindsTasksBeforeTheirStartDate() = runComposeUiTest {
+        storage.text = "JavaLand talk +Talks due:2027-09-01 t:2027-07-01\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
+        controller.filter = controller.filter.copy(text = "javaland")
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.INBOX
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.BOARD
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
     }
 
     // [utest->dsn~overdue-separator~1]
@@ -1395,6 +1411,10 @@ class AppTest {
         onNodeWithText("Sweep the floor").performClick()
         onNodeWithTag("edit-dialog").assertExists()
         onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        // A task is completed where it is shown.
+        onAllNodesWithTag("task-done")[1].performClick()
+        assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Water the plants" in it })
+        onAllNodesWithTag("overview-task").assertCountEquals(1)
         onNodeWithTag("overview-back").performClick()
         onNodeWithTag("overview-phone").assertExists()
 
@@ -1441,6 +1461,29 @@ class AppTest {
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-barriers").assertTextContains("default = month")
         onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00")
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aTimeMapIsPaintedOnTheDaysOfAWeek() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00\nEvenings = Mon-Thu 19:00-21:00")
+        onNodeWithTag("plan-edit-map-General").performClick()
+        onNodeWithTag("time-map-paint-yellow").performClick()
+        // Down on Monday from eight o'clock to a quarter to ten: the quarters of an hour that the drag touches.
+        onNodeWithTag("time-map-grid").performTouchInput {
+            swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
+        }
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
+        onNodeWithTag("time-map-revert").performClick()
+        onNodeWithTag("time-map-definition").assertTextEquals("Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("time-map-paint-black").performClick()
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
+        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-editor").assertDoesNotExist()
+        // The other map stays as it was typed.
+        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black\nEvenings = Mon-Thu 19:00-21:00")
     }
 
     // [utest->dsn~plan-dialog~1]
@@ -1533,8 +1576,9 @@ class AppTest {
 
         onNodeWithTag("agenda-day-2026-11-12").assertTextEquals("Today · Thu 2026-11-12")
         onNodeWithTag("agenda-day-2026-11-13").assertTextEquals("Tomorrow · Fri 2026-11-13")
-        // A day without a block is left out, as are the days after the week.
-        onNodeWithTag("agenda-day-2026-11-14").assertDoesNotExist()
+        // The day after tomorrow is shown without a block; a later day without a block is left out, as are the days after the week.
+        onNodeWithTag("agenda-day-2026-11-14").assertExists()
+        onNodeWithTag("agenda-day-2026-11-15").assertDoesNotExist()
         onAllNodesWithTag("agenda-block").assertCountEquals(3)
         // A block whose task is gone still tells what was planned.
         onNodeWithText("A task that is gone").assertExists()
@@ -1608,6 +1652,18 @@ class AppTest {
         onNodeWithText("Every task has a context.").assertExists()
     }
 
+    // [utest->dsn~inbox~1]
+    @Test
+    fun theInboxCompletesATask() = runComposeUiTest {
+        storage.text += "Sweep the floor\n"
+        start()
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (2)").performClick()
+        val done = storage.text.lines().count { it.startsWith("x ") }
+        onAllNodesWithTag("task-done")[0].performClick()
+        assertEquals(done + 1, storage.text.lines().count { it.startsWith("x ") })
+        onNodeWithTag("inbox-switch").assertTextEquals("Inbox (1)")
+    }
+
     // [utest->dsn~unsaved-changes~1]
     @Test
     fun escAsksBeforeChangesAreLost() = runComposeUiTest {
@@ -1651,13 +1707,13 @@ class AppTest {
             withKeysDown(listOfNotNull(Key.CtrlLeft, Key.ShiftLeft.takeIf { shift })) { pressKey(key) }
         }
 
-        ctrl(Key.Four)
+        ctrl(Key.Two)
         onNodeWithTag("agenda").assertExists()
         ctrl(Key.C, shift = true)
         onNodeWithTag("week").assertExists()
         ctrl(Key.Six)
         onNodeWithTag("inbox").assertExists()
-        ctrl(Key.One)
+        ctrl(Key.Five)
         onNodeWithTag("inbox").assertDoesNotExist()
 
         ctrl(Key.F, shift = true)
@@ -1791,6 +1847,28 @@ class AppTest {
         assertEquals(1, shared)
         // The dialog stays open: sharing changes no setting.
         onNodeWithTag("settings-dialog").assertExists()
+    }
+
+    // [utest->dsn~build-version~1]
+    @Test
+    fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {
+        var version by mutableStateOf<String?>(null)
+        var copied: String? = null
+        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
+            override fun getText() = copied?.let(::AnnotatedString)
+            override fun setText(annotatedString: AnnotatedString) {
+                copied = annotatedString.text
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", version = version) } }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-version").assertDoesNotExist()
+        version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
+        onNodeWithTag("settings-version").performScrollTo().assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
+        onNodeWithTag("settings-version").performTouchInput { longClick() }
+        assertEquals("1234abc", copied)
+        onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30) · Copied 1234abc")
     }
 
     // [utest->dsn~failure-log~1]
@@ -1957,28 +2035,28 @@ class AppTest {
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFileIsOpenedAtOnceWithItsConfiguration() = runComposeUiTest {
+    fun aChosenFileIsOpenedAndTheSettingsAreLeftWithoutWritingThem() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n").apply { companions["koppter.yml"] = "share-actions:\n  later: \"{} due:1w\"\n" }
         val controller = TodoController(Settings(), { if (it.todoFile == "/data/other/todo.txt") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { "/data/other/todo.txt" }) }
+        val before = storage.companions["koppter.yml"]
 
         onNodeWithTag("open-settings").performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} +research @reading due:2w dur:1h")
+        onNodeWithTag("settings-share-actions").performScrollTo().performTextReplacement("typed = {} due:1d")
         onNodeWithTag("settings-choose-file").performScrollTo().performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
-        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
-        onNodeWithTag("settings-file-message").assertExists()
-        // Without Save, the file from before is open again.
-        onNodeWithText("Cancel").performScrollTo().performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
-        assertEquals("", controller.settings.todoFile)
-        onNodeWithText("Thank Mom").assertExists()
-        onNodeWithText("Read the paper").assertDoesNotExist()
+        assertEquals("/data/other/todo.txt", controller.settings.todoFile)
+        onNodeWithText("Read the paper").assertExists()
+        assertEquals(before, storage.companions["koppter.yml"])
+        assertEquals("share-actions:\n  later: \"{} due:1w\"\n", chosen.companions["koppter.yml"])
+        // The settings show the configuration that the file brings along.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
     }
 
     // [utest->dsn~settings-open-file~1]
     @Test
-    fun aChosenFolderIsOpenedAtOnceAndAChooserThatFailsIsReported() = runComposeUiTest {
+    fun aChosenFolderIsOpenedAndAChooserThatFailsIsReported() = runComposeUiTest {
         val chosen = MemoryStorage("Read the paper\n")
         val controller = TodoController(Settings(), { if (it.todoFile == "content://documents/tree/todo") chosen else storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", chooseFile = { error("No program shows the dialog") }, chooseFolder = { "content://documents/tree/todo" }) }
@@ -1989,9 +2067,8 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
 
         onNodeWithTag("settings-choose-folder").performScrollTo().performClick()
-        onNodeWithTag("settings-file-message").assertTextContains("Opened.", substring = true)
+        onNodeWithTag("settings-dialog").assertDoesNotExist()
         assertEquals("content://documents/tree/todo", controller.settings.todoFile)
-        onNodeWithTag("settings-save").performScrollTo().performClick()
         onNodeWithText("Read the paper").assertExists()
     }
 

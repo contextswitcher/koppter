@@ -9,16 +9,26 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The times of a time map can be green, yellow, red or black, as in SkedPal: tasks are planned in green times; yellow and then red times are taken only for a task that would otherwise be done after its due date or not before its barrier; black times are left to the tasks of their own map. *Paint* in the plan dialog paints a time map on the days of a week.
 - On Windows with AnchorHub installed, the list shows the open items of the To-Do list of the classic Outlook, flagged mails and tasks of all accounts, without writing them to the file. An item carries the hashtag `#outlook`, and its label *Outlook* opens it in Outlook. Giving an item a context or a project, or another change, writes it to the file with the hashtag and the tag `ol:`; completing it in koppter marks it done in Outlook.
 - Planning writes the blocks of the next three weeks into the main calendar of Outlook as private, tentative appointments whose subject ends with `[koppter]`, replaces them with each plan and takes the other appointments of that calendar as busy times; the settings name the account and the weeks. *Remove koppter's blocks from Outlook* in the settings deletes them after a confirmation of their number and leaves every other appointment alone.
+- The last line of the settings shows the version and the commit of the build; a long press on it copies the hash of the commit.
+- A widget for the Android home screen shows the plan from now on by day, or the open tasks of the list if nothing is planned.
+- *Name of the commits* and *Email address of the commits* in the git section of the settings set the committer of the commits of this device; empty, the git configuration applies, and without one `koppter` and `koppter@localhost`, which the fields name.
 
 ### Changed
 
 - The tail rotor in the icon shows its crossed blades instead of a single line.
+- On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
+- A search in the list or the inbox also finds the tasks before their start date.
+- The agenda shows tomorrow and the day after it also when nothing is planned on them.
+- The switches of the views are in the order *Overview*, *Agenda*, *Week*, *Board*, *List*, *Inbox*; Ctrl+1 to Ctrl+6 follow that order.
+- The tasks of a tile of the overview and the tasks of the inbox have a box that completes them.
 - Planning moves a task that would be done after its due date before the tasks with a higher priority, the one due first first; the agenda and the week show it at its earlier times. A low priority thus counts until the due date comes close.
 - The inbox shows the hashtags of a task next to its text and puts *Give it:* before the contexts to choose from, so that they no longer look like contexts of the task.
 - The empty fields *Name of the commits* and *Email address of the commits* in the settings show their default in gray, also while they do not have the focus; their titles stand above them.
 - The search fields are lower, and the field that searches labels in the filter panel stands at its top instead of below *Clear all filters*, where it was out of view.
+- *Choose file* and *Choose folder* in the settings close the settings and show the tasks of the chosen file, as *Clone* does; what was typed into the settings before is not written.
 - `just run-loop` prints `Running koppter...` when it starts the application and `koppter finished` when the loop ends.
 - The Windows task manager names the desktop application *koppter* instead of *Tasks in a todo.txt file*.
 
@@ -37,12 +47,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Contexts of projects* in the settings states the contexts of a project, as `+project = @context`; a project that is added to a task in its dialog brings them along.
 - *Rename…* in the menu of a project, a context or a hashtag of the filter panel gives it another name in all tasks and scheduled tasks, in the links and in the contexts of projects.
 - *Check connection* in the settings, next to *Choose folder*, tells whether the server of the git repository in the field of the file is reached and lets the device in, without cloning.
-- *Name of the commits* and *Email address of the commits* in the git section of the settings set the committer of the commits of this device; empty, the git configuration applies, and without one `koppter` and `koppter@localhost`, which the fields name.
 - `just run-loop` runs the desktop application from a checkout of the sources; the application then shows *Restart to update* when the repository has newer commits, and a click pulls, builds and starts it again.
 
 ### Changed
 
-- On a narrow screen, as on a phone, the field for the text of the filter lies in the filter panel; a search button to the left of the button for a new task opens the panel with the field ready for typing.
 - The heading of a group of the list, such as *Next (33)*, stays at the top while its tasks are scrolled.
 - *Clone* in the settings stands below the address, next to *Check connection*, and no longer takes the place of *Save*; after the clone, the settings close and the tasks of the repository show, and nothing that stood in the settings is written.
 - A clone that fails is reported with the cause below the message, and it is recorded in the log, which *Share log* passes on.

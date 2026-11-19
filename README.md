@@ -79,6 +79,10 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 ![Plan dialog with time maps and barriers](docs/screenshots/plan.png)
 
+*Paint* shows a time map on a week: green times are for planning, yellow and red ones only for a task that would otherwise be late, black ones for the tasks of that map alone.
+
+![Time map painted green, yellow and red](docs/screenshots/time-map.png)
+
 The edit dialog: the description without metadata at the top, the metadata below, then the note, the resulting line of the `todo.txt` file, and the date the task was added according to the git history.
 The line can be edited as text as well: the fields follow what is typed there.
 The dialog offers all known projects, contexts and hashtags, and typing into *Add project* and the like narrows them.
@@ -177,8 +181,7 @@ A note or `koppter.yml` that two devices changed at the same place stops the syn
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
 *Clone*, below the field, does that, closes the settings and shows the tasks of the repository; it writes nothing that stood in the settings.
-A file chosen with *Choose file* and the `todo.txt` file of a folder chosen with *Choose folder* are opened at once, and the settings then show the board columns, names of priorities and share actions that come with them.
-*Cancel* returns to the file that was open before.
+*Choose file* and *Choose folder* do the same with a file and with the `todo.txt` file of a folder: the settings close and show its tasks.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
 With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.

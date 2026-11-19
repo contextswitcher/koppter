@@ -6,6 +6,15 @@ plugins {
     alias(libs.plugins.kotlin.compose)
 }
 
+// [impl->dsn~build-version~1]
+// The commit the APK is built from, as `<short sha> (<yyyy-MM-dd HH:mm>)`; empty outside a git checkout.
+val gitCommitLine: String = runCatching {
+    providers.exec {
+        commandLine("git", "show", "--no-patch", "--date=format:%Y-%m-%d %H:%M", "--format=%h (%cd)", "HEAD")
+        isIgnoreExitValue = true
+    }.standardOutput.asText.get().trim()
+}.getOrDefault("")
+
 android {
     namespace = "io.github.koppor.koppter.android"
     compileSdk = 37
@@ -19,6 +28,7 @@ android {
         versionCode = 1
         // The release workflow passes the day of the release.
         versionName = providers.environmentVariable("KOPPTER_VERSION").getOrElse("0")
+        buildConfigField("String", "GIT_COMMIT_LINE", "\"$gitCommitLine\"")
     }
 
     // The key of the published APK is not in the repository (decision 0010).
@@ -45,6 +55,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     // JGit and Apache MINA sshd are OSGi bundles; several of their jars carry bundle metadata under the same name.
