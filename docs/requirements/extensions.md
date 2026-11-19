@@ -514,6 +514,7 @@ Needs: impl, utest
 A storage that implements `CompanionFiles` reads and writes files relative to the directory of the todo.txt file.
 `FileStorage` and `GitStorage` implement it; `GitStorage` commits the companion files written since the last commit together with the next change of the todo.txt file.
 A file that is no text, such as an image of a note, is read and written as bytes (`readCompanionBytes`, `writeCompanionBytes`) and recorded in the same way.
+A deleted file (`deleteCompanion`), such as the note of a task that moved to a shared list, is recorded in the same way.
 The storage of a single document on Android does not implement it, so that notes, scheduled tasks and board columns defined by filters are not available there.
 
 Covers:

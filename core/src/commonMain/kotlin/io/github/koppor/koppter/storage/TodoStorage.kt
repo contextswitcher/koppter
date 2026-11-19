@@ -39,6 +39,9 @@ interface CompanionFiles {
 
     /** As [writeCompanion], for a file that is no text. */
     fun writeCompanionBytes(path: String, bytes: ByteArray)
+
+    /** Deletes the file if it exists; a storage with a history records that together with the next [TodoStorage.write]. */
+    fun deleteCompanion(path: String)
 }
 
 enum class SyncState { IDLE, RUNNING, FAILED }

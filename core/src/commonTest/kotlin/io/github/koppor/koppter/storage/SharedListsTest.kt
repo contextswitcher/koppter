@@ -1,6 +1,9 @@
 package io.github.koppor.koppter.storage
 
+import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertSame
@@ -27,6 +30,20 @@ class SharedListsTest {
         override fun writeCompanionBytes(path: String, bytes: ByteArray) {
             files[path] = bytes
         }
+
+        override fun deleteCompanion(path: String) {
+            files -= path
+        }
+    }
+
+    /** A list whose clone is gone. */
+    private class Missing : TodoStorage {
+        var written = false
+        override fun read(): String = error("clone missing")
+        override fun write(text: String, change: String) {
+            written = true
+        }
+        override fun version(): Any? = null
     }
 
     private val main = Memory("Call Mom @phone\n")
@@ -56,16 +73,80 @@ class SharedListsTest {
     }
 
     @Test
-    fun removingTheContextMovesTheTaskWithItsNoteToTheMainFile() {
+    fun removingTheContextMovesTheTaskWithItsNoteAndItsImagesToTheMainFile() {
         household.text = "Buy milk note:abc.md\n"
-        household.files["notes/abc.md"] = "Oat milk"
+        household.files["notes/abc.md"] = "Oat milk ![](abc-1.jpg)"
+        household.files["notes/abc-1.jpg"] = byteArrayOf(7)
         lists.read()
 
         lists.write("Call Mom @phone\nBuy milk note:abc.md\n", "Edit")
 
         assertEquals("Call Mom @phone\nBuy milk note:abc.md\n", main.text)
         assertEquals("", household.text)
+        assertEquals("Oat milk ![](abc-1.jpg)", main.files["notes/abc.md"])
+        assertEquals(7, main.readCompanionBytes("notes/abc-1.jpg")?.single())
+        assertEquals(emptyMap(), household.files)
+        assertEquals(1, household.writes)
+    }
+
+    @Test
+    fun aNoteThatAnotherLineOfItsFileStillNamesIsCopiedAndNotDeleted() {
+        household.text = "Buy milk note:abc.md\nBuy more milk note:abc.md\n"
+        household.files["notes/abc.md"] = "Oat milk"
+        lists.read()
+
+        lists.write("Call Mom @phone\nBuy milk note:abc.md\nBuy more milk note:abc.md @household\n", "Edit")
+
         assertEquals("Oat milk", main.files["notes/abc.md"])
+        assertEquals("Oat milk", household.files["notes/abc.md"])
+    }
+
+    @Test
+    fun aListThatCannotBeReadShowsNoTasksAndIsNotWritten() {
+        val missing = Missing()
+        val withMissing = SharedLists(main, listOf("flat" to missing))
+        val reported = mutableListOf<SyncStatus>()
+        withMissing.onStatus = { reported += it }
+
+        assertEquals("Call Mom @phone\n", withMissing.read())
+        assertEquals("@flat: clone missing", reported.single().message)
+
+        withMissing.write("Call Mom @phone\nRead @home\n", "Add")
+        assertEquals("Call Mom @phone\nRead @home\n", main.text)
+        val failure = assertFailsWith<IllegalStateException> { withMissing.write("Call Mom @phone\nRead @home\nClean @flat\n", "Add") }
+        assertEquals("Not written: the list @flat cannot be read (clone missing)", failure.message)
+        assertFalse(missing.written)
+        assertEquals("Call Mom @phone\nRead @home\n", main.text)
+    }
+
+    @Test
+    fun theScheduleIsThatOfAllFilesWithTheContextOfTheList() {
+        main.files[ICE_RECUR_FILE] = "weekly ; day Friday - Weekly review @review\n"
+        household.files[ICE_RECUR_FILE] = "# Shared\r\nweekly ; day Monday - Take out the trash\r\n"
+        lists.read()
+
+        assertEquals(
+            "weekly ; day Friday - Weekly review @review\n# Shared\nweekly ; day Monday - Take out the trash @household\n",
+            lists.readCompanion(ICE_RECUR_FILE),
+        )
+
+        lists.writeCompanion(
+            ICE_RECUR_FILE,
+            "weekly ; day Friday - Weekly review @review\n# Shared\nweekly ; day Monday - Take out the trash @household\nmonthly ; day_of_month 1 - Pay rent @household\n",
+        )
+        assertEquals("weekly ; day Friday - Weekly review @review\n", main.files[ICE_RECUR_FILE])
+        assertEquals("# Shared\nweekly ; day Monday - Take out the trash\nmonthly ; day_of_month 1 - Pay rent\n", household.files[ICE_RECUR_FILE])
+    }
+
+    @Test
+    fun aListGetsAScheduleOnlyForAnEntryOfItsOwn() {
+        main.files[ICE_RECUR_FILE] = "weekly ; day Friday - Weekly review\n"
+        lists.read()
+
+        lists.writeCompanion(ICE_RECUR_FILE, "daily - Water the plants\n")
+
+        assertEquals("daily - Water the plants\n", main.files[ICE_RECUR_FILE])
+        assertNull(household.files[ICE_RECUR_FILE])
     }
 
     @Test
@@ -100,9 +181,11 @@ class SharedListsTest {
     }
 
     @Test
-    fun aListIsNamedAfterTheDirectoryOfItsFile() {
+    fun aListIsNamedAfterItsRepositoryOrTheDirectoryOfItsFile() {
         assertEquals("household", SharedLists.name("/home/me/household/todo.txt"))
         assertEquals("shared-flat", SharedLists.name("C:\\clones\\shared flat\\todo.txt"))
+        assertEquals("household", SharedLists.name("git@github.com:me/household.git"))
+        assertEquals("flat", SharedLists.name("https://example.org/we/flat/"))
     }
 
     @Test

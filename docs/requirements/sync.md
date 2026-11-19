@@ -89,11 +89,13 @@ Needs: dsn
 ### Shared lists
 `req~shared-lists~1`
 
-The settings name further todo.txt files, such as those of clones of repositories shared with other people.
-Their tasks are shown together with those of the main file, each with a context named after the directory of its file.
-A new task with that context, or with a level below it, is written into that file, a task without such a context into the main file; changing the context moves the task with its note.
+The settings name further lists, each by the address of its repository or by its todo.txt file, such as those of repositories shared with other people.
+Their tasks are shown together with those of the main file, each with a context named after its repository, or after the directory of its file.
+A new task with that context, or with a level below it, is written into that list, a task without such a context into the main file; changing the context moves the task, and its note and the images of the note move with it.
+The entries of the `ice_recur.txt` of a list are scheduled as those of the main file and add their tasks to that list.
 A line of a file is written back unchanged unless the user edited it; the context of the list is not written into the file of the list.
-Where the application clones a repository, it clones the repository of a shared list as well and adds its todo.txt file to the shared lists.
+A list that cannot be read, such as one whose clone is gone, does not keep the others from being shown: the application reports why, and does not write a change that would go into that list.
+Where the application clones a repository, it clones the repository of a shared list as well, and clones it again when the clone is gone.
 
 Covers:
 
@@ -346,14 +348,18 @@ Needs: impl, utest
 ### Shared lists in one storage
 `dsn~shared-lists~1`
 
-`SharedLists` is a storage that combines the storage of the main file with one storage per shared list, each a `GitStorage` or a `FileStorage` as for the main file.
+`SharedLists` is a storage that combines the storage of the main file with one storage per shared list, each a `GitStorage` or a `FileStorage` as for the main file, or the storage of a clone by its address.
 It reads the lines of the main file, followed by those of each list with the context of the list appended (`SharedLists.shown`), unless the line has that context or a level below it.
-On a write, it gives each line that has the context of a list, or a level below it, to the first such list without the context (`SharedLists.stripped`), every other line to the main file, and a blank line to the file of the line above it.
+On a write, it gives each line that has the context of a list, or a level below it, to the first such list without the context (`SharedLists.stripped`), and every other line to the main file.
+A line without a task, such as a blank line, goes with the next line that has one, as it usually heads it, and at the end of the text with the line above.
 It writes only the files whose lines changed or whose companion files were written.
-A note that does not exist yet waits until the line that names it is written and goes to the file of that line, with the images that it shows; the note of a line that is new in a file is copied there from the file that has it.
-A note is read from the first file that has it; the other companion files are those of the main file.
-The synchronization status is the first failure of a storage, prefixed with the name of its list, else the first running one.
+A note that does not exist yet waits until the line that names it is written and goes to the file of that line, with the images that it shows.
+The note of a line that is new in a file, of a task that moved, is copied there with the images that it shows, and deleted where it was unless a line of that file still names it.
+A note is read from the first file that has it; the files next to the todo.txt file other than the notes and the schedule are those of the main file.
+A list whose file cannot be read shows no tasks, and its failure is reported as the synchronization status; a write that would change its lines fails before any file is written.
+The synchronization status is the first failure of a storage, prefixed with the context of its list, else the first running one.
 Without a shared list, and for a main storage without companion files, the main storage is used alone (`SharedLists.of`).
+The name of a list is the last part of its address without `.git`, or the directory of its file for an entry that ends with `.txt` (`SharedLists.name`).
 
 Covers:
 
@@ -362,26 +368,42 @@ Covers:
 
 Needs: impl, utest
 
-### Setting of the shared lists
-`dsn~shared-lists-setting~1`
+### Schedule of the shared lists
+`dsn~shared-ice-recur~1`
 
-The settings dialog has the field *Shared lists* below the field of the file, with one todo.txt file per line.
-A change of the field opens the files anew, as a change of the file does.
+`SharedLists` reads `ice_recur.txt` as the schedule of the main file followed by the schedules of the lists, each entry of a list with the context of the list appended to its task, which ends the line; a comment stays as it is.
+It writes the schedule split as the lines of the todo.txt file, an entry by the contexts of its task and a comment with the next entry, and writes only the schedules that changed; a list without a schedule gets none for no entries.
+The tasks that the schedule adds thus carry the context of their list and are written into it.
 
 Covers:
 
 * `req~shared-lists~1`
 
-Needs: impl
+Needs: impl, utest
+
+### Setting of the shared lists
+`dsn~shared-lists-setting~1`
+
+The settings dialog shows the shared lists below the field of the file as rows, one per entry: the context of the list, its address or file, the button *Check* for an address, which checks the connection as for the main repository, and the button *Remove*, which leaves the clone alone.
+A row says so when another list has the same context, whose tasks go to the first of them.
+*Add folder*, where the platform chooses folders, adds the todo.txt file of a folder of the file system.
+A change of the shared lists opens the files anew, as a change of the file does.
+
+Covers:
+
+* `req~shared-lists~1`
+
+Needs: impl, utest
 
 ### Clone of a shared list
 `dsn~shared-list-clone~1`
 
-Below the field *Shared lists*, where the platform passes `GitSetupActions`, the settings dialog has a field for the address of a shared repository and the button *Clone*, enabled while the field holds an address (`isGitAddress`).
-*Clone* clones the repository with `GitSetup.cloneShared` and adds its todo.txt file to the field; *Save* then opens it, and the dialog says with which context its tasks show.
+Below the shared lists, where the platform passes `GitSetupActions`, the settings dialog has a field for the address of a shared repository and the button *Clone*, enabled while the field holds an address (`isGitAddress`).
+*Clone* clones the repository with `GitSetup.cloneShared` and adds its address as a row; *Save* then opens it, and the dialog says with which context its tasks show.
 If the clone fails, the dialog shows the reason in the color for errors, and the failure goes to the log.
-`GitSetup.cloneShared` clones into a directory of `shared` next to the main clone that is named after the repository, as the name of that directory is the context of the list.
-A clone of the same repository is kept; a directory that holds anything else, such as the clone of another repository of the same name, is not replaced, and the name takes a number, as in `household-2`.
+The settings keep the address, as for the main repository (`dsn~clone-by-address~1`): `GitSetup.storageForSharedAddress` clones the repository again in the background when the clone is gone, and settings that name the clone of a shared list get its address (`GitSetup.withAddresses`).
+`GitSetup.cloneShared` clones into a directory of `shared` next to the main clone that is named after the repository.
+A clone of the same repository is kept; a directory that holds anything else, such as the clone of another repository of the same name, is not replaced, and the name of the directory takes a number, as in `household-2`.
 
 Covers:
 

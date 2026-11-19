@@ -159,9 +159,6 @@ fun SettingsDialog(
     val uriHandler = LocalUriHandler.current
     var todoFile by remember { mutableStateOf(settings.todoFile) }
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
-    var sharedAddress by remember { mutableStateOf("") }
-    var sharedMessage by remember { mutableStateOf("") }
-    var sharedFailed by remember { mutableStateOf(false) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
@@ -302,61 +299,7 @@ fun SettingsDialog(
                     if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
                 }
                 // [impl->dsn~shared-lists-setting~1]
-                OutlinedTextField(
-                    value = sharedLists,
-                    onValueChange = { sharedLists = it },
-                    label = { Text("Shared lists") },
-                    supportingText = {
-                        Text(
-                            "The todo.txt files of further lists, such as the clone of a repository shared with other people, one per line." +
-                                " Their tasks are shown with the name of their directory as context, such as @household; a task with that context is written into that file, together with its note.",
-                        )
-                    },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth().testTag("settings-shared-lists"),
-                )
-                if (git != null) {
-                    // [impl->dsn~shared-list-clone~1]
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        OutlinedTextField(
-                            value = sharedAddress,
-                            onValueChange = { sharedAddress = if (it.length > sharedAddress.length + 1) sshAddress(it) else it },
-                            label = { Text("Address of a shared repository") },
-                            singleLine = true,
-                            modifier = Modifier.weight(1f).testTag("settings-shared-address"),
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                cloning = true
-                                sharedFailed = false
-                                sharedMessage = "Cloning"
-                                scope.launch {
-                                    try {
-                                        val file = git.cloneShared(sshAddress(sharedAddress.trim()))
-                                        if (file !in sharedLists.lines().map(String::trim)) sharedLists = (sharedLists.trimEnd().lines().filter(String::isNotBlank) + file).joinToString("\n")
-                                        sharedAddress = ""
-                                        sharedMessage = "Cloned. After Save, its tasks show with the context @${SharedLists.name(file)}."
-                                    } catch (e: Exception) {
-                                        sharedFailed = true
-                                        onGitFailed("Clone of a shared list failed", e)
-                                        sharedMessage = "Not cloned: ${failureText(e)}"
-                                    }
-                                    cloning = false
-                                }
-                            },
-                            enabled = isGitAddress(sharedAddress.trim()) && !cloning,
-                            modifier = Modifier.testTag("settings-clone-shared"),
-                        ) { Text("Clone") }
-                    }
-                    if (sharedMessage.isNotEmpty()) {
-                        Text(
-                            sharedMessage,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (sharedFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
-                            modifier = Modifier.testTag("settings-shared-message"),
-                        )
-                    }
-                }
+                SharedListsSection(sharedLists, { sharedLists = it }, git, chooseFolder, onGitFailed)
                 Row(
                     Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
                         .testTag("settings-write-dates"),
@@ -502,6 +445,140 @@ fun SettingsDialog(
                 }
             }
         }
+    }
+}
+
+/**
+ * The shared lists as rows, each with its context, its address or file, and buttons that check its connection and remove it;
+ * below them, what adds a list: the address of a repository to clone, or a folder to choose.
+ * The removal of a list leaves its clone alone.
+ */
+// [impl->dsn~shared-lists-setting~1]
+@Composable
+private fun SharedListsSection(
+    sharedLists: String,
+    onChange: (String) -> Unit,
+    git: GitSetupActions?,
+    chooseFolder: (suspend () -> String?)?,
+    onGitFailed: (String, Exception) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val entries = SharedLists.entries(sharedLists)
+    var address by remember { mutableStateOf("") }
+    var busy by remember { mutableStateOf(false) }
+    /** The last message of each entry, and of the entry to add under the key "", with whether it reports a failure. */
+    var messages by remember { mutableStateOf(mapOf<String, Pair<String, Boolean>>()) }
+    fun add(entry: String) {
+        if (entry !in entries) onChange((entries + entry).joinToString("\n"))
+    }
+    fun failed(key: String, shown: String, logged: String, e: Exception) {
+        onGitFailed(logged, e)
+        messages += key to ("$shown: ${failureText(e)}" to true)
+    }
+
+    Text("Shared lists", style = MaterialTheme.typography.titleMedium)
+    Text(
+        "Lists in repositories of their own, such as one shared with a household. Their tasks show with the name of the repository as context, such as @household;" +
+            " a task with that context is written into that list, with its note and its images, and so are the entries of its ice_recur.txt.",
+        style = MaterialTheme.typography.bodySmall,
+    )
+    entries.forEachIndexed { index, entry ->
+        val name = SharedLists.name(entry)
+        Column(Modifier.fillMaxWidth().testTag("settings-shared-list-$index")) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text("@$name", style = MaterialTheme.typography.bodyLarge)
+                    Text(entry, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                if (git != null && isGitAddress(entry)) {
+                    OutlinedButton(
+                        onClick = {
+                            busy = true
+                            messages += entry to ("Checking" to false)
+                            scope.launch {
+                                try {
+                                    git.check(entry)
+                                    messages += entry to ("Connected" to false)
+                                } catch (e: Exception) {
+                                    failed(entry, "Not connected", "Connection check of a shared list failed", e)
+                                }
+                                busy = false
+                            }
+                        },
+                        enabled = !busy,
+                        modifier = Modifier.testTag("settings-shared-check-$index"),
+                    ) { Text("Check") }
+                }
+                TextButton(onClick = { onChange((entries - entry).joinToString("\n")) }, modifier = Modifier.testTag("settings-shared-remove-$index")) { Text("Remove") }
+            }
+            if (entries.count { SharedLists.name(it) == name } > 1) {
+                Text("Another list has the context @$name as well; its tasks go to the first of them.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
+            messages[entry]?.let { (message, failure) ->
+                Text(
+                    message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (failure) MaterialTheme.colorScheme.error else Color.Unspecified,
+                    modifier = Modifier.testTag("settings-shared-message-$index"),
+                )
+            }
+        }
+    }
+    if (git != null) {
+        // [impl->dsn~shared-list-clone~1]
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedTextField(
+                value = address,
+                onValueChange = { address = if (it.length > address.length + 1) sshAddress(it) else it },
+                label = { Text("Address of a shared repository") },
+                singleLine = true,
+                modifier = Modifier.weight(1f).testTag("settings-shared-address"),
+            )
+            Button(
+                onClick = {
+                    busy = true
+                    messages += "" to ("Cloning" to false)
+                    scope.launch {
+                        try {
+                            // The settings keep the address: a clone that is gone is cloned again from it.
+                            val cloned = sshAddress(address.trim())
+                            git.cloneShared(cloned)
+                            add(cloned)
+                            address = ""
+                            messages += "" to ("Cloned. After Save, its tasks show with the context @${SharedLists.name(cloned)}." to false)
+                        } catch (e: Exception) {
+                            failed("", "Not cloned", "Clone of a shared list failed", e)
+                        }
+                        busy = false
+                    }
+                },
+                enabled = isGitAddress(address.trim()) && !busy,
+                modifier = Modifier.testTag("settings-clone-shared"),
+            ) { Text("Clone") }
+        }
+    }
+    if (chooseFolder != null) {
+        OutlinedButton(
+            onClick = {
+                scope.launch {
+                    try {
+                        // A folder behind a document provider, as on Android, has no repository that the list could be synchronized with.
+                        chooseFolder()?.let { if (it.endsWith(".txt")) add(it) else messages += "" to ("Not added: a shared list needs a folder of the file system" to true) }
+                    } catch (e: Exception) {
+                        messages += "" to ("Not chosen: ${e.message ?: e}" to true)
+                    }
+                }
+            },
+            modifier = Modifier.testTag("settings-shared-choose-folder"),
+        ) { Text("Add folder") }
+    }
+    messages[""]?.let { (message, failure) ->
+        Text(
+            message,
+            style = MaterialTheme.typography.bodySmall,
+            color = if (failure) MaterialTheme.colorScheme.error else Color.Unspecified,
+            modifier = Modifier.testTag("settings-shared-message"),
+        )
     }
 }
 

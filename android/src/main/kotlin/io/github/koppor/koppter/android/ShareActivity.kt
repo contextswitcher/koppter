@@ -75,9 +75,7 @@ internal suspend fun noteImage(bytes: ByteArray): ByteArray = FileKit.compressIm
 // [impl->dsn~android-locations~1]
 // [impl->dsn~shared-lists~1]
 internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage =
-    SharedLists.of(mainStorage(settings, gitSetup), settings.sharedLists) {
-        gitSetup.storageFor(java.nio.file.Paths.get(it), settings.committerName, settings.committerEmail)
-    }
+    SharedLists.of(mainStorage(settings, gitSetup), settings.sharedLists) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
 
 private fun Context.mainStorage(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
     settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"), settings.committerName, settings.committerEmail)
@@ -92,7 +90,7 @@ private fun Context.mainStorage(settings: Settings, gitSetup: GitSetup): TodoSto
 /** Settings of an earlier version name the clone instead of the address of its repository; they get the address, which survives the clone. */
 // [impl->dsn~clone-by-address~1]
 internal fun Settings.withAddress(gitSetup: GitSetup, file: SettingsFile): Settings =
-    gitSetup.addressOf(todoFile)?.let { copy(todoFile = it).also(file::save) } ?: this
+    gitSetup.withAddresses(this).also { if (it !== this) file.save(it) }
 
 internal fun Context.todoController(gitSetup: GitSetup): TodoController {
     val settingsFile = SettingsFile(filesDir.toPath().resolve("settings.properties"))

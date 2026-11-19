@@ -43,6 +43,10 @@ class FileStorage(private val path: Path) : TodoStorage, CompanionFiles {
         Files.write(file, bytes)
     }
 
+    override fun deleteCompanion(path: String) {
+        Files.deleteIfExists(companion(path))
+    }
+
     private fun companion(relative: String): Path = path.toAbsolutePath().parent.resolve(relative)
 
     override fun version(): Any? = if (path.exists()) path.getLastModifiedTime() to Files.size(path) else null

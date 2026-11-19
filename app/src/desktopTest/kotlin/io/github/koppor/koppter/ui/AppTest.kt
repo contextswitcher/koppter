@@ -12,10 +12,10 @@ import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertIsOff
 import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
-import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasTestTag
@@ -88,6 +88,10 @@ private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
     override fun readCompanion(path: String) = companions[path]
     override fun writeCompanion(path: String, text: String) {
         companions[path] = text
+    }
+    override fun deleteCompanion(path: String) {
+        companions -= path
+        images -= path
     }
 
     override fun read() = text
@@ -1966,30 +1970,45 @@ class AppTest {
     }
 
     // [utest->dsn~shared-list-clone~1]
+    // [utest->dsn~shared-lists-setting~1]
     @Test
-    fun aClonedSharedListIsAddedToTheSharedListsAndSaved() = runComposeUiTest {
+    fun aClonedSharedListIsAddedAsARowWithItsContextAndSavedByItsAddress() = runComposeUiTest {
+        val checked = mutableListOf<String>()
         val git = object : GitSetupActions {
             override fun publicKey(): String? = null
             override suspend fun clone(url: String) = error("not cloned in this test")
             override suspend fun cloneShared(url: String) = if (url == "git@example.org:household.git") "/data/shared/household/todo.txt" else error("no such repository")
-            override suspend fun check(url: String) = Unit
+            override suspend fun check(url: String) {
+                checked += url
+            }
         }
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        val controller = TodoController(Settings(sharedLists = "/home/me/flat/todo.txt"), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", git = git) }
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-shared-list-0").performScrollTo()
+        onNode(hasText("@flat") and hasAnyAncestor(hasTestTag("settings-shared-list-0"))).assertExists()
+        onNode(hasText("/home/me/flat/todo.txt") and hasAnyAncestor(hasTestTag("settings-shared-list-0"))).assertExists()
+        // A file has no address whose connection could be checked.
+        onAllNodesWithTag("settings-shared-check-0").assertCountEquals(0)
         onNodeWithTag("settings-clone-shared").performScrollTo().assertIsNotEnabled()
         onNodeWithTag("settings-shared-address").performTextInput("git@example.org:other.git")
         onNodeWithTag("settings-clone-shared").performClick()
-        waitUntil { onAllNodesWithTag("settings-shared-message").fetchSemanticsNodes().isNotEmpty() && !onAllNodesWithText("Cloning").fetchSemanticsNodes().isNotEmpty() }
-        onNodeWithTag("settings-shared-message").assertTextEquals("Not cloned: no such repository")
+        waitUntil { onAllNodesWithText("Not cloned: no such repository").fetchSemanticsNodes().isNotEmpty() }
 
         onNodeWithTag("settings-shared-address").performTextClearance()
         onNodeWithTag("settings-shared-address").performTextInput("git@example.org:household.git")
         onNodeWithTag("settings-clone-shared").performClick()
         waitUntil { onAllNodesWithText("Cloned. After Save, its tasks show with the context @household.").fetchSemanticsNodes().isNotEmpty() }
+        onNodeWithTag("settings-shared-list-1").performScrollTo()
+        onNode(hasText("@household") and hasAnyAncestor(hasTestTag("settings-shared-list-1"))).assertExists()
+        onNodeWithTag("settings-shared-check-1").performClick()
+        waitUntil { onAllNodesWithText("Connected").fetchSemanticsNodes().isNotEmpty() }
+        assertEquals(listOf("git@example.org:household.git"), checked)
+
+        onNodeWithTag("settings-shared-remove-0").performScrollTo().performClick()
         onNodeWithTag("settings-save").performScrollTo().performClick()
-        assertEquals("/data/shared/household/todo.txt", controller.settings.sharedLists)
+        assertEquals("git@example.org:household.git", controller.settings.sharedLists)
     }
 
     // [utest->dsn~git-setup-dialog~1]
