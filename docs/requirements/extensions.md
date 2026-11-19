@@ -533,6 +533,7 @@ An image of a task is a file in the directory `notes`, which the note of the tas
 For a storage with companion files, the edit dialog has the button *Add image* where the platform gives a function that chooses an image, and *Take photo* where it gives one for the camera.
 The function gives the bytes of the images, several when the user chooses several, each scaled down to at most `NOTE_IMAGE_SIZE` pixels on its longer side and as JPEG, which `compressImage` of FileKit does.
 The dialog names each file after the note with the first number that is free (`imageName`), appends each Markdown image as a paragraph to the note, and shows the images of the note below it at a height of 96 dp; a file that is missing or not shown is named instead.
+Then the note has the focus, with the cursor at its end, behind the image.
 `TodoController` writes the images that were added, and that the note still shows, to `notes/<name>` before it writes the note; an image whose line was removed from the note again is not written.
 The desktop application chooses images with the file dialog; the Android application chooses them with the picker of the system and takes a photo with the camera application, into its cache.
 On Android, `ShareActivity` also receives one or several shared images: `TodoController.share` adds a task with the shared text, or *Image* without one, applies the share action, and gives the task a note that shows the images.

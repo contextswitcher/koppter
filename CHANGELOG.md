@@ -25,6 +25,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- After an image is attached, the note of the task has the focus with the cursor behind the image, instead of where a tap into the note puts it.
 - The agenda lists the due items of the To-Do list of Outlook below today, as the list and the inbox do.
 
 ## [2026-11-18] - 2026-11-18

@@ -1,5 +1,9 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.withKeysDown
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
@@ -793,6 +797,8 @@ class AppTest {
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-abc-1.jpg").assertExists()
         onNodeWithTag("edit-note").assertTextContains("Bring tape\n\n![](abc-1.jpg)\n")
+        // The cursor stands behind the image, in the focused note.
+        onNodeWithTag("edit-note").assertIsFocused().assert(SemanticsMatcher.expectValue(SemanticsProperties.TextSelectionRange, TextRange("Bring tape\n\n![](abc-1.jpg)\n".length)))
         // A chooser that is left without an image, and one that fails.
         picked = { emptyList() }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()

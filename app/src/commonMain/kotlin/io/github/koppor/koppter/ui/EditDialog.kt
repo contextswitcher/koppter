@@ -178,6 +178,7 @@ fun EditDialog(
     var images by remember { mutableStateOf(mapOf<String, ByteArray>()) }
     var imageMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val noteFocus = remember { FocusRequester() }
 
     // [impl->dsn~note-images~1]
     fun attach(source: suspend () -> List<ByteArray>) {
@@ -190,6 +191,8 @@ fun EditDialog(
                     val text = note.text.trimEnd().let { if (it.isEmpty()) "" else "$it\n\n" } + "![]($name)\n"
                     note = TextFieldValue(text, TextRange(text.length))
                 }
+                // Unfocused, the field shows no cursor, and a tap on Android places it where the finger lands, often inside the Markdown of the image.
+                if (note.text.isNotEmpty()) noteFocus.requestFocus()
                 ""
             } catch (e: Exception) {
                 "Not attached: ${e.message ?: e}"
@@ -373,7 +376,7 @@ fun EditDialog(
                             label = { Text("Note (Markdown)") },
                             minLines = 2,
                             maxLines = 8,
-                            modifier = Modifier.fillMaxWidth().testTag("edit-note"),
+                            modifier = Modifier.fillMaxWidth().focusRequester(noteFocus).testTag("edit-note"),
                         )
                         // [impl->dsn~note-images~1]
                         if (pickImage != null || takePhoto != null) {
