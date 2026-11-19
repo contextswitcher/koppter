@@ -193,7 +193,7 @@ private data class Editing(val entry: Entry?)
 const val NOTE_IMAGE_SIZE = 1600
 
 /** Ctrl with the n-th of these keys shows the n-th view. */
-private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six)
+private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven)
 
 // [impl->dsn~main-screen~1]
 @OptIn(ExperimentalMaterial3Api::class)
@@ -249,7 +249,7 @@ private fun MainScreen(
                 controller.view = View.LIST
             }
             // The agenda and the week show the plan, which the filter does not apply to.
-            if (controller.view == View.AGENDA || controller.view == View.WEEK) controller.view = View.LIST
+            if (controller.view == View.AGENDA || controller.view == View.WEEK || controller.view == View.TODAY) controller.view = View.LIST
             focusSearch()
         }
         when {
@@ -298,7 +298,7 @@ private fun MainScreen(
             { text ->
                 controller.filter = controller.filter.copy(text = text)
                 // The agenda and the week show the plan, which the filter does not apply to.
-                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK)) controller.view = View.LIST
+                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK || controller.view == View.TODAY)) controller.view = View.LIST
             },
             "Search text", "filter-text", modifier.focusRequester(filterFocus),
         )
@@ -409,6 +409,15 @@ private fun MainScreen(
                             }
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked)
+                        } else if (controller.view == View.TODAY) {
+                            // The line of the current time moves on once a minute.
+                            val now by androidx.compose.runtime.produceState(controller.minuteOfDay()) {
+                                while (true) {
+                                    delay(60_000)
+                                    value = controller.minuteOfDay()
+                                }
+                            }
+                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), now, controller::toggle, open, controller::worked)
                         } else if (controller.view == View.WEEK) {
                             Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {

@@ -607,6 +607,11 @@ Below the blocks of today are the tasks that are due today or overdue and have n
 
 ![Plan of a week as a calendar](docs/screenshots/week.png)
 
+*Today* shows the agenda of today beside the day as a calendar, with a line at the current time, and the sum of the time planned for today.
+On a narrow screen, it shows the agenda of today only.
+
+![Today beside its calendar](docs/screenshots/today.png)
+
 Both show what `calendar.txt` says: after tasks changed, *Plan* brings it up to date.
 A block whose task was completed, deleted or edited since shows the text it was planned with.
 
@@ -677,8 +682,8 @@ Do not enter the published address of the same calendar under *Calendars with bu
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
-| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda and the week, this shows the list |
-| Ctrl+1 to Ctrl+6 | List, board, overview, agenda, week, inbox |
+| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda, the week and today, this shows the list |
+| Ctrl+1 to Ctrl+7 | Overview, agenda, week, board, list, inbox, today |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
 
