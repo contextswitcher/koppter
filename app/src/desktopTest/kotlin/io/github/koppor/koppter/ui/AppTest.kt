@@ -1933,6 +1933,23 @@ class AppTest {
         onNodeWithTag("edit-dates").assertTextEquals("Added 2026-11-01 (from the git history)")
     }
 
+    // [utest->dsn~periodic-sync~1]
+    @Test
+    fun aSynchronizingStorageIsSynchronizedEveryFiveMinutes() = runComposeUiTest {
+        val syncing = object : SyncingStorage, TodoStorage by storage {
+            override var onStatus: (SyncStatus) -> Unit = {}
+            var synchronizations = 0
+            override fun sync() {
+                synchronizations++
+            }
+            override fun dates() = emptyMap<String, TaskDates>()
+        }
+        setContent { App(TodoController(Settings(), { syncing }, today = { LocalDate(2026, 11, 12) }), "todo.txt") }
+        assertEquals(1, syncing.synchronizations)
+        mainClock.advanceTimeBy(5 * 60_000L + 100)
+        assertEquals(2, syncing.synchronizations)
+    }
+
     // [utest->dsn~sync-status~1]
     @Test
     fun aPlainFileHasNoSynchronizationStatus() = runComposeUiTest {
