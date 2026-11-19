@@ -243,6 +243,17 @@ Covers:
 
 Needs: impl, utest
 
+### Periodic synchronization
+`dsn~periodic-sync~1`
+
+The main screen starts a synchronization every five minutes, so that an application left open receives the changes of other devices without a write of its own.
+
+Covers:
+
+* `req~git-sync~1`
+
+Needs: impl, utest
+
 ### SSH key
 `dsn~ssh-key~1`
 
