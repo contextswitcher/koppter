@@ -31,7 +31,7 @@ import kotlinx.datetime.LocalDate
 import org.tinylog.Logger
 
 /**
- * Receives text or an image that another application shares and adds it as a task, without showing a screen.
+ * Receives text or images that another application shares and adds it as a task, without showing a screen.
  * A share action chosen in the share sheet arrives as the id of its shortcut; the plain entry of the application applies the first action.
  */
 // [impl->dsn~android-share-target~1]
@@ -45,20 +45,24 @@ class ShareActivity : Activity() {
         // The share sheet ranks the targets by their use.
         action?.let { getSystemService(ShortcutManager::class.java)?.reportShortcutUsed(it) }
         // [impl->dsn~note-images~1]
-        // The variant that names the type exists from Android 13 on.
+        // The variants that name the type exist from Android 13 on.
         @Suppress("DEPRECATION")
-        val shared = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
-        val message = if (text.isBlank() && shared == null) {
+        val shared = if (intent.action == Intent.ACTION_SEND_MULTIPLE) {
+            intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM).orEmpty()
+        } else {
+            listOfNotNull(intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM))
+        }
+        val message = if (text.isBlank() && shared.isEmpty()) {
             "Nothing to add"
         } else {
             try {
-                val image = shared?.let { uri ->
-                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw java.io.IOException("the image was not read")
+                val images = shared.map { uri ->
+                    val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: throw java.io.IOException("an image was not read")
                     runBlocking { noteImage(bytes) }
                 }
                 // ponytail: the push runs on a background thread of a process that the system may stop after this activity;
                 // the commit is made before, and the next start of the application pushes it. A foreground service if that shows.
-                todoController(GitSetup(filesDir.toPath().resolve("git"))).share(text, action, image)
+                todoController(GitSetup(filesDir.toPath().resolve("git"))).share(text, action, images)
             } catch (e: Exception) {
                 "Not added: ${e.message ?: e}"
             }

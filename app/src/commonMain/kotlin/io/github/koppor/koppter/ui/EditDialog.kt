@@ -145,10 +145,10 @@ fun EditDialog(
     /** The width of the dialog in dp where the window allows it, and what keeps a width that the user chose. */
     width: Int = 760,
     onWidth: (Int) -> Unit = {},
-    /** Lets the user choose an image and gives its bytes, `null` if none was chosen; `null` on a platform without that. */
-    pickImage: (suspend () -> ByteArray?)? = null,
+    /** Lets the user choose images and gives their bytes, none if none was chosen; `null` on a platform without that. */
+    pickImage: (suspend () -> List<ByteArray>)? = null,
     /** As [pickImage], with the camera. */
-    takePhoto: (suspend () -> ByteArray?)? = null,
+    takePhoto: (suspend () -> List<ByteArray>)? = null,
     /** The image of a note that the storage has, by its file name. */
     imageOf: (String) -> ByteArray? = { null },
 ) {
@@ -180,15 +180,16 @@ fun EditDialog(
     val scope = rememberCoroutineScope()
 
     // [impl->dsn~note-images~1]
-    fun attach(source: suspend () -> ByteArray?) {
+    fun attach(source: suspend () -> List<ByteArray>) {
         scope.launch {
             imageMessage = try {
-                val bytes = source() ?: return@launch
-                val name = imageName(base.tag(Task.NOTE) ?: newNoteName) { it in images || it in noteImages(note.text) || imageOf(it) != null }
-                images = images + (name to bytes)
-                // In a paragraph of its own, which is how Markdown shows an image on its own line.
-                val text = note.text.trimEnd().let { if (it.isEmpty()) "" else "$it\n\n" } + "![]($name)\n"
-                note = TextFieldValue(text, TextRange(text.length))
+                for (bytes in source()) {
+                    val name = imageName(base.tag(Task.NOTE) ?: newNoteName) { it in images || it in noteImages(note.text) || imageOf(it) != null }
+                    images = images + (name to bytes)
+                    // In a paragraph of its own, which is how Markdown shows an image on its own line.
+                    val text = note.text.trimEnd().let { if (it.isEmpty()) "" else "$it\n\n" } + "![]($name)\n"
+                    note = TextFieldValue(text, TextRange(text.length))
+                }
                 ""
             } catch (e: Exception) {
                 "Not attached: ${e.message ?: e}"

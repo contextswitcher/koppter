@@ -120,10 +120,10 @@ fun App(
     /** The version and commit of the build, shown at the bottom of the settings; `null` where the platform does not tell it. */
     version: String? = null,
     chooseFileNote: String? = null,
-    /** Lets the user choose an image for a note and gives its bytes, scaled down; `null` on a platform without that. */
-    pickImage: (suspend () -> ByteArray?)? = null,
+    /** Lets the user choose images for a note and gives their bytes, scaled down, none if none was chosen; `null` on a platform without that. */
+    pickImage: (suspend () -> List<ByteArray>)? = null,
     /** As [pickImage], with the camera of the device. */
-    takePhoto: (suspend () -> ByteArray?)? = null,
+    takePhoto: (suspend () -> List<ByteArray>)? = null,
     /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
     update: (() -> Unit)? = null,
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
@@ -207,8 +207,8 @@ private fun MainScreen(
     git: GitSetupActions?,
     shareLog: (() -> Unit)?,
     version: String?,
-    pickImage: (suspend () -> ByteArray?)?,
-    takePhoto: (suspend () -> ByteArray?)?,
+    pickImage: (suspend () -> List<ByteArray>)?,
+    takePhoto: (suspend () -> List<ByteArray>)?,
     update: (() -> Unit)?,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,

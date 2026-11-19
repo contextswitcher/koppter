@@ -30,6 +30,7 @@ import io.github.vinceglb.filekit.compressImage
 import io.github.vinceglb.filekit.readBytes
 import io.github.vinceglb.filekit.dialogs.FileKitDialogParent
 import io.github.vinceglb.filekit.dialogs.FileKitDialogSettings
+import io.github.vinceglb.filekit.dialogs.FileKitMode
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
@@ -67,11 +68,11 @@ private suspend fun chooseFolder(owner: java.awt.Window): String? =
     FileKit.openDirectoryPicker(dialogSettings = FileKitDialogSettings(title = "Folder of the todo.txt file", parent = FileKitDialogParent.awt(owner)))
         ?.let { Path(it.absolutePath(), "todo.txt").toString() }
 
-/** An image that the user picks for a note, scaled down and as JPEG. */
+/** The images that the user picks for a note, scaled down and as JPEG. */
 // [impl->dsn~note-images~1]
-private suspend fun pickImage(owner: java.awt.Window): ByteArray? =
-    FileKit.openFilePicker(type = FileKitType.Image, dialogSettings = FileKitDialogSettings(title = "Image for the note", parent = FileKitDialogParent.awt(owner)))
-        ?.let { FileKit.compressImage(it.readBytes(), maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE) }
+private suspend fun pickImage(owner: java.awt.Window): List<ByteArray> =
+    FileKit.openFilePicker(type = FileKitType.Image, mode = FileKitMode.Multiple(), dialogSettings = FileKitDialogSettings(title = "Images for the note", parent = FileKitDialogParent.awt(owner)))
+        .orEmpty().map { FileKit.compressImage(it.readBytes(), maxWidth = NOTE_IMAGE_SIZE, maxHeight = NOTE_IMAGE_SIZE) }
 
 /** The exit code that `scripts/run-loop` answers by pulling, building and starting the application again; far from the codes of a JVM or a shell. */
 private const val RESTART_EXIT_CODE = 55

@@ -563,20 +563,20 @@ class TodoController(
     /**
      * Adds the text that another application shared as a task.
      * [action] is the title of the share action to apply; without it or if there is none with this title, the first one is applied.
-     * A shared [image] becomes the note of the task; without a text, the task is called after it.
+     * Shared [images] become the note of the task; without a text, the task is called after them.
      * Returns what to tell the user.
      */
     // [impl->dsn~note-images~1]
-    fun share(text: String, action: String? = null, image: ByteArray? = null): String {
-        if (image != null && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
+    fun share(text: String, action: String? = null, images: List<ByteArray> = emptyList()): String {
+        if (images.isNotEmpty() && storage !is CompanionFiles) return "Not added: this todo.txt file has no notes, which an image needs"
         val chosen = shareActions.firstOrNull { it.title == action } ?: shareActions.firstOrNull()
-        val shared = text.ifBlank { if (image == null) text else "Image" }
+        val shared = text.ifBlank { if (images.isEmpty()) text else "Image" }
         val plain = chosen?.task(shared, today()) ?: Task(body = shared.trim().replace(Regex("\\s+"), " "))
         val noteName = newNoteName()
-        val imageFile = imageName(noteName) { false }
-        val task = if (image == null) plain else plain.withTag(Task.NOTE, noteName)
+        val files = buildMap { images.forEach { put(imageName(noteName) { name -> name in this }, it) } }
+        val task = if (images.isEmpty()) plain else plain.withTag(Task.NOTE, noteName)
         error = null
-        if (image == null) add(task) else add(task, "![]($imageFile)\n", mapOf(imageFile to image))
+        if (images.isEmpty()) add(task) else add(task, files.keys.joinToString("\n") { "![]($it)\n" }, files)
         return error ?: "Added${chosen?.let { " (${it.title})" }.orEmpty()}: ${task.description}"
     }
 

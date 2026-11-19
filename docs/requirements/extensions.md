@@ -54,7 +54,7 @@ Needs: dsn
 ### Images of a task
 `req~note-images~1`
 
-The user attaches an image to a task: one that is chosen on the device, a photo taken with the camera of a phone, or an image that another application shares on Android.
+The user attaches images to a task: ones that are chosen on the device, a photo taken with the camera of a phone, or images that another application shares on Android.
 The image is kept and synchronized with the tasks, and the dialog of the task shows it.
 
 Covers:
@@ -531,11 +531,11 @@ Needs: impl, utest
 An image of a task is a file in the directory `notes`, which the note of the task shows as a Markdown image: `![](k3f-1.jpg)`.
 `noteImages` gives the images of a note: the targets of its Markdown images that are a plain file name, so that neither an address nor a path that leads out of the directory is read.
 For a storage with companion files, the edit dialog has the button *Add image* where the platform gives a function that chooses an image, and *Take photo* where it gives one for the camera.
-The function gives the bytes of the image, scaled down to at most `NOTE_IMAGE_SIZE` pixels on its longer side and as JPEG, which `compressImage` of FileKit does.
-The dialog names the file after the note with the first number that is free (`imageName`), appends the Markdown image as a paragraph to the note, and shows the images of the note below it at a height of 96 dp; a file that is missing or not shown is named instead.
+The function gives the bytes of the images, several when the user chooses several, each scaled down to at most `NOTE_IMAGE_SIZE` pixels on its longer side and as JPEG, which `compressImage` of FileKit does.
+The dialog names each file after the note with the first number that is free (`imageName`), appends each Markdown image as a paragraph to the note, and shows the images of the note below it at a height of 96 dp; a file that is missing or not shown is named instead.
 `TodoController` writes the images that were added, and that the note still shows, to `notes/<name>` before it writes the note; an image whose line was removed from the note again is not written.
-The desktop application chooses an image with the file dialog; the Android application chooses one with the picker of the system and takes a photo with the camera application, into its cache.
-On Android, `ShareActivity` also receives a shared image: `TodoController.share` adds a task with the shared text, or *Image* without one, applies the share action, and gives the task a note that shows the image.
+The desktop application chooses images with the file dialog; the Android application chooses them with the picker of the system and takes a photo with the camera application, into its cache.
+On Android, `ShareActivity` also receives one or several shared images: `TodoController.share` adds a task with the shared text, or *Image* without one, applies the share action, and gives the task a note that shows the images.
 A storage without companion files has no notes and therefore no images; an image shared to it is not added.
 An image is not deleted: the file of an image whose line was removed from a saved note stays.
 

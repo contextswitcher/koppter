@@ -784,7 +784,7 @@ class AppTest {
         storage.text = "Post signs +GarageSale note:abc.md\nSchedule pickup\n"
         storage.companions["notes/abc.md"] = "Bring tape\n"
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        var picked: () -> ByteArray? = { png }
+        var picked: () -> List<ByteArray> = { listOf(png) }
         setContent { App(controller, "todo.txt", pickImage = { picked() }) }
 
         openTask("Post signs")
@@ -794,19 +794,21 @@ class AppTest {
         onNodeWithTag("edit-image-abc-1.jpg").assertExists()
         onNodeWithTag("edit-note").assertTextContains("Bring tape\n\n![](abc-1.jpg)\n")
         // A chooser that is left without an image, and one that fails.
-        picked = { null }
+        picked = { emptyList() }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         picked = { error("the file is no image") }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-message").assertTextEquals("Not attached: the file is no image")
-        picked = { png }
+        // Several images chosen at once.
+        picked = { listOf(png, png) }
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-image-message").assertDoesNotExist()
-        onNodeWithTag("edit-image-abc-2.jpg").assertExists()
+        onNodeWithTag("edit-image-abc-3.jpg").assertExists()
+        picked = { listOf(png) }
         onNodeWithTag("edit-save").performScrollTo().performClick()
-        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg"), storage.images.keys)
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg"), storage.images.keys)
         assertEquals(png.toList(), storage.images.getValue("notes/abc-1.jpg").toList())
-        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n", storage.companions["notes/abc.md"])
+        assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n\n![](abc-3.jpg)\n", storage.companions["notes/abc.md"])
 
         // The dialog shows the images that the storage has, and names one that it has not.
         openTask("Post signs")
@@ -824,13 +826,13 @@ class AppTest {
         onNodeWithTag("edit-save").performScrollTo().performClick()
         val note = Regex("Schedule pickup note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
         assertEquals("Ask for a box\n\n![]($note-2.jpg)\n", storage.companions["notes/$note.md"])
-        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/$note-2.jpg"), storage.images.keys)
+        assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg", "notes/$note-2.jpg"), storage.images.keys)
 
-        // An image that is shared becomes a task of its own.
-        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, png) })
+        // Images that are shared become a task of their own.
+        assertEquals("Added (inbox): Image", runOnUiThread { controller.share("", null, listOf(png, png)) })
         val shared = Regex("Image note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
-        assertEquals("![]($shared-1.jpg)\n", storage.companions["notes/$shared.md"])
-        assertEquals(png.toList(), storage.images.getValue("notes/$shared-1.jpg").toList())
+        assertEquals("![]($shared-1.jpg)\n\n![]($shared-2.jpg)\n", storage.companions["notes/$shared.md"])
+        assertEquals(png.toList(), storage.images.getValue("notes/$shared-2.jpg").toList())
     }
 
     // [utest->dsn~new-task-defaults~1]

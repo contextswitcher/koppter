@@ -12,6 +12,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Today* shows the agenda of today beside the day as a calendar with a line at the current time and the sum of the planned time; Ctrl+7 opens it.
 - The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.
 - The `ice_recur.txt` of a shared list schedules tasks into that list.
+- *Add image* attaches several images chosen at once, and on Android several images shared together become one task with all of them in its note.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
 
 ### Changed
