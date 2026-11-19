@@ -40,6 +40,7 @@ import kotlinx.datetime.LocalDate
 import net.harawata.appdirs.AppDirsFactory
 import org.tinylog.Logger
 import java.io.File
+import io.github.koppor.koppter.latex.Latex
 import java.nio.file.Path
 import kotlin.concurrent.thread
 import kotlin.io.path.Path
@@ -171,7 +172,13 @@ fun main(args: Array<String>) {
         log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
         outlook = AnchorHubOutlook.installed(),
         // [impl->dsn~latex-todos~1]
-        readFile = { path -> java.io.File(path.replaceFirst(Regex("^~(?=/|$)"), Regex.escapeReplacement(System.getProperty("user.home")))).takeIf { it.isFile }?.readText() },
+        readFile = { path -> File(withHome(path)).takeIf { it.isFile }?.readText() },
+        // [impl->dsn~latex-open~1]
+        openFile = { template, path, line ->
+            val file = File(withHome(path))
+            if (template.isBlank()) thread(isDaemon = true) { java.awt.Desktop.getDesktop().open(file) }
+            else ProcessBuilder(Latex.command(template, file.path, line)).start()
+        },
     )
     val links = Channel<String>(Channel.UNLIMITED)
     link?.let(links::trySend)
@@ -225,3 +232,6 @@ fun main(args: Array<String>) {
         }
     }
 }
+
+/** The path with `~` at its start as the home directory, as a shell reads it. */
+private fun withHome(path: String): String = path.replaceFirst(Regex("^~(?=/|$)"), Regex.escapeReplacement(System.getProperty("user.home")))

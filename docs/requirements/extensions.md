@@ -165,6 +165,29 @@ Covers:
 
 Needs: dsn
 
+### Changed TODOs of a LaTeX document
+`req~latex-rematch~1`
+
+When the text of a TODO changes a little in the document, the task that refers to it follows it: it takes the new text and keeps its priority, labels and dates.
+A TODO is not followed while its document cannot be read.
+
+Covers:
+
+* `feat~latex~1`
+
+Needs: dsn
+
+### Opening a TODO of a LaTeX document
+`req~latex-open~1`
+
+From a task, the user opens its TODO where it stands in the document, with a program that the settings of the device name.
+
+Covers:
+
+* `feat~latex~1`
+
+Needs: dsn
+
 ### Scheduled tasks
 `req~scheduled-tasks~1`
 
@@ -688,6 +711,37 @@ Covers:
 
 * `req~latex-todos~1`
 * `adr~latex-tag~1`
+
+Needs: impl, utest
+
+### Lines that follow a changed TODO
+`dsn~latex-rematch~1`
+
+`Latex.todos` returns `null` for a document whose main file cannot be read, and `TodoController.refreshLatex` keeps only the documents that were read.
+After each reading, `Latex.rematched` takes, per project, the open lines whose tag `tex:` names no TODO of the document and the TODOs that no line names.
+It pairs them by the share of words they have in common, the labels of the line left out, at least one half, the most alike pair first and each line and TODO once.
+The line of a pair takes the text and the tag of the TODO and keeps its priority, dates, labels and other tags; `refreshLatex` writes all of them in one change.
+A line without a pair stays as it is, open.
+
+Covers:
+
+* `req~latex-rematch~1`
+* `adr~latex-rematch~1`
+
+Needs: impl, utest
+
+### Opening a TODO of a LaTeX document
+`dsn~latex-open~1`
+
+`TaskLabels` makes the label *LaTeX* open the link `koppter-latex:<tag>`, which `App` hands to `TodoController.openLatex`.
+It looks up the TODO with that tag among those read last and calls the function `openFile` of the platform with its path and line, which only the desktop has.
+The setting `latexEditor`, *Program that opens a TODO* in the settings, is a template such as `code --goto {file}:{line}`: `Latex.command` splits it at blanks and then replaces `{file}` and `{line}` in each word, so that a path with blanks stays one argument.
+Blank, the desktop opens the file with the program of the system.
+A TODO that is no longer in its document is reported.
+
+Covers:
+
+* `req~latex-open~1`
 
 Needs: impl, utest
 

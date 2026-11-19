@@ -313,7 +313,16 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             }
             // [impl->dsn~latex-todos~1]
             // The value is a hash, which says nothing to the user.
-            key == Task.LATEX -> Label("LaTeX", colors.tertiaryContainer, colors.onTertiaryContainer, Modifier.testTag("label-latex"))
+            // [impl->dsn~latex-open~1]
+            key == Task.LATEX -> Label(
+                "LaTeX",
+                colors.tertiaryContainer,
+                colors.onTertiaryContainer,
+                Modifier.clip(RoundedCornerShape(percent = 50))
+                    .clickable(onClickLabel = "Open the TODO in its document", role = Role.Button) { uriHandler.openUri(LATEX_LINK + value) }
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .testTag("label-latex"),
+            )
             else -> {
                 val (container, content) = when {
                     overdue -> colors.errorContainer to colors.onErrorContainer

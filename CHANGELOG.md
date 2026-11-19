@@ -18,6 +18,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
   `\todo` of `todonotes` and the commands of `fixme`, `zebra`, `snaptodo`, `fixmetodonotes` and `pdfcomment` count.
   Giving a TODO a priority or another change writes it to the file with the tag `tex:`; completing it in koppter hides it; the document is not changed.
 - *Add image* attaches several images chosen at once, and on Android several images shared together become one task with all of them in its note.
+- When the text of a TODO of a LaTeX document changes a little, its task in the file follows it with the new text and keeps its priority, labels and dates.
+- The label *LaTeX* of a task opens its TODO, with the program that *Program that opens a TODO* in the settings names, such as `code --goto {file}:{line}`, or with the program of the system.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
 
 ### Changed

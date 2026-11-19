@@ -51,6 +51,8 @@ data class Settings(
     val outlookCalendar: String = "",
     /** For how many weeks from today the plan is written to the calendar of Outlook; 0 writes nothing. */
     val outlookWeeks: Int = 3,
+    /** The program that opens a TODO of a LaTeX document, as a template of [io.github.koppor.koppter.latex.Latex.command]; blank for the program of the system. */
+    val latexEditor: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -72,6 +74,7 @@ data class Settings(
         COMMITTER_EMAIL to committerEmail,
         OUTLOOK_CALENDAR to outlookCalendar,
         OUTLOOK_WEEKS to outlookWeeks.toString(),
+        LATEX_EDITOR to latexEditor,
     )
 
     companion object {
@@ -93,6 +96,7 @@ data class Settings(
         private const val COMMITTER_EMAIL = "committerEmail"
         private const val OUTLOOK_CALENDAR = "outlookCalendar"
         private const val OUTLOOK_WEEKS = "outlookWeeks"
+        private const val LATEX_EDITOR = "latexEditor"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -114,6 +118,7 @@ data class Settings(
             committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
             outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
             outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
+            latexEditor = properties[LATEX_EDITOR].orEmpty(),
         )
     }
 }

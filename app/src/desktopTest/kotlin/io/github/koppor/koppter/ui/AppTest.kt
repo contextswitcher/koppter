@@ -1107,8 +1107,12 @@ class AppTest {
     // [utest->dsn~project-properties~1]
     @Test
     fun aProjectGetsALatexDocumentWhoseTodosAreShownUntilALineStandsForThem() = runComposeUiTest {
-        val documents = mapOf("/papers/fair/main.tex" to "Text\\todo{Cite the study}\\input{intro}", "/papers/fair/intro.tex" to "\\TODO{Add the outline}")
-        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, readFile = documents::get)
+        val documents = mutableMapOf("/papers/fair/main.tex" to "Text\\todo{Cite the study}\\input{intro}", "/papers/fair/intro.tex" to "\\TODO{Add the outline}")
+        val opened = mutableListOf<Triple<String, String, Int>>()
+        val controller = TodoController(
+            Settings(latexEditor = "edit {file}:{line}"), { storage }, today = { LocalDate(2026, 11, 12) },
+            readFile = documents::get, openFile = { template, path, line -> opened += Triple(template, path, line) },
+        )
         setContent { App(controller, "todo.txt") }
         onAllNodesWithTag("label-project-GarageSale", useUnmergedTree = true)[0].performMouseInput { rightClick() }
         onNodeWithTag("edit-project").assertTextEquals("Edit\u2026").performClick()
@@ -1126,6 +1130,19 @@ class AppTest {
         assertTrue(storage.text.trim().lines().last().matches(Regex("x (\\S+ )?Cite the study \\+GarageSale #latex tex:\\w+")), storage.text)
         assertTrue(controller.visible.none { it.task.description.startsWith("Cite the study") })
         assertEquals(1, controller.visible.count { it.task.description.startsWith("Add the outline") })
+
+        // [utest->dsn~latex-rematch~1]
+        // A TODO with a priority, whose text then changes a little in the document: its line follows it.
+        runOnIdle { controller.visible.first { it.task.description.startsWith("Add the outline") }.let { controller.replace(it, it.task.edit(priority = 'B')) } }
+        documents["/papers/fair/intro.tex"] = "\n\\TODO{Add the outline of the method}"
+        runBlocking { controller.refreshLatex() }
+        assertTrue(storage.text.trim().lines().last().matches(Regex("\\(B\\) (\\S+ )?Add the outline of the method \\+GarageSale #latex tex:\\w+")), storage.text)
+        assertEquals(1, controller.visible.count { it.task.description.startsWith("Add the outline") })
+
+        // [utest->dsn~latex-open~1]
+        controller.filter = controller.filter.copy(text = "outline")
+        onNodeWithTag("label-latex", useUnmergedTree = true).performClick()
+        assertEquals(listOf(Triple("edit {file}:{line}", "/papers/fair/intro.tex", 2)), opened)
     }
 
     // [utest->dsn~outlook-blocks~1]

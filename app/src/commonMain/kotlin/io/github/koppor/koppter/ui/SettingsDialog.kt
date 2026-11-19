@@ -150,6 +150,8 @@ fun SettingsDialog(
     onDismiss: () -> Unit,
     /** Counts and deletes the blocks of koppter in the calendar of Outlook of an account; `null` where Outlook is not reached. */
     outlookBlocks: OutlookBlockActions? = null,
+    /** Whether the device opens the TODOs of LaTeX documents, with the program that the settings name. */
+    opensLatex: Boolean = false,
 ) {
     val scope = rememberCoroutineScope()
     // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
@@ -171,6 +173,7 @@ fun SettingsDialog(
     var committerName by remember { mutableStateOf(settings.committerName) }
     var committerEmail by remember { mutableStateOf(settings.committerEmail) }
     var outlookCalendar by remember { mutableStateOf(settings.outlookCalendar) }
+    var latexEditor by remember { mutableStateOf(settings.latexEditor) }
     var outlookWeeks by remember { mutableStateOf(settings.outlookWeeks.toString()) }
     val outlookWeeksValue = outlookWeeks.trim().toIntOrNull()?.takeIf { it >= 0 }
     var cloning by remember { mutableStateOf(false) }
@@ -189,7 +192,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks)
+    val state = listOf(todoFile, sharedLists, writeDates, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -399,6 +402,14 @@ fun SettingsDialog(
                     )
                     OutlookClearButton(outlookBlocks, outlookCalendar)
                 }
+                if (opensLatex) {
+                    // [impl->dsn~latex-open~1]
+                    Text("LaTeX", style = MaterialTheme.typography.titleMedium)
+                    CommitterField(
+                        "Program that opens a TODO", latexEditor, { latexEditor = it }, "Program of the system", "settings-latex-editor",
+                        "The label LaTeX of a task opens its TODO with it; {file} and {line} stand for where the TODO is, such as code --goto {file}:{line}.",
+                    )
+                }
                 Row(Modifier.fillMaxWidth()) {
                     // [impl->dsn~share-log~1]
                     if (shareLog != null) {
@@ -410,7 +421,7 @@ fun SettingsDialog(
                         settings.copy(
                             todoFile = file, sharedLists = sharedLists.trim(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
-                            outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks,
+                            outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
                         ),
                         columns?.trim(),
                         actions?.trim(),

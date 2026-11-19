@@ -94,6 +94,8 @@ class TodoController(
     private val outlook: OutlookBridge? = null,
     /** Reads a file of the device by its path, `null` if there is none; `null` where the platform cannot, as on Android. */
     private val readFile: ((String) -> String?)? = null,
+    /** Opens a file of the device at a line, with the program of the template of [Latex.command], or as the system opens it for a blank one; `null` where the platform cannot. */
+    private val openFile: ((template: String, path: String, line: Int) -> Unit)? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -283,15 +285,35 @@ class TodoController(
         val read = readFile ?: return
         val documents = latexDocuments
         latexTodos = withContext(Dispatchers.Default) {
-            documents.associate { (project, path) ->
-                project.drop(1) to try {
-                    Latex.todos(path) { read(it) }
+            documents.mapNotNull { (project, path) ->
+                try {
+                    Latex.todos(path) { read(it) }?.let { project.drop(1) to it }
                 } catch (e: Exception) {
                     log("The LaTeX document $path was not read: ${e.message}", e)
-                    emptyList()
+                    null
                 }
-            }
+            }.toMap()
         }
+        // [impl->dsn~latex-rematch~1]
+        val rematched = Latex.rematched(latexTodos, file.entries)
+        if (rematched.isNotEmpty()) {
+            val new = rematched.fold(file) { text, (line, task) -> text.replace(line.index, task) }
+            write(new, "Follow changed LaTeX TODOs: ${rematched.joinToString { it.second.description }}")
+        }
+    }
+
+    /** Whether the label *LaTeX* opens its TODO. */
+    val opensLatex: Boolean get() = openFile != null
+
+    /** Opens the TODO that the tag `tex:` names where it stands in its document, with the program of the settings. */
+    // [impl->dsn~latex-open~1]
+    fun openLatex(tag: String) {
+        val open = openFile ?: return
+        val todo = latexTodos.values.flatten().firstOrNull { Latex.tag(it) == tag } ?: run {
+            error = "The TODO is no longer in the LaTeX document of its project."
+            return
+        }
+        guarded { open(settings.latexEditor, todo.path, todo.line) }
     }
 
     /** Opens the item of Outlook that a link of [Outlook.anchor] names; returns whether the link was one. */

@@ -145,7 +145,10 @@ fun App(
         object : UriHandler {
             override fun openUri(uri: String) = try {
                 // [impl->dsn~outlook-tag~1]
-                if (!controller.openOutlook(uri)) platform.openUri(uri) else Unit
+                if (controller.openOutlook(uri)) Unit
+                // [impl->dsn~latex-open~1]
+                else if (uri.startsWith(LATEX_LINK)) controller.openLatex(uri.removePrefix(LATEX_LINK))
+                else platform.openUri(uri)
             } catch (e: Exception) {
                 controller.error = "Not opened: $uri"
             }
@@ -193,6 +196,9 @@ fun App(
         }
     }
 }
+
+/** The link of the label *LaTeX*, which the application handles itself, as it handles the links of Outlook. */
+internal const val LATEX_LINK = "koppter-latex:"
 
 internal const val LEAVE_WARNING = "Back again leaves koppter."
 
@@ -553,6 +559,7 @@ private fun MainScreen(
                 showSettings = false
             },
             // [impl->dsn~outlook-clear~1]
+            opensLatex = controller.opensLatex,
             outlookBlocks = if (!controller.readsOutlook) null else object : OutlookBlockActions {
                 override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
                 override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)
