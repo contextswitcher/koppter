@@ -126,6 +126,8 @@ fun App(
     takePhoto: (suspend () -> ByteArray?)? = null,
     /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
     update: (() -> Unit)? = null,
+    /** Gives the parts of the window that the platform draws, such as the title bar on Windows, the dark or the light variant. */
+    windowVariant: (dark: Boolean) -> Unit = {},
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
 ) {
@@ -134,6 +136,8 @@ fun App(
         Appearance.LIGHT -> false
         Appearance.DARK -> true
     }
+    // [impl->dsn~title-bar-theme~1]
+    LaunchedEffect(dark) { windowVariant(dark) }
     // A link without a program that handles it, such as one of ContextSwitcher on a device without it, is reported.
     val platform = LocalUriHandler.current
     val uriHandler = remember(platform) {
