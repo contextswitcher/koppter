@@ -1596,6 +1596,26 @@ class AppTest {
         assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Schedule pickup" in it })
     }
 
+    // [utest->dsn~today~1]
+    @Test
+    fun todayShowsTheAgendaBesideTheDay() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  10:00-11:00 Thank Mom @phone
+            2026-11-13 w46 Fri  09:00-10:00 Post signs +GarageSale
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 15 })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("today-switch").performClick()
+
+        onAllNodesWithTag("agenda-block").assertCountEquals(2)
+        onAllNodesWithTag("week-block").assertCountEquals(2)
+        onNodeWithTag("today-planned").assertTextEquals("1h30m planned")
+        onNodeWithTag("today-now").assertExists()
+        onNodeWithText("10:00 Thank Mom").performClick()
+        onNodeWithTag("edit-dialog").assertExists()
+    }
+
     // [utest->dsn~agenda~1]
     @Test
     fun theWeekShowsTheBlocksAsACalendar() = runComposeUiTest {

@@ -560,6 +560,19 @@ Covers:
 
 Needs: impl, utest
 
+### Today
+`dsn~today~1`
+
+`Today` shows the agenda of today on the left and the blocks of today as a calendar on the right, as a column of `Week`, with a line at the current minute, which moves on once a minute.
+Above them, it shows the sum of the planned time of the blocks of today whose task is open.
+The calendar is 260 dp wide; below a width of 760 dp, it is left out.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
 ### State of the plan in the labels
 `dsn~plan-state~1`
 

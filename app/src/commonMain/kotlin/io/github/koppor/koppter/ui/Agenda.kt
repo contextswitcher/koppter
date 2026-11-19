@@ -84,12 +84,13 @@ fun Agenda(
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
     onWorked: (Entry, Int) -> Unit,
+    days: Int = 7,
 ) {
     // A block is counted once, also when the button is hit twice.
     val counted = remember { mutableStateListOf<TextBlock>() }
     Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
-        for (offset in 0..6) {
+        for (offset in 0 until days) {
             val day = today.plus(DatePeriod(days = offset))
             val ofDay = blocks.orEmpty().filter { it.date == day }
             if (ofDay.isEmpty() && offset > 2) continue
@@ -182,32 +183,108 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (En
                             color = if (day == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.height(28.dp).padding(start = 4.dp),
                         )
-                        Box(
-                            Modifier.fillMaxWidth().height(hourHeight * (lastHour - firstHour))
-                                .background(if (day == today) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
-                        ) {
-                            for (hour in 0 until lastHour - firstHour) HorizontalDivider(Modifier.offset(y = hourHeight * hour))
-                            for (block in ofWeek.filter { it.date == day }) {
-                                val entry = entryOf(block)
-                                Surface(
-                                    color = if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                                    contentColor = if (entry != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    shape = MaterialTheme.shapes.extraSmall,
-                                    modifier = Modifier.padding(horizontal = 2.dp).fillMaxWidth()
-                                        .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
-                                        .height(hourHeight * block.span.length / 60)
-                                        .clickable(enabled = entry != null) { entry?.let(onOpen) }
-                                        .testTag("week-block"),
-                                ) {
-                                    Text(
-                                        "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        overflow = TextOverflow.Ellipsis,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                                    )
-                                }
+                        DayColumn(ofWeek.filter { it.date == day }, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = day == today)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** The blocks of one day at their times, the hours from [firstHour] to [lastHour] running down; [nowMinute] draws a line at that time. */
+@Composable
+private fun DayColumn(
+    blocks: List<TextBlock>,
+    firstHour: Int,
+    lastHour: Int,
+    hourHeight: androidx.compose.ui.unit.Dp,
+    entryOf: (TextBlock) -> Entry?,
+    suffixOf: (Entry) -> String,
+    onOpen: (Entry) -> Unit,
+    highlight: Boolean,
+    nowMinute: Int? = null,
+) {
+    Box(
+        Modifier.fillMaxWidth().height(hourHeight * (lastHour - firstHour))
+            .background(if (highlight) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
+    ) {
+        for (hour in 0 until lastHour - firstHour) HorizontalDivider(Modifier.offset(y = hourHeight * hour))
+        for (block in blocks) {
+            val entry = entryOf(block)
+            Surface(
+                color = if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (entry != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                shape = MaterialTheme.shapes.extraSmall,
+                modifier = Modifier.padding(horizontal = 2.dp).fillMaxWidth()
+                    .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
+                    .height(hourHeight * block.span.length / 60)
+                    .clickable(enabled = entry != null) { entry?.let(onOpen) }
+                    .testTag("week-block"),
+            ) {
+                Text(
+                    "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
+                    style = MaterialTheme.typography.labelSmall,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                )
+            }
+        }
+        if (nowMinute != null && nowMinute in firstHour * 60 until lastHour * 60) {
+            HorizontalDivider(
+                Modifier.offset(y = hourHeight * (nowMinute - firstHour * 60) / 60).testTag("today-now"),
+                thickness = 2.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+/**
+ * Today on one screen: the tasks of the agenda of today on the left and the day as a calendar on the right,
+ * with a line at the current time. A narrow screen shows the tasks only.
+ */
+// [impl->dsn~today~1]
+@Composable
+fun Today(
+    blocks: List<TextBlock>?,
+    dueUnplanned: List<Entry>,
+    entryOf: (TextBlock) -> Entry?,
+    suffixOf: (Entry) -> String,
+    today: LocalDate,
+    nowMinute: Int,
+    onToggle: (Entry) -> Unit,
+    onOpen: (Entry) -> Unit,
+    onWorked: (Entry, Int) -> Unit,
+) {
+    val ofDay = blocks.orEmpty().filter { it.date == today }
+    val planned = ofDay.filter { entryOf(it) != null }.sumOf { it.span.length }
+    Column(Modifier.padding(8.dp).testTag("today")) {
+        // The agenda below names the day; the sum of the planned time is what the day adds to it.
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.End) {
+            Text(
+                "${Task.durationText(planned.minutes).ifEmpty { "0m" }} planned",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testTag("today-planned"),
+            )
+        }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            // The cards of the agenda need about 500 dp to keep their labels on one line beside the text.
+            val wide = maxWidth >= 760.dp
+            val height = maxHeight
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1) }
+                if (wide) {
+                    val firstHour = minOf(8, ofDay.minOfOrNull { it.span.start / 60 } ?: 8, nowMinute / 60)
+                    val lastHour = maxOf(18, ofDay.maxOfOrNull { (it.span.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
+                    val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp) / (lastHour - firstHour))
+                    Row(Modifier.width(260.dp).padding(top = 8.dp).verticalScroll(rememberScrollState()).testTag("today-day")) {
+                        Column(Modifier.width(44.dp)) {
+                            for (hour in firstHour until lastHour) {
+                                Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
                             }
                         }
+                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute)
                     }
                 }
             }

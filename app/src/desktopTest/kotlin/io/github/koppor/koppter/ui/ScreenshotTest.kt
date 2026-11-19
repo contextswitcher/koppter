@@ -117,7 +117,7 @@ class ScreenshotTest {
     }
 
     private fun DesktopComposeUiTest.start(settings: Settings = Settings()) {
-        val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) })
+        val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 })
         setContent { App(controller, "todo.txt", git = git) }
     }
 
@@ -171,6 +171,8 @@ class ScreenshotTest {
         save("agenda.png")
         onNodeWithTag("week-switch").performClick()
         save("week.png")
+        onNodeWithTag("today-switch").performClick()
+        save("today.png")
         onNodeWithTag("inbox-switch").performClick()
         save("inbox.png")
     }
