@@ -116,7 +116,7 @@ Needs: dsn
 ### Version of the build
 `req~build-version~1`
 
-On Android, the settings show at their bottom the version and the commit the application was built from, so that the user tells which build runs on the device.
+The settings show at their bottom the version and the commit the application was built from, so that the user tells which build runs.
 
 Covers:
 
@@ -416,7 +416,7 @@ Needs: impl, utest
 
 `App` takes a text `version`; if the platform gives one, `SettingsDialog` shows it as its last line; a long press on it copies the hash of the commit to the clipboard and adds *Copied* with the hash to the line.
 The build of `:android` writes the short hash and the date of the commit of `HEAD` into `BuildConfig.GIT_COMMIT_LINE`; `MainActivity` puts the version name of a release before it.
-The desktop application gives no text.
+The build of `:app` writes the version of a release and the same commit line into the resource `koppter-version.txt`, which the desktop application reads.
 
 Covers:
 

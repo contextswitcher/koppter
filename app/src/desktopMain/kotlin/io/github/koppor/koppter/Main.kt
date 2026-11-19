@@ -176,6 +176,8 @@ fun main(args: Array<String>) {
                 chooseFolder = { chooseFolder(window) },
                 git = git,
                 pickImage = { pickImage(window) },
+                // [impl->dsn~build-version~1]
+                version = remember { ClassLoader.getSystemResource("koppter-version.txt")?.readText()?.ifBlank { null } },
                 // Every change is in the file already, as on closing the window.
                 update = if (updateWaits) ({ exitProcess(RESTART_EXIT_CODE) }) else null,
             )
