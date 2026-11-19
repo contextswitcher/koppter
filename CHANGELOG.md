@@ -18,6 +18,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- A search in the list or the inbox also finds the tasks before their start date.
 - The agenda shows tomorrow and the day after it also when nothing is planned on them.
 - The switches of the views are in the order *Overview*, *Agenda*, *Week*, *Board*, *List*, *Inbox*; Ctrl+1 to Ctrl+6 follow that order.
 - The tasks of a tile of the overview and the tasks of the inbox have a box that completes them.

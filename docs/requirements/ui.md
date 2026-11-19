@@ -342,6 +342,7 @@ Needs: impl, utest
 `dsn~visible-tasks~1`
 
 `TodoController.visible` is the list of entries that match the filter, in list order.
+With a search text, the list and the inbox also show the tasks before their start date.
 
 Covers:
 

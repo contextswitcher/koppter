@@ -168,6 +168,21 @@ class AppTest {
         onNodeWithTag("overdue-separator").assertDoesNotExist()
     }
 
+    // [utest->dsn~visible-tasks~1]
+    @Test
+    fun searchInListAndInboxFindsTasksBeforeTheirStartDate() = runComposeUiTest {
+        storage.text = "JavaLand talk +Talks due:2027-09-01 t:2027-07-01\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
+        controller.filter = controller.filter.copy(text = "javaland")
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.INBOX
+        onNodeWithText("JavaLand talk").assertExists()
+        controller.view = View.BOARD
+        onNodeWithText("JavaLand talk").assertDoesNotExist()
+    }
+
     // [utest->dsn~overdue-separator~1]
     // [utest->dsn~list-groups~1]
     // [utest->dsn~list-step~1]

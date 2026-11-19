@@ -275,8 +275,12 @@ class TodoController(
     /** The tasks to show, filtered and in list order: the lines of the file and the items of Outlook that no line names. */
     // [impl->dsn~visible-tasks~1]
     // [impl->dsn~outlook-items~1]
+    /** The filter that [visible] applies: a search in the list or the inbox also finds the tasks before their start date, to add a note to one of them. */
+    private val searched: Filter
+        get() = if (filter.text.isNotBlank() && (view == View.LIST || view == View.INBOX)) filter.copy(hideFuture = false) else filter
+
     val visible: List<Entry>
-        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { filter.matches(it.task, today()) }.sortedWith(listOrder(today()))
+        get() = (file.entries + Outlook.entries(outlookItems, file.entries)).filter { searched.matches(it.task, today()) }.sortedWith(listOrder(today()))
             // [impl->dsn~next-actions~1]
             .let { if (nextOnly) nextActions(it, file.entries, today()) else it }
             // [impl->dsn~top-tasks~1]
