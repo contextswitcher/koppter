@@ -9,7 +9,14 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The settings show the shared lists as rows with their context, *Check* for the connection of a repository and *Remove*; *Add folder* adds a folder on the desktop.
+- The `ice_recur.txt` of a shared list schedules tasks into that list.
 - A file in a git repository is synchronized every five minutes as well, so that an application left open receives the changes of other devices before a task is edited there.
+
+### Changed
+
+- The note of a task that moves between the main list and a shared list moves with its images and is deleted where it was.
+- The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
 
 ## [2026-11-18] - 2026-11-18
 

@@ -119,6 +119,7 @@ class SharedListsTest {
         assertEquals("Call Mom @phone\nRead @home\n", main.text)
     }
 
+    // [utest->dsn~shared-ice-recur~1]
     @Test
     fun theScheduleIsThatOfAllFilesWithTheContextOfTheList() {
         main.files[ICE_RECUR_FILE] = "weekly ; day Friday - Weekly review @review\n"
@@ -138,6 +139,7 @@ class SharedListsTest {
         assertEquals("# Shared\nweekly ; day Monday - Take out the trash\nmonthly ; day_of_month 1 - Pay rent\n", household.files[ICE_RECUR_FILE])
     }
 
+    // [utest->dsn~shared-ice-recur~1]
     @Test
     fun aListGetsAScheduleOnlyForAnEntryOfItsOwn() {
         main.files[ICE_RECUR_FILE] = "weekly ; day Friday - Weekly review\n"
