@@ -153,6 +153,18 @@ Covers:
 
 Needs: dsn
 
+### Time tracking
+`req~time-tracking~1`
+
+The user starts a clock on a task when beginning to work on it and stops it when pausing or done; the time in between adds to the time spent.
+One clock runs at a time, and the task whose clock runs is always visible.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan as a file
 `req~plan-file~1`
 
@@ -557,6 +569,21 @@ Both views show what the file says and do not plan.
 Covers:
 
 * `req~agenda~1`
+
+Needs: impl, utest
+
+### Clock of a task
+`dsn~time-tracking~1`
+
+The tag `started:` holds the local date and minute of the start of the clock, such as `started:2026-11-19T16:50`; `Task.started` reads it.
+`Task.stop` adds the minutes since then to `spent:` through `Task.withSpent` and removes the tag; a start after the current time adds nothing.
+`TodoController.start` stops the clock that runs, in the same write, and `TodoController.toggle` stops the clock of a task that is completed; the next occurrence of a recurring task has no clock.
+The agenda and today have *Start* or *Stop* beside each task of today, and a bar above every view shows the task whose clock runs, its start and the time since it, with *Stop*.
+
+Covers:
+
+* `req~time-tracking~1`
+* `adr~clock-tag~1`
 
 Needs: impl, utest
 

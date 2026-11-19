@@ -85,6 +85,8 @@ fun Agenda(
     onOpen: (Entry) -> Unit,
     onWorked: (Entry, Int) -> Unit,
     days: Int = 7,
+    running: Entry? = null,
+    onClock: (Entry) -> Unit = {},
 ) {
     // A block is counted once, also when the button is hit twice.
     val counted = remember { mutableStateListOf<TextBlock>() }
@@ -122,6 +124,7 @@ fun Agenda(
                             modifier = Modifier.testTag("agenda-worked"),
                         ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
                     }
+                    if (entry != null && offset == 0) ClockButton(entry, running, onClock)
                 }
             }
             if (offset == 0 && dueUnplanned.isNotEmpty()) {
@@ -131,7 +134,12 @@ fun Agenda(
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-due"),
                 )
-                for (entry in dueUnplanned) TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) })
+                for (entry in dueUnplanned) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f)) { TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) }
+                        ClockButton(entry, running, onClock)
+                    }
+                }
             }
         }
     }
@@ -187,6 +195,41 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (En
                     }
                 }
             }
+        }
+    }
+}
+
+/** Starts the clock of the task, or stops it if it runs. */
+// [impl->dsn~time-tracking~1]
+@Composable
+private fun ClockButton(entry: Entry, running: Entry?, onClock: (Entry) -> Unit) {
+    TextButton(onClick = { onClock(entry) }, modifier = Modifier.testTag(if (entry == running) "clock-stop" else "clock-start")) {
+        Text(if (entry == running) "Stop" else "Start")
+    }
+}
+
+/** The task whose clock runs, with the time since its start; shown above every view. */
+// [impl->dsn~time-tracking~1]
+@Composable
+fun RunningClock(entry: Entry, now: kotlinx.datetime.LocalDateTime, onOpen: () -> Unit, onStop: () -> Unit) {
+    val started = entry.task.started ?: return
+    val elapsed = entry.task.runningFor(now)
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().testTag("running-clock")) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                entry.task.description,
+                style = MaterialTheme.typography.titleSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).clickable(onClick = onOpen),
+            )
+            Text(
+                "since ${started.time.toString().take(5)} · ${Task.durationText(elapsed).ifEmpty { "0m" }}",
+                fontFamily = FontFamily.Monospace,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.padding(horizontal = 8.dp).testTag("running-clock-time"),
+            )
+            TextButton(onClick = onStop, modifier = Modifier.testTag("running-clock-stop")) { Text("Stop") }
         }
     }
 }
@@ -255,6 +298,8 @@ fun Today(
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
     onWorked: (Entry, Int) -> Unit,
+    running: Entry? = null,
+    onClock: (Entry) -> Unit = {},
 ) {
     val ofDay = blocks.orEmpty().filter { it.date == today }
     val planned = ofDay.filter { entryOf(it) != null }.sumOf { it.span.length }
@@ -273,7 +318,7 @@ fun Today(
             val wide = maxWidth >= 760.dp
             val height = maxHeight
             Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1) }
+                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock) }
                 if (wide) {
                     val firstHour = minOf(8, ofDay.minOfOrNull { it.span.start / 60 } ?: 8, nowMinute / 60)
                     val lastHour = maxOf(18, ofDay.maxOfOrNull { (it.span.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
