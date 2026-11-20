@@ -265,6 +265,7 @@ data class Task(
         const val AT = "at"
         const val BY = "dueby"
         const val TRAVEL = "tt"
+        const val MAP = "map"
         const val SPENT = "spent"
         const val STARTED = "started"
 

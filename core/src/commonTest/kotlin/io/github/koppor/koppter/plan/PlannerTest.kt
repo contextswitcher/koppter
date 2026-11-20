@@ -242,6 +242,21 @@ class PlannerTest {
         )
     }
 
+    // [utest->dsn~task-time-map~1]
+    @Test
+    fun aTaskIsPlannedInTheMapItNamesBeforeThatOfItsContext() {
+        val config = PlanConfig(maps, contextMaps = mapOf("research" to "Morning-Focus"))
+        val plan = plan(
+            """
+            Read the survey @research map:Evenings dur:1h
+            Read the paper @research map:Nowhere dur:1h
+            """,
+            config,
+        )
+        // A name that is no time map leaves the task in the map of its context.
+        assertEquals(listOf("2026-11-12 8:00 60 Read the paper", "2026-11-12 19:00 60 Read the survey"), plan.lines())
+    }
+
     // [utest->dsn~planner~1]
     // [utest->dsn~plan-configuration~1]
     @Test

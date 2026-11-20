@@ -51,6 +51,7 @@ A task carries both: `Outline the related work +research>FirstPaper @writing`.
   The [inbox](../README.md#inbox) lists the tasks that have none.
 * A task that can be done in two ways carries two contexts: `@writing @train`.
   It shows under both, and the plan takes the time map of the first context that has one.
+* A single task that belongs into other times than its context names its time map with `map:Evenings`.
 * `@waiting` in addition marks a task that waits for someone else.
 * `#someday` marks a task that is not decided yet: the board keeps it apart from the next actions, as [Getting Things Done](../README.md#getting-things-done) does.
 * Five to nine contexts are enough.
@@ -135,7 +136,7 @@ A task of more than a day of work is a project: split it into tasks of at most a
 | --- | --- |
 | Level of the outline | Project `+`, with `>` for the levels |
 | Project with an end | Project below the project of its area, with a barrier for its deadline |
-| Time map | Time map, given to contexts: the kind of work of a task names the times it is planned in |
+| Time map | Time map, given to contexts: the kind of work of a task names the times it is planned in; `map:` gives a single task a time map of its own |
 | Zone with a budget | Limit of a context or a project: `max 5h/week` |
 | Minimum block length | Limit `block 2h` |
 | Plan with a start date | Threshold date `t:` |

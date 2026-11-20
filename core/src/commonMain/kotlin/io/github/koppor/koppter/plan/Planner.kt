@@ -78,8 +78,10 @@ class PlanConfig(
             barriers.filter { (_, spec) -> barrierDate(spec, LocalDate(2000, 1, 1)) == null }.map { (key, spec) -> "$key: \"$spec\" is no barrier" } +
             limitProblems
 
-    /** The time map of the first context of the task that has one, the nearest context above it included. */
-    fun mapOf(task: Task): String? = task.contexts.firstNotNullOfOrNull { context ->
+    /** The time map that the task names with `map:`, else that of its first context that has one, the nearest context above it included. */
+    // [impl->dsn~task-time-map~1]
+    // A name that is no time map, such as one mistyped, falls back to the context, which is closer to what was meant than the default map.
+    fun mapOf(task: Task): String? = task.tag(Task.MAP)?.takeIf { it in maps } ?: task.contexts.firstNotNullOfOrNull { context ->
         context.withAncestors().reversed().firstNotNullOfOrNull { contextMaps[it] ?: contextMaps["@$it"] }
     }
 

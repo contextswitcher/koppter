@@ -25,6 +25,7 @@ Needs: dsn
 The user defines time maps: named times of the week.
 A time map may be restricted to another one, so that general working hours are defined once.
 The user gives contexts a time map; the tasks of a context and of the contexts below it are planned in its times.
+A task may name a time map of its own, which comes before that of its contexts.
 
 Covers:
 
@@ -324,6 +325,19 @@ Covers:
 
 * `req~time-maps~1`
 * `req~barriers~1`
+
+Needs: impl, utest
+
+### Time map of a task
+`dsn~task-time-map~1`
+
+The tag `map:` names the time map of a task, such as `map:Evenings`.
+`PlanConfig.mapOf` gives it before the time map of the contexts of the task; a name that is no time map is left out, so that the task is planned in the map of its context.
+
+Covers:
+
+* `req~time-maps~1`
+* `adr~task-time-map~1`
 
 Needs: impl, utest
 

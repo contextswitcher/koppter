@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- A task can name its own time map with `map:`, such as `map:Evenings`; the plan takes it before the time map of its context.
 - *Week* and *Today* show the appointments of the calendar of Outlook beside the blocks of the plan, in the colors of their categories in Outlook. A click on one opens it in Outlook or puts it on the sideline, as SkedPal does: it stays in the calendar, and tasks are planned into its time. The sideline is the category `Sideline` in Outlook, for a recurring appointment of the whole series.
 - *Add holidays* in the plan dialog adds the public holidays of a German state to the first time map, so that no tasks are planned on them.
 - On the desktop, *Send the projects and contexts of the filter to ContextSwitcher* in the settings lets koppter and ContextSwitcher share the projects and contexts of their filters: a change in one changes the filter of the other.
