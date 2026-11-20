@@ -60,8 +60,10 @@ import androidx.compose.material.icons.materialIcon
 import androidx.compose.material.icons.materialPath
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CalendarLocale
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -80,7 +82,6 @@ import androidx.compose.material3.TimePickerDialog
 import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
@@ -691,6 +692,10 @@ private fun RecurrenceField(value: String, onChange: (String) -> Unit, valid: Bo
     }
 }
 
+/** The locale of the device, with weeks that start on Monday as everywhere in the application: the calendar of Material takes the first day of its weeks from a locale alone. */
+@OptIn(ExperimentalMaterial3Api::class)
+internal expect fun mondayFirstLocale(): CalendarLocale
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateField(
@@ -716,9 +721,13 @@ private fun DateField(
         modifier = modifier,
     )
     if (picking) {
-        val state = rememberDatePickerState(
-            initialSelectedDateMillis = Task.parseDate(value.trim().substringBefore('T'))?.let { it.toEpochDays() * MILLIS_PER_DAY },
-        )
+        // [impl->adr~week-starts-on-monday~1]
+        val state = remember {
+            DatePickerState(
+                locale = mondayFirstLocale(),
+                initialSelectedDateMillis = Task.parseDate(value.trim().substringBefore('T'))?.let { it.toEpochDays() * MILLIS_PER_DAY },
+            )
+        }
         DatePickerDialog(
             onDismissRequest = { picking = false },
             confirmButton = {

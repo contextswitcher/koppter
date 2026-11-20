@@ -24,6 +24,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The settings are grouped in tabs: *File*, *Tasks*, *Colors* and, where the platform offers them, *Integrations*.
   The title, the tabs and *Save* stay in view while a tab scrolls.
 - The plan dialog lists the time maps instead of showing them as text; *Edit* or a click on a map opens the painter, which now also edits the name and dates of the map, takes a typed definition and deletes the map, and *Add time map* adds one.
+- The calendar in which a date of a task is chosen starts its weeks on Monday, as the other views do, instead of on the first day of the locale of the system.
 
 ### Fixed
 

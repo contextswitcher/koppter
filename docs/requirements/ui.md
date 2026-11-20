@@ -687,6 +687,7 @@ Projects, contexts and hashtags are chips: those of the task, then all known one
 Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
 The calendar of the deadline has the button *Use due date* while the task has a due date, as the two are often the same day.
+The calendar of a date starts its weeks on Monday, whatever the locale of the system (`mondayFirstLocale`, [decision 0049](../decisions/0049-weeks-start-on-monday.md)).
 *Save* is disabled while a date, the recurrence or the duration is invalid or the task is empty.
 The dialog also serves for a new task.
 

@@ -711,6 +711,24 @@ class AppTest {
         onNodeWithTag("group-none").assertDoesNotExist()
     }
 
+    // [utest->dsn~edit-dialog~1]
+    @Test
+    fun theCalendarOfADateStartsItsWeeksOnMonday() = runComposeUiTest {
+        // The weeks of the United States start on Sunday.
+        val locale = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.US)
+        try {
+            start()
+            onNodeWithTag("new-task").performClick()
+            onNodeWithContentDescription("Choose Due date").performClick()
+            val monday = onNodeWithContentDescription("Monday", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.left
+            val sunday = onNodeWithContentDescription("Sunday", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.left
+            assertTrue(monday < sunday)
+        } finally {
+            java.util.Locale.setDefault(locale)
+        }
+    }
+
     // [utest->dsn~edit-pickers~1]
     @Test
     fun aTimeAndADurationOfTheDialogAreChosenInADialogOfTheirOwn() = runComposeUiTest {
