@@ -2639,6 +2639,9 @@ class AppTest {
         // A text that is no link of the application changes nothing.
         runOnUiThread { controller.openLink("https://example.org/?project=Family") }
         onAllNodesWithTag("task").assertCountEquals(2)
+
+        runOnUiThread { controller.openLink("koppter://new") }
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
     }
 
     // [utest->dsn~app-link-copy~1]

@@ -86,6 +86,9 @@ import kotlin.time.Duration.Companion.minutes
 // Today and the list come first, as they show what to do next; the overview, which tells how things stand, comes last.
 enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview") }
 
+/** The link that opens the dialog for a new task, in the forms that programs make of it. */
+private val NEW_TASK_LINK = Regex("koppter:(//)?new/?")
+
 class TodoController(
     settings: Settings,
     private val storageFor: (Settings) -> TodoStorage,
@@ -160,12 +163,20 @@ class TodoController(
     // [impl->dsn~next-actions~1]
     var nextOnly by mutableStateOf(false)
 
+    /** Set by the link `koppter://new`; the screen opens the dialog for a new task and resets it. */
+    var newTaskRequested by mutableStateOf(false)
+
     /**
-     * Shows the tasks that a link to the application names, in the list; a text that is no such link changes nothing.
+     * Shows the tasks that a link to the application names, in the list, or opens a new task for `koppter://new`;
+     * a text that is no such link changes nothing.
      * The link replaces the filter, so that it shows the same tasks whatever was filtered before.
      */
     // [impl->dsn~app-links~1]
     fun openLink(link: String) {
+        if (NEW_TASK_LINK.matches(link.trim())) {
+            newTaskRequested = true
+            return
+        }
         filter = filterOfLink(link) ?: return
         topOnly = false
         nextOnly = false

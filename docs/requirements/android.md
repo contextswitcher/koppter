@@ -239,6 +239,7 @@ Needs: impl
 `AgendaWidget` shows today's date as its title and a list that `AgendaWidgetService` fills through a controller of its own.
 `CalendarTxt.ahead` gives the blocks of `calendar.txt` that have not ended, in the order of time; the list shows them under a heading per day, each with the text of its task and its times.
 Without such a block, the list shows the open tasks of the filtered list.
+It is placed at two cells by one and grows in both directions.
 The widget is refreshed every half hour and when `MainActivity` stops; a click on it opens the application.
 Its colors are those of the system theme from Android 12 on.
 

@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.text.format.DateUtils
 import android.view.View
 import android.widget.RemoteViews
@@ -36,6 +37,9 @@ class AgendaWidget : AppWidgetProvider() {
             val views = RemoteViews(context.packageName, R.layout.widget).apply {
                 setTextViewText(R.id.widget_title, context.dateText(java.time.LocalDate.now()))
                 setOnClickPendingIntent(R.id.widget_title, open)
+                // The activity passes the link to the controller, which opens the dialog for a new task.
+                val add = Intent(Intent.ACTION_VIEW, Uri.parse("koppter://new"), context, MainActivity::class.java)
+                setOnClickPendingIntent(R.id.widget_add, PendingIntent.getActivity(context, 1, add, PendingIntent.FLAG_IMMUTABLE))
                 setRemoteAdapter(R.id.widget_list, Intent(context, AgendaWidgetService::class.java))
                 setEmptyView(R.id.widget_list, R.id.widget_empty)
                 // A row of a list takes its click from this template.

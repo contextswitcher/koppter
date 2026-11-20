@@ -267,6 +267,13 @@ private fun MainScreen(
             filterFocus.requestFocus()
         }
     }
+    // [impl->dsn~app-links~1]
+    LaunchedEffect(controller.newTaskRequested) {
+        if (controller.newTaskRequested) {
+            editing = Editing(null)
+            controller.newTaskRequested = false
+        }
+    }
     val dialog = editing != null || showSettings || schedule != null || planning != null
     LaunchedEffect(focused, dialog) { if (!focused && !dialog) rootFocus.requestFocus() }
 

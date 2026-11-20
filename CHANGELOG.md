@@ -9,6 +9,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The Android widget has a *+* button that opens the dialog for a new task, as does the link `koppter://new`.
+- The Android widget is placed at two cells by one and pulled larger for more of the plan.
 - The edit dialog has the rows *Waits for* and *Before*: typing part of the description of another task offers it, and *Save* writes the tags `id:` and `p:` into both tasks.
 - The fields of the settings that name projects and contexts, such as *Contexts of projects*, offer the projects and contexts of the file while `+` or `@` is typed.
 
