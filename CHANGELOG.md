@@ -14,6 +14,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The labels *Outlook*, *LaTeX* and `cs:`, which open the item in another program, are shown in the color of links instead of that of projects.
 - The settings are grouped in tabs: *File*, *Tasks*, *Colors* and, where the platform offers them, *Integrations*.
   The title, the tabs and *Save* stay in view while a tab scrolls.
 - The plan dialog lists the time maps instead of showing them as text; *Edit* or a click on a map opens the painter, which now also edits the name and dates of the map, takes a typed definition and deletes the map, and *Add time map* adds one.

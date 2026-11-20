@@ -290,8 +290,8 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             // [impl->dsn~context-switcher-tag~1]
             key == Task.CONTEXT_SWITCHER -> Label(
                 value,
-                colors.surfaceVariant,
-                colors.onSurfaceVariant,
+                linkColors().first,
+                linkColors().second,
                 Modifier.clip(RoundedCornerShape(percent = 50))
                     .clickable(onClickLabel = "Switch to the task in ContextSwitcher", role = Role.Button) { uriHandler.openUri(Task.contextSwitcherLink(value)) }
                     .pointerHoverIcon(PointerIcon.Hand)
@@ -303,8 +303,8 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             key == Task.OUTLOOK -> Outlook.entryId(value)?.let { entryId ->
                 Label(
                     "Outlook",
-                    colors.tertiaryContainer,
-                    colors.onTertiaryContainer,
+                    linkColors().first,
+                    linkColors().second,
                     Modifier.clip(RoundedCornerShape(percent = 50))
                         .clickable(onClickLabel = "Open the item in Outlook", role = Role.Button) { uriHandler.openUri(Outlook.anchor(entryId)) }
                         .pointerHoverIcon(PointerIcon.Hand)
@@ -316,8 +316,8 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             // [impl->dsn~latex-open~1]
             key == Task.LATEX -> Label(
                 "LaTeX",
-                colors.tertiaryContainer,
-                colors.onTertiaryContainer,
+                linkColors().first,
+                linkColors().second,
                 Modifier.clip(RoundedCornerShape(percent = 50))
                     .clickable(onClickLabel = "Open the TODO in its document", role = Role.Button) { uriHandler.openUri(LATEX_LINK + value) }
                     .pointerHoverIcon(PointerIcon.Hand)
@@ -351,6 +351,10 @@ fun projectColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { tertia
 
 @Composable
 fun contextColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { secondaryContainer to onSecondaryContainer }
+
+/** A label that opens the item in another program has the color of links, so that it does not pass for a project. */
+@Composable
+fun linkColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { surfaceVariant to primary }
 
 @Composable
 fun hashtagColors(): Pair<Color, Color> = MaterialTheme.colorScheme.run { surface to onSurface }
