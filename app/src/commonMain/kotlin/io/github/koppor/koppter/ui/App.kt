@@ -451,7 +451,10 @@ private fun MainScreen(
                         } else if (controller.view == View.AGENDA) {
                             Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
                         } else if (controller.view == View.TODAY) {
-                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock)
+                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                                calendarWidth = controller.settings.todayCalendarWidth,
+                                onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
+                            )
                         } else if (controller.view == View.WEEK) {
                             Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
                         } else if (controller.view == View.INBOX) {

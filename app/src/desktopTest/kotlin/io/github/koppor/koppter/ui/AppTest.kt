@@ -37,6 +37,7 @@ import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.longClick
@@ -1697,6 +1698,19 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
+    // [utest->dsn~today-resize~1]
+    @Test
+    fun theCalendarOfTodayIsResizedByItsHandle() = runDesktopComposeUiTest(width = 1600, height = 860) {
+        val controller = TodoController(Settings(view = "TODAY"), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 15 })
+        setContent { App(controller, "todo.txt") }
+        fun width() = onNodeWithTag("today-day").fetchSemanticsNode().size.width
+
+        val before = width()
+        onNodeWithTag("today-resize").performTouchInput { swipeLeft(centerX, centerX - 100f) }
+        assertTrue(width() > before)
+        assertTrue(controller.settings.todayCalendarWidth > 400)
+    }
+
     // [utest->dsn~agenda~1]
     @Test
     fun theWeekShowsTheBlocksAsACalendar() = runComposeUiTest {
@@ -1813,13 +1827,13 @@ class AppTest {
             withKeysDown(listOfNotNull(Key.CtrlLeft, Key.ShiftLeft.takeIf { shift })) { pressKey(key) }
         }
 
-        ctrl(Key.Two)
+        ctrl(Key.Three)
         onNodeWithTag("agenda").assertExists()
         ctrl(Key.C, shift = true)
         onNodeWithTag("week").assertExists()
         ctrl(Key.Six)
         onNodeWithTag("inbox").assertExists()
-        ctrl(Key.Five)
+        ctrl(Key.Two)
         onNodeWithTag("inbox").assertDoesNotExist()
 
         ctrl(Key.F, shift = true)
@@ -1843,7 +1857,7 @@ class AppTest {
 
         // The filter text is reached from a view that the filter does not apply to, and keeps the other filters.
         onNodeWithTag("filter-context-phone").performClick()
-        ctrl(Key.Five)
+        ctrl(Key.Two)
         ctrl(Key.F, shift = true)
         onNodeWithTag("week").assertDoesNotExist()
         onNodeWithTag("filter-text").assertIsFocused().performTextInput("mom")
@@ -1851,7 +1865,7 @@ class AppTest {
 
         // The search looks through every task: the other filters are reset, and completed tasks are found.
         onNodeWithTag("top").performClick()
-        ctrl(Key.Three)
+        ctrl(Key.Four)
         ctrl(Key.E)
         onNodeWithTag("filter-text").assertIsFocused().performTextInput("mom")
         onAllNodesWithTag("task").assertCountEquals(2)

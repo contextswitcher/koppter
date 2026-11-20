@@ -25,6 +25,15 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -144,6 +153,9 @@ fun Agenda(
         }
     }
 }
+
+/** The calendar of `Today` still shows the start of the text of a block. */
+private val MIN_CALENDAR_WIDTH = 260.dp
 
 /** A block of half an hour still shows the start of its text; a whole day fits on a phone that is held upright. */
 private val MIN_HOUR_HEIGHT = 20.dp
@@ -300,7 +312,11 @@ fun Today(
     onWorked: (Entry, Int) -> Unit,
     running: Entry? = null,
     onClock: (Entry) -> Unit = {},
+    calendarWidth: Int = 400,
+    onCalendarWidth: (Int) -> Unit = {},
 ) {
+    val density = LocalDensity.current
+    var shownWidth by remember(calendarWidth) { mutableStateOf(calendarWidth.dp) }
     val ofDay = blocks.orEmpty().filter { it.date == today }
     val planned = ofDay.filter { entryOf(it) != null }.sumOf { it.span.length }
     Column(Modifier.padding(8.dp).testTag("today")) {
@@ -317,13 +333,29 @@ fun Today(
             // The cards of the agenda need about 500 dp to keep their labels on one line beside the text.
             val wide = maxWidth >= 760.dp
             val height = maxHeight
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // The agenda keeps 600 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen.
+            val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 600.dp)
+            Row(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock) }
                 if (wide) {
+                    val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
+                    // [impl->dsn~today-resize~1]
+                    Box(
+                        Modifier.fillMaxHeight().width(14.dp).testTag("today-resize")
+                            .pointerHoverIcon(PointerIcon.Hand)
+                            .draggable(
+                                rememberDraggableState { delta -> shownWidth = (shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) - with(density) { delta.toDp() }).coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) },
+                                Orientation.Horizontal,
+                                onDragStopped = { onCalendarWidth(shownWidth.value.roundToInt()) },
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                    }
                     val firstHour = minOf(8, ofDay.minOfOrNull { it.span.start / 60 } ?: 8, nowMinute / 60)
                     val lastHour = maxOf(18, ofDay.maxOfOrNull { (it.span.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
                     val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp) / (lastHour - firstHour))
-                    Row(Modifier.width(260.dp).padding(top = 8.dp).verticalScroll(rememberScrollState()).testTag("today-day")) {
+                    Row(Modifier.width(shown).padding(top = 8.dp).verticalScroll(rememberScrollState()).testTag("today-day")) {
                         Column(Modifier.width(44.dp)) {
                             for (hour in firstHour until lastHour) {
                                 Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)

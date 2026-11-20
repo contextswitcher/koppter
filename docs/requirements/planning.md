@@ -608,7 +608,19 @@ Needs: impl, utest
 
 `Today` shows the agenda of today on the left and the blocks of today as a calendar on the right, as a column of `Week`, with a line at the current minute, which moves on once a minute.
 Above them, it shows the sum of the planned time of the blocks of today whose task is open.
-The calendar is 260 dp wide; below a width of 760 dp, it is left out.
+The calendar is 400 dp wide by default; below a width of 760 dp, it is left out.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### Width of the calendar of today
+`dsn~today-resize~1`
+
+Between the agenda and the calendar of `Today`, a handle is dragged sideways to change the width of the calendar, between 260 dp and the width that leaves the agenda 600 dp.
+The width is kept in the settings of the device as `todayCalendarWidth` when the drag ends.
 
 Covers:
 

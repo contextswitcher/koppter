@@ -26,6 +26,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The switches of the views are in the order *Today*, *List*, *Agenda*, *Week*, *Board*, *Inbox*, *Overview*; Ctrl+1 to Ctrl+7 follow that order.
+- The calendar of *Today* is 400 dp wide instead of 260 dp, and a handle between the agenda and the calendar changes its width, which is kept.
 - On Windows, the title bar of the window follows the light or dark variant of the colors.
 - The note of a task that moves between the main list and a shared list moves with its images and is deleted where it was.
 - The settings keep the address of a cloned shared list and clone it again when the clone is gone; a list that cannot be read no longer keeps the other tasks from being shown.
