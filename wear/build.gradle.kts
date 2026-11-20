@@ -55,4 +55,9 @@ dependencies {
     implementation(libs.wear.compose.material3)
     implementation(libs.wear.compose.foundation)
     implementation(libs.play.services.wearable)
+    // [impl->dsn~watch-tile~1]
+    implementation(libs.wear.tiles)
+    implementation(libs.wear.protolayout.material3)
+    // Turns the answer of the Data Layer into the future that a tile service returns.
+    implementation(libs.androidx.concurrent.futures)
 }

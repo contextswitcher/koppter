@@ -56,7 +56,7 @@
   The dialogs for a file and a folder come from FileKit, on the desktop as well (decision 0036).
   Not run on a device or emulator in development sessions; say so when reporting Android changes.
   CI signs the release APK with the key from the secrets `SIGNING_KEYSTORE_BASE64` and `SIGNING_KEYSTORE_PASSWORD` (decision 0010); the key store itself is never committed.
-* `:wear` — the application for a watch with Wear OS (decision 0048): one activity with Wear Compose, fed by `Watch.kt` of `:android` through the Data Layer.
+* `:wear` — the application for a watch with Wear OS (decision 0048): one activity with Wear Compose and a tile, fed by `Watch.kt` of `:android` through the Data Layer.
   It has the application id and the signature of `:android` and shares its launcher icon (`android/src/icon/res`).
   The paths and keys of the Data Layer stand in both modules; the two are installed apart, so a released name stays and an addition is optional.
   Not run on a device or emulator either.

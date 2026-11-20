@@ -115,6 +115,18 @@ Covers:
 
 Needs: dsn
 
+### Tile on a watch
+`req~watch-tile~1`
+
+The user adds a tile to the watch that shows the next tasks of the agenda without opening the application.
+
+Covers:
+
+* `feat~platforms~1`
+* `feat~planning~1`
+
+Needs: dsn
+
 ## Design
 
 ### Shared UI as an Android library
@@ -321,5 +333,18 @@ Covers:
 
 * `req~watch-agenda~1`
 * `adr~watch-through-data-layer~1`
+
+Needs: impl
+
+### Tile of the watch application
+`dsn~watch-tile~1`
+
+`AgendaTileService` of `:wear` reads the item `/koppter/agenda` and shows the first day as the title and the first two tasks below it, each with its times if it has a block; a tap opens the application.
+`AgendaListenerService` has the tile drawn again when the phone stored the agenda, which it does when a block starts as well.
+The tile does not ask the phone, so it keeps a block that ended until the phone stores the agenda the next time.
+
+Covers:
+
+* `req~watch-tile~1`
 
 Needs: impl

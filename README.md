@@ -739,6 +739,10 @@ A watch with Wear OS, such as a Galaxy Watch from the fourth generation on, has 
 It lists the blocks of the plan from now on, by day; when nothing is planned, it lists the open tasks as the phone application filters them.
 A tap on a task asks whether to complete it, and the phone application then completes it in the file.
 
+The application also offers a tile, which shows the next two tasks; a tap on it opens the application.
+The tile changes when the phone sends the agenda: when a block starts, when the widget of the phone is refreshed and when the phone application is left.
+In between, it keeps a block that ended.
+
 * The watch application has no file and no settings: it needs the phone application, installed from the same release, and Google Play services on the phone.
 * While the phone is out of reach, the watch shows what it got last, and a task cannot be completed.
 * It shows the first 50 lines.

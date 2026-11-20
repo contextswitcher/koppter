@@ -1,6 +1,5 @@
 package io.github.koppor.koppter.wear
 
-import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -30,18 +29,12 @@ import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataItem
-import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.Wearable
 
-// The paths and keys of `Watch.kt` in :android. The two applications are installed apart, so a released name stays as it is.
-private const val AGENDA_PATH = "/koppter/agenda"
 private const val REFRESH_PATH = "/koppter/refresh"
 private const val COMPLETE_PATH = "/koppter/complete"
 
 private const val NOT_CONNECTED = "The phone is not connected"
-
-/** A line as the phone sends it: a day, or a task with the times of its block if it has one; [name] is what the phone completes the task by. */
-private data class Line(val day: String?, val text: String, val times: String?, val name: String?)
 
 /** Shows the agenda that the phone application sends and asks it to complete a task. */
 // [impl->dsn~watch-data-layer~1]
@@ -63,7 +56,7 @@ class MainActivity : ComponentActivity(), DataClient.OnDataChangedListener {
         val data = Wearable.getDataClient(this)
         data.addListener(this)
         // What the phone sent last is shown until it answers the request: blocks may have ended since.
-        data.getDataItems(Uri.parse("wear://*$AGENDA_PATH")).addOnSuccessListener { items ->
+        data.getDataItems(AGENDA_URI).addOnSuccessListener { items ->
             items.forEach(::show)
             items.release()
         }
@@ -80,9 +73,7 @@ class MainActivity : ComponentActivity(), DataClient.OnDataChangedListener {
     }
 
     private fun show(item: DataItem) {
-        lines = DataMapItem.fromDataItem(item).dataMap.getDataMapArrayList("lines").orEmpty().map {
-            Line(it.getString("day"), it.getString("text").orEmpty(), it.getString("times"), it.getString("name"))
-        }
+        lines = linesOf(item)
         // The agenda that follows a completion has the task no more.
         sent = emptySet()
     }
