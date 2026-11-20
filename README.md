@@ -624,6 +624,17 @@ On a narrow screen, it shows the agenda of today only.
 Both show what `calendar.txt` says: after tasks changed, *Plan* brings it up to date.
 A block whose task was completed, deleted or edited since shows the text it was planned with.
 
+### Notifications on Android
+
+When a block of the plan starts, the Android application shows a notification with the task and the times of the block.
+*Done* in the notification completes the task; a tap opens the application.
+The notification leaves when the block ends.
+
+* A watch that is connected to the phone shows the notification as well, with *Done*.
+* Travel time gets no notification, nor does a block whose task was completed, deleted or edited since.
+* The notification may come some minutes after the block started, as Android delivers it when that saves energy.
+* From Android 13 on, the application asks for the permission to notify when it starts and the file has a plan.
+
 ### Calendars
 
 *Calendars with busy times* in the plan dialog takes the addresses at which calendar services publish a calendar as an iCalendar file, one per line.

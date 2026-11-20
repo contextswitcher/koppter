@@ -3,6 +3,10 @@
 
     <!-- For the synchronization through git and for reading the calendars with busy times. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- [impl->dsn~android-block-notification~1] -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- The system drops the alarm of the next block when the device restarts. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <application
         android:name=".KoppterApplication"
@@ -62,6 +66,15 @@
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/agenda_widget" />
+        </receiver>
+        <!-- [impl->dsn~android-block-notification~1] -->
+        <receiver
+            android:name=".PlanReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
         </receiver>
         <service
             android:name=".AgendaWidgetService"

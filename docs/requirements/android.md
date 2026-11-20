@@ -88,6 +88,20 @@ Covers:
 
 Needs: dsn
 
+### Notification of a block
+`req~android-block-notification~1`
+
+On Android, the application tells the user with a notification that a block of the plan starts.
+The notification names the task and the times of the block and offers to complete the task.
+A watch that is connected to the phone shows the notification with that action.
+
+Covers:
+
+* `feat~platforms~1`
+* `feat~planning~1`
+
+Needs: dsn
+
 ## Design
 
 ### Shared UI as an Android library
@@ -246,5 +260,22 @@ Its colors are those of the system theme from Android 12 on.
 Covers:
 
 * `req~android-widget~1`
+
+Needs: impl, utest
+
+### Notification of a block on Android
+`dsn~android-block-notification~1`
+
+`CalendarTxt.next` gives the first block that starts after now, and `scheduleBlockAlarm` sets an alarm for its start: when `MainActivity` stops, when the widget is refreshed, after the device started and after the application was updated.
+The alarm is inexact, so that it needs no permission; the system may deliver it some minutes late.
+`PlanReceiver` receives it and shows the block that `CalendarTxt.current` gives, if its task is open: the description as the title, the times as the text and the action *Done*, which completes the task through a controller of its own.
+A block of travel time and a block whose task was completed, deleted or edited since get no notification.
+The notification leaves when its block ends, and each alarm sets the next one.
+From Android 13 on, `MainActivity` asks for the permission to notify when the file has a plan.
+Wear OS shows the notifications of the phone with their actions, so the watch needs no code for it.
+
+Covers:
+
+* `req~android-block-notification~1`
 
 Needs: impl, utest

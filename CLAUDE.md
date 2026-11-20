@@ -49,7 +49,7 @@
   The README shows copies in `docs/screenshots/`: after a change of the user interface, run `./gradlew :app:desktopTest --tests '*ScreenshotTest*'` and copy the images there.
   The tasks in that test are invented; never put real data into it.
   Android library target: compiled from the same `commonMain`.
-  The icon is drawn in `docs/logo.svg`; after a change, export it with `inkscape docs/logo.svg -w 256 -o app/src/desktopMain/resources/koppter.png` repeat the paths in `android/src/main/res/drawable/ic_launcher_foreground.xml`, and run `app/packaging/icons.sh` for the icons of the desktop packages.
+  The icon is drawn in `docs/logo.svg`; after a change, export it with `inkscape docs/logo.svg -w 256 -o app/src/desktopMain/resources/koppter.png` repeat the paths in `android/src/main/res/drawable/ic_launcher_foreground.xml` and `ic_notification.xml`, and run `app/packaging/icons.sh` for the icons of the desktop packages.
   `just run-loop` (`scripts/run-loop.sh`, `.cmd`) runs the application from the checkout; its exit code 55, from *Restart to update*, makes the loop pull, build and start it again.
   `./gradlew :app:packageDistributionForCurrentOS` builds the package of the system it runs on (deb, msi or dmg) into `app/build/compose/binaries/`.
 * `:android` — the Android application: `MainActivity`, `DocumentStorage` (file behind a `content:` URI), `FolderStorage` (folder behind one, with the files next to todo.txt).

@@ -36,6 +36,21 @@ class PlannerTest {
         assertEquals(listOf("Running", "Later", "Tomorrow"), CalendarTxt.ahead(blocks, today, minutes("10:00")).map { it.text })
     }
 
+    // [utest->dsn~android-block-notification~1]
+    @Test
+    fun theCurrentBlockRunsNowAndTheNextOneStartsLater() {
+        val blocks = CalendarTxt.blocks(
+            "2026-11-12 w46 Thu  08:00-09:00 Done. 09:30-11:00 Running. 14:00-15:00 Later\n" +
+                "2026-11-13 w46 Fri  08:00-09:00 Tomorrow\n",
+        )
+        assertEquals("Running", CalendarTxt.current(blocks, today, minutes("09:30"))?.text)
+        assertEquals("Later", CalendarTxt.next(blocks, today, minutes("09:30"))?.text)
+        // Between two blocks, and at the minute at which a block ends.
+        assertEquals(null, CalendarTxt.current(blocks, today, minutes("11:00")))
+        assertEquals("Tomorrow", CalendarTxt.next(blocks, today, minutes("14:00"))?.text)
+        assertEquals(null, CalendarTxt.next(blocks, LocalDate(2026, 11, 13), minutes("08:00")))
+    }
+
     // [utest->dsn~time-maps~1]
     @Test
     fun aTimeMapNamesTheTimesOfTheWeekAndIsRestrictedToTheMapItNames() {

@@ -96,6 +96,16 @@ object CalendarTxt {
     fun ahead(blocks: List<TextBlock>, today: LocalDate, minute: Int): List<TextBlock> =
         blocks.filter { it.date > today || it.date == today && it.span.end > minute }.sortedWith(compareBy({ it.date }, { it.span.start }))
 
+    /** The block that runs at [minute] of today; the earlier one if two overlap. */
+    // [impl->dsn~android-block-notification~1]
+    fun current(blocks: List<TextBlock>, today: LocalDate, minute: Int): TextBlock? =
+        ahead(blocks, today, minute).firstOrNull { it.date == today && it.span.start <= minute }
+
+    /** The first block that starts after [minute] of today. */
+    // [impl->dsn~android-block-notification~1]
+    fun next(blocks: List<TextBlock>, today: LocalDate, minute: Int): TextBlock? =
+        ahead(blocks, today, minute).firstOrNull { it.date > today || it.span.start > minute }
+
     /** A day as a text, such as `Mon 2026-11-16`. */
     fun dayText(date: LocalDate): String = "${WEEKDAYS[date.dayOfWeek.isoDayNumber - 1]} $date"
 

@@ -1,13 +1,16 @@
 package io.github.koppor.koppter.android
 
+import android.Manifest
 import android.content.ComponentName
 import android.content.res.Configuration
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
@@ -73,6 +76,9 @@ class MainActivity : ComponentActivity() {
         startActivity(chooser)
     }
 
+    // Registered before the activity starts, as the system requires; the answer changes nothing here.
+    private val askForNotifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
+
     private lateinit var controller: TodoController
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,6 +88,11 @@ class MainActivity : ComponentActivity() {
         FileKit.init(this)
         controller = todoController(gitSetup)
         publishShareTargets(controller.shareActions)
+        // [impl->dsn~android-block-notification~1]
+        // Asked where there is a plan to notify of; the system stops asking after the second refusal.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && savedInstanceState == null && !controller.planBlocks.isNullOrEmpty()) {
+            askForNotifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
         // [impl->dsn~android-links~1]
         // Not after a change of the configuration, such as a rotation: the link would undo what the user filtered since.
         if (savedInstanceState == null) intent?.dataString?.let(controller::openLink)
@@ -118,5 +129,6 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         publishShareTargets(controller.shareActions)
         updateAgendaWidgets()
+        scheduleBlockAlarm(controller)
     }
 }

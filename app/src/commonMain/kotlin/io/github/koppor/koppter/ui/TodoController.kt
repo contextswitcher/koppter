@@ -224,7 +224,10 @@ class TodoController(
     private val planNames: Map<Entry, String> by derivedStateOf { CalendarTxt.names(file.entries) }
 
     /** The open task that a block of the plan is for; `null` if the task was completed, deleted or edited since. */
-    fun entryOf(block: TextBlock): Entry? = planNames.entries.firstOrNull { it.value == block.text }?.key
+    fun entryOf(block: TextBlock): Entry? = entryNamed(block.text)
+
+    /** The open task that the plan calls [name]; what is shown outside the application, such as a notification, names its task that way. */
+    fun entryNamed(name: String): Entry? = planNames.entries.firstOrNull { it.value == name }?.key
 
     /** What the plan adds to the text of the task to tell it from another task with the same text; empty for most tasks. */
     fun planSuffix(entry: Entry): String = planNames[entry]?.removePrefix(CalendarTxt.text(entry.task)).orEmpty()

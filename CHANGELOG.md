@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- On Android, a notification tells that a block of the plan starts; *Done* in it completes the task, and a connected watch shows it with that action.
 - The Android widget has a *+* button that opens the dialog for a new task, as does the link `koppter://new`.
 - The Android widget is placed at two cells by one and pulled larger for more of the plan.
 - The edit dialog has the rows *Waits for* and *Before*: typing part of the description of another task offers it, and *Save* writes the tags `id:` and `p:` into both tasks.
