@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.sync
 
+import io.github.koppor.koppter.storage.defaultCommitterEmail
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.transport.URIish
 import java.nio.file.Files
@@ -62,6 +63,15 @@ class GitStorageTest {
 
         val idents = Git.open(directory.toFile()).use { git -> git.log().call().map { "${it.committerIdent.name} <${it.committerIdent.emailAddress}>" } }
         assertEquals(listOf("Ada <repo@example.org>", "Repo User <repo@example.org>"), idents)
+    }
+
+    // [utest->dsn~reflog-email~1]
+    @Test
+    fun theReflogNamesTheEmailAddressOfTheApplicationWhereGitHasNone() {
+        device("phone").write("Call Mom\n", "Add task: Call Mom")
+        Git.open(root.resolve("phone").toFile()).use { git ->
+            assertEquals(defaultCommitterEmail, git.reflog().call().first().who.emailAddress)
+        }
     }
 
     // [utest->dsn~git-sync~1]

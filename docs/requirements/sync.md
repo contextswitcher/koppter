@@ -158,6 +158,19 @@ Covers:
 
 Needs: impl, utest
 
+### Email address of the reflog
+`dsn~reflog-email~1`
+
+JGit records each commit in the reflog in the name of the configured git user, whatever the committer of the commit is.
+Without a configured email address it makes one up from the name of the host, for which it asks the network; Android forbids that on the main thread, where a change is committed, so the commit would fail.
+`GitStorage` therefore passes `defaultCommitterEmail` to JGit as the email address of the environment, unless the environment has one.
+
+Covers:
+
+* `req~commit-per-change~1`
+
+Needs: impl, utest
+
 ### Commit per change
 `dsn~commit-per-change~1`
 
@@ -176,6 +189,7 @@ Needs: impl, utest
 `dsn~git-sync~1`
 
 A synchronization commits pending changes of the file made by other programs, fetches, merges the remote branch of the current branch, and pushes.
+Changes made during the fetch are committed before the merge, which refuses a working tree with a change.
 A branch that is behind is fast-forwarded.
 For diverged branches, a file that both sides changed is merged as `dsn~merge-of-companions~1` says if it is the todo.txt file, `ice_recur.txt` or a file of the plan.
 A file that one side changed is taken from that side as it is, so that an order of the lines that one device changed is kept.

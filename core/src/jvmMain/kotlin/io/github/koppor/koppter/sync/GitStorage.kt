@@ -12,6 +12,8 @@ import kotlinx.datetime.LocalDate
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
 import org.eclipse.jgit.api.TransportCommand
+import org.eclipse.jgit.lib.Constants.GIT_AUTHOR_EMAIL_KEY
+import org.eclipse.jgit.lib.Constants.GIT_COMMITTER_EMAIL_KEY
 import org.eclipse.jgit.lib.ObjectId
 import io.github.koppor.koppter.storage.defaultCommitterEmail
 import io.github.koppor.koppter.storage.defaultCommitterName
@@ -25,6 +27,7 @@ import org.eclipse.jgit.transport.RemoteRefUpdate
 import org.eclipse.jgit.transport.SshSessionFactory
 import org.eclipse.jgit.transport.SshTransport
 import org.eclipse.jgit.treewalk.TreeWalk
+import org.eclipse.jgit.util.SystemReader
 import java.nio.file.Path
 import java.time.ZoneId
 import java.util.concurrent.Executors
@@ -135,7 +138,11 @@ class GitStorage(
         // Twice: another device may push between our fetch and our push.
         repeat(2) {
             git.fetch().setRemote(remote).withSsh().call()
-            synchronized(lock) { mergeRemote(remote) }
+            synchronized(lock) {
+                // A merge refuses a working tree with a change, and the file may have changed since the commit above.
+                commit("Update $path")
+                mergeRemote(remote)
+            }
             if (repository.resolve("HEAD") == null) return
             val rejected = git.push().setRemote(remote).withSsh().call()
                 .flatMap { it.remoteUpdates }
@@ -263,6 +270,16 @@ class GitStorage(
     }
 
     companion object {
+        init {
+            // [impl->dsn~reflog-email~1]
+            // Without an email address of the git user, JGit makes one up for the reflog from the name of the host,
+            // which Android forbids to look up on the main thread, where a change is committed. One of the environment comes first.
+            SystemReader.setInstance(object : SystemReader.Delegate(SystemReader.getInstance()) {
+                override fun getenv(variable: String?): String? = super.getenv(variable)
+                    ?: defaultCommitterEmail.takeIf { variable == GIT_AUTHOR_EMAIL_KEY || variable == GIT_COMMITTER_EMAIL_KEY }
+            })
+        }
+
         /** The repository whose working tree contains the file, or `null` if there is none. */
         // [impl->dsn~git-detection~1]
         fun repositoryOf(file: Path): Repository? {

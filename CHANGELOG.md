@@ -24,6 +24,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
   The title, the tabs and *Save* stay in view while a tab scrolls.
 - The plan dialog lists the time maps instead of showing them as text; *Edit* or a click on a map opens the painter, which now also edits the name and dates of the map, takes a typed definition and deletes the map, and *Add time map* adds one.
 
+### Fixed
+
+- On Android, text shared to koppter right after its start is committed instead of failing with `NetworkOnMainThreadException`.
+- A synchronization no longer fails with *Checkout conflict* when the todo.txt file changes while it fetches.
+
 ## [2026-11-19] - 2026-11-19
 
 ### Added
