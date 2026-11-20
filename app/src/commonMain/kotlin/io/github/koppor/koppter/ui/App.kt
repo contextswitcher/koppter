@@ -505,8 +505,9 @@ private fun MainScreen(
             pickImage = pickImage,
             takePhoto = takePhoto,
             imageOf = controller::imageOf,
-            onSave = { task, note, images ->
-                if (entry == null) controller.add(task, note, images) else controller.replace(entry, task, note, images)
+            others = remember(entry, controller.file) { controller.file.entries.filter { it != entry } },
+            onSave = { task, note, images, changed ->
+                if (entry == null) controller.add(task, note, images, changed) else controller.replace(entry, task, note, images, changed)
                 editing = null
             },
             onDelete = {
@@ -546,6 +547,9 @@ private fun MainScreen(
             priorityNames = controller.priorityNamesText,
             labelLinks = controller.labelLinksText,
             projectContexts = controller.projectContextsText,
+            // [impl->dsn~config-completion~1]
+            knownProjects = controller.projects,
+            knownContexts = controller.contexts,
             // [impl->dsn~failure-log~1]
             onGitFailed = controller::report,
             newTask = controller.newTaskText,

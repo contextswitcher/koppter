@@ -912,6 +912,22 @@ class AppTest {
         onNodeWithTag("settings-project-contexts").performScrollTo().assertTextContains("+Fair = @errands")
     }
 
+    // [utest->dsn~config-completion~1]
+    @Test
+    fun aProjectTypedInTheSettingsIsCompletedFromTheFile() = runComposeUiTest {
+        storage.text += "Order the tables +Fair @errands\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-project-contexts").performScrollTo().performTextInput("+fa")
+        onNodeWithTag("settings-project-contexts-suggest-errands").assertDoesNotExist()
+        onNodeWithTag("settings-project-contexts-suggest-Fair").performScrollTo().performClick()
+        onNodeWithTag("settings-project-contexts").performTextInput(" = @err")
+        onNodeWithTag("settings-project-contexts-suggest-errands").performScrollTo().performClick()
+        onNodeWithTag("settings-project-contexts").assertTextContains("+Fair = @errands")
+    }
+
     // [utest->dsn~edit-help~1]
     @Test
     fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {
@@ -3107,5 +3123,20 @@ class AppTest {
         onNodeWithTag("board-switch").performClick()
         onNodeWithTag("group-HASHTAG").performClick()
         onNodeWithText("#urgent (1)").assertExists()
+    }
+
+    // [utest->dsn~edit-dependencies~1]
+    @Test
+    fun aTaskChosenInTheDialogIsWaitedFor() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-waits-add").performScrollTo().performTextInput("pickup")
+        onNodeWithTag("edit-waits-suggest-0").performClick()
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale id:1")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+
+        assertEquals(listOf("(B) Schedule pickup +GarageSale @phone p:1", "Post signs +GarageSale id:1"), storage.text.lines().take(2))
+        openTask("Post signs")
+        onNodeWithTag("edit-waits-0").assertExists()
     }
 }

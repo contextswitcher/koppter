@@ -7,6 +7,11 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- The edit dialog has the rows *Waits for* and *Before*: typing part of the description of another task offers it, and *Save* writes the tags `id:` and `p:` into both tasks.
+- The fields of the settings that name projects and contexts, such as *Contexts of projects*, offer the projects and contexts of the file while `+` or `@` is typed.
+
 ### Changed
 
 - The plan dialog lists the time maps instead of showing them as text; *Edit* or a click on a map opens the painter, which now also edits the name and dates of the map, takes a typed definition and deletes the map, and *Add time map* adds one.

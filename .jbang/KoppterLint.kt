@@ -22,6 +22,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/sync/TaskHistory.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/ContextSwitcherSync.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/DatePhrase.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Dependencies.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Filter.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Grouping.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/IceRecur.kt
