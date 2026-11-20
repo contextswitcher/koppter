@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- On Android, *Share log* passes the entries of the last hour only, instead of the end of the log whatever its age.
 - The labels *Outlook*, *LaTeX* and `cs:`, which open the item in another program, are shown in the color of links instead of that of projects.
 - The settings are grouped in tabs: *File*, *Tasks*, *Colors* and, where the platform offers them, *Integrations*.
   The title, the tabs and *Save* stay in view while a tab scrolls.
