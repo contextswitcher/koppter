@@ -637,6 +637,9 @@ The application only reads the calendars and writes nothing to them.
 On Windows with the classic Outlook and [AnchorHub](#tasks-of-outlook), planning also works with the main calendar of an Outlook account ([decision 0041](docs/decisions/0041-plan-in-the-main-calendar-of-outlook.md)):
 
 * Its appointments are busy times, as those of the calendars above; whole-day appointments and those marked as free do not count.
+* *Week* and *Today* show its appointments next to the blocks of the plan, in the colors of their categories in Outlook; whole-day appointments are not shown.
+  A click on an appointment opens it in Outlook or puts it on the sideline: it stays in the calendar, but tasks are planned into its time, as with a word of *Sideline* in the plan dialog.
+  The sideline is the category `Sideline` of the appointment in Outlook, for a recurring appointment of its whole series, so it can also be set in Outlook itself.
 * The plan of the next three weeks goes into it as appointments that are private and tentative, without reminder, whose subject ends with `[koppter]`.
   Colleagues see the time as tentatively taken, not the task.
 * Each plan replaces the appointments that koppter wrote before; a block that is still in the plan stays as it is.

@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.ui
 
+import io.github.koppor.koppter.outlook.OutlookCalendar
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.isMetaPressed
@@ -159,6 +160,8 @@ fun App(
         LaunchedEffect(controller) {
             while (true) {
                 controller.refreshOutlook()
+                // [impl->dsn~outlook-appointments~1]
+                controller.refreshAppointments()
                 delay(OUTLOOK_REFRESH)
             }
         }
@@ -437,6 +440,16 @@ private fun MainScreen(
                         }
                         val running = controller.running
                         val clock: (Entry) -> Unit = { if (it == running) controller.stop(it) else controller.start(it) }
+                        // [impl->dsn~outlook-appointments~1]
+                        val appointmentScope = rememberCoroutineScope()
+                        val sidelineWords = controller.sidelineWords
+                        val appointments = if (!controller.readsOutlook) null else CalendarAppointments(
+                            controller.appointments,
+                            onShow = controller::showAppointments,
+                            sidelined = { OutlookCalendar.isSidelined(it, sidelineWords) },
+                            onOpen = controller::openAppointment,
+                            onSideline = { appointment, on -> appointmentScope.launch { controller.setSideline(appointment, on) } },
+                        )
                         running?.let { RunningClock(it, kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60)), onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }) }
                         ViewOptions(controller)
                         // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
@@ -454,9 +467,10 @@ private fun MainScreen(
                             Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
                                 calendarWidth = controller.settings.todayCalendarWidth,
                                 onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
+                                appointments = appointments,
                             )
                         } else if (controller.view == View.WEEK) {
-                            Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open)
+                            Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
                         } else if (controller.view == View.INBOX) {
                             Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
                         } else if (controller.board) {

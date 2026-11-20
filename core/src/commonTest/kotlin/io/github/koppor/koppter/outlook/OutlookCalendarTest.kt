@@ -37,6 +37,21 @@ class OutlookCalendarTest {
         assertEquals(emptyList(), OutlookCalendar.blocks(plan, OutlookCalendar.window(now, 0)))
     }
 
+    // [utest->dsn~outlook-sideline~1]
+    // [utest->dsn~outlook-appointments~1]
+    @Test
+    fun anAppointmentOnTheSidelineStaysInTheDayButNotInTheBusyTimes() {
+        val sidelined = OutlookBusy(LocalDateTime(2026, 11, 18, 9, 0), LocalDateTime(2026, 11, 18, 10, 0), false, BusyStatus.BUSY, "Office hours", "AA", sideline = true)
+        val byWord = OutlookBusy(LocalDateTime(2026, 11, 18, 11, 0), LocalDateTime(2026, 11, 18, 12, 0), false, BusyStatus.BUSY, "Optional: talk", "BB")
+        val night = OutlookBusy(LocalDateTime(2026, 11, 17, 23, 0), LocalDateTime(2026, 11, 18, 1, 0), false, BusyStatus.BUSY, "Flight", "CC")
+        assertEquals(mapOf(LocalDate(2026, 11, 17) to listOf(Span(1380, 1440)), today to listOf(Span(0, 60))), OutlookCalendar.busyTimes(listOf(sidelined, byWord, night), listOf("optional")))
+        assertTrue(OutlookCalendar.isSidelined(sidelined, emptyList()))
+        assertTrue(OutlookCalendar.isSidelined(byWord, listOf("optional")))
+        assertEquals(listOf(Span(0, 60), Span(540, 600), Span(660, 720)), OutlookCalendar.onDay(listOf(sidelined, byWord, night), today).map { it.second })
+        assertEquals(Triple(157, 183, 232), OutlookCalendar.rgb("#9DB7E8"))
+        assertEquals(null, OutlookCalendar.rgb("blue"))
+    }
+
     // [utest->dsn~outlook-busy~1]
     @Test
     fun theAppointmentsThatAreNotFreeAreBusyTimesByDay() {

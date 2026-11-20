@@ -1,5 +1,14 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.ui.text.style.TextDecoration
+import kotlin.math.abs
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.runtime.key
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import io.github.koppor.koppter.plan.Span
+import io.github.koppor.koppter.outlook.OutlookCalendar
+import io.github.koppor.koppter.outlook.OutlookBusy
 import kotlin.time.Duration.Companion.minutes
 import io.github.koppor.koppter.todotxt.Task
 import androidx.compose.runtime.mutableStateListOf
@@ -160,17 +169,44 @@ private val MIN_CALENDAR_WIDTH = 260.dp
 /** A block of half an hour still shows the start of its text; a whole day fits on a phone that is held upright. */
 private val MIN_HOUR_HEIGHT = 20.dp
 
-/** The blocks of the plan of one week as a calendar: one column per day, the time running down. */
+/**
+ * The appointments of Outlook that the calendar views show next to the blocks of the plan, and what the user does with one.
+ *
+ * @param onShow reads the appointments of the days from the first to before the second, which the view shows
+ * @param sidelined whether the time of the appointment counts as free for planning
+ */
+// [impl->dsn~outlook-appointments~1]
+class CalendarAppointments(
+    val all: List<OutlookBusy>,
+    val onShow: suspend (LocalDate, LocalDate) -> Unit,
+    val sidelined: (OutlookBusy) -> Boolean,
+    val onOpen: (OutlookBusy) -> Unit,
+    val onSideline: (OutlookBusy, Boolean) -> Unit,
+) {
+    fun onDay(day: LocalDate): List<Pair<OutlookBusy, Span>> = OutlookCalendar.onDay(all, day)
+}
+
+/** The blocks of the plan of one week as a calendar: one column per day, the time running down; with [appointments], those of Outlook next to them. */
 // [impl->dsn~agenda~1]
 @Composable
-fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (Entry) -> String, today: LocalDate, onOpen: (Entry) -> Unit) {
+fun Week(
+    blocks: List<TextBlock>?,
+    entryOf: (TextBlock) -> Entry?,
+    suffixOf: (Entry) -> String,
+    today: LocalDate,
+    onOpen: (Entry) -> Unit,
+    appointments: CalendarAppointments? = null,
+) {
     val thisWeek = today.minus(DatePeriod(days = today.dayOfWeek.isoDayNumber - 1))
     var monday by remember { mutableStateOf(thisWeek) }
     val days = (0..6).map { monday.plus(DatePeriod(days = it)) }
+    // [impl->dsn~outlook-appointments~1]
+    LaunchedEffect(monday, appointments != null) { appointments?.onShow(monday, monday.plus(DatePeriod(days = 7))) }
     val ofWeek = blocks.orEmpty().filter { it.date in days }
+    val spans = ofWeek.map { it.span } + days.flatMap { day -> appointments?.onDay(day).orEmpty().map { it.second } }
     // Office hours at least, so that an empty week has a grid as well.
-    val firstHour = minOf(8, ofWeek.minOfOrNull { it.span.start / 60 } ?: 8)
-    val lastHour = maxOf(18, ofWeek.maxOfOrNull { (it.span.end + 59) / 60 } ?: 18)
+    val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8)
+    val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18)
 
     Column(Modifier.padding(8.dp).testTag("week")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -203,7 +239,7 @@ fun Week(blocks: List<TextBlock>?, entryOf: (TextBlock) -> Entry?, suffixOf: (En
                             color = if (day == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.height(28.dp).padding(start = 4.dp),
                         )
-                        DayColumn(ofWeek.filter { it.date == day }, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = day == today)
+                        DayColumn(ofWeek.filter { it.date == day }, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = day == today, appointments = appointments, day = day)
                     }
                 }
             }
@@ -258,19 +294,38 @@ private fun DayColumn(
     onOpen: (Entry) -> Unit,
     highlight: Boolean,
     nowMinute: Int? = null,
+    appointments: CalendarAppointments? = null,
+    day: LocalDate? = null,
 ) {
-    Box(
+    val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
+    fun overlaps(a: Span, b: Span) = a.start < b.end && b.start < a.end
+    BoxWithConstraints(
         Modifier.fillMaxWidth().height(hourHeight * (lastHour - firstHour))
             .background(if (highlight) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
     ) {
+        // Where a block and an appointment take the same time, the appointment stands in the left half and the block in the right one.
+        val half = maxWidth / 2
         for (hour in 0 until lastHour - firstHour) HorizontalDivider(Modifier.offset(y = hourHeight * hour))
+        // [impl->dsn~outlook-appointments~1]
+        if (appointments != null) {
+            for ((appointment, span) in ofDay) {
+                key(appointment.entryId, appointment.start) {
+                    AppointmentBox(
+                        appointment, span, appointments,
+                        Modifier.offset(y = hourHeight * (span.start - firstHour * 60) / 60).height(hourHeight * span.length / 60)
+                            .then(if (blocks.any { overlaps(it.span, span) }) Modifier.width(half) else Modifier.fillMaxWidth()),
+                    )
+                }
+            }
+        }
         for (block in blocks) {
             val entry = entryOf(block)
+            val beside = ofDay.any { overlaps(it.second, block.span) }
             Surface(
                 color = if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = if (entry != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 shape = MaterialTheme.shapes.extraSmall,
-                modifier = Modifier.padding(horizontal = 2.dp).fillMaxWidth()
+                modifier = Modifier.padding(start = if (beside) half else 0.dp).padding(horizontal = 2.dp).fillMaxWidth()
                     .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
                     .height(hourHeight * block.span.length / 60)
                     .clickable(enabled = entry != null) { entry?.let(onOpen) }
@@ -295,6 +350,74 @@ private fun DayColumn(
 }
 
 /**
+ * An appointment of Outlook in a calendar view, in the color of its category in Outlook, so that it is recognized; one on the sideline is pale.
+ * A click offers to open it in Outlook and to put it on the sideline or take it off.
+ */
+// [impl->dsn~outlook-appointments~1]
+// [impl->dsn~outlook-sideline~1]
+@Composable
+private fun AppointmentBox(appointment: OutlookBusy, span: Span, actions: CalendarAppointments, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    var menu by remember { mutableStateOf(false) }
+    val sidelined = actions.sidelined(appointment)
+    // The color is data that Outlook gives, not a color of the application: it is what the user knows the appointment by.
+    val own = OutlookCalendar.rgb(appointment.color)?.let { (red, green, blue) -> Color(red, green, blue) }
+    val container = (own ?: colors.secondaryContainer).let { if (sidelined) it.copy(alpha = 0.3f) else it }
+    // Of the two text colors of the theme, the one that stands out more from the background.
+    val content = when {
+        sidelined || own == null -> if (own == null) colors.onSecondaryContainer else colors.onSurface
+        abs(colors.onSurface.luminance() - own.luminance()) >= abs(colors.inverseOnSurface.luminance() - own.luminance()) -> colors.onSurface
+        else -> colors.inverseOnSurface
+    }
+    Box(modifier) {
+        Surface(
+            color = container,
+            contentColor = content,
+            shape = MaterialTheme.shapes.extraSmall,
+            border = if (sidelined) BorderStroke(1.dp, own ?: colors.outline) else null,
+            modifier = Modifier.padding(horizontal = 2.dp).fillMaxSize().clickable { menu = true }
+                .testTag(if (sidelined) "calendar-appointment-sideline" else "calendar-appointment"),
+        ) {
+            Text(
+                "${CalendarTxt.timesText(span).substringBefore('-')} ${appointment.subject.ifEmpty { "(no subject)" }}",
+                style = MaterialTheme.typography.labelSmall,
+                textDecoration = if (sidelined) TextDecoration.LineThrough else null,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+            )
+        }
+        DropdownMenu(menu, onDismissRequest = { menu = false }, modifier = Modifier.testTag("appointment-menu")) {
+            DropdownMenuItem(
+                text = { Text("Open in Outlook") },
+                onClick = {
+                    menu = false
+                    actions.onOpen(appointment)
+                },
+                modifier = Modifier.testTag("appointment-open"),
+            )
+            if (appointment.sideline || !sidelined) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            (if (appointment.sideline) "Take off the sideline" else "Sideline: its time counts as free") +
+                                if (appointment.recurring) ", the whole series" else "",
+                        )
+                    },
+                    onClick = {
+                        menu = false
+                        actions.onSideline(appointment, !appointment.sideline)
+                    },
+                    modifier = Modifier.testTag("appointment-sideline"),
+                )
+            } else {
+                // A word of the plan dialog sidelines it; the category of Outlook cannot take it off.
+                DropdownMenuItem(text = { Text("On the sideline by a word of its title") }, onClick = { menu = false }, enabled = false)
+            }
+        }
+    }
+}
+
+/**
  * Today on one screen: the tasks of the agenda of today on the left and the day as a calendar on the right,
  * with a line at the current time. A narrow screen shows the tasks only.
  */
@@ -314,7 +437,11 @@ fun Today(
     onClock: (Entry) -> Unit = {},
     calendarWidth: Int = 400,
     onCalendarWidth: (Int) -> Unit = {},
+    appointments: CalendarAppointments? = null,
 ) {
+    // [impl->dsn~outlook-appointments~1]
+    LaunchedEffect(today, appointments != null) { appointments?.onShow(today, today.plus(DatePeriod(days = 1))) }
+    val appointmentSpans = appointments?.onDay(today).orEmpty().map { it.second }
     val density = LocalDensity.current
     var shownWidth by remember(calendarWidth) { mutableStateOf(calendarWidth.dp) }
     val ofDay = blocks.orEmpty().filter { it.date == today }
@@ -352,8 +479,9 @@ fun Today(
                     ) {
                         Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
                     }
-                    val firstHour = minOf(8, ofDay.minOfOrNull { it.span.start / 60 } ?: 8, nowMinute / 60)
-                    val lastHour = maxOf(18, ofDay.maxOfOrNull { (it.span.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
+                    val spans = ofDay.map { it.span } + appointmentSpans
+                    val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8, nowMinute / 60)
+                    val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
                     val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp) / (lastHour - firstHour))
                     Row(Modifier.width(shown).padding(top = 8.dp).verticalScroll(rememberScrollState()).testTag("today-day")) {
                         Column(Modifier.width(44.dp)) {
@@ -361,7 +489,7 @@ fun Today(
                                 Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
                             }
                         }
-                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute)
+                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute, appointments = appointments, day = today)
                     }
                 }
             }

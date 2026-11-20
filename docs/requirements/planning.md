@@ -230,6 +230,19 @@ Covers:
 
 Needs: dsn
 
+### Appointments of Outlook in the calendar
+`req~outlook-appointments~1`
+
+The calendar views show the appointments of the calendar of Outlook next to the blocks of the plan, in the colors that their categories have in Outlook.
+A click on an appointment opens it in Outlook or puts it on the sideline, so that it stays in the calendar and tasks are planned into its time; for a recurring appointment, this holds for the whole series.
+
+Covers:
+
+* `feat~planning~1`
+* `feat~outlook~1`
+
+Needs: dsn
+
 ### Views of the plan
 `req~agenda~1`
 
@@ -515,11 +528,41 @@ Covers:
 
 Needs: impl, utest
 
+### Appointments of Outlook in the calendar views
+`dsn~outlook-appointments~1`
+
+`Week` and `Today` ask through `CalendarAppointments.onShow` for the appointments of the days they show; `TodoController.showAppointments` reads them with `ankd outlook-busy` and `App` reads them again every two minutes.
+`DayColumn` draws those with a start time (`OutlookCalendar.onDay`, cut at midnight) at their times; where one overlaps a block, the appointment takes the left half and the block the right one.
+`AppointmentBox` fills an appointment with the color of its first category that AnchorHub passes as `#RRGGBB`, and without one with `secondaryContainer`; the text takes `onSurface` or `inverseOnSurface`, whichever stands out more from that color.
+The color of a category is data of Outlook, by which the user knows the appointment, and therefore the one color that does not come from the theme.
+A click opens a menu with *Open in Outlook*, which runs `ankd outlook-open` with the EntryID of the appointment, for a recurring one that of its series.
+Whole-day appointments are not shown.
+
+Covers:
+
+* `req~outlook-appointments~1`
+
+Needs: impl, utest
+
+### Sideline in Outlook
+`dsn~outlook-sideline~1`
+
+The menu of an appointment puts it on the sideline or takes it off with `ankd outlook-sideline <link> on|off`, which adds or removes the category `Sideline` in Outlook, for a recurring appointment at its series.
+AnchorHub passes the category as the field `sideline` of `outlook-busy`; `OutlookCalendar.isSidelined` holds for that field or for a word of `dsn~sideline~1` in the subject, and `OutlookCalendar.busyTimes` leaves such an appointment out.
+An appointment on the sideline is drawn pale with a border and its text struck through; one that a word sidelines offers no switch, as the category would not change it.
+
+Covers:
+
+* `req~outlook-appointments~1`
+* `req~sideline~1`
+
+Needs: impl, utest
+
 ### Blocks in the calendar of Outlook
 `dsn~outlook-blocks~1`
 
 `TodoController.planWithCalendars` passes the blocks of the plan that start between now and the end of the day before today plus `outlookWeeks` weeks (`OutlookCalendar.window`, `OutlookCalendar.blocks`) to `OutlookBridge.syncBlocks`, for the account `outlookCalendar` of the settings; 0 weeks writes nothing.
-A block has the id of its event in `calendar.ics` (`Ics.id`), its subject is its text followed by ` [koppter]`, and its text starts with `[koppter]`.
+A block has the id of its event in `calendar.ics` (`Ics.id`), its subject is its text followed by a blank and `[koppter]`, and its text starts with `[koppter]`.
 On the desktop, `AnchorHubOutlook` passes them as JSON on the standard input of `ankd outlook-blocks-sync`, which creates them as private, tentative appointments without reminder and replaces those of its own in the window.
 The summary of the plan tells what changed in Outlook; a failure is shown as a problem of the plan.
 The settings dialog has the fields for the account and the weeks where Outlook is reached.

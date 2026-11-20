@@ -131,7 +131,12 @@ private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appoin
         cleared++
         return blocks.also { blocks = 0 }
     }
-    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments
+    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments.also { shown += from to to }
+    val shown = mutableListOf<Pair<LocalDate, LocalDate>>()
+    val sidelined = mutableListOf<Pair<String, Boolean>>()
+    override fun sideline(entryId: String, on: Boolean) {
+        sidelined += entryId to on
+    }
 }
 
 @OptIn(ExperimentalTestApi::class)
@@ -1059,6 +1064,31 @@ class AppTest {
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
     }
 
+    // [utest->dsn~outlook-appointments~1]
+    // [utest->dsn~outlook-sideline~1]
+    @Test
+    fun theWeekShowsTheAppointmentsOfOutlookWhichOpenAndGoOnTheSideline() = runComposeUiTest {
+        val meeting = OutlookBusy(LocalDateTime(2026, 11, 12, 10, 0), LocalDateTime(2026, 11, 12, 11, 0), false, BusyStatus.BUSY, "Faculty board", "00000000AA", recurring = true, color = "#9DB7E8")
+        val lunch = OutlookBusy(LocalDateTime(2026, 11, 13, 12, 0), LocalDateTime(2026, 11, 13, 13, 0), false, BusyStatus.BUSY, "Lunch with Ada", "00000000BB")
+        val outlook = FakeOutlook(appointments = listOf(meeting, lunch))
+        val controller = TodoController(Settings(view = "WEEK"), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().size == 2 }
+        // The week from Monday on.
+        assertEquals(LocalDate(2026, 11, 9) to LocalDate(2026, 11, 16), outlook.shown.last())
+
+        onAllNodesWithTag("calendar-appointment", useUnmergedTree = true)[0].performClick()
+        onNodeWithText("Sideline: its time counts as free, the whole series").assertExists()
+        onNodeWithTag("appointment-open").performClick()
+        assertEquals(listOf("00000000AA"), outlook.opened)
+
+        onAllNodesWithTag("calendar-appointment", useUnmergedTree = true)[0].performClick()
+        onNodeWithTag("appointment-sideline").performClick()
+        waitUntil { outlook.sidelined.isNotEmpty() }
+        assertEquals(listOf("00000000AA" to true), outlook.sidelined)
+        waitUntil { onAllNodesWithTag("calendar-appointment-sideline", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).assertCountEquals(1)
+    }
     // [utest->dsn~outlook-items~1]
     // [utest->dsn~outlook-tag~1]
     // [utest->dsn~outlook-complete~1]

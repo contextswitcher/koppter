@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- *Week* and *Today* show the appointments of the calendar of Outlook beside the blocks of the plan, in the colors of their categories in Outlook. A click on one opens it in Outlook or puts it on the sideline, as SkedPal does: it stays in the calendar, and tasks are planned into its time. The sideline is the category `Sideline` in Outlook, for a recurring appointment of the whole series.
 - On the desktop, *Send the projects and contexts of the filter to ContextSwitcher* in the settings lets koppter and ContextSwitcher share the projects and contexts of their filters: a change in one changes the filter of the other.
 - A time map can have its own times on dates, such as `General 2026-12-24..2027-01-06 = 10:00-12:00` for a vacation or `General 2026-12-25 2026-12-26 = none` for holidays; on these dates they replace the times of the map.
 - *Start* beside a task of today in the agenda and in *Today* starts a clock on it, written as `started:` into the task; a bar above every view shows the task and the time since its start, and *Stop* adds that time to `spent:`.

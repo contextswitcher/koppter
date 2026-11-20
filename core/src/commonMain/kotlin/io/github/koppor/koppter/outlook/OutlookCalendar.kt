@@ -16,8 +16,22 @@ data class OutlookBlock(val id: String, val start: LocalDateTime, val end: Local
 /** How Outlook shows an appointment: as free, tentative, busy, out of office or working elsewhere. */
 enum class BusyStatus { FREE, TENTATIVE, BUSY, OOF, ELSEWHERE }
 
-/** An appointment of Outlook as far as planning needs it. */
-data class OutlookBusy(val start: LocalDateTime, val end: LocalDateTime, val allDay: Boolean, val status: BusyStatus, val subject: String = "")
+/**
+ * An appointment of Outlook as planning and the calendar views need it.
+ * [entryId] names the appointment, for a recurring one its series; [sideline] is set when it carries the category `Sideline` in Outlook;
+ * [color] is that of its first category in Outlook as `#RRGGBB`, `null` without one.
+ */
+data class OutlookBusy(
+    val start: LocalDateTime,
+    val end: LocalDateTime,
+    val allDay: Boolean,
+    val status: BusyStatus,
+    val subject: String = "",
+    val entryId: String = "",
+    val recurring: Boolean = false,
+    val sideline: Boolean = false,
+    val color: String? = null,
+)
 
 // [impl->dsn~outlook-blocks~1]
 object OutlookCalendar {
@@ -43,14 +57,15 @@ object OutlookCalendar {
     /**
      * The times that the appointments take, by day: those that are not free and have a start time.
      * Whole-day appointments are left out, as [io.github.koppor.koppter.plan.busyTimes] does for an iCalendar file.
-     * The blocks of koppter are not among them: AnchorHub leaves them out. Nor are the [sidelined] ones.
+     * The blocks of koppter are not among them: AnchorHub leaves them out. Nor are the [sidelined] ones, by a word of their subject or by the category of Outlook.
      */
     fun busyTimes(appointments: List<OutlookBusy>, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> {
         val result = mutableMapOf<LocalDate, MutableList<Span>>()
         for (appointment in appointments) {
             if (appointment.allDay || appointment.status == BusyStatus.FREE || appointment.end <= appointment.start) continue
             // [impl->dsn~sideline~1]
-            if (sidelined(appointment.subject, sideline)) continue
+            // [impl->dsn~outlook-sideline~1]
+            if (isSidelined(appointment, sideline)) continue
             var date = appointment.start.date
             while (date <= appointment.end.date) {
                 val start = if (date == appointment.start.date) minuteOf(appointment.start) else 0
@@ -61,6 +76,25 @@ object OutlookCalendar {
         }
         return result
     }
+
+    /** Whether the appointment stays in the calendar and leaves its time to planning: by the category `Sideline` or by a word of its subject. */
+    // [impl->dsn~outlook-sideline~1]
+    fun isSidelined(appointment: OutlookBusy, sideline: List<String>): Boolean = appointment.sideline || sidelined(appointment.subject, sideline)
+
+    /** The appointments with a start time that take time on the day, each with its span on that day; one that goes past midnight is cut there. */
+    // [impl->dsn~outlook-appointments~1]
+    fun onDay(appointments: List<OutlookBusy>, day: LocalDate): List<Pair<OutlookBusy, Span>> =
+        appointments.filter { !it.allDay && it.start.date <= day && it.end.date >= day && it.end > it.start }.mapNotNull { appointment ->
+            val start = if (appointment.start.date == day) minuteOf(appointment.start) else 0
+            val end = if (appointment.end.date == day) minuteOf(appointment.end) else 24 * 60
+            (appointment to Span(start, end)).takeIf { end > start }
+        }.sortedBy { it.second.start }
+
+    /** The color of an appointment as red, green and blue from 0 to 255; `null` without one or for a text that is no `#RRGGBB`. */
+    fun rgb(color: String?): Triple<Int, Int, Int>? =
+        color?.takeIf(RGB::matches)?.let { Triple(it.substring(1, 3).toInt(16), it.substring(3, 5).toInt(16), it.substring(5, 7).toInt(16)) }
+
+    private val RGB = Regex("^#[0-9A-Fa-f]{6}$")
 
     private fun at(date: LocalDate, minute: Int): LocalDateTime =
         if (minute >= 24 * 60) LocalDateTime(date.plus(DatePeriod(days = 1)), LocalTime(0, 0)) else LocalDateTime(date, LocalTime(minute / 60, minute % 60))

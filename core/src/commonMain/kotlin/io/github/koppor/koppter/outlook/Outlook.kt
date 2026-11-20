@@ -35,6 +35,9 @@ interface OutlookBridge {
 
     /** The appointments of the calendar on the days from [from] to before [to], without the blocks of koppter. */
     fun busy(calendar: String?, from: LocalDate, to: LocalDate): List<OutlookBusy>
+
+    /** Puts the appointment, for a recurring one its series, on the sideline or takes it off, by the category `Sideline`; blocks while Outlook answers. */
+    fun sideline(entryId: String, on: Boolean)
 }
 
 // [impl->dsn~outlook-tag~1]

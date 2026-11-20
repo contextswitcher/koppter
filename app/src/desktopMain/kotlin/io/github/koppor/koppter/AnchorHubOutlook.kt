@@ -69,6 +69,11 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
     override fun busy(calendar: String?, from: LocalDate, to: LocalDate): List<OutlookBusy> =
         parseOutlookBusy(run("outlook-busy", "--from", from.toString(), "--to", to.toString(), *calendarArguments(calendar)))
 
+    // [impl->dsn~outlook-sideline~1]
+    override fun sideline(entryId: String, on: Boolean) {
+        run("outlook-sideline", Outlook.anchor(entryId), if (on) "on" else "off")
+    }
+
     private fun calendarArguments(calendar: String?) = calendar?.let { arrayOf("--calendar", it) } ?: emptyArray()
 
     /** Runs `ankd` with the arguments and gives what it prints; [input], if given, is written to it as UTF-8. */
@@ -147,5 +152,16 @@ internal fun parseOutlookBusy(json: String): List<OutlookBusy> =
             "elsewhere" -> BusyStatus.ELSEWHERE
             else -> BusyStatus.BUSY
         }
-        OutlookBusy(time("start") ?: return@mapNotNull null, time("end") ?: return@mapNotNull null, item["allDay"]?.jsonPrimitive?.booleanOrNull ?: false, status, item["subject"]?.jsonPrimitive?.contentOrNull.orEmpty())
+        fun flag(key: String) = item[key]?.jsonPrimitive?.booleanOrNull ?: false
+        OutlookBusy(
+            time("start") ?: return@mapNotNull null,
+            time("end") ?: return@mapNotNull null,
+            flag("allDay"),
+            status,
+            item["subject"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            item["entryId"]?.jsonPrimitive?.contentOrNull.orEmpty(),
+            flag("recurring"),
+            flag("sideline"),
+            item["color"]?.jsonPrimitive?.contentOrNull,
+        )
     }

@@ -10,6 +10,7 @@ import io.github.koppor.koppter.latex.LatexTodo
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
 import io.github.koppor.koppter.outlook.OutlookBridge
+import io.github.koppor.koppter.outlook.OutlookBusy
 import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.plan.Block
 import kotlinx.datetime.LocalDateTime
@@ -298,6 +299,60 @@ class TodoController(
         } catch (e: Exception) {
             log("The To-Do list of Outlook was not read: ${e.message}", e)
         }
+    }
+
+    /** The appointments of the calendar of Outlook on the days that a calendar view shows, as they were read last. */
+    var appointments by mutableStateOf<List<OutlookBusy>>(emptyList())
+        private set
+
+    /** The days, from the first to before the last, whose appointments a calendar view shows; `null` while none does. */
+    private var shownDays: Pair<LocalDate, LocalDate>? = null
+
+    /** The words by which an event of a calendar is on the sideline, as the configuration lists them. */
+    val sidelineWords: List<String> get() = ConfigFile.entries(config.orEmpty(), ConfigFile.SIDELINE).map { it.first.trim() }.filter(String::isNotEmpty)
+
+    /** Reads the appointments of Outlook on the days from [from] to before [to], which a calendar view shows from now on. */
+    // [impl->dsn~outlook-appointments~1]
+    suspend fun showAppointments(from: LocalDate, to: LocalDate) {
+        if (shownDays != from to to) appointments = emptyList()
+        shownDays = from to to
+        refreshAppointments()
+    }
+
+    /** Reads the appointments of the days that a calendar view shows again; what fails is logged and leaves them as they were. */
+    // [impl->dsn~outlook-appointments~1]
+    suspend fun refreshAppointments() {
+        val source = outlook ?: return
+        val (from, to) = shownDays ?: return
+        try {
+            val read = withContext(Dispatchers.Default) { source.busy(outlookCalendar, from, to) }
+            // Another view may have asked for other days meanwhile.
+            if (shownDays == from to to) appointments = read
+        } catch (e: Exception) {
+            log("The calendar of Outlook was not read: ${e.message}", e)
+        }
+    }
+
+    /**
+     * Puts the appointment, for a recurring one its series, on the sideline in Outlook, or takes it off: its time then counts as free for the next plan, or as taken.
+     * A failure is shown to the user.
+     */
+    // [impl->dsn~outlook-sideline~1]
+    suspend fun setSideline(appointment: OutlookBusy, on: Boolean) {
+        val source = outlook ?: return
+        try {
+            withContext(Dispatchers.Default) { source.sideline(appointment.entryId, on) }
+            appointments = appointments.map { if (it.entryId == appointment.entryId) it.copy(sideline = on) else it }
+        } catch (e: Exception) {
+            error = "Not changed in Outlook: ${e.message ?: e}"
+            log("The sideline of an appointment was not changed in Outlook", e)
+        }
+    }
+
+    /** Shows the appointment, for a recurring one its series, in Outlook. */
+    // [impl->dsn~outlook-appointments~1]
+    fun openAppointment(appointment: OutlookBusy) {
+        if (appointment.entryId.isNotEmpty()) openOutlook(Outlook.anchor(appointment.entryId))
     }
 
     /** The TODOs of the LaTeX documents of the projects as they were read last, by project. */
