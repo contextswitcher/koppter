@@ -867,17 +867,19 @@ class AppTest {
 
         // A priority is given by its name.
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-new-task").performScrollTo().assertTextContains("priority = C\ndue = next weekend")
         onNodeWithTag("settings-new-task").performTextReplacement("priority = 5\ndue = tomorrow")
         onNodeWithTag("settings-priorities").performScrollTo().performTextReplacement("A = 1\nB = 2\nC = 3\nD = 5")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         addTask("Call the plumber")
         assertEquals("(D) Call the plumber due:2026-11-13", storage.text.trim().lines().last())
 
         // Without lines, a new task starts empty, and the default does not come back.
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-new-task").performScrollTo().performTextReplacement("")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("new-task:"))
         addTask("Sweep the yard")
         assertEquals("Sweep the yard", storage.text.trim().lines().last())
@@ -891,8 +893,9 @@ class AppTest {
         setContent { App(controller, "todo.txt") }
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-project-contexts").performScrollTo().performTextReplacement("+Fair = @errands")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("project-contexts:\n  \"+Fair\": \"@errands\""))
 
         onNodeWithTag("new-task").performClick()
@@ -909,6 +912,7 @@ class AppTest {
         assertEquals(true, storage.text.contains("Rent a van +Fair @errands"))
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-project-contexts").performScrollTo().assertTextContains("+Fair = @errands")
     }
 
@@ -1058,8 +1062,9 @@ class AppTest {
     fun theSettingsDialogSwitchesTheWritingOfDatesOn() = runComposeUiTest {
         start()
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-write-dates").performClick()
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         onAllNodesWithTag("task-done")[0].performClick()
         assertEquals("x 2026-11-12 Thank Mom @phone due:2026-11-20 pri:A", storage.text.lines()[2])
     }
@@ -1207,6 +1212,7 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = outlook)
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-integrations").performClick()
         onNodeWithTag("settings-outlook-clear").performScrollTo().performClick()
         waitUntil { onAllNodesWithTag("settings-outlook-clear-confirm").fetchSemanticsNodes().isNotEmpty() }
         onNodeWithText("Remove 7 blocks?").assertExists()
@@ -1281,8 +1287,9 @@ class AppTest {
         onNodeWithTag("copy-link").performClick()
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-links").performScrollTo().performTextReplacement("+GarageSale = contextswitcher://switch-category/garage-sale\n@phone = https://example.org/numbers")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("links:\n  \"+GarageSale\": \"contextswitcher://switch-category/garage-sale\""))
 
         // In the filter panel and at a task.
@@ -1297,6 +1304,7 @@ class AppTest {
 
         // The settings show what was entered.
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-links").performScrollTo().assertTextContains("+GarageSale = contextswitcher://switch-category/garage-sale\n@phone = https://example.org/numbers")
     }
 
@@ -1427,11 +1435,12 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-board-columns").performScrollTo().performTextReplacement("High = (>3)\nTop = (A)")
         // The third scale offered: the first steps of the Fibonacci sequence.
         onNodeWithTag("settings-priorities-preset-2").performScrollTo().performClick()
         onNodeWithTag("settings-priorities").assertTextContains("A = 1\nB = 2\nC = 3\nD = 5\nE = 8")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         // A filter names a priority by its name or by its letter; the settings keep what was typed.
         assertEquals("High = (>3)\nTop = (A)", controller.boardColumnsText)
         controller.groupKey = null
@@ -1465,15 +1474,17 @@ class AppTest {
         assertEquals("Added (reading): A paper", controller.share("A paper", "reading"))
         assertEquals("A paper +research @reading due:2026-11-26 dur:1h", storage.text.trim().lines().last())
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} +research @reading due:2w dur:1h")
         // With the field cleared, there is no action, and the shared text is the task.
         onNodeWithTag("settings-share-actions").performTextReplacement("")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals("Added: A book", controller.share("A book"))
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-share-actions").performScrollTo().performTextInput("inbox = @inbox\nreading = {} @research>reading due:2w dur:1h")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals(true, storage.companions.getValue("koppter.yml").contains("share-actions:"))
 
         assertEquals("Added (reading): https://example.org/article", controller.share("https://example.org/article", "reading"))
@@ -2005,6 +2016,7 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, saveSettings = { saved = it }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-colors").performClick()
         onNodeWithTag("settings-theme-Nord").assertIsSelected()
         onNodeWithTag("settings-theme-Everforest").performScrollTo().performClick()
         onNodeWithTag("settings-appearance-Dark").performScrollTo().performClick()
@@ -2025,7 +2037,7 @@ class AppTest {
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-share-log").assertDoesNotExist()
         offered = true
-        onNodeWithTag("settings-share-log").performScrollTo().performClick()
+        onNodeWithTag("settings-share-log").performClick()
         assertEquals(1, shared)
         // The dialog stays open: sharing changes no setting.
         onNodeWithTag("settings-dialog").assertExists()
@@ -2047,7 +2059,7 @@ class AppTest {
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-version").assertDoesNotExist()
         version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
-        onNodeWithTag("settings-version").performScrollTo().assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
+        onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
         onNodeWithTag("settings-version").performTouchInput { longClick() }
         assertEquals("1234abc", copied)
         onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30) · Copied 1234abc")
@@ -2156,7 +2168,7 @@ class AppTest {
         onNodeWithTag("settings-committer-name").performScrollTo().assertTextEquals("koppter", "Empty: that of the git configuration, otherwise the value in gray.", "")
         onNodeWithTag("settings-committer-name").performTextInput("Ada ")
         onNodeWithTag("settings-committer-email").performScrollTo().performTextInput("ada@example.org")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals("Ada" to "ada@example.org", controller.settings.committerName to controller.settings.committerEmail)
         // The storage commits in the new name from now on.
         assertEquals(2, opened.size)
@@ -2201,7 +2213,7 @@ class AppTest {
         assertEquals(listOf("git@example.org:household.git"), checked)
 
         onNodeWithTag("settings-shared-remove-0").performScrollTo().performClick()
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals("git@example.org:household.git", controller.settings.sharedLists)
     }
 
@@ -2249,7 +2261,7 @@ class AppTest {
                 "Is the public SSH key of this device, shown below, registered with the server?",
         )
         // An address is cloned, not saved as a file.
-        onNodeWithTag("settings-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("settings-save").assertIsNotEnabled()
         onNodeWithTag("settings-clone").performScrollTo().performClick()
         // The reason, with what most often is the cause on a device with a key of its own.
         onNodeWithTag("settings-file-message").assertIsDisplayed()
@@ -2262,7 +2274,10 @@ class AppTest {
         assertEquals("", controller.settings.todoFile)
 
         // The clone shows its tasks at once: the dialog is left, and what stood in it is written nowhere.
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-board-columns").performScrollTo().performTextReplacement("Home = @home")
+        // What was typed in another tab stays when the tab changes.
+        onNodeWithTag("settings-tab-file").performClick()
         onNodeWithTag("settings-file").performScrollTo().performTextReplacement("git@example.org:todo.git")
         onNodeWithTag("settings-clone").performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
@@ -2276,9 +2291,10 @@ class AppTest {
         // The settings then show the configuration that the repository brings along.
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-file").assertTextContains("git@example.org:todo.git")
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-board-columns").assertTextContains("Phone = @phone")
         // The address of the open repository is no new one to clone: the other settings are saved.
-        onNodeWithTag("settings-save").performScrollTo().assertIsEnabled()
+        onNodeWithTag("settings-save").assertIsEnabled()
     }
 
     // [utest->dsn~settings-open-file~1]
@@ -2290,7 +2306,10 @@ class AppTest {
         val before = storage.companions["koppter.yml"]
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-share-actions").performScrollTo().performTextReplacement("typed = {} due:1d")
+        // What was typed in another tab stays when the tab changes.
+        onNodeWithTag("settings-tab-file").performClick()
         onNodeWithTag("settings-choose-file").performScrollTo().performClick()
         onNodeWithTag("settings-dialog").assertDoesNotExist()
         assertEquals("/data/other/todo.txt", controller.settings.todoFile)
@@ -2299,6 +2318,7 @@ class AppTest {
         assertEquals("share-actions:\n  later: \"{} due:1w\"\n", chosen.companions["koppter.yml"])
         // The settings show the configuration that the file brings along.
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("later = {} due:1w")
     }
 
@@ -2986,9 +3006,10 @@ class AppTest {
         onNodeWithText("Someday (0)").assertExists()
 
         onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-tasks").performClick()
         onNodeWithTag("settings-board-columns").assertTextContains("Today = due:<=today -@waiting\nNext = -@waiting -#someday\nWaiting = @waiting\nSomeday = #someday")
         onNodeWithTag("settings-board-columns").performTextReplacement("Phone = @phone\nSoon = due:<2w\nNothing = +Nowhere")
-        onNodeWithTag("settings-save").performScrollTo().performClick()
+        onNodeWithTag("settings-save").performClick()
         assertEquals(
             "# Configuration of koppter for the todo.txt file in this directory\n" +
                 "board-columns:\n  \"Phone\": \"@phone\"\n  \"Soon\": \"due:<2w\"\n  \"Nothing\": \"+Nowhere\"\n",
