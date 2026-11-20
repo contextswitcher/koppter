@@ -689,7 +689,7 @@ Do not enter the published address of the same calendar under *Calendars with bu
 | Ctrl+Enter | In the edit dialog: save |
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
-| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters; from the agenda, the week and today, this shows the list |
+| Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters |
 | Ctrl+1 to Ctrl+7 | Today, list, agenda, week, board, inbox, overview |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |

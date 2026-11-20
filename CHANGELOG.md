@@ -27,6 +27,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The filter applies to *Today*, *Agenda* and *Week* as well: they show the planned blocks and due tasks that match it, and typing a search text there no longer switches to *List*.
 - The switches of the views are in the order *Today*, *List*, *Agenda*, *Week*, *Board*, *Inbox*, *Overview*; Ctrl+1 to Ctrl+7 follow that order.
 - The calendar of *Today* is 400 dp wide instead of 260 dp, and a handle between the agenda and the calendar changes its width, which is kept.
 - On Windows, the title bar of the window follows the light or dark variant of the colors.
