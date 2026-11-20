@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
@@ -20,6 +20,8 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryScrollableTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ClipboardManager
@@ -188,7 +190,10 @@ fun SettingsDialog(
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
-    val scroll = rememberScrollState()
+    val tabs = listOfNotNull("File", "Tasks", "Colors", "Integrations".takeIf { outlookBlocks != null || syncsContextSwitcher || opensLatex })
+    var tab by remember { mutableStateOf(0) }
+    // A tab starts at its top, not at the position of the tab before.
+    val scroll = remember(tab) { ScrollState(0) }
     /** Whether the field holds the address of a repository, which is cloned before anything else is done with it. */
     val address = git != null && isGitAddress(todoFile.trim())
 
@@ -206,233 +211,251 @@ fun SettingsDialog(
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
-            Column(Modifier.verticalScroll(scroll).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)
-                OutlinedTextField(
-                    value = todoFile,
-                    // A pasted address, which arrives at once, is converted; one that is typed is left alone until it is cloned.
-                    onValueChange = { todoFile = if (git != null && it.length > todoFile.length + 1) sshAddress(it) else it },
-                    label = { Text(if (git == null) "todo.txt file" else "todo.txt file or address of a git repository") },
-                    placeholder = { Text(defaultTodoFile) },
-                    supportingText = {
-                        Text(
-                            "Empty: $defaultTodoFile" +
-                                (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub becomes that form.") +
-                                "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
-                                "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
-                        )
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("settings-file"),
-                )
-                if (fileMessage.isNotEmpty()) {
-                    Text(
-                        fileMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (fileFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
-                        modifier = Modifier.testTag("settings-file-message"),
-                    )
-                }
-                if (chooseFile != null || git != null) {
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for ((title, tag, choose) in listOfNotNull(
-                            chooseFile?.let { Triple("Choose file", "settings-choose-file", it) },
-                            chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
-                        )) {
-                            OutlinedButton(
-                                onClick = {
-                                    scope.launch {
-                                        try {
-                                            // [impl->dsn~settings-open-file~1]
-                                            choose()?.let(onOpenFile)
-                                        } catch (e: Exception) {
-                                            // A platform without a program that shows the dialog, or one that refuses it.
-                                            fileFailed = true
-                                            fileMessage = "Not chosen: ${e.message ?: e}"
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.testTag(tag),
-                            ) {
-                                Text(title)
-                            }
-                        }
-                        if (git != null) {
-                            // [impl->dsn~git-setup-dialog~1]
-                            OutlinedButton(
-                                onClick = {
-                                    cloning = true
-                                    fileFailed = false
-                                    fileMessage = "Checking"
-                                    scope.launch {
-                                        try {
-                                            git.check(sshAddress(todoFile.trim()))
-                                            fileMessage = "Connected"
-                                        } catch (e: Exception) {
-                                            gitFailed("Not connected", "Connection check failed", e)
-                                        }
-                                        cloning = false
-                                        // The message stands above the buttons and may be out of view.
-                                        scroll.animateScrollTo(0)
-                                    }
-                                },
-                                enabled = address && !cloning,
-                                modifier = Modifier.testTag("settings-check-connection"),
-                            ) {
-                                Text("Check connection")
-                            }
-                            // At the address and not at the end of the dialog, where Save stands: a clone saves nothing of the dialog.
-                            Button(
-                                onClick = {
-                                    cloning = true
-                                    fileFailed = false
-                                    fileMessage = "Cloning"
-                                    scope.launch {
-                                        try {
-                                            // [impl->dsn~clone-by-address~1]
-                                            // The settings keep the address: a clone that is gone is cloned again from it.
-                                            val cloned = sshAddress(todoFile.trim())
-                                            git.clone(cloned)
-                                            onOpenFile(cloned)
-                                        } catch (e: Exception) {
-                                            gitFailed("Not cloned", "Clone failed", e)
-                                        }
-                                        cloning = false
-                                        scroll.animateScrollTo(0)
-                                    }
-                                },
-                                enabled = address && !cloning,
-                                modifier = Modifier.testTag("settings-clone"),
-                            ) {
-                                Text("Clone")
-                            }
-                        }
+                // [impl->dsn~settings-dialog~1]
+                PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
+                    tabs.forEachIndexed { index, title ->
+                        Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title) }, modifier = Modifier.testTag("settings-tab-${title.lowercase()}"))
                     }
-                    if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
                 }
-                // [impl->dsn~shared-lists-setting~1]
-                SharedListsSection(sharedLists, { sharedLists = it }, git, chooseFolder, onGitFailed)
-                Row(
-                    Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
-                        .testTag("settings-write-dates"),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Checkbox(checked = writeDates, onCheckedChange = null, modifier = Modifier.padding(6.dp))
-                    Text("Write creation and completion dates into the file")
-                }
-                OutlinedTextField(
-                    value = topCount,
-                    onValueChange = { topCount = it },
-                    label = { Text("Number of tasks for the filter option of the first tasks") },
-                    isError = topCountValue == null,
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testTag("settings-top-count"),
-                )
-                columns?.let { text ->
-                    ConfigField(
-                        "Board columns by filter", text, { columns = it }, "Next = -@waiting -#someday\nWaiting = @waiting",
-                        "One column per line as title = filter.", "settings-board-columns",
-                    )
-                }
-                // [impl->dsn~priority-names~1]
-                priorities?.let { text ->
-                    ConfigField(
-                        "Names of the priorities", text, { priorities = it }, "A = 1\nB = 2\nC = 3",
-                        "One priority per line as letter = name. The tasks show the names, and a task is given one of these priorities; the file keeps the letters.",
-                        "settings-priorities",
-                    )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        PRIORITY_PRESETS.forEachIndexed { index, names ->
-                            AssistChip(
-                                onClick = { priorities = PriorityNames.lines(names) },
-                                label = { Text(if (names.isEmpty()) "Letters" else names.joinToString(", ")) },
-                                modifier = Modifier.testTag("settings-priorities-preset-$index"),
+                // The title, the tabs and the buttons stay in view; only the content of the tab scrolls.
+                Column(Modifier.weight(1f, fill = false).verticalScroll(scroll), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    when (tabs[tab]) {
+                        "File" -> {
+                            OutlinedTextField(
+                                value = todoFile,
+                                // A pasted address, which arrives at once, is converted; one that is typed is left alone until it is cloned.
+                                onValueChange = { todoFile = if (git != null && it.length > todoFile.length + 1) sshAddress(it) else it },
+                                label = { Text(if (git == null) "todo.txt file" else "todo.txt file or address of a git repository") },
+                                placeholder = { Text(defaultTodoFile) },
+                                supportingText = {
+                                    Text(
+                                        "Empty: $defaultTodoFile" +
+                                            (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub becomes that form.") +
+                                            "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
+                                            "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
+                                    )
+                                },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("settings-file"),
                             )
+                            if (fileMessage.isNotEmpty()) {
+                                Text(
+                                    fileMessage,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = if (fileFailed) MaterialTheme.colorScheme.error else Color.Unspecified,
+                                    modifier = Modifier.testTag("settings-file-message"),
+                                )
+                            }
+                            if (chooseFile != null || git != null) {
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    for ((title, tag, choose) in listOfNotNull(
+                                        chooseFile?.let { Triple("Choose file", "settings-choose-file", it) },
+                                        chooseFolder?.let { Triple("Choose folder", "settings-choose-folder", it) },
+                                    )) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                scope.launch {
+                                                    try {
+                                                        // [impl->dsn~settings-open-file~1]
+                                                        choose()?.let(onOpenFile)
+                                                    } catch (e: Exception) {
+                                                        // A platform without a program that shows the dialog, or one that refuses it.
+                                                        fileFailed = true
+                                                        fileMessage = "Not chosen: ${e.message ?: e}"
+                                                    }
+                                                }
+                                            },
+                                            modifier = Modifier.testTag(tag),
+                                        ) {
+                                            Text(title)
+                                        }
+                                    }
+                                    if (git != null) {
+                                        // [impl->dsn~git-setup-dialog~1]
+                                        OutlinedButton(
+                                            onClick = {
+                                                cloning = true
+                                                fileFailed = false
+                                                fileMessage = "Checking"
+                                                scope.launch {
+                                                    try {
+                                                        git.check(sshAddress(todoFile.trim()))
+                                                        fileMessage = "Connected"
+                                                    } catch (e: Exception) {
+                                                        gitFailed("Not connected", "Connection check failed", e)
+                                                    }
+                                                    cloning = false
+                                                    // The message stands above the buttons and may be out of view.
+                                                    scroll.animateScrollTo(0)
+                                                }
+                                            },
+                                            enabled = address && !cloning,
+                                            modifier = Modifier.testTag("settings-check-connection"),
+                                        ) {
+                                            Text("Check connection")
+                                        }
+                                        // At the address and not at the end of the dialog, where Save stands: a clone saves nothing of the dialog.
+                                        Button(
+                                            onClick = {
+                                                cloning = true
+                                                fileFailed = false
+                                                fileMessage = "Cloning"
+                                                scope.launch {
+                                                    try {
+                                                        // [impl->dsn~clone-by-address~1]
+                                                        // The settings keep the address: a clone that is gone is cloned again from it.
+                                                        val cloned = sshAddress(todoFile.trim())
+                                                        git.clone(cloned)
+                                                        onOpenFile(cloned)
+                                                    } catch (e: Exception) {
+                                                        gitFailed("Not cloned", "Clone failed", e)
+                                                    }
+                                                    cloning = false
+                                                    scroll.animateScrollTo(0)
+                                                }
+                                            },
+                                            enabled = address && !cloning,
+                                            modifier = Modifier.testTag("settings-clone"),
+                                        ) {
+                                            Text("Clone")
+                                        }
+                                    }
+                                }
+                                if (chooseFileNote != null) Text(chooseFileNote, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("settings-choose-file-note"))
+                            }
+                            // [impl->dsn~shared-lists-setting~1]
+                            SharedListsSection(sharedLists, { sharedLists = it }, git, chooseFolder, onGitFailed)
+                            if (git != null) {
+                                Text("Git repository", style = MaterialTheme.typography.titleMedium)
+                                // [impl->dsn~committer~1]
+                                CommitterField("Name of the commits", committerName, { committerName = it }, defaultCommitterName, "settings-committer-name")
+                                CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, defaultCommitterEmail, "settings-committer-email")
+                                GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
+                            }
+                        }
+                        "Tasks" -> {
+                            Row(
+                                Modifier.fillMaxWidth().toggleable(value = writeDates, onValueChange = { writeDates = it }, role = Role.Checkbox)
+                                    .testTag("settings-write-dates"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = writeDates, onCheckedChange = null, modifier = Modifier.padding(6.dp))
+                                Text("Write creation and completion dates into the file")
+                            }
+                            OutlinedTextField(
+                                value = topCount,
+                                onValueChange = { topCount = it },
+                                label = { Text("Number of tasks for the filter option of the first tasks") },
+                                isError = topCountValue == null,
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth().testTag("settings-top-count"),
+                            )
+                            columns?.let { text ->
+                                ConfigField(
+                                    "Board columns by filter", text, { columns = it }, "Next = -@waiting -#someday\nWaiting = @waiting",
+                                    "One column per line as title = filter.", "settings-board-columns",
+                                )
+                            }
+                            // [impl->dsn~priority-names~1]
+                            priorities?.let { text ->
+                                ConfigField(
+                                    "Names of the priorities", text, { priorities = it }, "A = 1\nB = 2\nC = 3",
+                                    "One priority per line as letter = name. The tasks show the names, and a task is given one of these priorities; the file keeps the letters.",
+                                    "settings-priorities",
+                                )
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    PRIORITY_PRESETS.forEachIndexed { index, names ->
+                                        AssistChip(
+                                            onClick = { priorities = PriorityNames.lines(names) },
+                                            label = { Text(if (names.isEmpty()) "Letters" else names.joinToString(", ")) },
+                                            modifier = Modifier.testTag("settings-priorities-preset-$index"),
+                                        )
+                                    }
+                            }
+                            }
+                            // [impl->dsn~label-links~1]
+                            links?.let { text ->
+                                ConfigField(
+                                    "Links of projects and contexts", text, { links = it }, "+Fair = https://example.org/fair\n@phone = https://example.org/numbers",
+                                    "One link per line as label = link, the label with its sign: + for a project, @ for a context, # for a hashtag. The menu of the label opens the link.",
+                                    "settings-links",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
+                                )
+                            }
+                            // [impl->dsn~new-task-defaults~1]
+                            newTaskDefaults?.let { text ->
+                                ConfigField(
+                                    "New task", text, { newTaskDefaults = it }, "priority = C\ndue = next weekend",
+                                    "What the dialog of a new task starts with: priority = a priority, and due = a day of the menu of the due date, such as tomorrow or next weekend, or an interval such as 10d. Without lines, a new task starts empty.",
+                                    "settings-new-task",
+                                )
+                            }
+                            // [impl->dsn~project-contexts~1]
+                            contexts?.let { text ->
+                                ConfigField(
+                                    "Contexts of projects", text, { contexts = it }, "+Fair = @errands\n+Garden = @home @weekend",
+                                    "One project per line as +project = @context. A project that is added to a task in its dialog brings these contexts along.",
+                                    "settings-project-contexts",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
+                                )
+                            }
+                            // [impl->dsn~share-actions~1]
+                            actions?.let { text ->
+                                ConfigField(
+                                    "Share actions", text, { actions = it }, "inbox = {}\nreading = {} +research @reading due:2w dur:1h",
+                                    "What sharing a text to koppter on Android adds: one action per line as title = task; {} stands for the shared text.",
+                                    "settings-share-actions",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
+                                )
+                            }
+                        }
+                        "Colors" -> {
+                            RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
+                            RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
+                        }
+                        "Integrations" -> {
+                            if (outlookBlocks != null) {
+                                // [impl->dsn~outlook-blocks~1]
+                                Text("Outlook", style = MaterialTheme.typography.titleMedium)
+                                CommitterField(
+                                    "Account of the calendar", outlookCalendar, { outlookCalendar = it }, "Default account", "settings-outlook-calendar",
+                                    "The name of the account in Outlook, such as its email address. Its main calendar takes the plan as private, tentative appointments whose subject ends with ${OutlookCalendar.MARK}.",
+                                )
+                                OutlinedTextField(
+                                    value = outlookWeeks,
+                                    onValueChange = { outlookWeeks = it },
+                                    label = { Text("Weeks of the plan in Outlook") },
+                                    supportingText = { Text("Planning writes the blocks of so many weeks from today to Outlook and replaces those it wrote before; 0 writes nothing.") },
+                                    isError = outlookWeeksValue == null,
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth().testTag("settings-outlook-weeks"),
+                                )
+                                OutlookClearButton(outlookBlocks, outlookCalendar)
+                                }
+                            if (syncsContextSwitcher) {
+                                // [impl->dsn~contextswitcher-sync~1]
+                                Text("ContextSwitcher", style = MaterialTheme.typography.titleMedium)
+                                Row(
+                                    Modifier.fillMaxWidth().toggleable(value = contextSwitcherSync, onValueChange = { contextSwitcherSync = it }, role = Role.Checkbox)
+                                        .testTag("settings-contextswitcher-sync"),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(checked = contextSwitcherSync, onCheckedChange = null, modifier = Modifier.padding(6.dp))
+                                    Text("Send the projects and contexts of the filter to ContextSwitcher, and take those it sends")
+                                }
+                            }
+                            if (opensLatex) {
+                                // [impl->dsn~latex-open~1]
+                                Text("LaTeX", style = MaterialTheme.typography.titleMedium)
+                                CommitterField(
+                                    "Program that opens a TODO", latexEditor, { latexEditor = it }, "Program of the system", "settings-latex-editor",
+                                    "The label LaTeX of a task opens its TODO with it; {file} and {line} stand for where the TODO is, such as code --goto {file}:{line}.",
+                                )
+                            }
                         }
                     }
-                }
-                // [impl->dsn~label-links~1]
-                links?.let { text ->
-                    ConfigField(
-                        "Links of projects and contexts", text, { links = it }, "+Fair = https://example.org/fair\n@phone = https://example.org/numbers",
-                        "One link per line as label = link, the label with its sign: + for a project, @ for a context, # for a hashtag. The menu of the label opens the link.",
-                        "settings-links",
-                        completions = mapOf('+' to knownProjects, '@' to knownContexts),
-                    )
-                }
-                // [impl->dsn~new-task-defaults~1]
-                newTaskDefaults?.let { text ->
-                    ConfigField(
-                        "New task", text, { newTaskDefaults = it }, "priority = C\ndue = next weekend",
-                        "What the dialog of a new task starts with: priority = a priority, and due = a day of the menu of the due date, such as tomorrow or next weekend, or an interval such as 10d. Without lines, a new task starts empty.",
-                        "settings-new-task",
-                    )
-                }
-                // [impl->dsn~project-contexts~1]
-                contexts?.let { text ->
-                    ConfigField(
-                        "Contexts of projects", text, { contexts = it }, "+Fair = @errands\n+Garden = @home @weekend",
-                        "One project per line as +project = @context. A project that is added to a task in its dialog brings these contexts along.",
-                        "settings-project-contexts",
-                        completions = mapOf('+' to knownProjects, '@' to knownContexts),
-                    )
-                }
-                // [impl->dsn~share-actions~1]
-                actions?.let { text ->
-                    ConfigField(
-                        "Share actions", text, { actions = it }, "inbox = {}\nreading = {} +research @reading due:2w dur:1h",
-                        "What sharing a text to koppter on Android adds: one action per line as title = task; {} stands for the shared text.",
-                        "settings-share-actions",
-                        completions = mapOf('+' to knownProjects, '@' to knownContexts),
-                    )
-                }
-                Text("Colors", style = MaterialTheme.typography.titleMedium)
-                RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
-                RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
-                if (git != null) {
-                    Text("Git repository", style = MaterialTheme.typography.titleMedium)
-                    // [impl->dsn~committer~1]
-                    CommitterField("Name of the commits", committerName, { committerName = it }, defaultCommitterName, "settings-committer-name")
-                    CommitterField("Email address of the commits", committerEmail, { committerEmail = it }, defaultCommitterEmail, "settings-committer-email")
-                    GitSection(git, clipboard, uriHandler, deployKeyPage(todoFile))
-                }
-                if (outlookBlocks != null) {
-                    // [impl->dsn~outlook-blocks~1]
-                    Text("Outlook", style = MaterialTheme.typography.titleMedium)
-                    CommitterField(
-                        "Account of the calendar", outlookCalendar, { outlookCalendar = it }, "Default account", "settings-outlook-calendar",
-                        "The name of the account in Outlook, such as its email address. Its main calendar takes the plan as private, tentative appointments whose subject ends with ${OutlookCalendar.MARK}.",
-                    )
-                    OutlinedTextField(
-                        value = outlookWeeks,
-                        onValueChange = { outlookWeeks = it },
-                        label = { Text("Weeks of the plan in Outlook") },
-                        supportingText = { Text("Planning writes the blocks of so many weeks from today to Outlook and replaces those it wrote before; 0 writes nothing.") },
-                        isError = outlookWeeksValue == null,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testTag("settings-outlook-weeks"),
-                    )
-                    OutlookClearButton(outlookBlocks, outlookCalendar)
-                }
-                if (syncsContextSwitcher) {
-                    // [impl->dsn~contextswitcher-sync~1]
-                    Text("ContextSwitcher", style = MaterialTheme.typography.titleMedium)
-                    Row(
-                        Modifier.fillMaxWidth().toggleable(value = contextSwitcherSync, onValueChange = { contextSwitcherSync = it }, role = Role.Checkbox)
-                            .testTag("settings-contextswitcher-sync"),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = contextSwitcherSync, onCheckedChange = null, modifier = Modifier.padding(6.dp))
-                        Text("Send the projects and contexts of the filter to ContextSwitcher, and take those it sends")
-                    }
-                }
-                if (opensLatex) {
-                    // [impl->dsn~latex-open~1]
-                    Text("LaTeX", style = MaterialTheme.typography.titleMedium)
-                    CommitterField(
-                        "Program that opens a TODO", latexEditor, { latexEditor = it }, "Program of the system", "settings-latex-editor",
-                        "The label LaTeX of a task opens its TODO with it; {file} and {line} stand for where the TODO is, such as code --goto {file}:{line}.",
-                    )
                 }
                 Row(Modifier.fillMaxWidth()) {
                     // [impl->dsn~share-log~1]

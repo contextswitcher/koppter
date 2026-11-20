@@ -14,6 +14,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The settings are grouped in tabs: *File*, *Tasks*, *Colors* and, where the platform offers them, *Integrations*.
+  The title, the tabs and *Save* stay in view while a tab scrolls.
 - The plan dialog lists the time maps instead of showing them as text; *Edit* or a click on a map opens the painter, which now also edits the name and dates of the map, takes a typed definition and deletes the map, and *Add time map* adds one.
 
 ## [2026-11-19] - 2026-11-19
