@@ -3063,4 +3063,19 @@ class AppTest {
         onNodeWithTag("group-HASHTAG").performClick()
         onNodeWithText("#urgent (1)").assertExists()
     }
+
+    // [utest->dsn~edit-dependencies~1]
+    @Test
+    fun aTaskChosenInTheDialogIsWaitedFor() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        onNodeWithTag("edit-waits-add").performScrollTo().performTextInput("pickup")
+        onNodeWithTag("edit-waits-suggest-0").performClick()
+        onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale id:1")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+
+        assertEquals(listOf("(B) Schedule pickup +GarageSale @phone p:1", "Post signs +GarageSale id:1"), storage.text.lines().take(2))
+        openTask("Post signs")
+        onNodeWithTag("edit-waits-0").assertExists()
+    }
 }
