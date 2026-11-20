@@ -546,6 +546,9 @@ private fun MainScreen(
             priorityNames = controller.priorityNamesText,
             labelLinks = controller.labelLinksText,
             projectContexts = controller.projectContextsText,
+            // [impl->dsn~config-completion~1]
+            knownProjects = controller.projects,
+            knownContexts = controller.contexts,
             // [impl->dsn~failure-log~1]
             onGitFailed = controller::report,
             newTask = controller.newTaskText,

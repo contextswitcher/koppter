@@ -525,6 +525,19 @@ Covers:
 
 Needs: impl, utest
 
+### Completion of projects and contexts in the settings
+`dsn~config-completion~1`
+
+The fields *Contexts of projects*, *Links of projects and contexts* and *Share actions* offer the projects and contexts of the file as chips below the field while a word that starts with `+` or `@` is typed, as the dialog of a task does.
+Any part of a name matches.
+A chip replaces the typed word with the name and its sign.
+
+Covers:
+
+* `req~project-contexts~1`
+
+Needs: impl, utest
+
 ### A file opened from the settings
 `dsn~settings-open-file~1`
 
