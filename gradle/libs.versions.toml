@@ -14,6 +14,8 @@ compose-pickers = "0.7.0"
 tinylog = "2.8.1"
 kotlinx-serialization = "1.12.0"
 openfasttrace = "3.5.0"
+play-services-wearable = "20.0.1"
+wear-compose = "1.7.2"
 
 [libraries]
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
@@ -37,6 +39,9 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 tinylog-impl = { module = "org.tinylog:tinylog-impl", version.ref = "tinylog" }
 tinylog-slf4j = { module = "org.tinylog:slf4j-tinylog", version.ref = "tinylog" }
 jgit-junit-ssh = { module = "org.eclipse.jgit:org.eclipse.jgit.junit.ssh", version.ref = "jgit" }
+play-services-wearable = { module = "com.google.android.gms:play-services-wearable", version.ref = "play-services-wearable" }
+wear-compose-material3 = { module = "androidx.wear.compose:compose-material3", version.ref = "wear-compose" }
+wear-compose-foundation = { module = "androidx.wear.compose:compose-foundation", version.ref = "wear-compose" }
 
 [plugins]
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }

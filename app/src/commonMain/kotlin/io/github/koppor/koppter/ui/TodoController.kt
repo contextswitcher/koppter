@@ -87,6 +87,12 @@ import kotlin.time.Duration.Companion.minutes
 enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview") }
 
 /** The link that opens the dialog for a new task, in the forms that programs make of it. */
+/**
+ * A line of [TodoController.agenda]: a day, or a task with the times of its block if it has one.
+ * [name] is what [TodoController.entryNamed] finds the task by; a line without it has no open task.
+ */
+data class AgendaLine(val day: LocalDate? = null, val text: String = "", val times: String? = null, val name: String? = null)
+
 private val NEW_TASK_LINK = Regex("koppter:(//)?new/?")
 
 class TodoController(
@@ -228,6 +234,24 @@ class TodoController(
 
     /** The open task that the plan calls [name]; what is shown outside the application, such as a notification, names its task that way. */
     fun entryNamed(name: String): Entry? = planNames.entries.firstOrNull { it.value == name }?.key
+
+    /**
+     * What the widget and the watch show: the blocks of the plan that have not ended, under their days;
+     * without such a block, the open tasks of the filtered list.
+     */
+    // [impl->dsn~android-widget~1]
+    // [impl->dsn~watch-agenda~1]
+    val agenda: List<AgendaLine>
+        get() {
+            val ahead = CalendarTxt.ahead(planBlocks.orEmpty(), today(), minuteOfDay())
+            if (ahead.isEmpty()) return visible.filterNot { it.task.completed }.map { AgendaLine(text = it.task.description, name = planNames[it]) }
+            return ahead.groupBy { it.date }.flatMap { (date, blocks) ->
+                listOf(AgendaLine(day = date)) + blocks.map { block ->
+                    val entry = entryOf(block)
+                    AgendaLine(text = entry?.task?.description ?: block.text, times = CalendarTxt.timesText(block.span), name = block.text.takeIf { entry != null })
+                }
+            }
+        }
 
     /** What the plan adds to the text of the task to tell it from another task with the same text; empty for most tasks. */
     fun planSuffix(entry: Entry): String = planNames[entry]?.removePrefix(CalendarTxt.text(entry.task)).orEmpty()

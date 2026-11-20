@@ -592,6 +592,34 @@ class AppTest {
         assertEquals("Post signs +GarageSale spent:1h30m", storage.text.lines()[1])
     }
 
+    // [utest->dsn~watch-agenda~1]
+    @Test
+    fun theAgendaNamesTheOpenTasksByWhichTheyAreCompleted() {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  08:00-09:00 Post signs +GarageSale. 09:00-09:45 Schedule pickup +GarageSale @phone. 12:00-12:30 A task that is gone
+            2026-11-13 w46 Fri  09:00-10:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 30 })
+        assertEquals(
+            listOf(
+                AgendaLine(day = LocalDate(2026, 11, 12)),
+                AgendaLine(text = "Schedule pickup", times = "09:00-09:45", name = "Schedule pickup +GarageSale @phone"),
+                AgendaLine(text = "A task that is gone", times = "12:00-12:30"),
+                AgendaLine(day = LocalDate(2026, 11, 13)),
+                AgendaLine(text = "Thank Mom", times = "09:00-10:00", name = "Thank Mom @phone"),
+            ),
+            controller.agenda,
+        )
+        controller.entryNamed("Schedule pickup +GarageSale @phone")?.let(controller::toggle)
+        assertEquals(true, storage.text.lines().first().let { it.startsWith("x ") && "Schedule pickup" in it })
+        // A second request for the same task finds none, so that it does not reopen the task.
+        assertEquals(null, controller.entryNamed("Schedule pickup +GarageSale @phone"))
+        // Without a block ahead, the agenda is the list of the open tasks.
+        storage.companions.remove("calendar.txt")
+        val unplanned = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        assertEquals(listOf("Thank Mom" to "Thank Mom @phone", "Post signs" to "Post signs +GarageSale"), unplanned.agenda.map { it.text to it.name })
+    }
+
     // [utest->dsn~time-spent~1]
     @Test
     fun aBlockOfTodayAddsItsLengthToTheTimeSpentOnItsTask() = runComposeUiTest {

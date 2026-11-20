@@ -11,12 +11,12 @@ import android.text.format.DateUtils
 import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
-import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.sync.GitSetup
+import io.github.koppor.koppter.ui.AgendaLine
 import kotlinx.datetime.toJavaLocalDate
 import java.time.ZoneId
 
-private fun Context.dateText(date: java.time.LocalDate): String = DateUtils.formatDateTime(
+internal fun Context.dateText(date: java.time.LocalDate): String = DateUtils.formatDateTime(
     this,
     date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli(),
     DateUtils.FORMAT_SHOW_WEEKDAY or DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_NO_YEAR or DateUtils.FORMAT_ABBREV_ALL,
@@ -52,13 +52,10 @@ class AgendaWidget : AppWidgetProvider() {
     }
 }
 
-/** A row of the widget: a day, or a task with the times of its block if it has one. */
-private data class Row(val day: java.time.LocalDate? = null, val text: String = "", val times: String? = null)
-
 // [impl->dsn~android-widget~1]
 class AgendaWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory = object : RemoteViewsFactory {
-        private var rows = emptyList<Row>()
+        private var rows = emptyList<AgendaLine>()
 
         // Runs off the main thread, where reading the file is allowed.
         override fun onDataSetChanged() {
@@ -73,8 +70,8 @@ class AgendaWidgetService : RemoteViewsService() {
 
         override fun getViewAt(position: Int): RemoteViews {
             val row = rows[position]
-            if (row.day != null) {
-                return RemoteViews(packageName, R.layout.widget_day).apply { setTextViewText(R.id.widget_day, dateText(row.day)) }
+            row.day?.let { day ->
+                return RemoteViews(packageName, R.layout.widget_day).apply { setTextViewText(R.id.widget_day, dateText(day.toJavaLocalDate())) }
             }
             return RemoteViews(packageName, R.layout.widget_item).apply {
                 setTextViewText(R.id.widget_text, row.text)
@@ -97,18 +94,12 @@ class AgendaWidgetService : RemoteViewsService() {
         override fun onDestroy() {}
     }
 
-    private fun rows(context: Context): List<Row> {
+    private fun rows(context: Context): List<AgendaLine> {
         // ponytail: a controller per refresh, as the share target does; it also starts a synchronization of a git repository.
         val controller = context.todoController(GitSetup(filesDir.toPath().resolve("git")))
         // [impl->dsn~android-block-notification~1]
         // The plan may have come with a synchronization since the application was open.
-        scheduleBlockAlarm(controller)
-        val now = java.time.LocalTime.now().toSecondOfDay() / 60
-        val ahead = CalendarTxt.ahead(controller.planBlocks.orEmpty(), controller.today(), now)
-        if (ahead.isEmpty()) return controller.visible.filterNot { it.task.completed }.map { Row(text = it.task.description) }
-        return ahead.groupBy { it.date }.flatMap { (date, blocks) ->
-            listOf(Row(day = date.toJavaLocalDate())) +
-                blocks.map { Row(text = controller.entryOf(it)?.task?.description ?: it.text, times = CalendarTxt.timesText(it.span)) }
-        }
+        publishAgenda(controller)
+        return controller.agenda
     }
 }

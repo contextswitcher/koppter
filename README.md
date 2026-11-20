@@ -733,6 +733,19 @@ reading = {} +research @reading due:2w dur:1h
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
 
+## Watch
+
+A watch with Wear OS, such as a Galaxy Watch from the fourth generation on, has an application of its own, which shows what the phone application sends it ([decision 0048](docs/decisions/0048-watch-fed-by-the-phone-through-the-data-layer.md)).
+It lists the blocks of the plan from now on, by day; when nothing is planned, it lists the open tasks as the phone application filters them.
+A tap on a task asks whether to complete it, and the phone application then completes it in the file.
+
+* The watch application has no file and no settings: it needs the phone application, installed from the same release, and Google Play services on the phone.
+* While the phone is out of reach, the watch shows what it got last, and a task cannot be completed.
+* It shows the first 50 lines.
+* A block whose task was completed, deleted or edited since is shown and cannot be tapped.
+
+The [notifications](#notifications-on-android) of the phone reach the watch without this application.
+
 ## Tasks of Outlook
 
 On Windows, the list shows the open items of the To-Do list of the classic Outlook next to the tasks of the file: the flagged mails and the tasks of all accounts.
@@ -868,12 +881,14 @@ The [latest release](https://github.com/contextswitcher/koppter/releases/latest)
 | File | System |
 | --- | --- |
 | `koppter-<date>.apk` | Android |
+| `koppter-wear-<date>.apk` | [Watch](#watch) with Wear OS 3 or later, next to the Android application of the same release on the phone |
 | `koppter_<version>_amd64.deb` | Linux with Debian packages, such as Debian and Ubuntu |
 | `koppter-<version>.msi` | Windows; installs for the current user |
 | `koppter-<version>.dmg` | macOS on Apple Silicon |
 
 There is one release per day on which something changed, named after that day.
 The version of a desktop package is that day as `YY.M.D`, such as `26.11.14`.
+A watch has neither a browser nor a file manager: its file is installed from a computer with `adb install koppter-wear-<date>.apk`, after *ADB debugging* and *Wireless debugging* were switched on in the developer options of the watch and the computer was paired with `adb pair` and connected with `adb connect`.
 The desktop packages bring their own Java runtime.
 They are not signed: Windows and macOS warn before they open them, and macOS opens the application only after it is allowed under *Privacy & Security* in the system settings.
 
@@ -919,7 +934,8 @@ Without just, `scripts/run-loop.sh` or `scripts\run-loop.cmd` does the same.
 ```
 
 builds the Android application as `android/build/outputs/apk/debug/android-debug.apk`.
-The workflows build the release variant, signed with a key that is a secret of the repository ([decision 0010](docs/decisions/0010-signing-key-as-repository-secret.md)): the build workflow publishes it as the artifact `koppter-android`, the daily release workflow attaches it to the release.
+`./gradlew :wear:assembleDebug` builds the watch application as `wear/build/outputs/apk/debug/wear-debug.apk`; the two talk to each other only if both are debug builds of the same computer or both come from a release, as they need the same signature.
+The workflows build the release variant, signed with a key that is a secret of the repository ([decision 0010](docs/decisions/0010-signing-key-as-repository-secret.md)): the build workflow publishes it as the artifact `koppter-android`, together with the watch application, and the daily release workflow attaches both to the release.
 
 ## Project documents
 

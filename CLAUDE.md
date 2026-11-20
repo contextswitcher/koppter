@@ -49,13 +49,17 @@
   The README shows copies in `docs/screenshots/`: after a change of the user interface, run `./gradlew :app:desktopTest --tests '*ScreenshotTest*'` and copy the images there.
   The tasks in that test are invented; never put real data into it.
   Android library target: compiled from the same `commonMain`.
-  The icon is drawn in `docs/logo.svg`; after a change, export it with `inkscape docs/logo.svg -w 256 -o app/src/desktopMain/resources/koppter.png` repeat the paths in `android/src/main/res/drawable/ic_launcher_foreground.xml` and `ic_notification.xml`, and run `app/packaging/icons.sh` for the icons of the desktop packages.
+  The icon is drawn in `docs/logo.svg`; after a change, export it with `inkscape docs/logo.svg -w 256 -o app/src/desktopMain/resources/koppter.png` repeat the paths in `android/src/icon/res/drawable/ic_launcher_foreground.xml` and `android/src/main/res/drawable/ic_notification.xml`, and run `app/packaging/icons.sh` for the icons of the desktop packages.
   `just run-loop` (`scripts/run-loop.sh`, `.cmd`) runs the application from the checkout; its exit code 55, from *Restart to update*, makes the loop pull, build and start it again.
   `./gradlew :app:packageDistributionForCurrentOS` builds the package of the system it runs on (deb, msi or dmg) into `app/build/compose/binaries/`.
 * `:android` — the Android application: `MainActivity`, `DocumentStorage` (file behind a `content:` URI), `FolderStorage` (folder behind one, with the files next to todo.txt).
   The dialogs for a file and a folder come from FileKit, on the desktop as well (decision 0036).
   Not run on a device or emulator in development sessions; say so when reporting Android changes.
   CI signs the release APK with the key from the secrets `SIGNING_KEYSTORE_BASE64` and `SIGNING_KEYSTORE_PASSWORD` (decision 0010); the key store itself is never committed.
+* `:wear` — the application for a watch with Wear OS (decision 0048): one activity with Wear Compose, fed by `Watch.kt` of `:android` through the Data Layer.
+  It has the application id and the signature of `:android` and shares its launcher icon (`android/src/icon/res`).
+  The paths and keys of the Data Layer stand in both modules; the two are installed apart, so a released name stays and an addition is optional.
+  Not run on a device or emulator either.
 * Files next to todo.txt (`notes/`, `ice_recur.txt`, `koppter.yml`, `calendar.txt`, `calendar.ics`) go through `CompanionFiles`; `GitStorage` commits them with the next todo.txt change.
 * `skills/` holds skills for agents that work on a todo.txt file of a user, not on this repository.
   A change of the todo.txt notation or of `ice_recur.txt` also changes `skills/koppter-tasks`; its `evals/` hold test cases in the layout of `claude plugin eval`.

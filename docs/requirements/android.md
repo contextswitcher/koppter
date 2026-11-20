@@ -102,6 +102,19 @@ Covers:
 
 Needs: dsn
 
+### Agenda on a watch
+`req~watch-agenda~1`
+
+On a watch with Wear OS that is connected to the phone, the user sees what the widget shows: what is planned from now on, by day, or the open tasks when nothing is planned.
+The user completes a task there, after confirming it.
+
+Covers:
+
+* `feat~platforms~1`
+* `feat~planning~1`
+
+Needs: dsn
+
 ## Design
 
 ### Shared UI as an Android library
@@ -279,3 +292,34 @@ Covers:
 * `req~android-block-notification~1`
 
 Needs: impl, utest
+
+### Agenda for the widget and the watch
+`dsn~watch-agenda~1`
+
+`TodoController.agenda` gives the lines that the widget and the watch show: the blocks that `CalendarTxt.ahead` gives under a line per day, or the open tasks of the filtered list.
+A line of an open task carries the name that the plan has for the task, which tells tasks with the same text apart.
+`TodoController.entryNamed` finds the open task of a name, so that a completion names its task by it: the line of the task may change in between, and a task that is completed already is not found and thus not reopened.
+
+Covers:
+
+* `req~watch-agenda~1`
+
+Needs: impl, utest
+
+### Watch through the Data Layer
+`dsn~watch-data-layer~1`
+
+The module `:wear` is an application for Wear OS with the application id of the phone application and its signature, without which the Data Layer does not connect the two.
+The phone application stores the first 50 lines of the agenda as the item `/koppter/agenda`: a list `lines` of maps with `day`, or with `text` and optionally `times` and `name`.
+It does so when `MainActivity` stops, when the widget is refreshed, when the alarm of a block arrives and after each message of the watch.
+The watch application shows the item while it is open, days as headings and tasks as buttons, and sends `/koppter/refresh` when it comes to the front, as blocks may have ended since.
+A tap on a task asks whether to complete it; the answer sends `/koppter/complete` with the name of the task, and `WatchListenerService` of the phone application completes it through a controller of its own and stores the agenda again.
+The item carries the time at which it was stored, so that the watch is told of it also when the lines stayed the same.
+A line without a name, whose task was completed, deleted or edited since, is shown and cannot be tapped.
+
+Covers:
+
+* `req~watch-agenda~1`
+* `adr~watch-through-data-layer~1`
+
+Needs: impl

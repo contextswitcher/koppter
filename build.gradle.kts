@@ -22,6 +22,8 @@ requirementTracing {
         "app/src",
         "android/build.gradle.kts",
         "android/src",
+        "wear/build.gradle.kts",
+        "wear/src",
         ".github/workflows",
     )
 }

@@ -58,6 +58,9 @@ android {
         buildConfig = true
     }
 
+    // The launcher icon, which the watch application in :wear shows as well.
+    sourceSets["main"].res.srcDir("src/icon/res")
+
     // JGit and Apache MINA sshd are OSGi bundles; several of their jars carry bundle metadata under the same name.
     packaging {
         resources.excludes += setOf("OSGI-INF/**", "META-INF/DEPENDENCIES", "META-INF/LICENSE*", "META-INF/NOTICE*", "about.html", "plugin.properties")
@@ -71,6 +74,8 @@ dependencies {
     implementation(libs.androidx.activity.compose)
     // [impl->adr~file-dialogs-of-filekit~1]
     implementation(libs.filekit.dialogs)
+    // [impl->adr~watch-through-data-layer~1]
+    implementation(libs.play.services.wearable)
     // [impl->adr~log-messages-through-tinylog~1]
     implementation(libs.tinylog.api)
     runtimeOnly(libs.tinylog.slf4j)

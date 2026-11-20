@@ -95,7 +95,7 @@ class PlanReceiver : BroadcastReceiver() {
                 } else {
                     context.notifyBlock(controller)
                 }
-                context.scheduleBlockAlarm(controller)
+                context.publishAgenda(controller)
             } catch (e: Exception) {
                 Logger.error(e, "The notification of the plan failed")
             } finally {

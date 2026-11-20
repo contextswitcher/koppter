@@ -101,13 +101,21 @@ jobs:
             KOPPTER_VERSION=$d ./gradlew :android:assembleRelease
             # Without the key, the build writes android-release-unsigned.apk and this step fails.
             cp android/build/outputs/apk/release/android-release.apk "$RUNNER_TEMP/koppter-$d.apk"
+            apks=("$RUNNER_TEMP/koppter-$d.apk")
+            # [impl->dsn~watch-data-layer~1]
+            # Tags from before the watch application have no such module.
+            if [ -d wear ]; then
+              KOPPTER_VERSION=$d ./gradlew :wear:assembleRelease
+              cp wear/build/outputs/apk/release/wear-release.apk "$RUNNER_TEMP/koppter-wear-$d.apk"
+              apks+=("$RUNNER_TEMP/koppter-wear-$d.apk")
+            fi
             if ! gh release view "$tag" >/dev/null 2>&1; then
               jbang heylogs@nbbrd extract --ref "$d" --output "$RUNNER_TEMP/notes.md" CHANGELOG.md
               # The release title already names the date; the heading "[d] - d" would repeat it twice more.
               sed -i '/^## \[/d' "$RUNNER_TEMP/notes.md"
               gh release create "$tag" --verify-tag --title "$d" --notes-file "$RUNNER_TEMP/notes.md"
             fi
-            gh release upload "$tag" "$RUNNER_TEMP/koppter-$d.apk" --clobber
+            gh release upload "$tag" "${apks[@]}" --clobber
           done
 
   # The package of the desktop application for each system, for every release that has none of it yet.

@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- An application for watches with Wear OS, such as the Galaxy Watch, shows the plan from now on, or the open tasks, and completes a task; the release carries it as `koppter-wear-<date>.apk`.
 - On Android, a notification tells that a block of the plan starts; *Done* in it completes the task, and a connected watch shows it with that action.
 - The Android widget has a *+* button that opens the dialog for a new task, as does the link `koppter://new`.
 - The Android widget is placed at two cells by one and pulled larger for more of the plan.
