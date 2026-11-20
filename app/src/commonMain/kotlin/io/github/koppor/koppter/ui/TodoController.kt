@@ -218,14 +218,23 @@ class TodoController(
     /** What the plan adds to the text of the task to tell it from another task with the same text; empty for most tasks. */
     fun planSuffix(entry: Entry): String = planNames[entry]?.removePrefix(CalendarTxt.text(entry.task)).orEmpty()
 
-    /** The open tasks that are due today or earlier and have no block today. */
+    /**
+     * The blocks of the plan whose task the filter shows; all blocks without a filter,
+     * as a block whose task is no longer open has no task to filter.
+     */
+    // [impl->dsn~plan-filter~1]
+    val shownBlocks: List<TextBlock>?
+        get() = if (filter.isDefault) planBlocks else planBlocks?.filter { block -> entryOf(block)?.let { filter.matches(it.task, today()) } == true }
+
+    /** The open tasks that the filter shows, that are due today or earlier and have no block today. */
     // [impl->dsn~agenda~1]
+    // [impl->dsn~plan-filter~1]
     val dueUnplanned: List<Entry>
         get() {
             val today = today()
             val plannedToday = planBlocks.orEmpty().filter { it.date == today }.map { it.text }.toSet()
             return tasks.filter { entry ->
-                !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday
+                !entry.task.completed && entry.task.due.let { it != null && it <= today } && planNames[entry] !in plannedToday && filter.matches(entry.task, today)
             }.sortedWith(listOrder(today))
         }
 

@@ -282,8 +282,6 @@ private fun MainScreen(
                 controller.nextOnly = false
                 controller.view = View.LIST
             }
-            // The agenda and the week show the plan, which the filter does not apply to.
-            if (controller.view == View.AGENDA || controller.view == View.WEEK || controller.view == View.TODAY) controller.view = View.LIST
             focusSearch()
         }
         when {
@@ -329,11 +327,7 @@ private fun MainScreen(
     val searchField: @Composable (Modifier) -> Unit = { modifier ->
         SearchField(
             controller.filter.text,
-            { text ->
-                controller.filter = controller.filter.copy(text = text)
-                // The agenda and the week show the plan, which the filter does not apply to.
-                if (text.isNotEmpty() && (controller.view == View.AGENDA || controller.view == View.WEEK || controller.view == View.TODAY)) controller.view = View.LIST
-            },
+{ controller.filter = controller.filter.copy(text = it) },
             "Search text", "filter-text", modifier.focusRequester(filterFocus),
         )
     }
@@ -462,15 +456,15 @@ private fun MainScreen(
                                 Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
                             }
                         } else if (controller.view == View.AGENDA) {
-                            Agenda(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
+                            Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
                         } else if (controller.view == View.TODAY) {
-                            Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                            Today(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
                                 calendarWidth = controller.settings.todayCalendarWidth,
                                 onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
                                 appointments = appointments,
                             )
                         } else if (controller.view == View.WEEK) {
-                            Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
+                            Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
                         } else if (controller.view == View.INBOX) {
                             Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
                         } else if (controller.board) {
@@ -523,7 +517,7 @@ private fun MainScreen(
         )
     }
     planning?.let {
-        PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null })
+        PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
     }
     schedule?.let {
         ScheduleDialog(

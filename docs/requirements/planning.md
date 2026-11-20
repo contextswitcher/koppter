@@ -299,6 +299,19 @@ Covers:
 
 Needs: impl, utest
 
+### Holidays of a state
+`dsn~holidays~1`
+
+*Add holidays* in the plan dialog lists the German states.
+Choosing one adds an entry of the first map with the public holidays of that state from today to the end of the next year and the definition `none`.
+`Holidays` computes them from the date of Easter; holidays of single communities only are left out.
+
+Covers:
+
+* `req~time-maps~1`
+
+Needs: impl, utest
+
 ### Configuration of planning
 `dsn~plan-configuration~1`
 
@@ -652,6 +665,19 @@ Needs: impl, utest
 `Today` shows the agenda of today on the left and the blocks of today as a calendar on the right, as a column of `Week`, with a line at the current minute, which moves on once a minute.
 Above them, it shows the sum of the planned time of the blocks of today whose task is open.
 The calendar is 400 dp wide by default; below a width of 760 dp, it is left out.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### Filter of the plan
+`dsn~plan-filter~1`
+
+`Agenda`, `Week` and `Today` apply the filter as the list does: with a filter, they show the blocks whose open task matches it, and below the blocks of today the tasks due without a block that match it (`TodoController.shownBlocks`, `TodoController.dueUnplanned`).
+Without a filter, they show every block, also that of a task that is no longer open.
+The options for the first tasks and the next actions do not apply, as they would hide planned tasks behind a cut that the plan does not know.
 
 Covers:
 
