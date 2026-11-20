@@ -1546,6 +1546,20 @@ class AppTest {
         onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black\nEvenings = Mon-Thu 19:00-21:00")
     }
 
+    // [utest->dsn~holidays~1]
+    @Test
+    fun theHolidaysOfAStateAreAddedToTheFirstMap() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-17:00")
+        onNodeWithTag("plan-add-holidays").performClick()
+        onNodeWithTag("plan-holidays-BY").performClick()
+        onNodeWithTag("plan-time-maps").assertTextContains(
+            "General = Mon-Fri 08:00-17:00\nGeneral 2026-12-25 2026-12-26 2027-01-01 2027-01-06 2027-03-26 2027-03-29 2027-05-01 2027-05-06 " +
+                "2027-05-17 2027-05-27 2027-10-03 2027-11-01 2027-12-25 2027-12-26 = none",
+        )
+    }
+
     // [utest->dsn~plan-dialog~1]
     // [utest->dsn~plan-names~1]
     @Test

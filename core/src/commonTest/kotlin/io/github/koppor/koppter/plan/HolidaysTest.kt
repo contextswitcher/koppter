@@ -1,0 +1,24 @@
+package io.github.koppor.koppter.plan
+
+import kotlinx.datetime.LocalDate
+import kotlin.test.Test
+import kotlin.test.assertEquals
+
+class HolidaysTest {
+    // [utest->dsn~holidays~1]
+    @Test
+    fun theHolidaysOfAStateFollowEasterAndTheLawOfTheState() {
+        assertEquals(
+            listOf("2026-01-01", "2026-01-06", "2026-04-03", "2026-04-06", "2026-05-01", "2026-05-14", "2026-05-25", "2026-06-04", "2026-10-03", "2026-11-01", "2026-12-25", "2026-12-26"),
+            Holidays.of("BY", 2026).map(LocalDate::toString),
+        )
+        assertEquals(
+            listOf("2027-01-01", "2027-03-26", "2027-03-29", "2027-05-01", "2027-05-06", "2027-05-17", "2027-10-03", "2027-10-31", "2027-11-17", "2027-12-25", "2027-12-26"),
+            Holidays.of("SN", 2027).map(LocalDate::toString),
+        )
+        assertEquals(
+            "General 2026-12-25 2026-12-26 2027-01-01 2027-03-26 2027-03-29 2027-05-01 2027-05-06 2027-05-17 2027-05-27 2027-10-03 2027-12-25 2027-12-26" to "none",
+            Holidays.entry("General", "HE", LocalDate(2026, 11, 20)),
+        )
+    }
+}

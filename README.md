@@ -519,6 +519,8 @@ The `todo.txt` file leads: the plan is computed from it, and planning does not c
 * A **time map** names times of the week: `General = Mon-Fri 08:00-12:00 13:00-18:00`.
   A map that starts with the name of another one is restricted to its times: `Morning-Focus = General 08:00-11:00`.
   The first map is for tasks whose contexts name none.
+  Dates after the name give the map on these dates, for a vacation or holidays: `General 2026-12-24..2027-01-06 = 10:00-12:00`, or `none` for no time; the later line wins.
+  *Add holidays* adds the public holidays of a German state to the first map.
 * A context gets a time map: `@research = Morning-Focus`.
   It holds for the contexts below it, such as `@research>reading`, unless they name their own.
 * A **barrier** is the day behind which a task is not planned: `week`, `month`, `quarter` (the default), `year` or a date.

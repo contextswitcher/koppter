@@ -286,6 +286,19 @@ Covers:
 
 Needs: impl, utest
 
+### Holidays of a state
+`dsn~holidays~1`
+
+*Add holidays* in the plan dialog lists the German states.
+Choosing one adds an entry of the first map with the public holidays of that state from today to the end of the next year and the definition `none`.
+`Holidays` computes them from the date of Easter; holidays of single communities only are left out.
+
+Covers:
+
+* `req~time-maps~1`
+
+Needs: impl, utest
+
 ### Configuration of planning
 `dsn~plan-configuration~1`
 

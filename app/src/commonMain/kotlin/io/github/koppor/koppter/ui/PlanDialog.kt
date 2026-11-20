@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -11,6 +12,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -27,9 +30,11 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.Holidays
 import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.storage.ConfigFile
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDate
 
 /** The parts of the configuration for planning, each as lines of the form `name = value`. */
 data class PlanSettings(val timeMaps: String, val contextMaps: String, val barriers: String, val limits: String = "", val sideline: String = "")
@@ -49,6 +54,7 @@ fun PlanDialog(
     calendars: String?,
     onPlan: suspend (PlanSettings, calendars: String?) -> PlanResult?,
     onDismiss: () -> Unit,
+    today: LocalDate,
 ) {
     var timeMaps by remember { mutableStateOf(settings.timeMaps) }
     var contextMaps by remember { mutableStateOf(settings.contextMaps) }
@@ -59,6 +65,7 @@ fun PlanDialog(
     var result by remember { mutableStateOf<PlanResult?>(null) }
     var running by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<String?>(null) }
+    var choosingState by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     @Composable
@@ -94,7 +101,8 @@ fun PlanDialog(
                         "A map that starts with the name of another one is restricted to its times: Morning-Focus = General 08:00-11:00. " +
                         "The first map is for tasks whose contexts name none. Without a map: Mon-Fri 09:00-17:00. " +
                         "A rule may end with yellow, red or black: Mon-Fri 07:00-08:00 yellow; Paint shows the map on a week. " +
-                        "Dates after the name replace the map on these dates: General 2026-12-24..2027-01-06 = 10:00-12:00, or none for no time.",
+                        "Dates after the name replace the map on these dates, the later line over an earlier one: " +
+                        "General 2026-12-24..2027-01-06 = 10:00-12:00, or none for no time. Add holidays adds those of a state up to the end of next year.",
                     "plan-time-maps",
                 )
                 // [impl->dsn~time-map-editor~1]
@@ -102,6 +110,26 @@ fun PlanDialog(
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for ((name, _) in maps) {
                         TextButton(onClick = { editing = name }, modifier = Modifier.testTag("plan-edit-map-$name")) { Text("Paint $name") }
+                    }
+                    // The holidays go to the first map, the general times; the maps restricted to it follow.
+                    // [impl->dsn~holidays~1]
+                    maps.firstOrNull()?.first?.substringBefore(' ')?.let { first ->
+                        Box {
+                            TextButton(onClick = { choosingState = true }, modifier = Modifier.testTag("plan-add-holidays")) { Text("Add holidays to $first") }
+                            DropdownMenu(choosingState, onDismissRequest = { choosingState = false }) {
+                                for ((code, state) in Holidays.STATES) {
+                                    DropdownMenuItem(
+                                        text = { Text(state) },
+                                        onClick = {
+                                            val (key, value) = Holidays.entry(first, code, today)
+                                            if (maps.none { it.first == key }) timeMaps = timeMaps.trimEnd() + "\n$key = $value"
+                                            choosingState = false
+                                        },
+                                        modifier = Modifier.testTag("plan-holidays-$code"),
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 editing?.let { name ->
