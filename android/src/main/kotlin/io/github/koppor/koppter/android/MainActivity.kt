@@ -11,6 +11,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import io.github.koppor.koppter.sync.GitSetup
+import io.github.koppor.koppter.storage.logSince
 import io.github.koppor.koppter.ui.App
 import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.TodoController
@@ -27,6 +28,7 @@ import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.LocalDateTime
 
 /** The number of characters of the log that are shared: what an intent carries safely, and more than a report needs. */
 private const val SHARED_LOG_LENGTH = 60_000
@@ -61,13 +63,16 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * Passes the end of the newest log file to another application as text, which the user reads before sending it.
+     * Passes the last hour of the newest log file to another application as text, which the user reads before sending it.
+     * Older entries belong to another problem than the one that is reported.
      */
     // ponytail: text, which an intent carries up to some hundred kilobytes; a FileProvider if whole files are to be shared.
+    // ponytail: the newest file only, so right after it rolled over at 1 MB the hour is cut short; read the backup too if that shows.
     // [impl->dsn~share-log~1]
     private fun shareLog() {
         val newest = logDirectory().toFile().listFiles()?.maxByOrNull { it.lastModified() }
-        val text = newest?.readText()?.takeLast(SHARED_LOG_LENGTH).orEmpty().ifEmpty { "The log is empty." }
+        val text = newest?.readText()?.let { logSince(it, LocalDateTime.now().minusHours(1)) }?.takeLast(SHARED_LOG_LENGTH).orEmpty()
+            .ifEmpty { "The log has no entry of the last hour." }
         val send = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_SUBJECT, "Log of koppter").putExtra(Intent.EXTRA_TEXT, text)
         // Without the application itself as a target: the log is no task.
         val chooser = Intent.createChooser(send, "Share log")

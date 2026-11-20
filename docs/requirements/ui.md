@@ -438,8 +438,9 @@ Needs: impl, utest
 `dsn~share-log~1`
 
 `App` takes a function `shareLog`; if the platform gives one, `SettingsDialog` shows the button *Share log*, which calls it and leaves the dialog open.
-`MainActivity` gives the function: it sends the last 60,000 characters of the newest log file as text to the application that the user chooses, with koppter itself left out of the choice.
+`MainActivity` gives the function: it sends the entries of the last hour of the newest log file, at most their last 60,000 characters, as text to the application that the user chooses, with koppter itself left out of the choice.
 As text, the log is shown by the receiving application before it is sent on, and it fits into what Android passes between applications.
+`logSince` cuts the log at the first entry of that hour by the date that starts each entry; older entries belong to another problem than the one reported.
 The desktop application gives no function: its log directory is reached with the file manager.
 
 Covers:
