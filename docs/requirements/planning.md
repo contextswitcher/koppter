@@ -616,6 +616,19 @@ Covers:
 
 Needs: impl, utest
 
+### Filter of the plan
+`dsn~plan-filter~1`
+
+`Agenda`, `Week` and `Today` apply the filter as the list does: with a filter, they show the blocks whose open task matches it, and below the blocks of today the tasks due without a block that match it (`TodoController.shownBlocks`, `TodoController.dueUnplanned`).
+Without a filter, they show every block, also that of a task that is no longer open.
+The options for the first tasks and the next actions do not apply, as they would hide planned tasks behind a cut that the plan does not know.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
 ### Width of the calendar of today
 `dsn~today-resize~1`
 

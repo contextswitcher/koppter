@@ -998,7 +998,7 @@ class AppTest {
 
     // [utest->dsn~filter-panel~1]
     @Test
-    fun theTextOfTheFilterOfANarrowWindowLiesInTheDrawerThatTheSearchButtonOpensAndLeadsFromTheWeekToTheList() = runDesktopComposeUiTest(width = 412, height = 760) {
+    fun theTextOfTheFilterOfANarrowWindowLiesInTheDrawerThatTheSearchButtonOpens() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
         // The panel with the other criteria and the field are closed.
@@ -1009,8 +1009,8 @@ class AppTest {
         onNodeWithTag("open-search").performClick()
         onNodeWithTag("filter-heading").assertIsDisplayed()
         onNodeWithTag("filter-text").assertIsDisplayed().assertIsFocused().performTextInput("mom")
-        onNodeWithTag("week").assertDoesNotExist()
-        onAllNodesWithTag("task").assertCountEquals(1)
+        // The filter applies to the week as well, so the week stays.
+        onNodeWithTag("week").assertExists()
     }
 
     // [utest->dsn~filter-panel~1]
@@ -1698,6 +1698,24 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
+    // [utest->dsn~plan-filter~1]
+    @Test
+    fun theFilterAppliesToThePlan() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  10:00-11:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(view = "TODAY"), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 15 })
+        setContent { App(controller, "todo.txt") }
+        onAllNodesWithTag("agenda-block").assertCountEquals(2)
+
+        onNodeWithTag("filter-project-GarageSale").performClick()
+        onNodeWithTag("today").assertExists()
+        onAllNodesWithTag("agenda-block").assertCountEquals(1)
+        onAllNodesWithTag("week-block").assertCountEquals(1)
+        onNodeWithTag("today-planned").assertTextEquals("30m planned")
+    }
+
     // [utest->dsn~today-resize~1]
     @Test
     fun theCalendarOfTodayIsResizedByItsHandle() = runDesktopComposeUiTest(width = 1600, height = 860) {
@@ -1855,7 +1873,7 @@ class AppTest {
         onNodeWithTag("plan-dialog").assertExists()
         onNodeWithTag("plan-close").performScrollTo().performClick()
 
-        // The filter text is reached from a view that the filter does not apply to, and keeps the other filters.
+        // The filter text keeps the other filters.
         onNodeWithTag("filter-context-phone").performClick()
         ctrl(Key.Two)
         ctrl(Key.F, shift = true)
