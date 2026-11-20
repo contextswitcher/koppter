@@ -105,7 +105,11 @@ import io.github.koppor.koppter.todotxt.Recurrence
 import io.github.koppor.koppter.todotxt.imageName
 import io.github.koppor.koppter.todotxt.noteImages
 import io.github.koppor.koppter.todotxt.oneNoteLinks
+import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.waitingFor
+import io.github.koppor.koppter.todotxt.waitsFor
+import io.github.koppor.koppter.todotxt.withDependencies
 import io.github.koppor.koppter.todotxt.dueChoices
 import com.kez.picker.Picker
 import com.kez.picker.PickerDefaults
@@ -138,8 +142,10 @@ fun EditDialog(
     today: LocalDate,
     /** The contexts that a task takes with a project. */
     contextsOf: (String) -> List<String> = { emptyList() },
-    /** Called with the task, its note and the images that were added to the note, each under its file name. */
-    onSave: (Task, note: String?, images: Map<String, ByteArray>) -> Unit,
+    /** The other tasks of the file, which the task can wait for or be waited for by. */
+    others: List<Entry> = emptyList(),
+    /** Called with the task, its note, the images that were added to the note, each under its file name, and the other tasks that changed with the dependencies. */
+    onSave: (Task, note: String?, images: Map<String, ByteArray>, changed: List<Entry>) -> Unit,
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     /** The width of the dialog in dp where the window allows it, and what keeps a width that the user chose. */
@@ -173,6 +179,8 @@ fun EditDialog(
     var projects by remember(base) { mutableStateOf(base.projects) }
     var contexts by remember(base) { mutableStateOf(base.contexts) }
     var hashtags by remember(base) { mutableStateOf(base.hashtags) }
+    var waits by remember(base) { mutableStateOf(waitsFor(base, others).map { it.index }.toSet()) }
+    var before by remember(base) { mutableStateOf(waitingFor(base, others).map { it.index }.toSet()) }
     var note by remember { mutableStateOf(TextFieldValue(originalNote.orEmpty())) }
     /** The images that were added in this dialog, which are written when the task is saved. */
     var images by remember { mutableStateOf(mapOf<String, ByteArray>()) }
@@ -227,9 +235,11 @@ fun EditDialog(
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.text.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
     // [impl->dsn~edit-dates~1]
     // Words of a description that was not touched stay words: they were there when the task was written.
-    val result = if (description.text == base.description) fields else fields.withDates(today)
+    val dated = if (description.text == base.description) fields else fields.withDates(today)
     /** Where the words that became dates start in the description; `null` if there are none. */
-    val phraseStart = result.description.length.takeIf { result != fields && description.text.startsWith(result.description) }
+    val phraseStart = dated.description.length.takeIf { dated != fields && description.text.startsWith(dated.description) }
+    // [impl->dsn~edit-dependencies~1]
+    val (result, changed) = withDependencies(dated, others, waits, before)
     val valid = dueValid && deadlineValid && thresholdValid && recurrenceValid && durationValid && atValid && byValid && travelValid && spentValid && result.body.isNotBlank() &&
         // What a new task starts with is no task yet.
         (!isNew || result != original)
@@ -239,7 +249,7 @@ fun EditDialog(
     // Without a keyboard, the focus brings up the keyboard of the screen, which hides half of an existing task; a new task is typed first.
     LaunchedEffect(Unit) { if (keyboard || isNew) descriptionFocus.requestFocus() }
 
-    val state = result.toLine() to note.text
+    val state = Triple(result.toLine(), note.text, changed)
     val initial = remember { state }
 
     // [impl->dsn~edit-resize~1]
@@ -254,7 +264,7 @@ fun EditDialog(
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
-                    if (save && valid) onSave(result, if (originalNote == null) null else note.text, images)
+                    if (save && valid) onSave(result, if (originalNote == null) null else note.text, images, changed)
                     save
                 },
         ) {
@@ -362,6 +372,9 @@ fun EditDialog(
                     // [impl->dsn~hashtags-in-ui~1]
                     // "#123" in a line is a word of the description, not a hashtag.
                     NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
+                    // [impl->dsn~edit-dependencies~1]
+                    WithHelp("The tasks that are to be done before this one (id: here, p: there).") { TaskChoice("Waits for", waits, others, { waits = it }, "edit-waits") }
+                    WithHelp("The tasks that are to be done after this one (p: here, id: there).") { TaskChoice("Before", before, others, { before = it }, "edit-before") }
 
                     if (originalNote != null) {
                         OutlinedTextField(
@@ -430,7 +443,7 @@ fun EditDialog(
                         }
                         Spacer(Modifier.weight(1f))
                         TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
-                        Button(onClick = { onSave(result, if (originalNote == null) null else note.text, images) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
+                        Button(onClick = { onSave(result, if (originalNote == null) null else note.text, images, changed) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                     }
                 }
                 // [impl->dsn~edit-resize~1]
@@ -723,6 +736,46 @@ private fun DateField(
         ) {
             DatePicker(state)
         }
+    }
+}
+
+/** The chosen tasks as removable chips and a field whose text suggests the open tasks that contain it. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TaskChoice(label: String, chosen: Set<Int>, others: List<Entry>, onChange: (Set<Int>) -> Unit, tag: String) {
+    var input by remember { mutableStateOf("") }
+    val colors = MaterialTheme.colorScheme
+    // Without text no suggestions: a file has too many tasks to offer them all.
+    val suggestions = if (input.isBlank()) emptyList() else others.filter { !it.task.completed && it.index !in chosen && it.task.description.contains(input.trim(), ignoreCase = true) }.take(5)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+        for (entry in others.filter { it.index in chosen }) {
+            InputChip(
+                selected = true,
+                onClick = { onChange(chosen - entry.index) },
+                label = { Text(entry.task.description) },
+                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove ${entry.task.description}") },
+                modifier = Modifier.testTag("$tag-${entry.index}"),
+            )
+        }
+        for (entry in suggestions) {
+            SuggestionChip(onClick = { onChange(chosen + entry.index); input = "" }, label = { Text(entry.task.description) }, modifier = Modifier.testTag("$tag-suggest-${entry.index}"))
+        }
+        BasicTextField(
+            value = input,
+            onValueChange = { input = it },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.labelLarge.copy(color = colors.onSurface),
+            cursorBrush = SolidColor(colors.primary),
+            modifier = Modifier.align(Alignment.CenterVertically).width(200.dp).height(32.dp)
+                .border(1.dp, colors.outline, MaterialTheme.shapes.small).testTag("$tag-add"),
+            decorationBox = { field ->
+                Box(Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
+                    if (input.isEmpty()) Text("Search task…", style = MaterialTheme.typography.labelLarge, color = colors.onSurfaceVariant)
+                    field()
+                }
+            },
+        )
     }
 }
 

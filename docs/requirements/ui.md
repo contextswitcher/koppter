@@ -53,6 +53,17 @@ Covers:
 
 Needs: dsn
 
+### Dependencies in the edit dialog
+`req~edit-dependencies~1`
+
+In the edit dialog, the user chooses the tasks that the task waits for and the tasks that wait for it, without typing tags.
+
+Covers:
+
+* `feat~task-editing~1`
+
+Needs: dsn
+
 ### Names for priorities
 `req~priority-names~1`
 
@@ -683,6 +694,21 @@ Covers:
 * `req~edit-dialog~1`
 * `req~complete-and-delete~1`
 * `adr~metadata-after-description~1`
+
+Needs: impl, utest
+
+### Dependencies in the edit dialog
+`dsn~edit-dependencies~1`
+
+Below the hashtags, `EditDialog` has the rows *Waits for* and *Before*: the chosen tasks as chips, and a field whose text suggests up to five open tasks whose description contains it.
+`waitsFor` and `waitingFor` fill the rows from the tags `id:` and `p:` of the tasks of the file, as topydo writes them.
+`withDependencies` writes the choice back: a task that the task waits for gets `p:` with the `id:` of the task, a task that waits for it gives its `id:` to a `p:` of the task, and a task that needs an `id:` and has none gets the next free number.
+Removing a chip removes only the tag of that dependency.
+*Save* writes the other tasks that changed together with the task.
+
+Covers:
+
+* `req~edit-dependencies~1`
 
 Needs: impl, utest
 
