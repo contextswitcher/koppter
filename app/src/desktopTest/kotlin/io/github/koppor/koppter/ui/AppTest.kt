@@ -1538,8 +1538,8 @@ class AppTest {
         """.trimIndent() + "\n"
         start()
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00")
-        onNodeWithTag("plan-time-maps").assertTextContains("Time maps (optional)")
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithText("Time maps (optional)").assertExists()
         onNodeWithTag("plan-context-maps").assertTextContains("@home = General")
         onNodeWithTag("plan-barriers").assertTextContains("default = year")
         onNodeWithTag("plan-limits").assertTextContains("+GarageSale = block 45m")
@@ -1550,7 +1550,7 @@ class AppTest {
         onNodeWithTag("plan-close").performClick()
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-barriers").assertTextContains("default = month")
-        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
     }
 
     // [utest->dsn~time-map-editor~1]
@@ -1558,22 +1558,66 @@ class AppTest {
     fun aTimeMapIsPaintedOnTheDaysOfAWeek() = runComposeUiTest {
         start()
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00\nEvenings = Mon-Thu 19:00-21:00")
-        onNodeWithTag("plan-edit-map-General").performClick()
+        addTimeMap("General", "Mon-Fri 08:00-12:00 13:00-17:00")
+        addTimeMap("Evenings", "Mon-Thu 19:00-21:00")
+        onNodeWithTag("plan-map-General").performClick()
         onNodeWithTag("time-map-paint-yellow").performClick()
         // Down on Monday from eight o'clock to a quarter to ten: the quarters of an hour that the drag touches.
         onNodeWithTag("time-map-grid").performTouchInput {
             swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
         }
-        onNodeWithTag("time-map-definition").assertTextEquals("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
-        onNodeWithTag("time-map-revert").performClick()
-        onNodeWithTag("time-map-definition").assertTextEquals("Mon-Fri 08:00-12:00 13:00-17:00")
+        onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
+        onNodeWithTag("time-map-revert").performScrollTo().performClick()
+        onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
         onNodeWithTag("time-map-paint-black").performClick()
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
-        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
         onNodeWithTag("time-map-editor").assertDoesNotExist()
         // The other map stays as it was typed.
-        onNodeWithTag("plan-time-maps").assertTextContains("General = Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black\nEvenings = Mon-Thu 19:00-21:00")
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black")
+        onNodeWithTag("plan-map-Evenings").assertTextContains("Mon-Thu 19:00-21:00")
+
+        // A typed definition shows on the grid.
+        onNodeWithTag("plan-map-Evenings").performClick()
+        onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("Sun 20:00-20:15 black")
+        onNodeWithTag("time-map-paint-erase").performClick()
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
+        onNodeWithTag("time-map-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("A map needs times.")
+        onNodeWithTag("time-map-cancel").performScrollTo().performClick()
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aTimeMapOnDatesIsAddedRenamedAndDeleted() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        addTimeMap("General", "Mon-Fri 08:00-17:00")
+        // The same name twice is one map.
+        onNodeWithTag("plan-add-map").performClick()
+        onNodeWithTag("time-map-name").performTextInput("General")
+        onNodeWithTag("time-map-definition").performScrollTo().performTextInput("Mon 08:00-09:00")
+        onNodeWithTag("time-map-save").performScrollTo().assertIsNotEnabled()
+        // On dates, no times are none.
+        onNodeWithTag("time-map-definition").performScrollTo().performTextClearance()
+        onNodeWithTag("time-map-dates").performTextInput("2026-12-25")
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("plan-map-General 2026-12-25").assertTextContains("none")
+        onNodeWithTag("plan-map-General 2026-12-25").performClick()
+        onNodeWithTag("time-map-dates").performTextReplacement("2026-12-24..2026-12-26")
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("plan-map-General 2026-12-25").assertDoesNotExist()
+        onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
+        onNodeWithTag("time-map-delete").performScrollTo().performClick()
+        onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").assertDoesNotExist()
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
+    }
+
+    private fun ComposeUiTest.addTimeMap(name: String, definition: String) {
+        onNodeWithTag("plan-add-map").performScrollTo().performClick()
+        onNodeWithTag("time-map-name").performTextInput(name)
+        onNodeWithTag("time-map-definition").performScrollTo().performTextInput(definition)
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
     }
 
     // [utest->dsn~holidays~1]
@@ -1581,13 +1625,13 @@ class AppTest {
     fun theHolidaysOfAStateAreAddedToTheFirstMap() = runComposeUiTest {
         start()
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-17:00")
+        addTimeMap("General", "Mon-Fri 08:00-17:00")
         onNodeWithTag("plan-add-holidays").performClick()
         onNodeWithTag("plan-holidays-BY").performClick()
-        onNodeWithTag("plan-time-maps").assertTextContains(
-            "General = Mon-Fri 08:00-17:00\nGeneral 2026-12-25 2026-12-26 2027-01-01 2027-01-06 2027-03-26 2027-03-29 2027-05-01 2027-05-06 " +
-                "2027-05-17 2027-05-27 2027-10-03 2027-11-01 2027-12-25 2027-12-26 = none",
-        )
+        onNodeWithTag(
+            "plan-map-General 2026-12-25 2026-12-26 2027-01-01 2027-01-06 2027-03-26 2027-03-29 2027-05-01 2027-05-06 " +
+                "2027-05-17 2027-05-27 2027-10-03 2027-11-01 2027-12-25 2027-12-26",
+        ).assertTextContains("none")
     }
 
     // [utest->dsn~plan-dialog~1]
@@ -1599,7 +1643,7 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 5 })
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00")
+        addTimeMap("General", "Mon-Fri 08:00-12:00 13:00-17:00")
         onNodeWithTag("plan-update").performScrollTo().performClick()
         onNodeWithTag("plan-summary").performScrollTo().assertTextEquals("Planned 2 tasks until 2026-11-12.")
         assertEquals(
@@ -1630,7 +1674,8 @@ class AppTest {
         onAllNodesWithTag("plan-LATE", useUnmergedTree = true).assertCountEquals(0)
 
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-time-maps").performTextInput("General = Mon-Fri 08:00-12:00 13:00-17:00\nEvenings = General 15:00-17:00 Noday")
+        addTimeMap("General", "Mon-Fri 08:00-12:00 13:00-17:00")
+        addTimeMap("Evenings", "General 15:00-17:00 Noday")
         onNodeWithTag("plan-context-maps").performTextInput("@home = Evenings")
         onNodeWithTag("plan-barriers").performScrollTo().performTextInput("default = year\n@home = week")
         onNodeWithTag("plan-limits").performScrollTo().performTextInput("+GarageSale = block 45m, max 1h/day")

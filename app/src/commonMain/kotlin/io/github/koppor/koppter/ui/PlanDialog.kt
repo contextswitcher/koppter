@@ -1,5 +1,9 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +19,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -25,13 +30,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Holidays
-import io.github.koppor.koppter.plan.TimeMaps
 import io.github.koppor.koppter.storage.ConfigFile
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
@@ -95,52 +101,61 @@ fun PlanDialog(
                         "${CalendarTxt.NAME} next to the todo.txt file. The settings are kept in ${ConfigFile.NAME}.",
                     style = MaterialTheme.typography.bodySmall,
                 )
-                field(
-                    "Time maps", timeMaps, { timeMaps = it },
-                    "When tasks are planned, one map per line: General = Mon-Fri 08:00-12:00 13:00-18:00. " +
-                        "A map that starts with the name of another one is restricted to its times: Morning-Focus = General 08:00-11:00. " +
-                        "The first map is for tasks whose contexts name none. Without a map: Mon-Fri 09:00-17:00. " +
-                        "A rule may end with yellow, red or black: Mon-Fri 07:00-08:00 yellow; Paint shows the map on a week. " +
-                        "Dates after the name replace the map on these dates, the later line over an earlier one: " +
-                        "General 2026-12-24..2027-01-06 = 10:00-12:00, or none for no time. Add holidays adds those of a state up to the end of next year.",
-                    "plan-time-maps",
-                )
                 // [impl->dsn~time-map-editor~1]
                 val maps = ConfigFile.parseLines(timeMaps)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for ((name, _) in maps) {
-                        TextButton(onClick = { editing = name }, modifier = Modifier.testTag("plan-edit-map-$name")) { Text("Paint $name") }
-                    }
-                    // The holidays go to the first map, the general times; the maps restricted to it follow.
-                    // [impl->dsn~holidays~1]
-                    maps.firstOrNull()?.first?.substringBefore(' ')?.let { first ->
-                        Box {
-                            TextButton(onClick = { choosingState = true }, modifier = Modifier.testTag("plan-add-holidays")) { Text("Add holidays to $first") }
-                            DropdownMenu(choosingState, onDismissRequest = { choosingState = false }) {
-                                for ((code, state) in Holidays.STATES) {
-                                    DropdownMenuItem(
-                                        text = { Text(state) },
-                                        onClick = {
-                                            val (key, value) = Holidays.entry(first, code, today)
-                                            if (maps.none { it.first == key }) timeMaps = timeMaps.trimEnd() + "\n$key = $value"
-                                            choosingState = false
-                                        },
-                                        modifier = Modifier.testTag("plan-holidays-$code"),
-                                    )
+                OutlinedCard(Modifier.fillMaxWidth().testTag("plan-time-maps")) {
+                    Column(Modifier.padding(vertical = 8.dp)) {
+                        Text("Time maps (optional)", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(horizontal = 16.dp))
+                        for ((key, value) in maps) MapRow(key, value) { editing = key }
+                        FlowRow(Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = { editing = "" }, modifier = Modifier.testTag("plan-add-map")) { Text("Add time map") }
+                            // The holidays go to the first map, the general times; the maps restricted to it follow.
+                            // [impl->dsn~holidays~1]
+                            maps.firstOrNull()?.first?.substringBefore(' ')?.let { first ->
+                                Box {
+                                    TextButton(onClick = { choosingState = true }, modifier = Modifier.testTag("plan-add-holidays")) { Text("Add holidays to $first") }
+                                    DropdownMenu(choosingState, onDismissRequest = { choosingState = false }) {
+                                        for ((code, state) in Holidays.STATES) {
+                                            DropdownMenuItem(
+                                                text = { Text(state) },
+                                                onClick = {
+                                                    val (key, value) = Holidays.entry(first, code, today)
+                                                    if (maps.none { it.first == key }) timeMaps = timeMaps.trimEnd() + "\n$key = $value"
+                                                    choosingState = false
+                                                },
+                                                modifier = Modifier.testTag("plan-holidays-$code"),
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                editing?.let { name ->
+                Text(
+                    "The times in which tasks are planned. The first map is for tasks whose contexts name none; without a map: Mon-Fri 09:00-17:00. " +
+                        "A map whose definition starts with the name of another one is restricted to its times: General 08:00-11:00. " +
+                        "A map with dates replaces the map of its name on these dates, a later one an earlier one; none leaves no time on them. " +
+                        "Add holidays adds those of a state up to the end of next year.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                )
+                editing?.let { key ->
                     TimeMapEditor(
-                        name,
-                        TimeMaps(maps),
-                        onSave = { definition ->
+                        key.ifEmpty { null },
+                        maps,
+                        onSave = { newKey, definition ->
+                            val line = "$newKey = $definition"
                             // Only the line of the map changes; the others stay as they were typed.
-                            timeMaps = timeMaps.lines().joinToString("\n") { line ->
-                                if (ConfigFile.parseLines(line).firstOrNull()?.first == name) "$name = $definition" else line
+                            timeMaps = if (key.isEmpty()) {
+                                (timeMaps.trimEnd() + "\n" + line).trimStart()
+                            } else {
+                                timeMaps.lines().joinToString("\n") { if (ConfigFile.parseLines(it).firstOrNull()?.first == key) line else it }
                             }
+                            editing = null
+                        },
+                        onDelete = {
+                            timeMaps = timeMaps.lines().filterNot { ConfigFile.parseLines(it).firstOrNull()?.first == key }.joinToString("\n")
                             editing = null
                         },
                         onDismiss = { editing = null },
@@ -216,5 +231,23 @@ fun PlanDialog(
                 }
             }
         }
+    }
+}
+
+/** A time map in the list of the plan dialog: a click on it, or on *Edit* that hovering shows, opens the editor. */
+@Composable
+private fun MapRow(key: String, value: String, onEdit: () -> Unit) {
+    val interactions = remember { MutableInteractionSource() }
+    val hovered by interactions.collectIsHoveredAsState()
+    Row(
+        Modifier.fillMaxWidth().hoverable(interactions).clickable(onClick = onEdit).padding(start = 16.dp, end = 8.dp).testTag("plan-map-$key"),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
+            Text(key, style = MaterialTheme.typography.titleSmall)
+            Text(value, style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace))
+        }
+        // Without a pointer that hovers, as on a phone, the row itself opens the editor.
+        TextButton(onClick = onEdit, modifier = Modifier.alpha(if (hovered) 1f else 0f).testTag("plan-edit-map-$key")) { Text("Edit") }
     }
 }

@@ -378,11 +378,14 @@ Needs: impl, utest
 ### Painting a time map
 `dsn~time-map-editor~1`
 
-The plan dialog has a button *Paint* for each map of the field of the time maps.
+The plan dialog lists the time maps, each with its name, dates and definition; a click on one, or on *Edit*, which shows while the pointer is over it, opens `TimeMapEditor`, and *Add time map* opens it for a new map.
+The editor edits the name, the dates and the definition, which can be typed or painted, and deletes the map.
 `TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the cells that a press or a drag touches with the chosen color, or clears them with the eraser.
 `TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
-A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved; a map restricted to another one keeps the name of that map in front.
-Saving replaces the line of the map in the field and leaves the other lines as they were typed; the field is saved with the next planning.
+A typed definition is shown on the cells, and painting writes the definition.
+A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved, except on dates, where it is `none`; a map restricted to another one keeps the name of that map in front.
+A map needs a name without spaces, and a name with dates that no other map has; what `TimeMaps` does not understand is shown, but does not prevent saving, as the map that a definition names may follow.
+Saving replaces the line of the map and leaves the other lines as they were typed; the time maps are saved with the next planning.
 
 Covers:
 

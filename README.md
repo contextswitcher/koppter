@@ -79,7 +79,7 @@ A click on a context shows its tasks, the most urgent first; the bar of a task f
 
 ![Plan dialog with time maps and barriers](docs/screenshots/plan.png)
 
-*Paint* shows a time map on a week: green times are for planning, yellow and red ones only for a task that would otherwise be late, black ones for the tasks of that map alone.
+A click on a time map shows it on a week, with its name and dates: green times are for planning, yellow and red ones only for a task that would otherwise be late, black ones for the tasks of that map alone.
 
 ![Time map painted green, yellow and red](docs/screenshots/time-map.png)
 

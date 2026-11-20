@@ -152,7 +152,7 @@ class ScreenshotTest {
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-update").performScrollTo().performClick()
         save("plan.png")
-        onNodeWithTag("plan-edit-map-General").performScrollTo().performClick()
+        onNodeWithTag("plan-map-General").performScrollTo().performClick()
         // Early mornings and late afternoons only if needed, Friday afternoon as the last resort.
         onNodeWithTag("time-map-paint-yellow").performClick()
         for (day in 0..4) {
