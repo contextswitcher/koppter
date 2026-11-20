@@ -859,10 +859,11 @@ class TodoController(
     }
 
     // [impl->dsn~task-operations~1]
-    fun add(task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
+    /** Adds the task; [changed] are other tasks whose dependencies on it changed. */
+    fun add(task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap(), changed: List<Entry> = emptyList()) {
         if (task.body.isBlank()) return
         guarded { saveNote(task, note, images) }
-        write(file.add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
+        write(withChanged(file, changed).add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
     }
 
     fun toggle(entry: Entry) {
@@ -896,7 +897,7 @@ class TodoController(
         }
     }
 
-    fun replace(entry: Entry, task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap()) {
+    fun replace(entry: Entry, task: Task, note: String? = null, images: Map<String, ByteArray> = emptyMap(), changed: List<Entry> = emptyList()) {
         // [impl->dsn~outlook-items~1]
         if (Outlook.isItem(entry)) {
             if (task != entry.task) add(task, note, images)
@@ -905,7 +906,7 @@ class TodoController(
         val index = locate(entry) ?: return
         var noteChanged = false
         guarded { noteChanged = saveNote(task, note, images) }
-        val new = file.replace(index, task)
+        val new = withChanged(file.replace(index, task), changed)
         // A changed note alone is a change to record, although the todo.txt file stays the same.
         if (new == file && noteChanged) guarded { storage.write(file.serialize(), "Edit note: ${task.description}") }
         write(new, "Edit task: ${task.description}")
@@ -1052,6 +1053,10 @@ class TodoController(
         if (found == null) error = "The task was changed by another program. Nothing was written."
         return found?.index
     }
+
+    // [impl->dsn~edit-dependencies~1]
+    private fun withChanged(start: TodoFile, changed: List<Entry>): TodoFile =
+        changed.fold(start) { new, entry -> new.replace(entry.index, entry.task) }
 
     private fun write(new: TodoFile, change: String) {
         if (new == file) return

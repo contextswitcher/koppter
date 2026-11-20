@@ -29,6 +29,9 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -140,6 +143,9 @@ fun SettingsDialog(
     labelLinks: String?,
     /** The contexts of the projects; `null` if the storage cannot keep them. */
     projectContexts: String?,
+    /** The projects and contexts of the file, offered while one is typed into a field of `koppter.yml`. */
+    knownProjects: List<String> = emptyList(),
+    knownContexts: List<String> = emptyList(),
     /** What a new task starts with; `null` if the storage cannot keep it. */
     newTask: String?,
     /** Called when the user chooses colors: they apply at once, so that the user sees them behind the dialog. */
@@ -375,6 +381,7 @@ fun SettingsDialog(
                                     "Links of projects and contexts", text, { links = it }, "+Fair = https://example.org/fair\n@phone = https://example.org/numbers",
                                     "One link per line as label = link, the label with its sign: + for a project, @ for a context, # for a hashtag. The menu of the label opens the link.",
                                     "settings-links",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
                                 )
                             }
                             // [impl->dsn~new-task-defaults~1]
@@ -391,6 +398,7 @@ fun SettingsDialog(
                                     "Contexts of projects", text, { contexts = it }, "+Fair = @errands\n+Garden = @home @weekend",
                                     "One project per line as +project = @context. A project that is added to a task in its dialog brings these contexts along.",
                                     "settings-project-contexts",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
                                 )
                             }
                             // [impl->dsn~share-actions~1]
@@ -399,6 +407,7 @@ fun SettingsDialog(
                                     "Share actions", text, { actions = it }, "inbox = {}\nreading = {} +research @reading due:2w dur:1h",
                                     "What sharing a text to koppter on Android adds: one action per line as title = task; {} stands for the shared text.",
                                     "settings-share-actions",
+                                    completions = mapOf('+' to knownProjects, '@' to knownContexts),
                                 )
                             }
                         }
@@ -634,14 +643,40 @@ private fun SharedListsSection(
 
 /** A field for a block of the configuration file: lines of the form `key = value`, with an example shown while it is empty. */
 @Composable
-private fun ConfigField(title: String, value: String, onChange: (String) -> Unit, example: String, help: String, tag: String) {
+private fun ConfigField(
+    title: String,
+    value: String,
+    onChange: (String) -> Unit,
+    example: String,
+    help: String,
+    tag: String,
+    /** The known names by their sign, such as `+` for the projects: a word at the cursor that starts with the sign offers them. */
+    completions: Map<Char, List<String>> = emptyMap(),
+) {
     val style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+    // The cursor tells the word that is typed; a value set from outside, such as a preset, replaces the field.
+    var field by remember { mutableStateOf(TextFieldValue(value)) }
+    if (field.text != value) field = TextFieldValue(value, TextRange(value.length))
+    val cursor = field.selection.start
+    val start = field.text.lastIndexOfAny(charArrayOf(' ', '\n', '\t', ','), cursor - 1) + 1
+    val word = field.text.substring(start, cursor)
+    val sign = word.firstOrNull()
+    val typed = word.drop(1)
+    // As in the dialog of a task, any part of the name counts, so that `rea` finds `research>reading`.
+    val suggestions = if (field.selection.collapsed && sign != null) {
+        completions[sign].orEmpty().filter { it != typed && it.contains(typed, ignoreCase = true) }.take(8)
+    } else {
+        emptyList()
+    }
     Column {
         // The title stands above the field: as a label in it, it would hide the example until the field has the focus.
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
         OutlinedTextField(
-            value = value,
-            onValueChange = onChange,
+            value = field,
+            onValueChange = {
+                field = it
+                if (it.text != value) onChange(it.text)
+            },
             // Paler than the placeholder of Material, which is hard to tell from lines that were typed.
             placeholder = { Text(example, style = style, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)) },
             supportingText = {
@@ -651,6 +686,20 @@ private fun ConfigField(title: String, value: String, onChange: (String) -> Unit
             minLines = maxOf(2, example.lines().size),
             modifier = Modifier.fillMaxWidth().testTag(tag),
         )
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (name in suggestions) {
+                SuggestionChip(
+                    onClick = {
+                        val inserted = "$sign$name"
+                        val text = field.text.substring(0, start) + inserted + field.text.substring(cursor)
+                        field = TextFieldValue(text, TextRange(start + inserted.length))
+                        onChange(text)
+                    },
+                    label = { Text("$sign$name") },
+                    modifier = Modifier.testTag("$tag-suggest-$name"),
+                )
+            }
+        }
     }
 }
 
