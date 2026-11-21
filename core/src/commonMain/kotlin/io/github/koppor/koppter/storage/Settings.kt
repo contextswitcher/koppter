@@ -59,6 +59,11 @@ data class Settings(
     val contextSwitcherSync: Boolean = false,
     /** The name of the period of the ranking of the family view. */
     val rankingPeriod: String = "WEEK",
+    /**
+     * The calendars of the members of a family, one per line as `member = address` of an iCalendar file; see [io.github.koppor.koppter.plan.Family.calendars].
+     * A setting of the device, as such an address is a secret.
+     */
+    val memberCalendars: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -84,6 +89,7 @@ data class Settings(
         LATEX_EDITOR to latexEditor,
         CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
         RANKING_PERIOD to rankingPeriod,
+        MEMBER_CALENDARS to memberCalendars,
     )
 
     companion object {
@@ -109,6 +115,7 @@ data class Settings(
         private const val LATEX_EDITOR = "latexEditor"
         private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
         private const val RANKING_PERIOD = "rankingPeriod"
+        private const val MEMBER_CALENDARS = "memberCalendars"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -134,6 +141,7 @@ data class Settings(
             latexEditor = properties[LATEX_EDITOR].orEmpty(),
             contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),
             rankingPeriod = properties[RANKING_PERIOD] ?: Settings().rankingPeriod,
+            memberCalendars = properties[MEMBER_CALENDARS].orEmpty(),
         )
     }
 }

@@ -75,6 +75,8 @@ fun FamilyCalendar(
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
     onAdd: (String) -> Unit,
+    /** What kept the absences of members from being updated. */
+    problems: List<String> = emptyList(),
 ) {
     // With the date as key: a tablet that runs for weeks shows the new day each morning.
     var day by remember(today) { mutableStateOf(today) }
@@ -125,6 +127,10 @@ fun FamilyCalendar(
                     }
                 }
             }
+        }
+        // [impl->dsn~absences~1]
+        for (problem in problems) {
+            Text(problem, Modifier.padding(horizontal = 12.dp).testTag("family-problem"), color = MaterialTheme.colorScheme.error)
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             val width = maxOf(MIN_MEMBER_WIDTH, (maxWidth - HOURS_WIDTH) / members.size)

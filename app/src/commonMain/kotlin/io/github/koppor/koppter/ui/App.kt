@@ -169,6 +169,15 @@ fun App(
             }
         }
     }
+    // [impl->dsn~absences~1]
+    // Whatever view is shown: the device of a member that knows the calendars keeps the absences current for the others.
+    val memberCalendars = controller.memberCalendars
+    LaunchedEffect(controller, memberCalendars) {
+        while (!memberCalendars.isNullOrBlank()) {
+            controller.updateAbsences()
+            delay(ABSENCE_REFRESH)
+        }
+    }
     val projectEditor = remember(controller) {
         object : ProjectEditor {
             override fun properties(project: String) = controller.projectProperties(project)
@@ -231,6 +240,9 @@ private data class Editing(val entry: Entry?, val context: String? = null)
 const val NOTE_IMAGE_SIZE = 1600
 
 /** Ctrl with the n-th of these keys shows the n-th view. */
+/** How often the calendars of the members are read: a calendar changes a few times a day, and each change is a commit. */
+private const val ABSENCE_REFRESH = 30 * 60_000L
+
 private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight)
 
 // [impl->dsn~main-screen~1]
@@ -510,6 +522,7 @@ private fun MainScreen(
                                 controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
                                 controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
                                 onAdd = { editing = Editing(null, context = it) },
+                                problems = controller.absenceProblems,
                             )
                         } else if (controller.view == View.INBOX) {
                             Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
@@ -602,6 +615,8 @@ private fun MainScreen(
             priorityNames = controller.priorityNamesText,
             labelLinks = controller.labelLinksText,
             projectContexts = controller.projectContextsText,
+            memberCalendars = controller.memberCalendars,
+            members = controller.members,
             // [impl->dsn~config-completion~1]
             knownProjects = controller.projects,
             knownContexts = controller.contexts,

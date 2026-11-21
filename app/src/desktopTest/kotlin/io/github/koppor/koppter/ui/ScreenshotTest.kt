@@ -173,7 +173,8 @@ class ScreenshotTest {
 
     private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false) {
         val shown = if (members) SharedLists(storage, family) else storage
-        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 })
+        // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
+        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
         setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen) }
     }
 
@@ -329,6 +330,10 @@ class ScreenshotTest {
         }
         // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
         screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }
+        screen("settings-members", members = true) {
+            onNodeWithTag("open-settings").performClick()
+            onNodeWithTag("settings-member-calendar-Carl").performScrollTo()
+        }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
         // The tab that Android alone has.

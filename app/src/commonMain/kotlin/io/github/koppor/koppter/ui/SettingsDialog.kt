@@ -1,5 +1,9 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import io.github.koppor.koppter.plan.Family
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -143,6 +147,10 @@ fun SettingsDialog(
     labelLinks: String?,
     /** The contexts of the projects; `null` if the storage cannot keep them. */
     projectContexts: String?,
+    /** The calendars of the members of a family; `null` if the platform cannot read calendars or the tasks have no members. */
+    memberCalendars: String? = null,
+    /** The members of the family, whose names the field of their calendars takes. */
+    members: List<String> = emptyList(),
     /** The projects and contexts of the file, offered while one is typed into a field of `koppter.yml`. */
     knownProjects: List<String> = emptyList(),
     knownContexts: List<String> = emptyList(),
@@ -175,6 +183,18 @@ fun SettingsDialog(
     val uriHandler = LocalUriHandler.current
     var todoFile by remember { mutableStateOf(settings.todoFile) }
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
+    // [impl->dsn~absences~1]
+    // The addresses of each member as its field holds them, several separated by blanks.
+    val calendarsOfMembers = remember {
+        mutableStateMapOf<String, String>().apply {
+            for (member in members) this[member] = Family.calendars(memberCalendars.orEmpty()).filter { it.first.equals(member, ignoreCase = true) }.joinToString(" ") { it.second }
+        }
+    }
+    /** The setting: a line per address, and the lines of members that are no list at present as they were. */
+    fun memberCalendarsText(): String = (
+        Family.calendars(memberCalendars.orEmpty()).filter { (named, _) -> members.none { it.equals(named, ignoreCase = true) } } +
+            members.flatMap { member -> calendarsOfMembers[member].orEmpty().split(Regex("\\s+")).filter(String::isNotEmpty).map { member to it } }
+        ).joinToString("\n") { (member, address) -> "$member = $address" }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var contextSwitcherSync by remember { mutableStateOf(settings.contextSwitcherSync) }
     var home by remember { mutableStateOf(homeScreen == true) }
@@ -211,7 +231,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor, home)
+    val state = listOf(todoFile, sharedLists, calendarsOfMembers.toMap(), writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor, home)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -332,6 +352,27 @@ fun SettingsDialog(
                             }
                             // [impl->dsn~shared-lists-setting~1]
                             SharedListsSection(sharedLists, { sharedLists = it }, git, chooseFolder, onGitFailed)
+                            // [impl->dsn~absences~1]
+                            if (memberCalendars != null) {
+                                Text("Calendars of the members", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "The address stays on this device. The times of the events of the calendar are written into the list of the member as Absent, " +
+                                        "which every device of the family shows, without what the events are. " +
+                                        "Enter the link to the iCalendar file, as Outlook and Google Calendar publish it for a calendar, on a device of the member and not on a shared one; several links are separated by a blank.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                for (member in members) {
+                                    OutlinedTextField(
+                                        value = calendarsOfMembers[member].orEmpty(),
+                                        onValueChange = { calendarsOfMembers[member] = it },
+                                        label = { Text("Calendar of $member (optional)") },
+                                        singleLine = true,
+                                        // An address is no word that a keyboard should correct.
+                                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                                        modifier = Modifier.fillMaxWidth().testTag("settings-member-calendar-$member"),
+                                    )
+                                }
+                            }
                             if (git != null) {
                                 Text("Git repository", style = MaterialTheme.typography.titleMedium)
                                 // [impl->dsn~committer~1]
@@ -487,7 +528,7 @@ fun SettingsDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     fun save(file: String) = onSave(
                         settings.copy(
-                            todoFile = file, sharedLists = sharedLists.trim(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
+                            todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
                             outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
                             contextSwitcherSync = contextSwitcherSync,

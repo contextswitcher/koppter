@@ -29,6 +29,18 @@ Covers:
 
 Needs: dsn
 
+### Absences from the calendars of a member
+`req~absences~1`
+
+A member names, on a device of their own, the addresses at which calendars of theirs are published as iCalendar files.
+The family view of every device then shows the times of the events of these calendars in the column of the member as absences, without what the events are.
+
+Covers:
+
+* `feat~family~1`
+
+Needs: dsn
+
 ## Design
 
 ### Stars and ranking
@@ -80,5 +92,25 @@ Covers:
 
 * `req~family-day~1`
 * `req~stars~1`
+
+Needs: impl, utest
+
+### Absences in the calendar.txt of a member
+`dsn~absences~1`
+
+The setting `memberCalendars` of the device holds the calendars, one per line as `member = address` (`Family.calendars`).
+The tab *File* of the settings dialog edits it below the shared lists, while the tasks have members and the platform reads calendars: one field per member for the address, or for several separated by blanks, so that neither a name nor a notation is typed; the text above the fields says first that the address stays on the device.
+A line of a member that is no list at present is kept as it is.
+`TodoController.updateAbsences` reads the calendars of each member with `busyTimes` for 28 days from today and passes their times to `CalendarTxt.withAbsences`, which replaces the blocks named `Absent` of the days from today on in the `calendar.txt` of the list of the member and leaves everything else of the file as it is.
+`SharedLists.writeCompanionOf` writes the file if it changed and has the storage record it as `Update the absences of @member`, so that the other devices get it with the synchronization and draw it as any block of that file (`dsn~family-view~1`).
+`App` does this at its start and every 30 minutes, whatever view is shown.
+A member whose name is no list, and a member one of whose calendars cannot be read, are reported in the family view above the columns in the color of an error, the calendar by its host only, as its address is a secret; the absences of such a member stay as they are.
+Events of whole days are left out, as `busyTimes` leaves them out.
+The answers to the flow: the fields are set once per device and therefore stand last in their tab; Save keeps them and starts the reading, Cancel leaves them as they were; what the reading gave shows in the family view, as its absences or as its failure; the calendars are read off the main thread.
+
+Covers:
+
+* `req~absences~1`
+* `adr~absences-in-calendar-txt~1`
 
 Needs: impl, utest

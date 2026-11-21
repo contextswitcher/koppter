@@ -110,4 +110,45 @@ class FamilyTest {
         assertEquals(listOf("Pack the bag"), todos(LocalDate(2026, 11, 22)))
         assertEquals(listOf("Tidy the room", "Water the plants"), todos(LocalDate(2026, 11, 20)))
     }
+
+    // [utest->dsn~absences~1]
+    @Test
+    fun theCalendarsOfTheMembersAreLinesOfAMemberAndAnAddress() {
+        assertEquals(
+            listOf("Anna" to "https://example.org/a.ics?key=1", "Ben" to "https://example.org/b.ics", "Anna" to "https://example.org/school.ics"),
+            Family.calendars("Anna = https://example.org/a.ics?key=1\n\n@Ben=https://example.org/b.ics\nAnna = https://example.org/school.ics\nno address\nCarl =\n"),
+        )
+    }
+
+    // [utest->dsn~absences~1]
+    @Test
+    fun theAbsencesFromTodayOnAreReplacedAndEverythingElseStays() {
+        val existing = """
+            # Calendar of Anna
+            2026-11-20 w47 Fri  08:00-13:00 Absent
+            2026-11-21 w47 Sat  Birthday of Grandma. 08:00-09:00 Absent. 10:00-11:00 Swimming
+            2026-11-22 w47 Sun  09:00-10:00 Absent
+            2026-11-23 w48 Mon
+        """.trimIndent() + "\n"
+        val absent = mapOf(
+            // Two calendars that touch are one absence.
+            today to listOf(Span(13 * 60, 15 * 60), Span(9 * 60, 10 * 60), Span(15 * 60, 16 * 60)),
+            LocalDate(2026, 11, 24) to listOf(Span(8 * 60, 12 * 60)),
+            // What was is not written anew.
+            LocalDate(2026, 11, 19) to listOf(Span(8 * 60, 12 * 60)),
+        )
+        val written = CalendarTxt.withAbsences(existing, absent, today)
+        assertEquals(
+            """
+            # Calendar of Anna
+            2026-11-20 w47 Fri  08:00-13:00 Absent
+            2026-11-21 w47 Sat  Birthday of Grandma. 09:00-10:00 Absent. 10:00-11:00 Swimming. 13:00-16:00 Absent
+            2026-11-24 w48 Tue  08:00-12:00 Absent
+            """.trimIndent() + "\n",
+            written,
+        )
+        // The same absences change nothing, so that nothing is committed.
+        assertEquals(written, CalendarTxt.withAbsences(written, absent, today))
+        assertEquals("", CalendarTxt.withAbsences("", emptyMap(), today))
+    }
 }

@@ -718,6 +718,9 @@ A family uses koppter together, such as on a tablet in the hallway: the view *Fa
   The stars are counted from the completed tasks, which have to stay in the file for that time.
 * Below the tasks, the day is a calendar.
   A task with a time, such as `Football due:2026-11-21 at:17:00 dur:90m`, stands at its time, and so do the blocks of the `calendar.txt` in the directory of the member, such as `2026-11-21 w47 Sat  08:00-13:00 School`.
+* A member who has calendars elsewhere, such as that of an employer, enters their addresses under *Calendars of the members* in the tab *File* of the settings, on a device of their own; the address is the one for the [calendars with busy times](#calendars).
+  That device writes the times of the events, for four weeks ahead, as blocks named `Absent` into the `calendar.txt` of the member, every half an hour while it runs; the other devices show them and learn neither the address nor what the events are ([decision 0053](docs/decisions/0053-absences-of-a-member-as-blocks-in-the-calendar-txt-of-the-list.md)).
+  Events of whole days are left out.
 * The button *+* beside a name adds a task of that member, and the arrows show the days before and after.
 * The filter does not apply to this view.
 

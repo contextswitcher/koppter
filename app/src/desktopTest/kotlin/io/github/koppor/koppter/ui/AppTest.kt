@@ -3399,4 +3399,43 @@ class AppTest {
         onNodeWithTag("family").assertDoesNotExist()
         onAllNodesWithTag("task").assertCountEquals(3)
     }
+
+    // [utest->dsn~absences~1]
+    @Test
+    fun theCalendarsOfAMemberBecomeAbsencesInTheCalendarOfTheList() = runComposeUiTest {
+        val anna = MemoryStorage("Feed the cat\n").apply { companions["calendar.txt"] = "2026-11-12 w46 Thu  07:00-07:30 Absent. 16:00-17:00 Swimming\n" }
+        val ben = MemoryStorage("Mow the lawn\n").apply { companions["calendar.txt"] = "2026-11-12 w46 Thu  10:00-11:00 Absent\n" }
+        val lists = SharedLists(storage, listOf("anna" to anna, "ben" to ben))
+        val event = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Salary talk\r\nDTSTART:20261112T090000\r\nDTEND:20261112T123000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        val settings = Settings(view = "FAMILY", memberCalendars = "Anna = https://calendar.example.org/secret/anna.ics\nben = https://calendar.example.org/secret/ben.ics\ncarl = https://calendar.example.org/carl.ics")
+        val controller = TodoController(
+            settings, { lists }, today = { LocalDate(2026, 11, 12) },
+            fetch = { address -> if ("anna" in address) event else error("HTTP 404") },
+        )
+        setContent { App(controller, "todo.txt") }
+        waitUntil { controller.absenceProblems.isNotEmpty() }
+
+        // The times of the event, without what it is; the absence that was there is gone, and the other block stays.
+        assertEquals("2026-11-12 w46 Thu  09:00-12:30 Absent. 16:00-17:00 Swimming\n", anna.companions["calendar.txt"])
+        assertEquals(listOf("Update the absences of @anna"), anna.changes)
+        onNodeWithText("09:00-12:30 Absent").assertExists()
+        onNodeWithText("Salary talk", substring = true).assertDoesNotExist()
+        // A calendar that cannot be read leaves the absences as they are, and the view says so without the address.
+        assertEquals("2026-11-12 w46 Thu  10:00-11:00 Absent\n", ben.companions["calendar.txt"])
+        assertEquals(
+            listOf("Calendar of ben at calendar.example.org was not read: HTTP 404", "Calendar of carl: there is no list of that name"),
+            controller.absenceProblems,
+        )
+        onAllNodesWithTag("family-problem").assertCountEquals(2)
+
+        // The settings have a field per member, and keep the line of a member that is no list at present.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-member-calendar-anna").performScrollTo().assertTextContains("https://calendar.example.org/secret/anna.ics")
+        onNodeWithTag("settings-member-calendar-ben").performScrollTo().performTextReplacement("https://example.org/b.ics  https://example.org/school.ics")
+        onNodeWithTag("settings-save").performClick()
+        assertEquals(
+            "carl = https://calendar.example.org/carl.ics\nanna = https://calendar.example.org/secret/anna.ics\nben = https://example.org/b.ics\nben = https://example.org/school.ics",
+            controller.settings.memberCalendars,
+        )
+    }
 }

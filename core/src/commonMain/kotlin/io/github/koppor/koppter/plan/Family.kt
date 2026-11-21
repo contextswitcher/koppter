@@ -52,6 +52,17 @@ object Family {
         }
     }
 
+    /**
+     * The calendars of the members as the settings name them, one per line as `member = address`: each member with an address.
+     * A line without an equals sign or without an address is left out.
+     */
+    // [impl->dsn~absences~1]
+    fun calendars(setting: String): List<Pair<String, String>> = setting.lines().mapNotNull { line ->
+        val member = line.substringBefore('=', "").trim()
+        val address = line.substringAfter('=', "").trim()
+        if (member.isEmpty() || address.isEmpty()) null else member.removePrefix("@") to address
+    }
+
     /** The tasks of a member that have a time on the day, completed or not, each for its duration or for [DEFAULT_DURATION]. */
     // [impl->dsn~family-day~1]
     fun appointments(entries: List<Entry>, member: String, members: List<String>, day: LocalDate): List<Appointment> =

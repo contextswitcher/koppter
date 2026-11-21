@@ -24,6 +24,9 @@ enum class PlanState { FITS, TIGHT, LATE }
 object CalendarTxt {
     const val NAME = "calendar.txt"
 
+    /** The text of a block for a time at which a member of a family is not there; what the member does then is not told. */
+    const val ABSENT = "Absent"
+
     private val DAY_LINE = Regex("^(\\d{4}-\\d{2}-\\d{2}) w\\d{2} [A-Z][a-z]{2}(?:  (.*))?$")
     private val BLOCK = Regex("^(\\d{2}):(\\d{2})-(\\d{2}):(\\d{2}) (.*)$")
     private val NEXT_BLOCK = Regex("\\. (?=\\d{2}:\\d{2}-\\d{2}:\\d{2} )")
@@ -63,10 +66,36 @@ object CalendarTxt {
         val days = generateSequence(today) { it.plus(DatePeriod(days = 1)) }.takeWhile { day -> blocks.any { it.date >= day } }
         val planned = days.map { day ->
             val events = byDay[day].orEmpty().sortedBy { it.span.start }.joinToString(". ") { "${timesText(it.span)} ${it.text}" }
-            "$day w${week(day).toString().padStart(2, '0')} ${WEEKDAYS[day.dayOfWeek.isoDayNumber - 1]}  $events".trimEnd()
+            dayLine(day, events)
         }
         return (kept + planned).joinToString("\n", postfix = "\n")
     }
+
+    /**
+     * The file of the list of a member with the absences from today on replaced by [absent]:
+     * the blocks named [ABSENT] of the days from today on give way to the given times, joined where they touch.
+     * Everything else stays: the other blocks and texts of these days, the lines of the days before today and the lines that are no day.
+     * A day without anything has no line.
+     */
+    // [impl->dsn~absences~1]
+    fun withAbsences(existing: String, absent: Map<LocalDate, List<Span>>, today: LocalDate): String {
+        val lines = existing.lines().filter(String::isNotBlank)
+        val kept = lines.mapNotNull { line -> dateOf(line)?.takeIf { it >= today }?.let { it to line } }.groupBy({ it.first }) { (_, line) ->
+            DAY_LINE.matchEntire(line)!!.groupValues[2].split(NEXT_BLOCK).map(String::trim)
+                .filter { it.isNotEmpty() && BLOCK.matchEntire(it)?.groupValues?.get(5) != ABSENT }
+        }.mapValues { it.value.flatten() }
+        val days = (kept.keys + absent.keys.filter { it >= today }).distinct().sorted()
+        val written = days.mapNotNull { day ->
+            // A text without a time stands first, as it holds for the whole day.
+            val events = (kept[day].orEmpty() + absent[day].orEmpty().joined().map { "${timesText(it)} $ABSENT" })
+                .sortedBy { event -> BLOCK.matchEntire(event)?.destructured?.let { (hours, minutes) -> hours.toInt() * 60 + minutes.toInt() } ?: -1 }
+            if (events.isEmpty()) null else dayLine(day, events.joinToString(". "))
+        }
+        val all = lines.filter { line -> dateOf(line).let { it == null || it < today } } + written
+        return if (all.isEmpty()) "" else all.joinToString("\n", postfix = "\n")
+    }
+
+    private fun dayLine(day: LocalDate, events: String) = "$day w${week(day).toString().padStart(2, '0')} ${WEEKDAYS[day.dayOfWeek.isoDayNumber - 1]}  $events".trimEnd()
 
     /** The blocks of the file in the order of time, those of past days included. */
     fun blocks(calendar: String): List<TextBlock> = calendar.lines().flatMap { line ->

@@ -63,6 +63,19 @@ class SharedListsTest {
         assertNull(lists.readCompanionOf("", "calendar.txt"))
     }
 
+    // [utest->dsn~absences~1]
+    @Test
+    fun aFileNextToAListIsWrittenAndRecordedWithItsChange() {
+        lists.read()
+        lists.writeCompanionOf("household", "calendar.txt", "2026-11-21 w47 Sat  08:00-12:00 Absent\n", "Update the absences of @household")
+        assertEquals("2026-11-21 w47 Sat  08:00-12:00 Absent\n", household.files["calendar.txt"])
+        // The todo.txt file is written as it is, which makes a storage with a history record the file next to it.
+        assertEquals(1, household.writes)
+        assertEquals("Buy milk\r\nClean @kitchen\r\n", household.text)
+        assertEquals(0, main.writes)
+        assertFailsWith<IllegalStateException> { lists.writeCompanionOf("elsewhere", "calendar.txt", "", "Nothing") }
+    }
+
     @Test
     fun theTasksOfASharedListAreShownWithItsContext() {
         assertEquals("Call Mom @phone\nBuy milk @household\nClean @kitchen @household\n", lists.read())

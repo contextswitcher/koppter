@@ -50,6 +50,19 @@ class SharedLists(main: TodoStorage, lists: List<Pair<String, TodoStorage>>) : S
     // [impl->dsn~family-day~1]
     fun readCompanionOf(list: String, path: String): String? = sources.indexOfFirst { it.first == list }.takeIf { it > 0 }?.let { readable(it)?.readCompanion(path) }
 
+    /**
+     * Writes a file next to the todo.txt file of a list, which a storage with a history records as [change].
+     * Fails for a list that there is not, that cannot be read or that keeps no such files.
+     */
+    // [impl->dsn~absences~1]
+    fun writeCompanionOf(list: String, path: String, text: String, change: String) {
+        val i = sources.indexOfFirst { it.first == list }.takeIf { it > 0 } ?: error("There is no list @$list")
+        failIfBroken(i)
+        (files(i) ?: error("The list @$list keeps no files next to its todo.txt file")).writeCompanion(path, text)
+        // The storage records such a file with the next write of the todo.txt file, which stays as it is.
+        sources[i].second.let { it.write(it.read(), change) }
+    }
+
     // ponytail: the statuses arrive from the threads of the storages unsynchronized; a lost update shows a stale state until the next one.
     private val statuses = MutableList(sources.size) { SyncStatus(SyncState.IDLE) }
 

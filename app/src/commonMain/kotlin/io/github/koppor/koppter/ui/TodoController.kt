@@ -88,6 +88,9 @@ import kotlin.time.Duration.Companion.minutes
 /** What the main screen shows of the tasks. */
 // From the views that show what is up to those that change the tasks.
 // Today and the list come first, as they show what to do next; the overview, which tells how things stand, comes last.
+/** For how many days from today the absences of the members are read: what a family plans ahead on its calendar. */
+private const val ABSENCE_DAYS = 28
+
 enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview"), FAMILY("Family") }
 
 /** The link that opens the dialog for a new task, in the forms that programs make of it. */
@@ -685,6 +688,53 @@ class TodoController(
                 ConfigFile.entries(text, ConfigFile.SIDELINE).joinToString("\n") { it.first },
             )
         }
+
+    /** The calendars of the members as the settings name them; `null` if the platform cannot read calendars or the tasks have no members. */
+    val memberCalendars: String? get() = settings.memberCalendars.takeIf { fetch != null && members.isNotEmpty() }
+
+    /** What kept the absences of members from being updated at the last attempt, as texts for the user. */
+    var absenceProblems by mutableStateOf(emptyList<String>())
+        private set
+
+    /**
+     * Reads the calendars of the members that the settings of this device name and writes the times of their events, for the next four weeks,
+     * as absences into the `calendar.txt` of the list of each member, where every device of the family reads them.
+     * A member one of whose calendars cannot be read keeps the absences that are there, and the failure is reported.
+     */
+    // [impl->dsn~absences~1]
+    suspend fun updateAbsences() {
+        val fetch = fetch ?: return
+        val lists = storage as? SharedLists ?: return
+        val problems = mutableListOf<String>()
+        for ((named, addresses) in Family.calendars(settings.memberCalendars).groupBy({ it.first }, { it.second })) {
+            val member = members.firstOrNull { it.equals(named, ignoreCase = true) }
+            if (member == null) {
+                problems += "Calendar of $named: there is no list of that name"
+                continue
+            }
+            try {
+                val absent = mutableMapOf<LocalDate, List<Span>>()
+                for (address in addresses) {
+                    try {
+                        busyTimes(fetch(address), today(), today().plus(DatePeriod(days = ABSENCE_DAYS)), TimeZone.currentSystemDefault())
+                            .forEach { (date, spans) -> absent[date] = absent[date].orEmpty() + spans }
+                    } catch (e: Exception) {
+                        // The address is a secret: only its host is shown, and the message of the exception, which may name it, stays out of the log.
+                        val host = address.substringAfter("://").substringBefore('/')
+                        log("Calendar of $member at $host was not read: ${e::class.simpleName}", null)
+                        error("Calendar of $member at $host was not read: ${e.message ?: e}")
+                    }
+                }
+                val existing = lists.readCompanionOf(member, CalendarTxt.NAME).orEmpty()
+                val new = CalendarTxt.withAbsences(existing, absent, today())
+                if (new != existing) lists.writeCompanionOf(member, CalendarTxt.NAME, new, "Update the absences of @$member")
+            } catch (e: Exception) {
+                problems += e.message ?: e.toString()
+            }
+        }
+        absenceProblems = problems
+        loadConfig()
+    }
 
     /** The addresses of the calendars with busy times; `null` if the platform cannot read them. */
     val calendars: String? get() = settings.calendars.takeIf { fetch != null }
