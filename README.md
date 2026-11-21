@@ -737,6 +737,15 @@ reading = {} +research @reading due:2w dur:1h
   They need a `todo.txt` file in the storage of the application or in a git repository, not one of a document provider.
 * Words of the shared text that start with `+`, `@` or `#` become projects, contexts and hashtags of the task.
 
+## koppter as the home screen on Android
+
+A device that is to show nothing but the tasks, such as a tablet on a desk, starts into koppter when koppter is its home screen.
+*Offer koppter as the home screen of this device*, in the tab *Device* of the settings, makes koppter one of the home apps of the device; after *Save*, Android shows its setting for the home app, where koppter is chosen.
+
+* Without that setting, Android does not list koppter among the home apps.
+* The other applications stay installed and are reached through the settings of Android; koppter does not lock the device.
+* Whether the screen stays on and whether the device asks for a PIN is set in the settings of Android.
+
 ## Watch
 
 A watch with Wear OS, such as a Galaxy Watch from the fourth generation on, has an application of its own, which shows what the phone application sends it ([decision 0048](docs/decisions/0048-watch-fed-by-the-phone-through-the-data-layer.md)).

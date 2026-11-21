@@ -2231,6 +2231,36 @@ class AppTest {
         onNodeWithTag("settings-dialog").assertExists()
     }
 
+    // [utest->dsn~android-home-screen~1]
+    @Test
+    fun theSettingsOfferTheHomeScreenWhereThePlatformHasOneAndPassTheChoiceAtSave() = runComposeUiTest {
+        val choices = mutableListOf<Boolean>()
+        var homeScreen by mutableStateOf<Boolean?>(null)
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", homeScreen = homeScreen, onHomeScreen = { choices += it; homeScreen = it }) }
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-device").assertDoesNotExist()
+        onNodeWithTag("settings-save").performClick()
+        homeScreen = false
+        // Cancel leaves no trace.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-device").performClick()
+        onNodeWithTag("settings-home-screen").assertIsOff().performClick()
+        onNodeWithText("Cancel").performClick()
+        assertEquals(emptyList(), choices)
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-device").performClick()
+        onNodeWithTag("settings-home-screen").assertIsOff().performClick()
+        onNodeWithTag("settings-save").performClick()
+        assertEquals(listOf(true), choices)
+        // A Save that leaves the choice alone passes nothing.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-tab-device").performClick()
+        onNodeWithTag("settings-home-screen").assertIsOn()
+        onNodeWithTag("settings-save").performClick()
+        assertEquals(listOf(true), choices)
+    }
+
     // [utest->dsn~build-version~1]
     @Test
     fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {

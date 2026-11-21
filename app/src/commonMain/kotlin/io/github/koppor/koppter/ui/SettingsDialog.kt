@@ -162,6 +162,10 @@ fun SettingsDialog(
     opensLatex: Boolean = false,
     /** Whether the device can send the filter to ContextSwitcher. */
     syncsContextSwitcher: Boolean = false,
+    /** Whether the system offers the application as its home screen; `null` on a platform without a home screen to replace. */
+    homeScreen: Boolean? = null,
+    /** Called at Save with the choice of the user for [homeScreen], if it changed. */
+    onHomeScreen: (Boolean) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
@@ -173,6 +177,7 @@ fun SettingsDialog(
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var contextSwitcherSync by remember { mutableStateOf(settings.contextSwitcherSync) }
+    var home by remember { mutableStateOf(homeScreen == true) }
     var topCount by remember { mutableStateOf(settings.topCount.toString()) }
     val topCountValue = topCount.trim().toIntOrNull()?.takeIf { it > 0 }
     var columns by remember { mutableStateOf(boardColumns) }
@@ -190,7 +195,7 @@ fun SettingsDialog(
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
     var fileFailed by remember { mutableStateOf(false) }
-    val tabs = listOfNotNull("File", "Tasks", "Colors", "Integrations".takeIf { outlookBlocks != null || syncsContextSwitcher || opensLatex })
+    val tabs = listOfNotNull("File", "Tasks", "Colors", "Integrations".takeIf { outlookBlocks != null || syncsContextSwitcher || opensLatex }, "Device".takeIf { homeScreen != null })
     var tab by remember { mutableStateOf(0) }
     // A tab starts at its top, not at the position of the tab before.
     val scroll = remember(tab) { ScrollState(0) }
@@ -206,7 +211,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor)
+    val state = listOf(todoFile, sharedLists, writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor, home)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -455,6 +460,22 @@ fun SettingsDialog(
                                 )
                             }
                         }
+                        "Device" -> {
+                            // [impl->dsn~android-home-screen~1]
+                            Row(
+                                Modifier.fillMaxWidth().toggleable(value = home, onValueChange = { home = it }, role = Role.Checkbox).testTag("settings-home-screen"),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(checked = home, onCheckedChange = null, modifier = Modifier.padding(6.dp))
+                                Text("Offer koppter as the home screen of this device")
+                            }
+                            Text(
+                                "For a device that shows koppter alone, such as a tablet on a desk. " +
+                                    "After Save, Android shows its setting for the home app: choose koppter there. " +
+                                    "The settings of Android stay in reach from the notifications; without the check mark, koppter is no home app anymore.",
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                 }
                 Row(Modifier.fillMaxWidth()) {
@@ -479,7 +500,10 @@ fun SettingsDialog(
                         newTaskDefaults?.trim(),
                     )
                     Button(
-                        onClick = { save(todoFile.trim()) },
+                        onClick = {
+                            if (home != (homeScreen == true)) onHomeScreen(home)
+                            save(todoFile.trim())
+                        },
                         // A new address is no file to save: it is cloned first. The address of the open repository stays.
                         enabled = topCountValue != null && outlookWeeksValue != null && !cloning && (!address || todoFile.trim() == settings.todoFile),
                         modifier = Modifier.testTag("settings-save"),

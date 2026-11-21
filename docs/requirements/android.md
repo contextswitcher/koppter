@@ -102,6 +102,18 @@ Covers:
 
 Needs: dsn
 
+### Application as the home screen
+`req~android-home-screen~1`
+
+On Android, the user makes koppter the home screen of a device, such as a tablet that is to show nothing but the tasks: the device then starts into koppter, and the home button returns to it.
+A device on which the user did not ask for it does not offer koppter as a home screen.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Agenda on a watch
 `req~watch-agenda~1`
 
@@ -302,6 +314,22 @@ Wear OS shows the notifications of the phone with their actions, so the watch ne
 Covers:
 
 * `req~android-block-notification~1`
+
+Needs: impl, utest
+
+### Home screen on Android
+`dsn~android-home-screen~1`
+
+The manifest has the alias `HomeScreen` of `MainActivity` with the categories `HOME` and `DEFAULT`, which is disabled: an enabled one would put koppter into the list of home apps of every device.
+The settings dialog has the checkbox *Offer koppter as the home screen of this device* in a tab of its own, *Device*, which stands last, as it is set once for a device; the text below it says how the user leaves koppter and how the choice is undone.
+Save passes a changed choice to `MainActivity`, which enables or disables the alias through the package manager; Cancel changes nothing.
+The package manager keeps the state, which the dialog shows; the settings of koppter do not repeat it, so a backup that is restored on another device does not turn it on there.
+After the alias was enabled, `MainActivity` opens the screen of the system for the home app, where the user chooses koppter; where the system has no such screen, it asks at the next press of the home button.
+The application does not lock the device to itself: the notifications and the settings of the system stay in reach.
+
+Covers:
+
+* `req~android-home-screen~1`
 
 Needs: impl, utest
 
