@@ -248,6 +248,7 @@ private fun MainScreen(
     leave: () -> Unit,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
+    var draft by remember { mutableStateOf<Draft?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
     var planning by remember { mutableStateOf<PlanSettings?>(null) }
@@ -514,7 +515,12 @@ private fun MainScreen(
             imageOf = controller::imageOf,
             others = remember(entry, controller.file) { controller.file.entries.filter { it != entry } },
             onSave = { task, note, images, changed ->
-                if (entry == null) controller.add(task, note, images, changed) else controller.replace(entry, task, note, images, changed)
+                if (entry == null) {
+                    controller.add(task, note, images, changed)
+                    draft = null
+                } else {
+                    controller.replace(entry, task, note, images, changed)
+                }
                 editing = null
             },
             onDelete = {
@@ -522,6 +528,8 @@ private fun MainScreen(
                 editing = null
             },
             onDismiss = { editing = null },
+            draft = draft.takeIf { entry == null },
+            onDraft = { draft = it },
         )
     }
     planning?.let {

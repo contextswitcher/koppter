@@ -1965,6 +1965,48 @@ class AppTest {
         onNodeWithTag("inbox-switch").assertTextEquals("Inbox (1)")
     }
 
+    // [utest->dsn~new-task-draft~1]
+    @Test
+    fun cancelKeepsANewTaskAsDraft() = runComposeUiTest {
+        start()
+        fun esc() = onNodeWithTag("edit-description").performKeyInput { pressKey(Key.Escape) }
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Order chalk")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // The task that is edited in between starts with its own text and leaves the draft alone.
+        openTask("Post signs")
+        onNodeWithTag("edit-description").assertTextContains("Post signs")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task (draft)")
+        onNodeWithTag("edit-description").assertTextContains("Order chalk")
+
+        // Discarding is the way to get rid of the draft.
+        esc()
+        onNodeWithTag("discard-confirm").performClick()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+        // Nothing entered is no draft: the dialog closes without the question.
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("new-task").performClick()
+        esc()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // A saved draft is gone as well.
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Order chalk")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(true, "Order chalk" in storage.text)
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+    }
+
     // [utest->dsn~unsaved-changes~1]
     @Test
     fun escAsksBeforeChangesAreLost() = runComposeUiTest {
