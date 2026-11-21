@@ -2,14 +2,19 @@ package io.github.koppor.koppter.android
 
 import android.Manifest
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.storage.logSince
 import io.github.koppor.koppter.ui.App
@@ -80,6 +85,20 @@ class MainActivity : ComponentActivity() {
         startActivity(chooser)
     }
 
+    // The alias of the manifest that carries the category HOME; the package manager keeps whether it is enabled, so no setting of koppter repeats it.
+    private val homeAlias by lazy { ComponentName(this, "io.github.koppor.koppter.android.HomeScreen") }
+    private var homeScreen by mutableStateOf(false)
+
+    // [impl->dsn~android-home-screen~1]
+    private fun offerAsHomeScreen(offer: Boolean) {
+        val state = if (offer) PackageManager.COMPONENT_ENABLED_STATE_ENABLED else PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+        // Without DONT_KILL_APP, the system ends the application that the user is looking at.
+        packageManager.setComponentEnabledSetting(homeAlias, state, PackageManager.DONT_KILL_APP)
+        homeScreen = offer
+        // Enabling the alias makes koppter a candidate only; the user picks it on this screen, which a few devices lack.
+        if (offer) runCatching { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
+    }
+
     private lateinit var controller: TodoController
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,6 +107,7 @@ class MainActivity : ComponentActivity() {
         // The pickers of FileKit start from this activity.
         FileKit.init(this)
         controller = todoController(gitSetup)
+        homeScreen = packageManager.getComponentEnabledSetting(homeAlias) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         publishShareTargets(controller.shareActions)
         // [impl->dsn~android-block-notification~1]
         // Asked where there is a plan to notify of; the system stops asking after the second refusal.
@@ -115,6 +135,8 @@ class MainActivity : ComponentActivity() {
                 backHandler = { onBack -> BackHandler(onBack = onBack) },
                 // To the background, as back does it for the first activity of an application since Android 12: the application keeps what it shows.
                 leave = { moveTaskToBack(true) },
+                homeScreen = homeScreen,
+                onHomeScreen = ::offerAsHomeScreen,
             )
         }
     }

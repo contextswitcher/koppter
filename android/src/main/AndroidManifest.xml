@@ -36,6 +36,19 @@
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
         </activity>
+        <!-- [impl->dsn~android-home-screen~1] -->
+        <!-- An alias that is disabled until the user turns it on: with the category on the activity itself, every device would offer koppter as a home app. -->
+        <activity-alias
+            android:name=".HomeScreen"
+            android:enabled="false"
+            android:exported="true"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity-alias>
         <!-- [impl->dsn~android-share-target~1] -->
         <activity
             android:name=".ShareActivity"

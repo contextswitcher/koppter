@@ -131,6 +131,10 @@ fun App(
     windowVariant: (dark: Boolean) -> Unit = {},
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
     leave: () -> Unit = {},
+    /** Whether the system offers the application as its home screen; `null` on a platform without a home screen to replace. */
+    homeScreen: Boolean? = null,
+    /** Offers the application as the home screen of the device or stops offering it. */
+    onHomeScreen: (Boolean) -> Unit = {},
 ) {
     val dark = when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
@@ -194,7 +198,7 @@ fun App(
             LocalProjectEditor provides projectEditor,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave, homeScreen, onHomeScreen)
         }
     }
 }
@@ -245,6 +249,8 @@ private fun MainScreen(
     update: (() -> Unit)?,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
+    homeScreen: Boolean?,
+    onHomeScreen: (Boolean) -> Unit,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
     var draft by remember { mutableStateOf<Draft?>(null) }
@@ -611,6 +617,8 @@ private fun MainScreen(
             // [impl->dsn~outlook-clear~1]
             opensLatex = controller.opensLatex,
             syncsContextSwitcher = controller.syncsContextSwitcher,
+            homeScreen = homeScreen,
+            onHomeScreen = onHomeScreen,
             outlookBlocks = if (!controller.readsOutlook) null else object : OutlookBlockActions {
                 override suspend fun count(calendar: String) = controller.countOutlookBlocks(calendar)
                 override suspend fun clear(calendar: String) = controller.clearOutlookBlocks(calendar)

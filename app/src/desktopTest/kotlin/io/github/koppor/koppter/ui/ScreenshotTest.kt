@@ -125,9 +125,9 @@ class ScreenshotTest {
         override suspend fun check(url: String) = Unit
     }
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings()) {
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null) {
         val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 })
-        setContent { App(controller, "todo.txt", git = git) }
+        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen) }
     }
 
     @Test
@@ -266,8 +266,8 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
-            start()
+        fun screen(name: String, homeScreen: Boolean? = null, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start(homeScreen = homeScreen)
             open()
             save("review/$size-$name.png")
         }
@@ -282,6 +282,11 @@ class ScreenshotTest {
         }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
+        // The tab that Android alone has.
+        screen("settings-device", homeScreen = false) {
+            onNodeWithTag("open-settings").performClick()
+            onNodeWithTag("settings-tab-device").performClick()
+        }
         // The last ones: the clock that runs and the time away stay in the file.
         storage.keepsWrites = true
         screen("clock") {
