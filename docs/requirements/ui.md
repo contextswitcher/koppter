@@ -784,6 +784,17 @@ Covers:
 
 Needs: impl, utest
 
+### Matches of the filter text in the drawer
+`dsn~filter-matches~1`
+
+While the field for the text of the filter in the drawer has a text, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Excluding in the filter panel
 `dsn~filter-exclusion~1`
 

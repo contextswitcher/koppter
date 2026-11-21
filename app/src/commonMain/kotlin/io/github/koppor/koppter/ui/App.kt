@@ -355,7 +355,22 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             onClose = onClose,
-            search = if (onClose != null) ({ searchField(Modifier.padding(bottom = 8.dp)) }) else null,
+            search = if (onClose != null) ({
+                searchField(Modifier.padding(bottom = 8.dp))
+                // [impl->dsn~filter-matches~1]
+                // The drawer covers the list, and the strip beside it that closes the drawer is narrow.
+                if (controller.filter.text.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                        val count = controller.visible.size
+                        Text(
+                            if (count == 1) "1 match" else "$count matches",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f).testTag("filter-matches"),
+                        )
+                        TextButton(onClick = onClose, modifier = Modifier.testTag("filter-show-results")) { Text("Go to results") }
+                    }
+                }
+            }) else null,
         )
     }
 
