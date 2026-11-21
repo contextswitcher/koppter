@@ -244,6 +244,7 @@ The column *Source* names the tool or document that defines each of them; those 
 | `started:2026-11-19T16:50` | The start of the clock of the task, while it runs | This application | *Start* beside a task of today in the agenda or in *Today*; *Stop* adds the time since then to `spent:` and removes the tag ([decision 0044](docs/decisions/0044-clock-of-a-task-as-a-tag-with-its-start.md)). |
 | `tt:30m` | The time that the way to the task takes, and the way back as well | This application | Field *Travel time* in the edit dialog, or typed into the task. [Planning](#travel-time) keeps that time free before and after the task ([decision 0023](docs/decisions/0023-tag-for-the-travel-time-of-a-task.md)). |
 | `map:Evenings` | The time map in which the task is planned | This application | Typed into the task. [Planning](#planning) takes it before the time map of the contexts of the task ([decision 0047](docs/decisions/0047-time-map-of-a-task-as-a-tag.md)). |
+| `stars:3` | The stars that a member of a family gets for completing the task | This application | Typed into the task. The [family view](#family-calendar) adds them up in its ranking; a task without the tag is worth one star ([decision 0052](docs/decisions/0052-tag-for-the-stars-of-a-task.md)). |
 | `id:1`, `p:1` | The task with `id:1` waits for the tasks with `p:1`, as topydo writes dependencies | [topydo](https://github.com/topydo/topydo/wiki/Dependencies) | Chosen in the edit dialog under *Waits for* and *Before*, or typed into the task. [Planning](#planning) gives the task its times after those it waits for ([decision 0020](docs/decisions/0020-dependencies-with-the-tags-of-topydo.md)). |
 | `cs:jabref/fix-npe` | The task of [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) that holds the working context | This application | Entered in the field *ContextSwitcher task* of the edit dialog or typed into the task, as the id or as the link that *Copy link* of ContextSwitcher gives, which becomes the tag. A click on the label switches to the task in ContextSwitcher, on a computer where it has registered its links ([decision 0016](docs/decisions/0016-tag-for-the-task-of-contextswitcher.md)). |
 | `ol:AAAAAKGyw9Q` | An item of the To-Do list of the classic Outlook: a flagged mail or a task | This application | Written when an [item of Outlook](#tasks-of-outlook) gets a context, a project or another change. A click on the label *Outlook* opens the item in Outlook ([decision 0040](docs/decisions/0040-tag-for-an-item-of-outlook-with-its-entryid-in-base64.md)). |
@@ -701,6 +702,25 @@ Do not enter the published address of the same calendar under *Calendars with bu
   A task is not coupled to an event either.
 * Reading calendars and the import of `calendar.ics` have been tried with files written for the tests, not with the calendars of Outlook or Google.
 
+## Family calendar
+
+A family uses koppter together, such as on a tablet in the hallway: the view *Family* shows the day of each member in a column of its own.
+
+![Family view with a column per member, the tasks of the day above a calendar](docs/screenshots/family.png)
+
+* A member is a list.
+  The repository of the family has a directory per member with a `todo.txt` file, such as `Anna/todo.txt` and `Ben/todo.txt` next to its own `todo.txt`; koppter reads each of them as a list and shows its tasks with the context `@Anna` or `@Ben` ([decision 0051](docs/decisions/0051-lists-of-members-as-directories-of-one-repository.md)).
+  A repository named as a shared list in the settings is a member as well.
+* The view is there once the file has such lists; a directory that is added shows after the next start.
+* A column lists the tasks of its member for the day: those due on it, and today also the overdue ones and those without a due date.
+  Ticking a task off gives the member its stars: one, or the number of the tag `stars:`, as in `Mow the lawn stars:3` ([decision 0052](docs/decisions/0052-tag-for-the-stars-of-a-task.md)).
+* Above the columns stands the ranking: the place and the stars of each member for the day, the week, the month, the quarter or the year.
+  The stars are counted from the completed tasks, which have to stay in the file for that time.
+* Below the tasks, the day is a calendar.
+  A task with a time, such as `Football due:2026-11-21 at:17:00 dur:90m`, stands at its time, and so do the blocks of the `calendar.txt` in the directory of the member, such as `2026-11-21 w47 Sat  08:00-13:00 School`.
+* The button *+* beside a name adds a task of that member, and the arrows show the days before and after.
+* The filter does not apply to this view.
+
 ## Keyboard
 
 | Keys | Effect |
@@ -710,7 +730,7 @@ Do not enter the published address of the same calendar under *Calendars with bu
 | Esc | Close a dialog; if it holds changes, it asks first and offers to return to it |
 | Ctrl+E | Search all tasks: reset the filters, show the list with completed tasks and those before their start date, go to the text of the filter |
 | Ctrl+F, Ctrl+Shift+F | Go to the text of the filter and keep the other filters |
-| Ctrl+1 to Ctrl+7 | Today, list, agenda, week, board, inbox, overview |
+| Ctrl+1 to Ctrl+8 | Today, list, agenda, week, board, inbox, overview, family |
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
 

@@ -57,6 +57,8 @@ data class Settings(
     val latexEditor: String = "",
     /** Whether the projects and contexts of the filter are sent to ContextSwitcher, on the desktop; see [io.github.koppor.koppter.todotxt.SyncSelection]. */
     val contextSwitcherSync: Boolean = false,
+    /** The name of the period of the ranking of the family view. */
+    val rankingPeriod: String = "WEEK",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -81,6 +83,7 @@ data class Settings(
         OUTLOOK_WEEKS to outlookWeeks.toString(),
         LATEX_EDITOR to latexEditor,
         CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
+        RANKING_PERIOD to rankingPeriod,
     )
 
     companion object {
@@ -105,6 +108,7 @@ data class Settings(
         private const val OUTLOOK_WEEKS = "outlookWeeks"
         private const val LATEX_EDITOR = "latexEditor"
         private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
+        private const val RANKING_PERIOD = "rankingPeriod"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -129,6 +133,7 @@ data class Settings(
             outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
             latexEditor = properties[LATEX_EDITOR].orEmpty(),
             contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),
+            rankingPeriod = properties[RANKING_PERIOD] ?: Settings().rankingPeriod,
         )
     }
 }

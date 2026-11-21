@@ -19,6 +19,8 @@ import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.storage.TodoStorage
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
@@ -125,8 +127,53 @@ class ScreenshotTest {
         override suspend fun check(url: String) = Unit
     }
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null) {
-        val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 })
+    /** A list of a member of a family, with what its `calendar.txt` says of the day. */
+    private class Member(private val text: String, private val calendar: String) : TodoStorage, CompanionFiles {
+        override fun read() = text.trimIndent() + "\n"
+        override fun write(text: String, change: String) = Unit
+        override fun version(): Any? = null
+        override fun readCompanion(path: String) = "2026-11-12 w46 Thu  $calendar\n".takeIf { path == "calendar.txt" }
+        override fun writeCompanion(path: String, text: String) = Unit
+        override fun readCompanionBytes(path: String): ByteArray? = null
+        override fun writeCompanionBytes(path: String, bytes: ByteArray) = Unit
+        override fun deleteCompanion(path: String) = Unit
+    }
+
+    private val family = listOf(
+        "Anna" to Member(
+            """
+            Feed the cat due:2026-11-12 rec:1d
+            Tidy the room stars:2 due:2026-11-11
+            Practice the piano stars:2
+            Choir due:2026-11-12 at:18:30 dur:90m
+            x 2026-11-12 Empty the dishwasher
+            x 2026-11-10 Do the homework stars:2
+            """,
+            "08:00-13:00 School",
+        ),
+        "Ben" to Member(
+            """
+            Take out the trash due:2026-11-12
+            Mow the lawn stars:3
+            Football due:2026-11-12 at:16:00 dur:2h
+            x 2026-11-11 Wash the car stars:5
+            x 2026-11-12 Water the plants
+            """,
+            "08:00-15:00 Absent",
+        ),
+        "Carl" to Member(
+            """
+            Buy the groceries stars:2 due:2026-11-12
+            Parents' evening due:2026-11-12 at:19:30 dur:1h
+            x 2026-11-09 Repair the bike stars:3
+            """,
+            "09:00-17:00 Absent",
+        ),
+    )
+
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false) {
+        val shown = if (members) SharedLists(storage, family) else storage
+        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 })
         setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen) }
     }
 
@@ -266,8 +313,8 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
-            start(homeScreen = homeScreen)
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start(homeScreen = homeScreen, members = members)
             open()
             save("review/$size-$name.png")
         }
@@ -280,6 +327,8 @@ class ScreenshotTest {
             // The description, in the last line of the card: on a phone, the middle of this card is a label that opens a link.
             onNodeWithText("Prepare the slides for the team meeting").performTouchInput { click(Offset(width * 0.3f, height - 12f)) }
         }
+        // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
+        screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
         // The tab that Android alone has.

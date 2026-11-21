@@ -224,13 +224,14 @@ internal const val NO_GROUPS = "no groups: by priority, then due date"
  */
 val LocalKeyboard = staticCompositionLocalOf { true }
 
-private data class Editing(val entry: Entry?)
+/** The task whose dialog is open; without one, a new task, which starts with the [context] if there is one. */
+private data class Editing(val entry: Entry?, val context: String? = null)
 
 /** The longer side of an image of a note in pixels: enough to read a photographed page, and a file of some hundred kilobytes for the repository. */
 const val NOTE_IMAGE_SIZE = 1600
 
 /** Ctrl with the n-th of these keys shows the n-th view. */
-private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven)
+private val VIEW_KEYS = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight)
 
 // [impl->dsn~main-screen~1]
 @OptIn(ExperimentalMaterial3Api::class)
@@ -303,7 +304,7 @@ private fun MainScreen(
             !event.isShiftPressed && event.key == Key.E -> search(all = true)
             // The key of browsers and editors for their search; with Shift, it is the key of SkedPal.
             event.key == Key.F -> search(all = false)
-            !event.isShiftPressed && view >= 0 -> controller.view = View.entries[view]
+            !event.isShiftPressed && view >= 0 -> View.entries[view].takeIf { it in controller.views }?.let { controller.view = it }
             !event.isShiftPressed -> return false
             // The keys of SkedPal for a new task and for its outline, today list, calendar and plan.
             event.key == Key.A -> editing = Editing(null)
@@ -435,7 +436,9 @@ private fun MainScreen(
                     )
                 },
                 floatingActionButton = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // [impl->dsn~family-view~1]
+                    // The family view has a button for a new task per member and nothing to search; buttons that float would cover its calendar.
+                    if (controller.view != View.FAMILY) Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (!wideNow) {
                             SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
                                 Icon(Icons.Default.Search, contentDescription = "Search")
@@ -449,7 +452,10 @@ private fun MainScreen(
                 snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
                 Row(Modifier.padding(padding).fillMaxSize()) {
-                    if (wideNow) {
+                    // [impl->dsn~family-view~1]
+                    // The family view shows the day of everybody, which no filter narrows, and its columns take the width.
+                    val filtered = controller.view != View.FAMILY
+                    if (wideNow && filtered) {
                         filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
                         VerticalDivider()
                     }
@@ -480,7 +486,7 @@ private fun MainScreen(
                         controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
                         ViewOptions(controller)
                         // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
-                        if (wideNow) searchField(Modifier.padding(8.dp))
+                        if (wideNow && filtered) searchField(Modifier.padding(8.dp))
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                         val open: (Entry) -> Unit = { editing = Editing(it) }
                         if (controller.view == View.OVERVIEW) {
@@ -499,6 +505,12 @@ private fun MainScreen(
                             )
                         } else if (controller.view == View.WEEK) {
                             Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
+                        } else if (controller.view == View.FAMILY) {
+                            FamilyCalendar(
+                                controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
+                                controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
+                                onAdd = { editing = Editing(null, context = it) },
+                            )
                         } else if (controller.view == View.INBOX) {
                             Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
                         } else if (controller.board) {
@@ -522,9 +534,10 @@ private fun MainScreen(
         }
     }
 
-    editing?.let { (entry) ->
+    editing?.let { (entry, context) ->
         EditDialog(
-            original = entry?.task ?: remember { controller.newTask() },
+            // [impl->dsn~family-view~1]
+            original = entry?.task ?: remember { controller.newTask().let { task -> if (context == null) task else task.edit(contexts = task.contexts + context) } },
             isNew = entry == null,
             dates = remember(entry) { entry?.let { controller.datesOf(it.task) } },
             originalNote = remember(entry) { controller.noteOf(entry?.task ?: Task(body = "")) },
@@ -554,7 +567,8 @@ private fun MainScreen(
                 editing = null
             },
             onDismiss = { editing = null },
-            draft = draft.takeIf { entry == null },
+            // A new task of a member starts with the context of the member, not with what was entered for another task.
+            draft = draft.takeIf { entry == null && context == null },
             onDraft = { draft = it },
         )
     }
@@ -638,7 +652,7 @@ private fun ViewOptions(controller: TodoController) {
     Column(Modifier.padding(horizontal = 8.dp)) {
         // Each row is one line that scrolls sideways: in a narrow window, wrapped rows would take the place of the tasks.
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (view in View.entries) {
+            for (view in controller.views) {
                 FilterChip(
                     selected = controller.view == view,
                     onClick = { controller.view = view },

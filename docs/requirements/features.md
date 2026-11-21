@@ -49,6 +49,13 @@ Lists of tasks that the user shares with other people, such as those of a househ
 
 Needs: req
 
+## Family calendar
+`feat~family~1`
+
+A family uses the application together, such as on a tablet in the hallway: it shows the day of each member side by side, with the tasks and the appointments, and the members collect stars for the tasks that they complete.
+
+Needs: req
+
 ## Synchronization through a local folder
 `feat~sync-local-folder~1`
 

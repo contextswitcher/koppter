@@ -889,7 +889,7 @@ Needs: impl
 `dsn~keyboard-shortcuts~1`
 
 The main screen is focusable and takes the focus whenever none of its elements has it and no dialog is open, so that keys always reach it; it handles the keys before its elements do.
-With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 7 show the views in the order of their switches: today, list, agenda, week, board, inbox and overview.
+With Ctrl, or the command key: N opens the dialog for a new task, E searches as this key does in OneNote, F gives the focus to the text of the filter as this key searches in browsers and editors, and 1 to 8 show the views in the order of their switches: today, list, agenda, week, board, inbox, overview and, where there is one, the family view.
 The search shows the list with every task, the completed ones and those before their start date included: it resets the filter with its option for the first tasks and gives the focus to the text of the filter.
 Where that field lies in the drawer, the drawer opens first.
 With Ctrl and Shift: A opens the dialog for a new task, F gives the focus to the text of the filter, L opens the plan dialog, and O, Y and C show the list, the agenda and the week, as these keys do in SkedPal.

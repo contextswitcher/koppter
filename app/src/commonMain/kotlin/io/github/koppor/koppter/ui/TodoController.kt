@@ -19,6 +19,8 @@ import kotlinx.datetime.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.Family
+import io.github.koppor.koppter.plan.RankingPeriod
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.plan.PlanState
 import io.github.koppor.koppter.plan.Planned
@@ -29,6 +31,7 @@ import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.storage.NOTES_DIRECTORY
 import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
@@ -85,7 +88,7 @@ import kotlin.time.Duration.Companion.minutes
 /** What the main screen shows of the tasks. */
 // From the views that show what is up to those that change the tasks.
 // Today and the list come first, as they show what to do next; the overview, which tells how things stand, comes last.
-enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview") }
+enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview"), FAMILY("Family") }
 
 /** The link that opens the dialog for a new task, in the forms that programs make of it. */
 /**
@@ -196,8 +199,31 @@ class TodoController(
      */
     // [impl->dsn~view-remembered~1]
     var view: View
-        get() = View.entries.firstOrNull { it.name == settings.view } ?: View.LIST
+        get() = views.firstOrNull { it.name == settings.view } ?: View.LIST
         set(value) = updateSettings(settings.copy(view = value.name))
+
+    /** The views that there are switches for: the family view only where the tasks have members. */
+    // [impl->dsn~family-view~1]
+    val views: List<View> get() = View.entries.filter { it != View.FAMILY || members.isNotEmpty() }
+
+    /**
+     * The members of the family, each the context of a list, in the order of the lists; none without lists.
+     * A task belongs to the member whose context it has.
+     */
+    // [impl->dsn~family-day~1]
+    var members by mutableStateOf(emptyList<String>())
+        private set
+
+    private var memberBlocks by mutableStateOf(emptyMap<String, List<TextBlock>>())
+
+    /** The blocks of the `calendar.txt` of the list of a member, such as the times at which the member is absent. */
+    fun blocksOf(member: String): List<TextBlock> = memberBlocks[member].orEmpty()
+
+    /** The period of the ranking of the family view, which the settings keep. */
+    // [impl->dsn~family-view~1]
+    var rankingPeriod: RankingPeriod
+        get() = RankingPeriod.entries.firstOrNull { it.name == settings.rankingPeriod } ?: RankingPeriod.WEEK
+        set(value) = updateSettings(settings.copy(rankingPeriod = value.name))
 
     val board: Boolean get() = view == View.BOARD
 
@@ -540,6 +566,16 @@ class TodoController(
             (storage as? CompanionFiles)?.readCompanion(CalendarTxt.NAME)?.let(CalendarTxt::blocks)
         } catch (_: Exception) {
             planBlocks
+        }
+        // [impl->dsn~family-day~1]
+        val lists = storage as? SharedLists
+        members = lists?.names.orEmpty()
+        memberBlocks = members.associateWith { member ->
+            try {
+                lists?.readCompanionOf(member, CalendarTxt.NAME)?.let(CalendarTxt::blocks).orEmpty()
+            } catch (_: Exception) {
+                blocksOf(member)
+            }
         }
     }
 
@@ -937,7 +973,9 @@ class TodoController(
             // [impl->dsn~time-tracking~1]
             // A task that is completed while its clock runs gets the time of the clock.
             val task = if (entry.task.started != null) stopped(entry.task) else entry.task
-            var new = file.replace(index, task.complete(today(), settings.writeDates))
+            // [impl->dsn~stars~1]
+            // The ranking needs the day on which a member completed a task.
+            var new = file.replace(index, task.complete(today(), settings.writeDates || Family.memberOf(task, members) != null))
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
             write(new, "Complete task: ${entry.task.description}")

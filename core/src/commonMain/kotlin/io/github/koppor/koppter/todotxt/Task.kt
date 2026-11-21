@@ -116,6 +116,10 @@ data class Task(
     /** This task with its clock stopped at [now] and the time since its start added to the time spent. */
     fun stop(now: LocalDateTime): Task = withSpent(runningFor(now)).withTag(STARTED, null)
 
+    /** The stars that completing the task is worth to the member of a family who does it: one, unless the tag says otherwise. */
+    // [impl->dsn~stars~1]
+    val stars: Int get() = tag(STARS)?.toIntOrNull()?.takeIf { it >= 0 } ?: 1
+
     /** The minutes of the day at which the task takes place, for a task with a fixed time. */
     // [impl->dsn~fixed-time~1]
     val at: Int? get() = tag(AT)?.let(::parseTime)
@@ -264,6 +268,7 @@ data class Task(
         const val MAP = "map"
         const val SPENT = "spent"
         const val STARTED = "started"
+        const val STARS = "stars"
 
         /** As topydo writes dependencies: a task with [ID] waits for the tasks whose [PARENT] has the same value. */
         const val ID = "id"

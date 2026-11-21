@@ -10,6 +10,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/outlook/OutlookCalendar.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/BusyTimes.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/CalendarTxt.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Family.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Holidays.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Ics.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Planner.kt

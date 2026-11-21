@@ -12,6 +12,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - Each stopped clock of a task adds the time to `timelog.txt` next to todo.txt, such as `2026-11-21 16:50-17:20 Write the report +Work`. *Away*, in the bar of the clock or at the top of *Today*, stops the clock and logs the time away until *Back* or the start of a task.
 - On a narrow screen, the filter shows the number of tasks that match its text, and a button *Go to results* closes it.
 - On Android, *Offer koppter as the home screen of this device* in the tab *Device* of the settings lets the user choose koppter as the home app, so that a device such as a tablet starts into koppter.
+- The view *Family* shows a day with a column per member of a family, each a list: the tasks of the day to tick off, and below them a calendar with the tasks that have a time and with the blocks of the `calendar.txt` of the list. The view is there once the file has such lists.
+- Completing a task gives its member stars: one, or the number of the tag `stars:`, as in `Mow the lawn stars:3`. The family view shows the place and the stars of each member for the day, the week, the month, the quarter or the year.
 - A directory next to a todo.txt file that has a todo.txt file of its own is a list as well, shown with the context named after the directory, such as `@anna` for `anna/todo.txt`. The members of a family keep their lists in one repository that way, which a device clones once.
 
 ### Changed

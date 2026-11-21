@@ -60,6 +60,7 @@ import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.storage.SharedLists
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
@@ -3334,5 +3335,68 @@ class AppTest {
         assertEquals(listOf("(B) Schedule pickup +GarageSale @phone p:1", "Post signs +GarageSale id:1"), storage.text.lines().take(2))
         openTask("Post signs")
         onNodeWithTag("edit-waits-0").assertExists()
+    }
+
+    // [utest->dsn~family-view~1]
+    // [utest->dsn~family-day~1]
+    // [utest->dsn~stars~1]
+    @Test
+    fun theFamilyViewShowsTheDayOfEachMemberAndGivesStarsForCompletedTasks() = runComposeUiTest {
+        val anna = MemoryStorage("Feed the cat\nMow the lawn stars:3\nChoir due:2026-11-12 at:19:00 dur:1h\nPack the bag due:2026-11-13\n")
+            .apply { companions["calendar.txt"] = "2026-11-12 w46 Thu  08:00-13:00 Absent\n" }
+        // Completed on the Tuesday of the week of today.
+        val ben = MemoryStorage("x 2026-11-10 Wash the car stars:2\n")
+        val lists = SharedLists(storage, listOf("anna" to anna, "ben" to ben))
+        val controller = TodoController(Settings(), { lists }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("family-switch").performClick()
+
+        onNodeWithTag("family-day").assertTextEquals("Today, Thu 2026-11-12")
+        onNodeWithTag("family-rank-ben").assertTextEquals("1. ben 2")
+        onNodeWithTag("family-rank-anna").assertTextEquals("2. anna 0")
+        // The calendar of the list and the task with a time, which is no task to tick off.
+        onNodeWithText("08:00-13:00 Absent").assertExists()
+        onNodeWithText("19:00-20:00 Choir").assertExists()
+        // The floating button for a new task would cover the calendar; each member has a button.
+        onNodeWithTag("new-task").assertDoesNotExist()
+        onAllNodesWithTag("family-task").assertCountEquals(2)
+        onNodeWithText("Pack the bag").assertDoesNotExist()
+
+        // Completing a task writes its day, which the ranking needs, also where the settings write no dates.
+        onAllNodesWithTag("family-toggle")[1].performClick()
+        assertEquals("x 2026-11-12 Mow the lawn stars:3", anna.text.lines()[1])
+        onNodeWithTag("family-rank-anna").assertTextEquals("1. anna 3")
+        onNodeWithTag("family-rank-ben").assertTextEquals("2. ben 2")
+        onNodeWithTag("ranking-day").performClick()
+        onNodeWithTag("family-rank-ben").assertTextEquals("2. ben 0")
+        assertEquals("DAY", controller.settings.rankingPeriod)
+        // Reopened, the task gives no star.
+        onAllNodesWithTag("family-toggle")[1].performClick()
+        assertEquals("Mow the lawn stars:3", anna.text.lines()[1])
+        onNodeWithTag("family-rank-anna").assertTextEquals("1. anna 0")
+
+        onNodeWithTag("family-next").performClick()
+        onNodeWithTag("family-day").assertTextEquals("Fri 2026-11-13")
+        onNodeWithText("Pack the bag").assertExists()
+        onNodeWithText("Feed the cat").assertDoesNotExist()
+        onNodeWithText("19:00-20:00 Choir").assertDoesNotExist()
+        onNodeWithTag("family-today").performClick()
+        onNodeWithText("Feed the cat").assertExists()
+
+        // A new task of a member goes to the list of the member.
+        onNodeWithTag("family-add-ben").performClick()
+        onNodeWithTag("edit-description").performTextInput("Do the homework")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("Do the homework", ben.text.lines()[1])
+        onNodeWithText("Do the homework").assertExists()
+    }
+
+    // [utest->dsn~family-view~1]
+    @Test
+    fun withoutMembersThereIsNoFamilyView() = runComposeUiTest {
+        start(Settings(view = "FAMILY"))
+        onNodeWithTag("family-switch").assertDoesNotExist()
+        onNodeWithTag("family").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(3)
     }
 }

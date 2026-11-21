@@ -192,7 +192,7 @@ fun Agenda(
 private val MIN_CALENDAR_WIDTH = 260.dp
 
 /** A block of half an hour still shows the start of its text; a whole day fits on a phone that is held upright. */
-private val MIN_HOUR_HEIGHT = 20.dp
+internal val MIN_HOUR_HEIGHT = 20.dp
 
 /**
  * The appointments of Outlook that the calendar views show next to the blocks of the plan, and what the user does with one.
@@ -353,7 +353,7 @@ fun AwayBar(since: kotlinx.datetime.LocalDateTime, now: kotlinx.datetime.LocalDa
 
 /** The blocks of one day at their times, the hours from [firstHour] to [lastHour] running down; [nowMinute] draws a line at that time. */
 @Composable
-private fun DayColumn(
+internal fun DayColumn(
     blocks: List<TextBlock>,
     firstHour: Int,
     lastHour: Int,
@@ -365,6 +365,8 @@ private fun DayColumn(
     nowMinute: Int? = null,
     appointments: CalendarAppointments? = null,
     day: LocalDate? = null,
+    /** Whether a block names its end as well, where the grid is too coarse to read it from. */
+    ends: Boolean = false,
 ) {
     val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
     fun overlaps(a: Span, b: Span) = a.start < b.end && b.start < a.end
@@ -401,7 +403,7 @@ private fun DayColumn(
                     .testTag("week-block"),
             ) {
                 Text(
-                    "${CalendarTxt.timesText(block.span).substringBefore('-')} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
+                    "${CalendarTxt.timesText(block.span).let { if (ends) it else it.substringBefore('-') }} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
                     style = MaterialTheme.typography.labelSmall,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),

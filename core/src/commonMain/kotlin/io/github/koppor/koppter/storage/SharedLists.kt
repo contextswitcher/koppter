@@ -43,6 +43,13 @@ class SharedLists(main: TodoStorage, lists: List<Pair<String, TodoStorage>>) : S
 
     private fun files(i: Int) = sources[i].second as? CompanionFiles
 
+    /** The names of the lists, which are their contexts, in their order. */
+    val names: List<String> get() = sources.drop(1).map { it.first }
+
+    /** A file next to the todo.txt file of a list, such as its `calendar.txt`; `null` if the list has none or cannot be read. */
+    // [impl->dsn~family-day~1]
+    fun readCompanionOf(list: String, path: String): String? = sources.indexOfFirst { it.first == list }.takeIf { it > 0 }?.let { readable(it)?.readCompanion(path) }
+
     // ponytail: the statuses arrive from the threads of the storages unsynchronized; a lost update shows a stale state until the next one.
     private val statuses = MutableList(sources.size) { SyncStatus(SyncState.IDLE) }
 

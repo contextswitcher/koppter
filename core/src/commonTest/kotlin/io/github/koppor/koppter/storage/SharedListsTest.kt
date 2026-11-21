@@ -50,6 +50,19 @@ class SharedListsTest {
     private val household = Memory("Buy milk\r\nClean @kitchen\r\n")
     private val lists = SharedLists(main, listOf("household" to household))
 
+    // [utest->dsn~family-day~1]
+    @Test
+    fun aFileNextToAListIsReadByTheNameOfTheList() {
+        household.files["calendar.txt"] = "2026-11-21 w47 Sat  08:00-12:00 Absent\n"
+        main.files["calendar.txt"] = "2026-11-21 w47 Sat  09:00-10:00 Call Mom\n"
+        assertEquals(listOf("household"), lists.names)
+        assertEquals("2026-11-21 w47 Sat  08:00-12:00 Absent\n", lists.readCompanionOf("household", "calendar.txt"))
+        assertNull(lists.readCompanionOf("household", "timelog.txt"))
+        assertNull(lists.readCompanionOf("elsewhere", "calendar.txt"))
+        // The main file is no list.
+        assertNull(lists.readCompanionOf("", "calendar.txt"))
+    }
+
     @Test
     fun theTasksOfASharedListAreShownWithItsContext() {
         assertEquals("Call Mom @phone\nBuy milk @household\nClean @kitchen @household\n", lists.read())

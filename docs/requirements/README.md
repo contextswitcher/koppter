@@ -13,6 +13,7 @@ Requirements are traced with [OpenFastTrace](https://github.com/itsallcode/openf
 | [planning.md](planning.md) | Time maps, barriers, planner, calendar.txt (`req`, `dsn`) |
 | [extensions.md](extensions.md) | Recurrence, top tasks, most important tasks, notes, scheduled tasks, board (`req`, `dsn`) |
 | [android.md](android.md) | Android application (`req`, `dsn`) |
+| [family.md](family.md) | Day of the members of a family, stars and ranking (`req`, `dsn`) |
 
 Chain: `feat` → `req` (what the user needs) → `dsn` (how it is built) → `impl` and `utest` tags in the source code.
 
