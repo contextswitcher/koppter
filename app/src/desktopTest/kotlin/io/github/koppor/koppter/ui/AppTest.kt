@@ -1965,6 +1965,48 @@ class AppTest {
         onNodeWithTag("inbox-switch").assertTextEquals("Inbox (1)")
     }
 
+    // [utest->dsn~new-task-draft~1]
+    @Test
+    fun cancelKeepsANewTaskAsDraft() = runComposeUiTest {
+        start()
+        fun esc() = onNodeWithTag("edit-description").performKeyInput { pressKey(Key.Escape) }
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Order chalk")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // The task that is edited in between starts with its own text and leaves the draft alone.
+        openTask("Post signs")
+        onNodeWithTag("edit-description").assertTextContains("Post signs")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task (draft)")
+        onNodeWithTag("edit-description").assertTextContains("Order chalk")
+
+        // Discarding is the way to get rid of the draft.
+        esc()
+        onNodeWithTag("discard-confirm").performClick()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+        // Nothing entered is no draft: the dialog closes without the question.
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("new-task").performClick()
+        esc()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // A saved draft is gone as well.
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-description").performTextInput("Order chalk")
+        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals(true, "Order chalk" in storage.text)
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-heading").assertTextEquals("New task")
+    }
+
     // [utest->dsn~unsaved-changes~1]
     @Test
     fun escAsksBeforeChangesAreLost() = runComposeUiTest {
@@ -2525,6 +2567,21 @@ class AppTest {
         // An existing task is read first: the keyboard of the screen would hide half of it.
         openTask("Post signs")
         onNodeWithTag("edit-description").assertIsNotFocused()
+    }
+
+    // [utest->dsn~filter-matches~1]
+    @Test
+    fun theDrawerCountsTheMatchesOfTheTextAndGoesToThem() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-matches").assertDoesNotExist()
+        onNodeWithTag("filter-text").performTextInput("garage")
+        onNodeWithTag("filter-matches").assertTextEquals("2 matches")
+        onNodeWithTag("filter-show-results").performClick()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+        onNodeWithText("Post signs").assertIsDisplayed()
     }
 
     // [utest->dsn~back~1]

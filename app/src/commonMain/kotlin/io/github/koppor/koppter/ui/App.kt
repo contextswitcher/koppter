@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -248,6 +247,7 @@ private fun MainScreen(
     leave: () -> Unit,
 ) {
     var editing by remember { mutableStateOf<Editing?>(null) }
+    var draft by remember { mutableStateOf<Draft?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
     var planning by remember { mutableStateOf<PlanSettings?>(null) }
@@ -354,7 +354,22 @@ private fun MainScreen(
             onNextOnly = { controller.nextOnly = it },
             modifier = modifier,
             onClose = onClose,
-            search = if (onClose != null) ({ searchField(Modifier.padding(bottom = 8.dp)) }) else null,
+            search = if (onClose != null) ({
+                searchField(Modifier.padding(bottom = 8.dp))
+                // [impl->dsn~filter-matches~1]
+                // The drawer covers the list, and the strip beside it that closes the drawer is narrow.
+                if (controller.filter.text.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                        val count = controller.visible.size
+                        Text(
+                            if (count == 1) "1 match" else "$count matches",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f).testTag("filter-matches"),
+                        )
+                        TextButton(onClick = onClose, modifier = Modifier.testTag("filter-show-results")) { Text("Go to results") }
+                    }
+                }
+            }) else null,
         )
     }
 
@@ -419,7 +434,7 @@ private fun MainScreen(
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
                         }
-                        FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
+                        SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
                             Icon(Icons.Default.Add, contentDescription = "New task")
                         }
                     }
@@ -514,7 +529,12 @@ private fun MainScreen(
             imageOf = controller::imageOf,
             others = remember(entry, controller.file) { controller.file.entries.filter { it != entry } },
             onSave = { task, note, images, changed ->
-                if (entry == null) controller.add(task, note, images, changed) else controller.replace(entry, task, note, images, changed)
+                if (entry == null) {
+                    controller.add(task, note, images, changed)
+                    draft = null
+                } else {
+                    controller.replace(entry, task, note, images, changed)
+                }
                 editing = null
             },
             onDelete = {
@@ -522,6 +542,8 @@ private fun MainScreen(
                 editing = null
             },
             onDismiss = { editing = null },
+            draft = draft.takeIf { entry == null },
+            onDraft = { draft = it },
         )
     }
     planning?.let {

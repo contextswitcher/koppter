@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [Unreleased]
+
+### Added
+
+- On a narrow screen, the filter shows the number of tasks that match its text, and a button *Go to results* closes it.
+
+### Changed
+
+- *Cancel* in the dialog of a new task keeps what was entered as a draft, with which the next new task starts; *Discard*, after Esc or the back button, removes it.
+- The button for a new task has the size of the search button next to it.
+
 ## [2026-11-20] - 2026-11-20
 
 ### Added
@@ -307,6 +318,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-20...HEAD
 [2026-11-20]: https://github.com/contextswitcher/koppter/compare/v2026-11-19...v2026-11-20
 [2026-11-19]: https://github.com/contextswitcher/koppter/compare/v2026-11-18...v2026-11-19
 [2026-11-18]: https://github.com/contextswitcher/koppter/compare/v2026-11-17...v2026-11-18

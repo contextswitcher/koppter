@@ -227,6 +227,17 @@ Covers:
 
 Needs: dsn
 
+### Draft of a new task
+`req~new-task-draft~1`
+
+What was entered for a new task is not lost when the dialog is canceled: the next new task starts with it, until it is saved or discarded.
+
+Covers:
+
+* `feat~task-editing~1`
+
+Needs: dsn
+
 ### Color themes
 `req~color-themes~1`
 
@@ -773,6 +784,17 @@ Covers:
 
 Needs: impl, utest
 
+### Matches of the filter text in the drawer
+`dsn~filter-matches~1`
+
+While the field for the text of the filter in the drawer has a text, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
 ### Excluding in the filter panel
 `dsn~filter-exclusion~1`
 
@@ -850,7 +872,7 @@ Needs: impl, utest
 ### Main screen
 `dsn~main-screen~1`
 
-The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button to its left instead of the field.
+The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button of the same size to its left instead of the field.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
@@ -893,6 +915,20 @@ The buttons of a dialog that close it without saving do so without the question.
 Covers:
 
 * `req~unsaved-changes~1`
+
+Needs: impl, utest
+
+### Draft of a new task
+`dsn~new-task-draft~1`
+
+*Cancel* in the dialog of a new task hands what differs from an empty new task to `App` as a `Draft`: the task, the note and the images added to it.
+The dialog of the next new task starts with the draft and says so in its heading.
+*Save* removes the draft, and so does *Discard*: with a draft, the dialog asks on Esc, on a click beside it and on the back button even if nothing was typed since.
+The draft holds no dependencies, as the other tasks may change while it waits, and it lasts as long as the application runs.
+
+Covers:
+
+* `req~new-task-draft~1`
 
 Needs: impl, utest
 

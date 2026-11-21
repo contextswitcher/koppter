@@ -126,6 +126,9 @@ import kotlin.time.Duration.Companion.minutes
  * The first field holds the description only; the metadata has its own fields below it.
  * Below the fields, the dialog shows the todo.txt line that *Save* writes.
  */
+/** What *Cancel* keeps of a new task: the task without its dependencies, the note and the images added to it. */
+data class Draft(val task: Task, val note: String, val images: Map<String, ByteArray>)
+
 // [impl->dsn~edit-dialog~1]
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -158,10 +161,14 @@ fun EditDialog(
     takePhoto: (suspend () -> List<ByteArray>)? = null,
     /** The image of a note that the storage has, by its file name. */
     imageOf: (String) -> ByteArray? = { null },
+    /** What the dialog of a new task starts with instead of [original]. */
+    draft: Draft? = null,
+    /** Called when the dialog of a new task closes without saving: with what *Cancel* keeps, with `null` when it is discarded. */
+    onDraft: (Draft?) -> Unit = {},
 ) {
     // The task as the line was last typed; the fields start anew from it.
     // [impl->dsn~edit-line~1]
-    var base by remember { mutableStateOf(original) }
+    var base by remember { mutableStateOf(draft?.task ?: original) }
     /** The line while it is typed: what was typed stays, where the fields would write it in another form. */
     var line by remember { mutableStateOf<String?>(null) }
     // With the cursor at the end, where the user goes on typing.
@@ -182,9 +189,9 @@ fun EditDialog(
     var hashtags by remember(base) { mutableStateOf(base.hashtags) }
     var waits by remember(base) { mutableStateOf(waitsFor(base, others).map { it.index }.toSet()) }
     var before by remember(base) { mutableStateOf(waitingFor(base, others).map { it.index }.toSet()) }
-    var note by remember { mutableStateOf(TextFieldValue(originalNote.orEmpty())) }
+    var note by remember { mutableStateOf(TextFieldValue(draft?.note ?: originalNote.orEmpty())) }
     /** The images that were added in this dialog, which are written when the task is saved. */
-    var images by remember { mutableStateOf(mapOf<String, ByteArray>()) }
+    var images by remember { mutableStateOf(draft?.images ?: mapOf()) }
     var imageMessage by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     val noteFocus = remember { FocusRequester() }
@@ -256,7 +263,9 @@ fun EditDialog(
     // [impl->dsn~edit-resize~1]
     var shownWidth by remember { mutableStateOf(width.dp) }
     val density = LocalDensity.current
-    GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
+    // [impl->dsn~new-task-draft~1]
+    // A draft counts as a change, so that the question is the way to discard it.
+    GuardedDialog(changed = state != initial || draft != null, onDismiss = { if (isNew) onDraft(null); onDismiss() }) {
         Surface(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 6.dp,
@@ -274,7 +283,7 @@ fun EditDialog(
                     Modifier.verticalScroll(rememberScrollState()).padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(if (isNew) "New task" else "Edit task", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("edit-heading"))
+                    Text(if (draft != null) "New task (draft)" else if (isNew) "New task" else "Edit task", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("edit-heading"))
                     OutlinedTextField(
                         value = description,
                         onValueChange = { description = it.copy(text = it.text.replace('\n', ' ')) },
@@ -443,7 +452,14 @@ fun EditDialog(
                             TextButton(onClick = onDelete, modifier = Modifier.testTag("edit-delete")) { Text("Delete") }
                         }
                         Spacer(Modifier.weight(1f))
-                        TextButton(onClick = onDismiss, modifier = Modifier.testTag("edit-cancel")) { Text("Cancel") }
+                        TextButton(
+                            onClick = {
+                                // [impl->dsn~new-task-draft~1]
+                                if (isNew) onDraft(Draft(dated, note.text, images).takeIf { dated != original || note.text.isNotBlank() })
+                                onDismiss()
+                            },
+                            modifier = Modifier.testTag("edit-cancel"),
+                        ) { Text("Cancel") }
                         Button(onClick = { onSave(result, if (originalNote == null) null else note.text, images, changed) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                     }
                 }
