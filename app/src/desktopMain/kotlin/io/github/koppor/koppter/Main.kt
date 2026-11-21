@@ -121,11 +121,18 @@ private fun refitAfterDisplayChange(window: java.awt.Frame) {
     window.addPropertyChangeListener("graphicsConfiguration") { refit.restart() }
 }
 
-/** Lets Windows draw the title bar of [window] dark or light; other systems keep theirs. */
+/** Lets Windows and macOS draw the title bar of [window] dark or light; other systems keep theirs. */
 // [impl->dsn~title-bar-theme~1]
 private fun titleBarVariant(window: java.awt.Window, dark: Boolean) {
+    val os = System.getProperty("os.name")
+    if (os.startsWith("Mac")) {
+        // The JDK applies a change of this property of the root pane to the open window as well.
+        (window as? javax.swing.RootPaneContainer)?.rootPane
+            ?.putClientProperty("apple.awt.windowAppearance", if (dark) "NSAppearanceNameDarkAqua" else "NSAppearanceNameAqua")
+        return
+    }
     // The window is displayable once Compose draws into it, which is when this is called.
-    if (!System.getProperty("os.name").startsWith("Windows") || !window.isDisplayable) return
+    if (!os.startsWith("Windows") || !window.isDisplayable) return
     runCatching {
         // 20 is DWMWA_USE_IMMERSIVE_DARK_MODE, known to Windows 10 since 20H1; older versions return an error, which is ignored.
         com.sun.jna.Function.getFunction("dwmapi", "DwmSetWindowAttribute")
