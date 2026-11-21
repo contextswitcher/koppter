@@ -52,6 +52,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -251,8 +252,13 @@ fun Week(
 // [impl->dsn~time-tracking~1]
 @Composable
 private fun ClockButton(entry: Entry, running: Entry?, onClock: (Entry) -> Unit) {
-    TextButton(onClick = { onClock(entry) }, modifier = Modifier.testTag(if (entry == running) "clock-stop" else "clock-start")) {
-        Text(if (entry == running) "Stop" else "Start")
+    if (entry == running) {
+        // Stays a word: the running task is the exception in the list, and core Material icons have no stop symbol.
+        TextButton(onClick = { onClock(entry) }, modifier = Modifier.testTag("clock-stop")) { Text("Stop") }
+    } else {
+        IconButton(onClick = { onClock(entry) }, modifier = Modifier.testTag("clock-start")) {
+            Icon(Icons.Default.PlayArrow, contentDescription = "Start")
+        }
     }
 }
 

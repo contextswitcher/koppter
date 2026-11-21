@@ -667,7 +667,7 @@ Needs: impl, utest
 The tag `started:` holds the local date and minute of the start of the clock, such as `started:2026-11-19T16:50`; `Task.started` reads it.
 `Task.stop` adds the minutes since then to `spent:` through `Task.withSpent` and removes the tag; a start after the current time adds nothing.
 `TodoController.start` stops the clock that runs, in the same write, and `TodoController.toggle` stops the clock of a task that is completed; the next occurrence of a recurring task has no clock.
-The agenda and today have *Start* or *Stop* beside each task of today, and a bar above every view shows the task whose clock runs, its start and the time since it, with *Stop*.
+The agenda and today have a play button (*Start*) or *Stop* beside each task of today, and a bar above every view shows the task whose clock runs, its start and the time since it, with *Stop*.
 
 Covers:
 

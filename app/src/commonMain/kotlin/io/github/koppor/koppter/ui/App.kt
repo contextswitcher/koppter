@@ -420,7 +420,8 @@ private fun MainScreen(
                             controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
                             if (controller.canSchedule) {
                                 // [impl->dsn~plan-dialog~1]
-                                BarButton(Icons.Default.PlayArrow, "Plan", "open-plan") { planning = controller.planSettings }
+                                // A word: the play icon starts the clock of a task.
+                                TextButton(onClick = { planning = controller.planSettings }, modifier = Modifier.testTag("open-plan")) { Text("Plan") }
                                 BarButton(Icons.Default.DateRange, "Scheduled tasks", "open-schedule") { schedule = controller.schedule() }
                             }
                             BarButton(Icons.Default.Settings, "Settings", "open-settings") { showSettings = true }
