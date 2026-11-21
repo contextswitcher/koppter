@@ -5,6 +5,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableStateOf
 import io.github.koppor.koppter.storage.CompanionFiles
+import io.github.koppor.koppter.plan.TimeLog
 import io.github.koppor.koppter.latex.Latex
 import io.github.koppor.koppter.latex.LatexTodo
 import io.github.koppor.koppter.outlook.Outlook
@@ -219,6 +220,11 @@ class TodoController(
     private var config by mutableStateOf<String?>(null)
 
     /** The blocks of `calendar.txt`; `null` without that file. */
+    /** Since when the user is away, as `timelog.txt` says; `null` if they are not. */
+    // [impl->dsn~time-log~1]
+    var awaySince by mutableStateOf<LocalDateTime?>(null)
+        private set
+
     var planBlocks by mutableStateOf<List<TextBlock>?>(null)
         private set
 
@@ -525,6 +531,11 @@ class TodoController(
             config
         }
         if (boardColumns.isEmpty() && groupKey == null) groupKey = GroupKey.PRIORITY
+        awaySince = try {
+            (storage as? CompanionFiles)?.readCompanion(TimeLog.NAME)?.let(TimeLog::awaySince)
+        } catch (_: Exception) {
+            awaySince
+        }
         planBlocks = try {
             (storage as? CompanionFiles)?.readCompanion(CalendarTxt.NAME)?.let(CalendarTxt::blocks)
         } catch (_: Exception) {
@@ -925,7 +936,7 @@ class TodoController(
         } else {
             // [impl->dsn~time-tracking~1]
             // A task that is completed while its clock runs gets the time of the clock.
-            val task = if (entry.task.started != null) entry.task.stop(now()) else entry.task
+            val task = if (entry.task.started != null) stopped(entry.task) else entry.task
             var new = file.replace(index, task.complete(today(), settings.writeDates))
             // [impl->dsn~recurrence-on-completion~1]
             entry.task.nextOccurrence(today())?.let { new = new.add(it.created(today(), settings.writeDates)) }
@@ -1044,19 +1055,44 @@ class TodoController(
     // [impl->dsn~time-tracking~1]
     val running: Entry? get() = file.entries.firstOrNull { !it.task.completed && it.task.started != null }
 
-    /** Starts the clock of the task and stops the one that ran, which gets its time. */
+    /** Changes `timelog.txt`; without files next to todo.txt, there is no log. */
+    private fun changeLog(change: (String) -> String) = guarded {
+        val files = storage as? CompanionFiles ?: return@guarded
+        val log = change(files.readCompanion(TimeLog.NAME).orEmpty())
+        files.writeCompanion(TimeLog.NAME, log)
+        awaySince = TimeLog.awaySince(log)
+    }
+
+    /** The task with its clock stopped, after the time of the clock was added to the log. */
+    private fun stopped(task: Task): Task {
+        task.started?.let { started -> changeLog { TimeLog.append(it, started, now(), CalendarTxt.text(task)) } }
+        return task.stop(now())
+    }
+
+    /** Starts the clock of the task, stops the one that ran, which gets its time, and ends the time away. */
     fun start(entry: Entry) {
         val index = locate(entry) ?: return
         var new = file
-        running?.takeIf { it.index != index }?.let { new = new.replace(it.index, it.task.stop(now())) }
+        running?.takeIf { it.index != index }?.let { new = new.replace(it.index, stopped(it.task)) }
+        if (awaySince != null) changeLog { TimeLog.back(it, now()) }
         write(new.replace(index, entry.task.start(now())), "Start working on: ${entry.task.description}")
     }
 
-    /** Stops the clock of the task and adds its time to the time spent. */
+    /** Stops the clock of the task and adds its time to the time spent and to the log. */
     fun stop(entry: Entry) {
         val index = locate(entry) ?: return
-        write(file.replace(index, entry.task.stop(now())), "Stop working on: ${entry.task.description}")
+        write(file.replace(index, stopped(entry.task)), "Stop working on: ${entry.task.description}")
     }
+
+    /** Stops the clock that runs and starts the time away. */
+    // [impl->dsn~time-log~1]
+    fun goAway() {
+        running?.let(::stop)
+        changeLog { TimeLog.goAway(it, now()) }
+    }
+
+    /** Ends the time away. */
+    fun back() = changeLog { TimeLog.back(it, now()) }
 
     fun worked(entry: Entry, minutes: Int) {
         val index = locate(entry) ?: return

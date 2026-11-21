@@ -109,23 +109,27 @@ fun Agenda(
 ) {
     // A block is counted once, also when the button is hit twice.
     val counted = remember { mutableStateListOf<TextBlock>() }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
-        for (offset in 0 until days) {
-            val day = today.plus(DatePeriod(days = offset))
-            val ofDay = blocks.orEmpty().filter { it.date == day }
-            if (ofDay.isEmpty() && offset > 2) continue
-            Text(
-                listOfNotNull("Today".takeIf { offset == 0 }, "Tomorrow".takeIf { offset == 1 }, CalendarTxt.dayText(day)).joinToString(" · "),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-day-$day"),
-            )
-            if (ofDay.isEmpty()) Text("No block", Modifier.padding(start = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-            for (block in ofDay) {
-                val entry = entryOf(block)
-                Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(CalendarTxt.timesText(block.span), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(96.dp))
-                    Box(Modifier.weight(1f)) {
+    BoxWithConstraints {
+        val narrow = maxWidth < 500.dp
+        // The space below lets the last task scroll clear of the floating buttons.
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 88.dp).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
+            for (offset in 0 until days) {
+                val day = today.plus(DatePeriod(days = offset))
+                val ofDay = blocks.orEmpty().filter { it.date == day }
+                if (ofDay.isEmpty() && offset > 2) continue
+                Text(
+                    listOfNotNull("Today".takeIf { offset == 0 }, "Tomorrow".takeIf { offset == 1 }, CalendarTxt.dayText(day)).joinToString(" · "),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-day-$day"),
+                )
+                if (ofDay.isEmpty()) Text("No block", Modifier.padding(start = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                for (block in ofDay) {
+                    val entry = entryOf(block)
+                    val time = @Composable {
+                        Text(CalendarTxt.timesText(block.span), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(96.dp))
+                    }
+                    val card = @Composable {
                         if (entry != null) {
                             TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) })
                         } else {
@@ -133,30 +137,50 @@ fun Agenda(
                             Text(block.text, Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
-                    // [impl->dsn~time-spent~1]
-                    if (entry != null && offset == 0 && block !in counted) {
-                        TextButton(
-                            onClick = {
-                                counted += block
-                                onWorked(entry, block.span.length)
-                            },
-                            modifier = Modifier.testTag("agenda-worked"),
-                        ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
+                    val actions = @Composable {
+                        // [impl->dsn~time-spent~1]
+                        if (entry != null && offset == 0 && block !in counted) {
+                            TextButton(
+                                onClick = {
+                                    counted += block
+                                    onWorked(entry, block.span.length)
+                                },
+                                modifier = Modifier.testTag("agenda-worked"),
+                            ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
+                        }
+                        if (entry != null && offset == 0) ClockButton(entry, running, onClock)
                     }
-                    if (entry != null && offset == 0) ClockButton(entry, running, onClock)
+                    if (narrow) {
+                        // On a phone, the card takes the whole width: the time and the buttons stand above it.
+                        // The space above the time keeps the buttons with the card below them.
+                    Column(Modifier.padding(top = 8.dp).testTag("agenda-block")) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                time()
+                                Box(Modifier.weight(1f))
+                                actions()
+                            }
+                            card()
+                        }
+                    } else {
+                        Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            time()
+                            Box(Modifier.weight(1f)) { card() }
+                            actions()
+                        }
+                    }
                 }
-            }
-            if (offset == 0 && dueUnplanned.isNotEmpty()) {
-                Text(
-                    "Due and without a block today",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-due"),
-                )
-                for (entry in dueUnplanned) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1f)) { TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) }
-                        ClockButton(entry, running, onClock)
+                if (offset == 0 && dueUnplanned.isNotEmpty()) {
+                    Text(
+                        "Due and without a block today",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-due"),
+                    )
+                    for (entry in dueUnplanned) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.weight(1f)) { TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) }
+                            ClockButton(entry, running, onClock)
+                        }
                     }
                 }
             }
@@ -265,25 +289,64 @@ private fun ClockButton(entry: Entry, running: Entry?, onClock: (Entry) -> Unit)
 /** The task whose clock runs, with the time since its start; shown above every view. */
 // [impl->dsn~time-tracking~1]
 @Composable
-fun RunningClock(entry: Entry, now: kotlinx.datetime.LocalDateTime, onOpen: () -> Unit, onStop: () -> Unit) {
+fun RunningClock(entry: Entry, now: kotlinx.datetime.LocalDateTime, onOpen: () -> Unit, onStop: () -> Unit, onAway: (() -> Unit)?) {
     val started = entry.task.started ?: return
     val elapsed = entry.task.runningFor(now)
     Surface(color = MaterialTheme.colorScheme.secondaryContainer, modifier = Modifier.fillMaxWidth().testTag("running-clock")) {
+        BoxWithConstraints {
+            val title = @Composable { modifier: Modifier ->
+                Text(
+                    entry.task.description,
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = modifier.clickable(onClick = onOpen),
+                )
+            }
+            val controls = @Composable {
+                Text(
+                    "since ${started.time.toString().take(5)} · ${Task.durationText(elapsed).ifEmpty { "0m" }}",
+                    fontFamily = FontFamily.Monospace,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(horizontal = 8.dp).testTag("running-clock-time"),
+                )
+                onAway?.let { TextButton(onClick = it, modifier = Modifier.testTag("go-away")) { Text("Away") } }
+                TextButton(onClick = onStop, modifier = Modifier.testTag("running-clock-stop")) { Text("Stop") }
+            }
+            if (maxWidth < 600.dp) {
+                // On a phone, the task gets a line of its own, so that its name is read in full.
+                Column(Modifier.padding(start = 12.dp, top = 6.dp, end = 4.dp)) {
+                    title(Modifier)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.weight(1f))
+                        controls()
+                    }
+                }
+            } else {
+                Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    title(Modifier.weight(1f))
+                    controls()
+                }
+            }
+        }
+    }
+}
+
+/** Since when the user is away, with the time since then; *Back* ends it. */
+// [impl->dsn~time-log~1]
+@Composable
+fun AwayBar(since: kotlinx.datetime.LocalDateTime, now: kotlinx.datetime.LocalDateTime, onBack: () -> Unit) {
+    val elapsed = Task.between(since, now)
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.fillMaxWidth().testTag("away-bar")) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Away", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
             Text(
-                entry.task.description,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).clickable(onClick = onOpen),
-            )
-            Text(
-                "since ${started.time.toString().take(5)} · ${Task.durationText(elapsed).ifEmpty { "0m" }}",
+                "since ${since.time.toString().take(5)} · ${Task.durationText(elapsed).ifEmpty { "0m" }}",
                 fontFamily = FontFamily.Monospace,
                 style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 8.dp).testTag("running-clock-time"),
+                modifier = Modifier.padding(horizontal = 8.dp),
             )
-            TextButton(onClick = onStop, modifier = Modifier.testTag("running-clock-stop")) { Text("Stop") }
+            TextButton(onClick = onBack, modifier = Modifier.testTag("away-back")) { Text("Back") }
         }
     }
 }
@@ -441,6 +504,7 @@ fun Today(
     onWorked: (Entry, Int) -> Unit,
     running: Entry? = null,
     onClock: (Entry) -> Unit = {},
+    onAway: (() -> Unit)? = null,
     calendarWidth: Int = 400,
     onCalendarWidth: (Int) -> Unit = {},
     appointments: CalendarAppointments? = null,
@@ -454,7 +518,11 @@ fun Today(
     val planned = ofDay.filter { entryOf(it) != null }.sumOf { it.span.length }
     Column(Modifier.padding(8.dp).testTag("today")) {
         // The agenda below names the day; the sum of the planned time is what the day adds to it.
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.End) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            // [impl->dsn~time-log~1]
+            // While a clock runs, its bar has the button.
+            if (running == null) onAway?.let { TextButton(onClick = it, modifier = Modifier.testTag("go-away")) { Text("Away") } }
+            Box(Modifier.weight(1f))
             Text(
                 "${Task.durationText(planned.minutes).ifEmpty { "0m" }} planned",
                 style = MaterialTheme.typography.titleMedium,

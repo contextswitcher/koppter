@@ -9,10 +9,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- Each stopped clock of a task adds the time to `timelog.txt` next to todo.txt, such as `2026-11-21 16:50-17:20 Write the report +Work`. *Away*, in the bar of the clock or at the top of *Today*, stops the clock and logs the time away until *Back* or the start of a task.
 - On a narrow screen, the filter shows the number of tasks that match its text, and a button *Go to results* closes it.
 
 ### Changed
 
+- On a phone, the agenda shows the time and the buttons of a block above its card, which takes the whole width.
 - *Cancel* in the dialog of a new task keeps what was entered as a draft, with which the next new task starts; *Discard*, after Esc or the back button, removes it.
 - The button for a new task has the size of the search button next to it.
 - *Start* beside a task is a play button; the button *Plan* of the top bar is a word instead of the play icon.

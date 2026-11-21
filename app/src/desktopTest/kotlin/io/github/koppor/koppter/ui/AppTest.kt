@@ -1841,6 +1841,44 @@ class AppTest {
         onNodeWithTag("running-clock").assertDoesNotExist()
     }
 
+    // [utest->dsn~time-log~1]
+    @Test
+    fun theTimesWorkedAndAwayGoIntoTheTimeLog() = runComposeUiTest {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+        """.trimIndent() + "\n"
+        var minute = 9 * 60
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { minute })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("agenda-switch").performClick()
+
+        onAllNodesWithTag("clock-start")[0].performClick()
+        // Away stops the clock that runs.
+        minute = 9 * 60 + 20
+        onNodeWithTag("go-away").performClick()
+        onNodeWithTag("running-clock").assertDoesNotExist()
+        onNodeWithTag("away-bar").assertExists()
+        onNodeWithTag("go-away").assertDoesNotExist()
+        assertEquals("2026-11-12 09:00-09:20 Schedule pickup +GarageSale @phone\n2026-11-12 09:20- Away\n", storage.companions["timelog.txt"])
+        // Starting a task ends the time away.
+        minute = 9 * 60 + 50
+        onAllNodesWithTag("clock-start")[0].performClick()
+        onNodeWithTag("away-bar").assertDoesNotExist()
+        minute = 10 * 60
+        onNodeWithTag("go-away").performClick()
+        minute = 10 * 60 + 5
+        onNodeWithTag("away-back").performClick()
+        assertEquals(
+            """
+            2026-11-12 09:00-09:20 Schedule pickup +GarageSale @phone
+            2026-11-12 09:20-09:50 Away
+            2026-11-12 09:50-10:00 Schedule pickup +GarageSale @phone
+            2026-11-12 10:00-10:05 Away
+            """.trimIndent() + "\n",
+            storage.companions["timelog.txt"],
+        )
+    }
+
     // [utest->dsn~today~1]
     @Test
     fun todayShowsTheAgendaBesideTheDay() = runDesktopComposeUiTest(width = 1100, height = 860) {

@@ -111,11 +111,7 @@ data class Task(
     fun start(now: LocalDateTime): Task = withTag(STARTED, now.toString())
 
     /** The time since the start of the clock; zero if it does not run, or if [now] lies before the start, as after a change of the clock of the device. */
-    fun runningFor(now: LocalDateTime): Duration {
-        val started = started ?: return Duration.ZERO
-        val minutes = started.date.daysUntil(now.date) * 24 * 60 + (now.hour * 60 + now.minute) - (started.hour * 60 + started.minute)
-        return maxOf(0, minutes).minutes
-    }
+    fun runningFor(now: LocalDateTime): Duration = started?.let { between(it, now) } ?: Duration.ZERO
 
     /** This task with its clock stopped at [now] and the time since its start added to the time spent. */
     fun stop(now: LocalDateTime): Task = withSpent(runningFor(now)).withTag(STARTED, null)
@@ -277,6 +273,10 @@ data class Task(
 
         /** Reads a time of the day such as `9:30` or `12:00` as the minutes since midnight; `null` if the text is none. */
         fun parseTime(text: String): Int? = TIME.matchEntire(text)?.destructured?.let { (hours, minutes) -> hours.toInt() * 60 + minutes.toInt() }
+
+        /** The whole minutes from [from] to [to]; zero if [to] lies before [from], as after a change of the clock of the device. */
+        fun between(from: LocalDateTime, to: LocalDateTime): Duration =
+            maxOf(0, from.date.daysUntil(to.date) * 24 * 60 + (to.hour * 60 + to.minute) - (from.hour * 60 + from.minute)).minutes
 
         /** Reads a duration such as `45m`, `2h` or `1h30m`; `null` if the text is none or not positive. */
         // [impl->dsn~duration~1]

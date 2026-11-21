@@ -13,6 +13,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Holidays.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Ics.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/Planner.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/TimeLog.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/plan/TimeMaps.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/ConfigFile.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/storage/Settings.kt

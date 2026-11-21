@@ -6,6 +6,7 @@ import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.performTouchInput
@@ -36,7 +37,9 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTestApi::class)
 class ScreenshotTest {
     private val storage = object : SyncingStorage, CompanionFiles {
-        private val companions = mapOf(
+        /** Whether writes are kept, for the screens that show what an action wrote; the other screens start from the same file. */
+        var keepsWrites = false
+        private val companions = mutableMapOf(
             "koppter.yml" to """
                 board-columns:
                   Now: due:<=today -@waiting
@@ -86,12 +89,14 @@ class ScreenshotTest {
         )
 
         override fun readCompanion(path: String) = companions[path]
-        override fun writeCompanion(path: String, text: String) = Unit
+        override fun writeCompanion(path: String, text: String) {
+            if (keepsWrites) companions[path] = text
+        }
         override fun readCompanionBytes(path: String): ByteArray? = null
         override fun writeCompanionBytes(path: String, bytes: ByteArray) = Unit
         override fun deleteCompanion(path: String) = Unit
 
-        override fun read() = """
+        private var text = """
             (A) Call the landlord about the heating @phone due:2026-11-12
             (A) Submit the travel expense report +Work @computer #money due:2026-11-10
             (B) Schedule Goodwill pickup +GarageSale @phone due:2026-11-14
@@ -106,7 +111,10 @@ class ScreenshotTest {
             x Thank Mom for the meatballs +Family @phone
         """.trimIndent() + "\n"
 
-        override fun write(text: String, change: String) = Unit
+        override fun read() = text
+        override fun write(text: String, change: String) {
+            if (keepsWrites) this.text = text
+        }
         override fun version(): Any? = null
     }
 
@@ -274,6 +282,13 @@ class ScreenshotTest {
         }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
+        // The last ones: the clock that runs and the time away stay in the file.
+        storage.keepsWrites = true
+        screen("clock") {
+            onNodeWithTag("today-switch").performClick()
+            onAllNodesWithTag("clock-start")[0].performClick()
+        }
+        screen("away") { onNodeWithTag("go-away").performClick() }
     }
 
     private fun DesktopComposeUiTest.save(name: String) {

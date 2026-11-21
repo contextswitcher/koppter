@@ -467,7 +467,11 @@ private fun MainScreen(
                             onOpen = controller::openAppointment,
                             onSideline = { appointment, on -> appointmentScope.launch { controller.setSideline(appointment, on) } },
                         )
-                        running?.let { RunningClock(it, kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60)), onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }) }
+                        val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))
+                        // [impl->dsn~time-log~1]
+                        val away = controller::goAway.takeIf { controller.canSchedule && controller.awaySince == null }
+                        running?.let { RunningClock(it, now, onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }, onAway = away) }
+                        controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
                         ViewOptions(controller)
                         // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
                         if (wideNow) searchField(Modifier.padding(8.dp))
@@ -482,6 +486,7 @@ private fun MainScreen(
                             Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
                         } else if (controller.view == View.TODAY) {
                             Today(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                                onAway = away,
                                 calendarWidth = controller.settings.todayCalendarWidth,
                                 onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
                                 appointments = appointments,

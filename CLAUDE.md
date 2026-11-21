@@ -61,7 +61,7 @@
   It has the application id and the signature of `:android` and shares its launcher icon (`android/src/icon/res`).
   The paths and keys of the Data Layer stand in both modules; the two are installed apart, so a released name stays and an addition is optional.
   Not run on a device or emulator either.
-* Files next to todo.txt (`notes/`, `ice_recur.txt`, `koppter.yml`, `calendar.txt`, `calendar.ics`) go through `CompanionFiles`; `GitStorage` commits them with the next todo.txt change.
+* Files next to todo.txt (`notes/`, `ice_recur.txt`, `koppter.yml`, `calendar.txt`, `calendar.ics`, `timelog.txt`) go through `CompanionFiles`; `GitStorage` commits them with the next todo.txt change.
 * `skills/` holds skills for agents that work on a todo.txt file of a user, not on this repository.
   A change of the todo.txt notation or of `ice_recur.txt` also changes `skills/koppter-tasks`; its `evals/` hold test cases in the layout of `claude plugin eval`.
   The skills for sessions that work on this repository are in `.claude/skills/`.

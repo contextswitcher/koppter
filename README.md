@@ -592,6 +592,9 @@ A task with the tag `spent:` was worked on already: the plan gives it the rest o
 A bar above every view then shows the task, the start and the time since it.
 *Stop* there or beside the task adds that time to `spent:` and removes the start; starting another task stops the clock that runs, and completing the task stops its own ([decision 0044](docs/decisions/0044-clock-of-a-task-as-a-tag-with-its-start.md)).
 
+Each stopped clock also adds a line to `timelog.txt` next to todo.txt, such as `2026-11-21 16:50-17:20 Write the report +Work`, so that the file tells on which day and at which time the task was worked on ([decision 0050](docs/decisions/0050-time-log-next-to-the-todo-txt-file.md)).
+*Away*, in the bar of the clock or at the top of *Today*, stops the clock that runs and writes `2026-11-21 17:20- Away`; a bar above every view shows the time away, and *Back* or starting a task completes the line, such as `2026-11-21 17:20-18:05 Away`.
+
 ### Travel time
 
 A task with the tag `tt:` takes place somewhere else: the plan keeps the stated time free before and after it, for the way there and the way back.

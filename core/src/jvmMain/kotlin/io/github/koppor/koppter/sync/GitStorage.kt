@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.sync
 
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.TimeLog
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.FileStorage
@@ -178,7 +179,8 @@ class GitStorage(
             Triple(base?.let { textAt(it, file) }, textAt(ours, file), textAt(theirs, file))
                 .takeIf { (base, ours, theirs) -> ours != theirs && ours != base && theirs != base }
         // [impl->dsn~merge-of-companions~1]
-        for (file in listOf(path, sibling(ICE_RECUR_FILE))) {
+        // [impl->dsn~time-log~1]
+        for (file in listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME))) {
             val (inBase, inOurs, inTheirs) = bothChanged(file) ?: continue
             val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
             merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")

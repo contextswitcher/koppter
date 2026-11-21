@@ -270,7 +270,9 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
         WithLinkMenu(LINK_CONTEXT, context) { WithPath("@$context", label) }
     }
     task.hashtags.forEach { hashtag -> WithLinkMenu(LINK_HASHTAG, hashtag) { HashtagLabel(hashtag, Modifier.testTag("label-hashtag-$hashtag")) } }
-    task.tags.forEach { (key, value) ->
+    // [impl->dsn~time-tracking~1]
+    // The bar of the clock shows the start; as a label, the stamp would only take room on the card.
+    task.tags.filter { it.first != Task.STARTED }.forEach { (key, value) ->
         // [impl->dsn~deadline~1]
         // A due date that has passed is highlighted as on its day while the deadline lies ahead.
         val date = when (key) {
