@@ -805,7 +805,8 @@ Needs: impl, utest
 `IceRecurEntry.parse` reads a line of the form `[@start] [@@end] timing - task`.
 The timing is `daily`, `weekly`, `monthly` or `yearly` with an optional interval, followed by the specifiers `day`, `day_of_month`, `day_of_week`, `day_of_year` and `month_of_year`, separated by ` ; `.
 `IceRecurEntry.occursOn` tells whether the schedule includes a date.
-Without a start, the start is 2018-01-01, as in the add-on; weeks start on Sunday.
+Without a start, the start is 2018-01-01, as in the add-on.
+An interval of weeks counts weeks from Monday to Sunday ([decision 0050](../decisions/0050-weeks-of-ice-recur-start-on-monday.md)).
 A line that is not understood is skipped.
 
 Covers:

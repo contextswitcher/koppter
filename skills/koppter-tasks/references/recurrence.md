@@ -76,6 +76,7 @@ Rules:
 * **An interval above one needs a start date.**
   Without `@start`, intervals count from 2018-01-01, so `weekly 2` falls on weeks the user does not expect.
   Use the first day on which the task is to appear.
+  The weeks of an interval run from Monday to Sunday: `weekly 2 ; day Friday, Sunday` gives a Friday and the Sunday after it.
 * **No date in the task of an entry.**
   The task is added as it is written, so `due:2026-12-01` in an entry gives every occurrence that same date.
   Leave dates out; the day it appears is the day it is meant for.

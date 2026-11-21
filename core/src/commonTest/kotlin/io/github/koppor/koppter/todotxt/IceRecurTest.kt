@@ -26,6 +26,8 @@ class IceRecurTest {
         assertEquals(listOf(3, 5, 10, 12, 17, 19, 24, 26), days("weekly ; day 2, 4 - Tuesdays and Thursdays", 2026, 11))
         assertEquals(listOf(5, 19), days("@2026-11-02 Weekly 2 ; day Thursday - Every second Thursday", 2026, 11))
         assertEquals(listOf(4, 11, 18, 25), days("@2026-11-04 weekly - On the weekday of the start", 2026, 11))
+        // A week runs from Monday to Sunday: the Sunday belongs to the Friday before it.
+        assertEquals(listOf(6, 8, 20, 22), days("@2026-11-02 weekly 2 ; day Friday, Sunday - Every second weekend", 2026, 11))
     }
 
     // [utest->dsn~ice-recur-schedule~1]

@@ -131,7 +131,8 @@ data class IceRecurEntry(
         /** [wanted] counts from the start, or from the end if negative: -1 is the last. */
         private fun dayMatches(wanted: Int, fromStart: Int, total: Int) = if (wanted > 0) wanted == fromStart else wanted == fromStart - total - 1
 
-        private fun weekStart(date: LocalDate) = date.minus(DatePeriod(days = date.dayOfWeek.isoDayNumber % 7))
+        // [impl->adr~weeks-of-ice-recur-start-on-monday~1]
+        private fun weekStart(date: LocalDate) = date.minus(DatePeriod(days = date.dayOfWeek.isoDayNumber - 1))
 
         private fun daysIn(date: LocalDate): Int {
             val first = LocalDate(date.year, date.month, 1)

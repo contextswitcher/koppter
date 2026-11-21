@@ -987,8 +987,9 @@ Needs: impl, utest
 ### Title bar in the variant of the colors
 `dsn~title-bar-theme~1`
 
-On Windows, the title bar of the window is drawn by the system.
-`App` reports the light or dark variant to the platform, and the desktop target sets the attribute `DWMWA_USE_IMMERSIVE_DARK_MODE` of the window to it.
+On Windows and macOS, the title bar of the window is drawn by the system.
+`App` reports the light or dark variant to the platform.
+On Windows, the desktop target sets the attribute `DWMWA_USE_IMMERSIVE_DARK_MODE` of the window to it; on macOS, the client property `apple.awt.windowAppearance` of its root pane.
 
 Covers:
 
