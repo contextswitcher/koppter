@@ -329,6 +329,7 @@ Nothing is scheduled until the entry is saved, which writes it to `ice_recur.txt
   A negative number counts from the end: `day_of_month -1` is the last day of the month.
 * Without a start date, intervals count from 2018-01-01, a Monday, as in the add-on.
   An entry with an interval greater than one should therefore have a start date.
+* An interval of weeks counts weeks from Monday to Sunday: `weekly 2 ; day Friday, Sunday` gives a Friday and the Sunday after it, then skips a week.
 * A line that starts with `#` is a comment.
 
 A task is not added while an open task with the same text exists, so tasks that are not completed do not pile up.

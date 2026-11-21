@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Cancel* in the dialog of a new task keeps what was entered as a draft, with which the next new task starts; *Discard*, after Esc or the back button, removes it.
 - The button for a new task has the size of the search button next to it.
 - *Start* beside a task is a play button; the button *Plan* of the top bar is a word instead of the play icon.
+- An interval of weeks in `ice_recur.txt`, such as `weekly 2`, counts weeks from Monday to Sunday instead of from Sunday to Saturday: with an interval above one, the Sundays of an entry move by a week.
 
 ## [2026-11-20] - 2026-11-20
 
