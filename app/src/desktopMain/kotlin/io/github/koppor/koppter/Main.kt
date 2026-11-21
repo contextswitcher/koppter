@@ -184,7 +184,13 @@ fun main(args: Array<String>) {
                 else -> storageOf(Path(settings.todoFile))
             }
             // [impl->dsn~shared-lists~1]
-            SharedLists.of(main, settings.sharedLists) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
+            // [impl->dsn~member-lists~1]
+            val mainFile = when {
+                settings.todoFile.isBlank() -> defaultTodoFile
+                isGitAddress(settings.todoFile) -> gitSetup.repositoryFile
+                else -> Path(settings.todoFile)
+            }
+            SharedLists.of(main, gitSetup.listsWithMembers(settings.sharedLists, mainFile)) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
         },
         saveSettings = settingsFile::save,
         today = { java.time.LocalDate.now().let { LocalDate(it.year, it.monthValue, it.dayOfMonth) } },

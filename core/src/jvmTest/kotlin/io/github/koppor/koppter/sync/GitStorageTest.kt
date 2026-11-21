@@ -57,8 +57,7 @@ class GitStorageTest {
         }
         val file = directory.resolve("todo.txt")
         val repository = assertNotNull(GitStorage.repositoryOf(file))
-        // Two storages of one repository do not share a lock: the background sync of the first must end before the second writes.
-        GitStorage(file, repository).apply { write("Call Mom\n", "Add task: Call Mom") }.synchronizeNow()
+        GitStorage(file, repository).write("Call Mom\n", "Add task: Call Mom")
         GitStorage(file, repository, committerName = "Ada").write("x Call Mom\n", "Complete task: Call Mom")
 
         val idents = Git.open(directory.toFile()).use { git -> git.log().call().map { "${it.committerIdent.name} <${it.committerIdent.emailAddress}>" } }
@@ -110,6 +109,36 @@ class GitStorageTest {
         assertEquals("x Call Mom\nBuy milk +shop\nWater plants\n", desktop.read())
         assertEquals(desktop.read(), phone.read())
         assertEquals("Merge remote changes", messages("desktop").first())
+    }
+
+    // [utest->dsn~member-lists~1]
+    @Test
+    fun theListsInTheDirectoriesOfARepositoryAreMergedByLineAsWell() {
+        fun member(device: GitStorage, name: String): GitStorage {
+            val file = root.resolve("$name/anna/todo.txt").also { Files.createDirectories(it.parent) }
+            return GitStorage(file, assertNotNull(GitStorage.repositoryOf(file)))
+        }
+        val tablet = device("tablet")
+        val annaOnTablet = member(tablet, "tablet")
+        tablet.write("Buy milk\n", "Add task: Buy milk")
+        annaOnTablet.write("Feed the cat\nTidy the room\n", "Add tasks")
+        tablet.synchronizeNow()
+        val phone = device("phone")
+        phone.synchronizeNow()
+        val annaOnPhone = member(phone, "phone")
+        assertEquals("Feed the cat\nTidy the room\n", annaOnPhone.read())
+
+        // Both change adjacent lines of the list of the member, which a textual merge reports as a conflict.
+        annaOnTablet.write("x Feed the cat\nTidy the room\n", "Complete task: Feed the cat")
+        annaOnPhone.write("Feed the cat\nTidy the room stars:2\n", "Edit task: Tidy the room")
+        // The storage of the main file merges, which has no change of its own.
+        tablet.synchronizeNow()
+        phone.synchronizeNow()
+        tablet.synchronizeNow()
+
+        assertEquals("x Feed the cat\nTidy the room stars:2\n", annaOnPhone.read())
+        assertEquals(annaOnPhone.read(), annaOnTablet.read())
+        assertEquals("Buy milk\n", phone.read())
     }
 
     // [utest->dsn~git-sync~1]

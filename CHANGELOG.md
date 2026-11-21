@@ -11,6 +11,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - Each stopped clock of a task adds the time to `timelog.txt` next to todo.txt, such as `2026-11-21 16:50-17:20 Write the report +Work`. *Away*, in the bar of the clock or at the top of *Today*, stops the clock and logs the time away until *Back* or the start of a task.
 - On a narrow screen, the filter shows the number of tasks that match its text, and a button *Go to results* closes it.
+- A directory next to a todo.txt file that has a todo.txt file of its own is a list as well, shown with the context named after the directory, such as `@anna` for `anna/todo.txt`. The members of a family keep their lists in one repository that way, which a device clones once.
 
 ### Changed
 

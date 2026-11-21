@@ -80,6 +80,23 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
         if (entry.endsWith(".txt")) storageFor(Path.of(entry), committerName, committerEmail) else storageForSharedAddress(entry, committerName, committerEmail)
 
     /**
+     * The lists of the settings together with those that need no entry there: the todo.txt files of the directories
+     * next to the main file and next to the file of each shared list ([memberFiles]), each behind the list that it lies in.
+     *
+     * @param mainFile the main file where it is a file of the file system; `null` for a document, which has no directories to look into
+     */
+    // [impl->dsn~member-lists~1]
+    fun listsWithMembers(sharedLists: String, mainFile: Path?): String {
+        fun members(file: Path?) = file?.let(::memberFiles).orEmpty().map { it.toString() }
+        // The rule of [sharedListStorage] tells a file from an address.
+        fun fileOf(entry: String): Path? = if (entry.endsWith(".txt")) runCatching { Path.of(entry) }.getOrNull() else sharedDirectoryFor(entry).resolve(TODO_FILE)
+        return (members(mainFile) + SharedLists.entries(sharedLists).flatMap { listOf(it) + members(fileOf(it)) }).joinToString("\n")
+    }
+
+    /** The todo.txt file of the clone of the main repository. */
+    val repositoryFile: Path get() = repositoryDirectory.resolve(TODO_FILE)
+
+    /**
      * Settings of an earlier version name clones instead of the addresses of their repositories;
      * they get the addresses, which survive the clones. The same settings if there is nothing to change.
      */
@@ -272,7 +289,6 @@ class GitSetup(private val directory: Path, private val ownKey: Boolean = true) 
 
     private companion object {
         const val COMMENT = "koppter"
-        const val TODO_FILE = "todo.txt"
 
         /** Clones in the same process, such as those of the application and of its widget, would replace one another's directory. */
         val cloning = Any()

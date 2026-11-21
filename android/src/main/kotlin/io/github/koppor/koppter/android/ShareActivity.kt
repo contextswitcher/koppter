@@ -79,7 +79,16 @@ internal suspend fun noteImage(bytes: ByteArray): ByteArray = FileKit.compressIm
 // [impl->dsn~android-locations~1]
 // [impl->dsn~shared-lists~1]
 internal fun Context.storageFor(settings: Settings, gitSetup: GitSetup): TodoStorage =
-    SharedLists.of(mainStorage(settings, gitSetup), settings.sharedLists) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
+    // [impl->dsn~member-lists~1]
+    SharedLists.of(mainStorage(settings, gitSetup), gitSetup.listsWithMembers(settings.sharedLists, mainFile(settings, gitSetup))) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
+
+/** The main file where it is a file of the file system, as [mainStorage] tells; `null` for a document. */
+private fun Context.mainFile(settings: Settings, gitSetup: GitSetup): java.nio.file.Path? = when {
+    settings.todoFile.isBlank() -> filesDir.toPath().resolve("todo.txt")
+    isGitAddress(settings.todoFile) -> gitSetup.repositoryFile
+    settings.todoFile.startsWith("content:") -> null
+    else -> java.nio.file.Paths.get(settings.todoFile)
+}
 
 private fun Context.mainStorage(settings: Settings, gitSetup: GitSetup): TodoStorage = when {
     settings.todoFile.isBlank() -> gitSetup.storageFor(filesDir.toPath().resolve("todo.txt"), settings.committerName, settings.committerEmail)

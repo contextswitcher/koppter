@@ -103,6 +103,19 @@ Covers:
 
 Needs: dsn
 
+### Lists in the directories of a list
+`req~member-lists~1`
+
+A directory next to the todo.txt file of the main file or of a shared list that has a todo.txt file of its own is a list as well: its tasks show with the context named after the directory, and it needs no entry in the settings.
+The members of a family or of a team thus keep a list each in one repository, which a device clones once.
+Changes that two devices make to the lists of one repository do not conflict.
+
+Covers:
+
+* `feat~shared-lists~1`
+
+Needs: dsn
+
 ## Design
 
 ### Detection of the repository
@@ -390,6 +403,23 @@ Covers:
 
 * `req~shared-lists~1`
 * `adr~shared-lists~1`
+
+Needs: impl, utest
+
+### Lists of the members in one repository
+`dsn~member-lists~1`
+
+`memberFiles` gives the todo.txt files of the directories next to a todo.txt file, in the order of the names of the directories and without the directories whose name starts with a full stop.
+`GitSetup.listsWithMembers` puts them behind the list that they lie in: those next to the main file first, then each shared list of the settings followed by those next to its file; a main file that is a document of Android has none.
+The desktop application and the Android application pass the result to `SharedLists.of`, so that such a list is a shared list in everything else, named after its directory by `SharedLists.name`.
+The directories are read when the storage is built: one that arrives with a synchronization shows after the next start.
+Two instances of `GitStorage` for one repository share one lock and one background thread, as they share the index and the remote.
+A merge covers the whole repository: `GitStorage` merges every file named `todo.txt`, `ice_recur.txt` or `timelog.txt` line by line and takes the newer one of every `calendar.txt` with its `calendar.ics`, as it does for the files of its own list.
+
+Covers:
+
+* `req~member-lists~1`
+* `adr~member-lists~1`
 
 Needs: impl, utest
 

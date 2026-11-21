@@ -31,6 +31,28 @@ class GitSetupTest {
         assertTrue(root.resolve("app/ssh/id_ecdsa").readText().startsWith("-----BEGIN OPENSSH PRIVATE KEY-----"))
     }
 
+    // [utest->dsn~member-lists~1]
+    @Test
+    fun theDirectoriesWithATodoFileNextToAListAreListsBehindIt() {
+        fun file(path: String) = root.resolve(path).also { Files.createDirectories(it.parent); it.writeText("") }
+        val main = file("family/todo.txt")
+        val ben = file("family/ben/todo.txt")
+        val anna = file("family/anna/todo.txt")
+        file("family/notes/a1b.md")
+        file("family/.git/todo.txt")
+        val household = file("household/todo.txt")
+        val guest = file("household/guest/todo.txt")
+
+        assertEquals(listOf(anna, ben), memberFiles(main))
+        assertEquals(emptyList(), memberFiles(root.resolve("nowhere/todo.txt")))
+        assertEquals(
+            listOf(anna, ben, household, guest, "git@example.org:us/flat.git").joinToString("\n"),
+            setup.listsWithMembers("$household\ngit@example.org:us/flat.git", main),
+        )
+        // A document of Android has no directories to look into.
+        assertEquals("", setup.listsWithMembers("", null))
+    }
+
     // [utest->dsn~host-keys~1]
     @Test
     fun unknownHostsAreAcceptedOnFirstContact() {

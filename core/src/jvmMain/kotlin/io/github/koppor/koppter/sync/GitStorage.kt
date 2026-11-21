@@ -57,9 +57,14 @@ class GitStorage(
     private val path = repository.workTree.toPath().toRealPath().relativize(file.toAbsolutePath().normalize().let { it.parent.toRealPath().resolve(it.fileName) })
         .joinToString("/")
 
-    /** Guards the working tree and the index: commits of the user interface and merges of the background thread. */
-    private val lock = Any()
-    private val background = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "koppter-git").apply { isDaemon = true } }
+    /**
+     * Guards the working tree and the index: commits of the user interface and merges of the background thread.
+     * The storages of one repository, such as those of the lists in its directories, share both, as they share the index and the remote.
+     */
+    // [impl->dsn~member-lists~1]
+    private val shared = SHARED.computeIfAbsent(repository.directory.canonicalFile) { Shared() }
+    private val lock = shared.lock
+    private val background = shared.background
 
     /** Companion files written since the last commit, as paths in the repository. */
     private val companions = mutableSetOf<String>()
@@ -180,15 +185,21 @@ class GitStorage(
                 .takeIf { (base, ours, theirs) -> ours != theirs && ours != base && theirs != base }
         // [impl->dsn~merge-of-companions~1]
         // [impl->dsn~time-log~1]
-        for (file in listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME))) {
+        // [impl->dsn~member-lists~1]
+        // A merge is one for the whole repository, so it covers the lists in the other directories as well, which have storages of their own.
+        val inDirectories = (filesOf(ours) + filesOf(theirs)).distinct()
+        fun named(vararg names: String) = inDirectories.filter { it.substringAfterLast('/') in names }
+        for (file in (listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME)) + named(TODO_FILE, ICE_RECUR_FILE, TimeLog.NAME)).distinct()) {
             val (inBase, inOurs, inTheirs) = bothChanged(file) ?: continue
             val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
             merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")
         }
         // A plan is one whole: lines of two plans do not make a plan, so the plan made last is taken.
-        val newerPlan = if (lastChange(theirs, sibling(CalendarTxt.NAME)) > lastChange(ours, sibling(CalendarTxt.NAME))) theirs else ours
-        for (file in listOf(sibling(CalendarTxt.NAME), sibling(Ics.NAME))) {
-            if (bothChanged(file) != null) textAt(newerPlan, file)?.let { merged[file] = it }
+        for (plan in (listOf(sibling(CalendarTxt.NAME)) + named(CalendarTxt.NAME)).distinct()) {
+            val newerPlan = if (lastChange(theirs, plan) > lastChange(ours, plan)) theirs else ours
+            for (file in listOf(plan, plan.removeSuffix(CalendarTxt.NAME) + Ics.NAME)) {
+                if (bothChanged(file) != null) textAt(newerPlan, file)?.let { merged[file] = it }
+            }
         }
 
         val result = git.merge().include(theirs).setCommit(false).setFastForward(MergeCommand.FastForwardMode.NO_FF).call()
@@ -250,6 +261,15 @@ class GitStorage(
         TreeWalk.forPath(repository, file, tree)?.use { treeWalk -> repository.open(treeWalk.getObjectId(0)).bytes.decodeToString() }
     }
 
+    /** The paths of all files of a commit. */
+    private fun filesOf(commit: ObjectId): List<String> = RevWalk(repository).use { walk ->
+        TreeWalk(repository).use { tree ->
+            tree.addTree(walk.parseCommit(commit).tree)
+            tree.isRecursive = true
+            buildList { while (tree.next()) add(tree.pathString) }
+        }
+    }
+
     private fun String?.toLines(): List<String> = orEmpty().lines().dropLastWhile { it.isEmpty() }
 
     // [impl->dsn~committer~1]
@@ -271,7 +291,15 @@ class GitStorage(
         const val ORIGIN = "origin"
     }
 
+    private class Shared {
+        val lock = Any()
+        val background: java.util.concurrent.ExecutorService = Executors.newSingleThreadExecutor { runnable -> Thread(runnable, "koppter-git").apply { isDaemon = true } }
+    }
+
     companion object {
+        /** By the directory of the repository; an entry stays for the life of the application, which opens few repositories. */
+        private val SHARED = java.util.concurrent.ConcurrentHashMap<java.io.File, Shared>()
+
         init {
             // [impl->dsn~reflog-email~1]
             // Without an email address of the git user, JGit makes one up for the reflog from the name of the host,
