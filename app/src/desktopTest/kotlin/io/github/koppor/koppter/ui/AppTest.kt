@@ -2527,6 +2527,21 @@ class AppTest {
         onNodeWithTag("edit-description").assertIsNotFocused()
     }
 
+    // [utest->dsn~filter-matches~1]
+    @Test
+    fun theDrawerCountsTheMatchesOfTheTextAndGoesToThem() = runDesktopComposeUiTest(width = 412, height = 760) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("open-filter").performClick()
+        onNodeWithTag("filter-matches").assertDoesNotExist()
+        onNodeWithTag("filter-text").performTextInput("garage")
+        onNodeWithTag("filter-matches").assertTextEquals("2 matches")
+        onNodeWithTag("filter-show-results").performClick()
+        onNodeWithTag("filter-close").assertIsNotDisplayed()
+        onNodeWithText("Post signs").assertIsDisplayed()
+    }
+
     // [utest->dsn~back~1]
     // [utest->dsn~filter-panel~1]
     @Test
