@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -419,7 +418,7 @@ private fun MainScreen(
                                 Icon(Icons.Default.Search, contentDescription = "Search")
                             }
                         }
-                        FloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
+                        SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
                             Icon(Icons.Default.Add, contentDescription = "New task")
                         }
                     }
