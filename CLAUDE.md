@@ -33,6 +33,7 @@
 * Kotlin, official code style, package `io.github.koppor.koppter`.
   `:core` `commonMain` stays free of JVM APIs; dates are `kotlinx.datetime.LocalDate`, and "today" is always passed in.
 * Tests: unit tests for logic in `:core` (`kotlin.test`); Compose UI tests for UI behavior.
+* User interface: a change that a user can see follows `.claude/skills/ux-review/SKILL.md`, before it is written and before it is committed: the questions about the flow, the settled rules, the screens at the size of a phone and of a laptop, and a reviewer that sees only the images.
 * License is MIT: no strong-copyleft dependencies.
 
 ## Architecture
@@ -63,6 +64,7 @@
 * Files next to todo.txt (`notes/`, `ice_recur.txt`, `koppter.yml`, `calendar.txt`, `calendar.ics`) go through `CompanionFiles`; `GitStorage` commits them with the next todo.txt change.
 * `skills/` holds skills for agents that work on a todo.txt file of a user, not on this repository.
   A change of the todo.txt notation or of `ice_recur.txt` also changes `skills/koppter-tasks`; its `evals/` hold test cases in the layout of `claude plugin eval`.
+  The skills for sessions that work on this repository are in `.claude/skills/`.
 * UI elements carry a `testTag`; colors come from `MaterialTheme.colorScheme`, never from literals; `Theme.kt` builds the scheme from the palettes (decision 0015).
 * The file is the data store.
   A line that the user did not edit is written back unchanged.

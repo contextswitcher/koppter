@@ -6,6 +6,7 @@ import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.onNodeWithText
@@ -245,6 +246,34 @@ class ScreenshotTest {
     fun rendersNarrowWindow() = runDesktopComposeUiTest(width = 412, height = 760) {
         start()
         save("narrow.png")
+    }
+
+    // The screens of the README are rendered taller than a window in use, which hides what falls out of view.
+    // These two sizes are the ones a change of the user interface is reviewed at (`.claude/skills/ux-review`); the README does not show them.
+    @Test
+    fun rendersPhoneForReview() = reviewScreens("phone", width = 412, height = 760)
+
+    @Test
+    fun rendersLaptopForReview() = reviewScreens("laptop", width = 1280, height = 720)
+
+    private fun reviewScreens(size: String, width: Int, height: Int) {
+        // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
+        fun screen(name: String, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start()
+            open()
+            save("review/$size-$name.png")
+        }
+        screen("list") {}
+        screen("week") { onNodeWithTag("week-switch").performClick() }
+        screen("today") { onNodeWithTag("today-switch").performClick() }
+        screen("edit") {
+            // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.
+            onNodeWithTag("list-switch").performClick()
+            // The description, in the last line of the card: on a phone, the middle of this card is a label that opens a link.
+            onNodeWithText("Prepare the slides for the team meeting").performTouchInput { click(Offset(width * 0.3f, height - 12f)) }
+        }
+        screen("plan") { onNodeWithTag("open-plan").performClick() }
+        screen("settings") { onNodeWithTag("open-settings").performClick() }
     }
 
     private fun DesktopComposeUiTest.save(name: String) {
