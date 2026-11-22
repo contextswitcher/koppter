@@ -706,18 +706,19 @@ Do not enter the published address of the same calendar under *Calendars with bu
 
 A family uses koppter together, such as on a tablet in the hallway: the view *Family* shows the day of each member in a column of its own.
 
-![Family view with a column per member, the tasks of the day above a calendar](docs/screenshots/family.png)
+![Family view with the calendar of the day in a column per member, and the tasks of the members beside it](docs/screenshots/family.png)
 
 * A member is a list.
   The repository of the family has a directory per member with a `todo.txt` file, such as `Anna/todo.txt` and `Ben/todo.txt` next to its own `todo.txt`; koppter reads each of them as a list and shows its tasks with the context `@Anna` or `@Ben` ([decision 0051](docs/decisions/0051-lists-of-members-as-directories-of-one-repository.md)).
   A repository named as a shared list in the settings is a member as well.
 * The view is there once the file has such lists; a directory that is added shows after the next start.
-* A column lists the tasks of its member for the day: those due on it, and today also the overdue ones and those without a due date.
+* A column shows the day of its member as a calendar.
+  A task with a time, such as `Football due:2026-11-21 at:17:00 dur:90m`, stands at its time, and so do the blocks of the `calendar.txt` in the directory of the member, such as `2026-11-21 w47 Sat  08:00-13:00 School`.
+* Below the calendar stand the tasks of the member for the day: those due on it, and today also the overdue ones and those without a due date.
+  In a window that is wider than high, such as a tablet or a phone held across, they stand beside the calendar instead.
   Ticking a task off gives the member its stars: one, or the number of the tag `stars:`, as in `Mow the lawn stars:3` ([decision 0052](docs/decisions/0052-tag-for-the-stars-of-a-task.md)).
 * Above the columns stands the ranking: the place and the stars of each member for the day, the week, the month, the quarter or the year.
   The stars are counted from the completed tasks, which have to stay in the file for that time.
-* Below the tasks, the day is a calendar.
-  A task with a time, such as `Football due:2026-11-21 at:17:00 dur:90m`, stands at its time, and so do the blocks of the `calendar.txt` in the directory of the member, such as `2026-11-21 w47 Sat  08:00-13:00 School`.
 * A member who has calendars elsewhere, such as that of an employer, enters their addresses under *Calendars of the members* in the tab *File* of the settings, on a device of their own; the address is the one for the [calendars with busy times](#calendars).
   That device writes the times of the events, for four weeks ahead, as blocks named `Absent` into the `calendar.txt` of the member, every half an hour while it runs; the other devices show them and learn neither the address nor what the events are ([decision 0053](docs/decisions/0053-absences-of-a-member-as-blocks-in-the-calendar-txt-of-the-list.md)).
   Events of whole days are left out.
