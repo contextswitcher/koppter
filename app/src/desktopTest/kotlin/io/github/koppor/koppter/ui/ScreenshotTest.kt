@@ -1,6 +1,10 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Canvas
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
@@ -179,7 +183,11 @@ class ScreenshotTest {
         val apps = (
             "Books Calculator Calendar Camera Chrome Clock Contacts Drive evcc Files Gallery Gmail Health Hue Keep Maps Messages Music News Notes Phone Photos Podcasts Radio " +
                 "Recorder Settings Sheets Signal Spotify Translate Wallet Weather YouTube"
-            ).split(" ").plus(listOf("Home Assistant Companion for Android", "Play Store", "Smart Life", "Voice Access")).map { DeviceApp(it) {} }
+            ).split(" ").plus(listOf("Home Assistant Companion for Android", "Play Store", "Smart Life", "Voice Access")).map { name ->
+                // A disk in a color of its own stands for the icon.
+                val icon = ImageBitmap(64, 64).also { Canvas(it).drawCircle(Offset(32f, 32f), 30f, Paint().apply { color = Color.hsv((name.hashCode() and 0xffff) % 360f, 0.5f, 0.8f) }) }
+                DeviceApp(name, name, icon) {}
+            }
         setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }) }
     }
 
@@ -327,8 +335,8 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
-            start(homeScreen = homeScreen, members = members)
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start(settings, homeScreen = homeScreen, members = members)
             open()
             save("review/$size-$name.png")
         }
@@ -364,7 +372,7 @@ class ScreenshotTest {
         }
         // What a device shows whose home screen is the application.
         screen("home", homeScreen = true) {}
-        screen("apps", homeScreen = true) { onNodeWithTag("open-apps").performClick() }
+        screen("apps", homeScreen = true, settings = Settings(appStarts = "Hue=31\nevcc=12\nChrome=5\nSettings=2\nCamera=2\nClock=1")) { onNodeWithTag("open-apps").performClick() }
         // The last ones: the clock that runs and the time away stay in the file.
         storage.keepsWrites = true
         screen("clock") {

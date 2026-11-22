@@ -64,6 +64,8 @@ data class Settings(
      * A setting of the device, as such an address is a secret.
      */
     val memberCalendars: String = "",
+    /** How often each application of the device was started from the list of the applications, one per line as `application=number`. */
+    val appStarts: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -90,6 +92,7 @@ data class Settings(
         CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
         RANKING_PERIOD to rankingPeriod,
         MEMBER_CALENDARS to memberCalendars,
+        APP_STARTS to appStarts,
     )
 
     companion object {
@@ -116,6 +119,7 @@ data class Settings(
         private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
         private const val RANKING_PERIOD = "rankingPeriod"
         private const val MEMBER_CALENDARS = "memberCalendars"
+        private const val APP_STARTS = "appStarts"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -142,6 +146,7 @@ data class Settings(
             contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),
             rankingPeriod = properties[RANKING_PERIOD] ?: Settings().rankingPeriod,
             memberCalendars = properties[MEMBER_CALENDARS].orEmpty(),
+            appStarts = properties[APP_STARTS].orEmpty(),
         )
     }
 }

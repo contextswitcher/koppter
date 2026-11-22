@@ -2254,7 +2254,7 @@ class AppTest {
     fun asTheHomeScreenTheApplicationStartsTheOtherApplicationsOfTheDevice() = runComposeUiTest {
         val started = mutableListOf<String>()
         var homeScreen by mutableStateOf<Boolean?>(false)
-        val apps = listOf(DeviceApp("evcc") { started += "evcc" }, DeviceApp("Camera") { error("no camera") }, DeviceApp("Hue") { started += "Hue" })
+        val apps = listOf(DeviceApp("io.evcc", "evcc") { started += "evcc" }, DeviceApp("camera", "Camera") { error("no camera") }, DeviceApp("hue", "Hue") { started += "Hue" })
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt", homeScreen = homeScreen, apps = { apps }) }
         // Elsewhere, the home screen of the system lists the applications.
@@ -2272,9 +2272,25 @@ class AppTest {
         onNodeWithTag("open-apps").performClick()
         onNodeWithText("Camera").performClick()
         onNodeWithTag("apps-failure").assertTextEquals("Camera was not started: no camera")
+        // Nothing was started from here so far.
+        onNodeWithTag("app-most").assertDoesNotExist()
         onNodeWithText("Hue").performClick()
         assertEquals(listOf("Hue"), started)
         onNodeWithTag("apps-dialog").assertDoesNotExist()
+        assertEquals("hue=1", controller.settings.appStarts)
+
+        // What was started most often stands first, and in the list of all as before; one that did not start does not count.
+        onNodeWithTag("open-apps").performClick()
+        onNodeWithTag("app-most").assertTextEquals("Hue")
+        onAllNodesWithTag("app").assertCountEquals(3)
+        onAllNodesWithTag("app")[1].performClick()
+        onNodeWithTag("open-apps").performClick()
+        onAllNodesWithTag("app")[1].performClick()
+        assertEquals("hue=1\nio.evcc=2", controller.settings.appStarts)
+        onNodeWithTag("open-apps").performClick()
+        onAllNodesWithTag("app-most").assertCountEquals(2)
+        onAllNodesWithTag("app-most")[0].assertTextEquals("evcc")
+        onAllNodesWithTag("app-most")[1].assertTextEquals("Hue")
     }
 
     // [utest->dsn~android-home-screen~1]
