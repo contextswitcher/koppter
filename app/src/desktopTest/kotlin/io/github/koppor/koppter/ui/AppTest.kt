@@ -3397,6 +3397,45 @@ class AppTest {
         onNodeWithText("Do the homework").assertExists()
     }
 
+    private fun ComposeUiTest.startFamily() {
+        val anna = MemoryStorage("Feed the cat\n").apply { companions["calendar.txt"] = "2026-11-12 w46 Thu  08:00-13:00 Absent\n" }
+        val controller = TodoController(Settings(view = "FAMILY"), { SharedLists(storage, listOf("anna" to anna, "ben" to MemoryStorage("Mow the lawn\n"))) }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+    }
+
+    // [utest->dsn~family-view~1]
+    @Test
+    fun theFamilyViewShowsTheTasksBelowTheCalendarInAHighWindow() = runDesktopComposeUiTest(width = 412, height = 760) {
+        startFamily()
+        val calendar = onNodeWithTag("family-calendar-ben").fetchSemanticsNode().boundsInRoot
+        val anna = onNodeWithTag("family-tasks-anna").fetchSemanticsNode().boundsInRoot
+        val ben = onNodeWithTag("family-tasks-ben").fetchSemanticsNode().boundsInRoot
+        assertTrue(anna.top >= calendar.bottom, "the tasks $anna stand below the calendar $calendar")
+        assertTrue(ben.top >= anna.bottom, "a phone has no room for the tasks of two members $anna and $ben beside each other")
+    }
+
+    // [utest->dsn~family-view~1]
+    @Test
+    fun theFamilyViewShowsTheTasksBesideTheCalendarInAWindowWiderThanHigh() = runDesktopComposeUiTest(width = 760, height = 412) {
+        startFamily()
+        val calendar = onNodeWithTag("family-calendar-ben").fetchSemanticsNode().boundsInRoot
+        val anna = onNodeWithTag("family-tasks-anna").fetchSemanticsNode().boundsInRoot
+        val ben = onNodeWithTag("family-tasks-ben").fetchSemanticsNode().boundsInRoot
+        assertTrue(anna.left >= calendar.right, "the tasks $anna stand beside the calendar $calendar")
+        assertTrue(ben.top >= anna.bottom && ben.left == anna.left, "the tasks of the members $anna and $ben stand below each other")
+    }
+
+    // [utest->dsn~family-view~1]
+    @Test
+    fun theFamilyViewSaysThatTasksFollowBelowThoseInView() = runDesktopComposeUiTest(width = 760, height = 412) {
+        val anna = MemoryStorage((1..8).joinToString("") { "Task $it\n" })
+        val controller = TodoController(Settings(view = "FAMILY"), { SharedLists(storage, listOf("anna" to anna, "ben" to MemoryStorage("Mow the lawn\n"))) }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("family-more").assertTextEquals("More tasks below")
+        onNodeWithText("Mow the lawn").performScrollTo()
+        onNodeWithTag("family-more").assertDoesNotExist()
+    }
+
     // [utest->dsn~family-view~1]
     @Test
     fun withoutMembersThereIsNoFamilyView() = runComposeUiTest {

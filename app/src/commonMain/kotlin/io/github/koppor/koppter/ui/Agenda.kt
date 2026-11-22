@@ -1,5 +1,7 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.foundation.ScrollState
 import androidx.compose.ui.text.style.TextDecoration
 import kotlin.math.abs
 import androidx.compose.ui.graphics.luminance
@@ -367,6 +369,8 @@ internal fun DayColumn(
     day: LocalDate? = null,
     /** Whether a block names its end as well, where the grid is too coarse to read it from. */
     ends: Boolean = false,
+    /** What scrolls the column from its top on: the text of a block then stays in view while the start of the block is scrolled out of it. */
+    scroll: ScrollState? = null,
 ) {
     val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
     fun overlaps(a: Span, b: Span) = a.start < b.end && b.start < a.end
@@ -406,7 +410,13 @@ internal fun DayColumn(
                     "${CalendarTxt.timesText(block.span).let { if (ends) it else it.substringBefore('-') }} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
                     style = MaterialTheme.typography.labelSmall,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp).then(
+                        if (scroll == null) Modifier else Modifier.offset {
+                            val top = (hourHeight * (block.span.start - firstHour * 60) / 60).roundToPx()
+                            val room = (hourHeight * block.span.length / 60 - MIN_HOUR_HEIGHT).roundToPx()
+                            IntOffset(0, (scroll.value - top).coerceIn(0, maxOf(0, room)))
+                        },
+                    ),
                 )
             }
         }

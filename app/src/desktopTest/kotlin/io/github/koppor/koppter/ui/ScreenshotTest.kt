@@ -312,6 +312,14 @@ class ScreenshotTest {
     @Test
     fun rendersLaptopForReview() = reviewScreens("laptop", width = 1280, height = 720)
 
+    // The one screen that differs in a window wider than high and still as narrow as a phone.
+    @Test
+    fun rendersFamilyOnAPhoneHeldAcrossForReview() = runDesktopComposeUiTest(width = 760, height = 412) {
+        start(members = true)
+        onNodeWithTag("family-switch").performScrollTo().performClick()
+        save("review/across-family.png")
+    }
+
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
         fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {

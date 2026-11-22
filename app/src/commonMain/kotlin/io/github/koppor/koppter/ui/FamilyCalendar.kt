@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -38,11 +39,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.github.koppor.koppter.plan.Appointment
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Family
 import io.github.koppor.koppter.plan.RankingPeriod
@@ -53,14 +56,26 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 
-/** A column still shows some words of a task beside the box and the stars; with more members than fit, the columns scroll sideways. */
-private val MIN_MEMBER_WIDTH = 200.dp
+/** A column of the calendar still shows the start and a word of a block; with more members than fit, the columns scroll sideways. */
+private val MIN_CALENDAR_WIDTH = 120.dp
+
+/** From this width of its column on, a block has the room to name its end as well. */
+private val ENDS_WIDTH = 180.dp
+
+/** The tasks of a member still show some words of a task beside the box and the stars. */
+private val MIN_TASKS_WIDTH = 240.dp
+
+/** From this width on, the tasks beside the calendar leave it two columns. */
+private val BESIDE_WIDTH = 600.dp
+
+// ponytail: a fixed width; a handle kept in the settings when the texts of the tasks need more.
+private val TASKS_WIDTH = 320.dp
 private val HOURS_WIDTH = 44.dp
 
 /**
- * The day of a family: the ranking of the members by their stars, and a column per member with the tasks of the day to tick off
- * and, below them, the day as a calendar with the appointments of the member and the blocks of the `calendar.txt` of the list
- * of the member, such as the times at which the member is absent.
+ * The day of a family: the ranking of the members by their stars, the day as a calendar with a column per member,
+ * which shows the appointments of the member and the blocks of the `calendar.txt` of the list of the member, such as the times
+ * at which the member is absent, and the tasks of the day of each member to tick off: below the calendar, or beside it in a wide window.
  */
 // [impl->dsn~family-view~1]
 @Composable
@@ -81,12 +96,6 @@ fun FamilyCalendar(
     // With the date as key: a tablet that runs for weeks shows the new day each morning.
     var day by remember(today) { mutableStateOf(today) }
     val ranking = Family.ranking(entries.map { it.task }, members, period, day)
-    val appointments = members.associateWith { Family.appointments(entries, it, members, day) }
-    val blocks = members.associateWith { member -> blocksOf(member).filter { it.date == day } }
-    val spans = appointments.values.flatten().map { it.span } + blocks.values.flatten().map { it.span }
-    // From breakfast to the evening at least, so that an empty day has a grid as well.
-    val firstHour = minOf(7, spans.minOfOrNull { it.start / 60 } ?: 7)
-    val lastHour = maxOf(21, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 21)
 
     Column(Modifier.padding(8.dp).testTag("family")) {
         // On a phone, the periods of the ranking wrap below the day instead of leaving the screen.
@@ -133,48 +142,83 @@ fun FamilyCalendar(
             Text(problem, Modifier.padding(horizontal = 12.dp).testTag("family-problem"), color = MaterialTheme.colorScheme.error)
         }
         BoxWithConstraints(Modifier.fillMaxSize()) {
-            val width = maxOf(MIN_MEMBER_WIDTH, (maxWidth - HOURS_WIDTH) / members.size)
-            // The tasks leave the larger part to the calendar; more tasks than fit scroll.
-            val tasksHeight = maxHeight * 0.4f
-            Column(Modifier.horizontalScroll(rememberScrollState())) {
+            val calendars: @Composable (Modifier) -> Unit = { modifier ->
+                MemberCalendars(
+                    members.associateWith { member -> blocksOf(member).filter { it.date == day } },
+                    members.associateWith { Family.appointments(entries, it, members, day) },
+                    day, nowMinute.takeIf { day == today }, onOpen, modifier,
+                )
+            }
+            val tasks: @Composable (Modifier) -> Unit = { modifier ->
+                MemberTasks(members.associateWith { Family.todos(entries, it, members, day, today) }, today, onToggle, onOpen, onAdd, modifier)
+            }
+            // A window that is wider than high, such as a tablet or a phone held across, has few hours to give away:
+            // the calendar keeps the height and the tasks stand beside it.
+            if (maxWidth > maxHeight && maxWidth >= BESIDE_WIDTH) {
                 Row {
-                    Spacer(Modifier.width(HOURS_WIDTH))
-                    for (member in members) MemberHeader(member, onAdd = { onAdd(member) }, Modifier.width(width))
+                    calendars(Modifier.weight(1f))
+                    VerticalDivider()
+                    tasks(Modifier.width(TASKS_WIDTH))
                 }
-                Row(Modifier.heightIn(max = tasksHeight).verticalScroll(rememberScrollState())) {
-                    Spacer(Modifier.width(HOURS_WIDTH))
-                    for (member in members) {
-                        Column(Modifier.width(width).testTag("family-tasks-$member")) {
-                            val tasks = Family.todos(entries, member, members, day, today)
-                            if (tasks.isEmpty()) {
-                                Text("No tasks", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                            for (entry in tasks) FamilyTask(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) })
+            } else {
+                // Below the calendar, the tasks leave it the larger part.
+                val tasksHeight = maxHeight * 0.4f
+                Column {
+                    calendars(Modifier.weight(1f))
+                    HorizontalDivider()
+                    tasks(Modifier.heightIn(max = tasksHeight))
+                }
+            }
+        }
+    }
+}
+
+/** The day as a calendar with a column per member, under the name of the member. */
+@Composable
+private fun MemberCalendars(
+    blocks: Map<String, List<TextBlock>>,
+    appointments: Map<String, List<Appointment>>,
+    day: LocalDate,
+    nowMinute: Int?,
+    onOpen: (Entry) -> Unit,
+    modifier: Modifier,
+) {
+    val spans = appointments.values.flatten().map { it.span } + blocks.values.flatten().map { it.span }
+    // From breakfast to the evening at least, so that an empty day has a grid as well.
+    val firstHour = minOf(7, spans.minOfOrNull { it.start / 60 } ?: 7)
+    val lastHour = maxOf(21, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 21)
+    BoxWithConstraints(modifier) {
+        val width = maxOf(MIN_CALENDAR_WIDTH, (maxWidth - HOURS_WIDTH) / blocks.size)
+        Column(Modifier.horizontalScroll(rememberScrollState())) {
+            Row {
+                Spacer(Modifier.width(HOURS_WIDTH))
+                for (member in blocks.keys) MemberHeader(member, onAdd = null, Modifier.width(width))
+            }
+            BoxWithConstraints(Modifier.weight(1f)) {
+                // The hours share the height that is left, so that the day is seen at once; only in a low window it scrolls.
+                val hourHeight = maxOf(MIN_HOUR_HEIGHT, maxHeight / (lastHour - firstHour))
+                // A low window does not show the whole day: it starts an hour before now.
+                // ponytail: once, when the view is opened; follow the time when a low window shows the view for days.
+                val start = with(LocalDensity.current) { (hourHeight * ((nowMinute ?: 0) / 60 - 1 - firstHour).coerceAtLeast(0)).roundToPx() }
+                val scroll = rememberScrollState(start)
+                Row(Modifier.verticalScroll(scroll)) {
+                    Column(Modifier.width(HOURS_WIDTH).testTag("family-hours")) {
+                        for (hour in firstHour until lastHour) {
+                            Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                }
-                HorizontalDivider(Modifier.width(HOURS_WIDTH + width * members.size))
-                BoxWithConstraints(Modifier.weight(1f)) {
-                    // The hours share the height that is left, so that the day is seen at once; only in a low window it scrolls.
-                    val hourHeight = maxOf(MIN_HOUR_HEIGHT, maxHeight / (lastHour - firstHour))
-                    Row(Modifier.verticalScroll(rememberScrollState())) {
-                        Column(Modifier.width(HOURS_WIDTH).testTag("family-hours")) {
-                            for (hour in firstHour until lastHour) {
-                                Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
-                            }
-                        }
-                        for (member in members) {
-                            // An appointment is a block with a task; the number of its line tells two with the same text apart.
-                            val tasks = appointments.getValue(member).associate { TextBlock(day, it.span, "${it.entry.task.description} #${it.entry.index}") to it.entry }
-                            Box(Modifier.width(width).testTag("family-calendar-$member")) {
-                                // The appointments last, so that one in a time of absence lies on top of it.
-                                DayColumn(
-                                    blocks.getValue(member) + tasks.keys, firstHour, lastHour, hourHeight,
-                                    entryOf = { tasks[it] }, suffixOf = { "" }, onOpen = onOpen, highlight = false,
-                                    nowMinute = nowMinute.takeIf { day == today },
-                                    ends = true,
-                                )
-                            }
+                    for (member in blocks.keys) {
+                        // An appointment is a block with a task; the number of its line tells two with the same text apart.
+                        val tasks = appointments.getValue(member).associate { TextBlock(day, it.span, "${it.entry.task.description} #${it.entry.index}") to it.entry }
+                        Box(Modifier.width(width).testTag("family-calendar-$member")) {
+                            // The appointments last, so that one in a time of absence lies on top of it.
+                            DayColumn(
+                                blocks.getValue(member) + tasks.keys, firstHour, lastHour, hourHeight,
+                                entryOf = { tasks[it] }, suffixOf = { "" }, onOpen = onOpen, highlight = false,
+                                nowMinute = nowMinute,
+                                ends = width >= ENDS_WIDTH,
+                                scroll = scroll,
+                            )
                         }
                     }
                 }
@@ -183,13 +227,53 @@ fun FamilyCalendar(
     }
 }
 
-/** The name of a member and the button for a new task of the member. */
+/** The tasks of the day of each member, to tick off, under the name of the member and the button for a new task of the member. */
 @Composable
-private fun MemberHeader(member: String, onAdd: () -> Unit, modifier: Modifier) {
-    Row(modifier.padding(start = 12.dp).testTag("family-member-$member"), verticalAlignment = Alignment.CenterVertically) {
+private fun MemberTasks(
+    tasks: Map<String, List<Entry>>,
+    today: LocalDate,
+    onToggle: (Entry) -> Unit,
+    onOpen: (Entry) -> Unit,
+    onAdd: (String) -> Unit,
+    modifier: Modifier,
+) {
+    val scroll = rememberScrollState()
+    Column(modifier) {
+        BoxWithConstraints(Modifier.weight(1f, fill = false)) {
+            // As many members beside each other as the width holds.
+            val width = maxWidth / (maxWidth / MIN_TASKS_WIDTH).toInt().coerceIn(1, tasks.size)
+            FlowRow(Modifier.verticalScroll(scroll)) {
+                for ((member, own) in tasks) {
+                    Column(Modifier.width(width).testTag("family-tasks-$member")) {
+                        MemberHeader(member, onAdd = { onAdd(member) }, Modifier.fillMaxWidth())
+                        if (own.isEmpty()) {
+                            Text("No tasks", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        for (entry in own) FamilyTask(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) })
+                    }
+                }
+            }
+        }
+        // Without it, nothing tells that members follow below the last task in view.
+        if (scroll.canScrollForward) {
+            Text(
+                "More tasks below", Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp).testTag("family-more"),
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** The name of a member and, with [onAdd], the button for a new task of the member. */
+@Composable
+private fun MemberHeader(member: String, onAdd: (() -> Unit)?, modifier: Modifier) {
+    // As high as with the button, so that the names of the calendar and of the tasks look the same.
+    Row(modifier.padding(start = 12.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(member, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        IconButton(onClick = onAdd, modifier = Modifier.testTag("family-add-$member")) {
-            Icon(Icons.Filled.Add, contentDescription = "New task of $member")
+        if (onAdd != null) {
+            IconButton(onClick = onAdd, modifier = Modifier.testTag("family-add-$member")) {
+                Icon(Icons.Filled.Add, contentDescription = "New task of $member")
+            }
         }
     }
 }

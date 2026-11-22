@@ -79,12 +79,17 @@ Needs: impl, utest
 `FamilyCalendar` is the view *Family*, whose switch stands last and is there only while the tasks have members (`TodoController.views`); settings that name the view without members show the list.
 Its first row has the buttons for the day before and the day after, the day, which says so when it is today, *Today* while another day is shown, the periods of the ranking, and the ranking: the members by their place, each with its stars, the first place in the primary color unless nobody has a star.
 On a narrow screen, the periods and the ranking wrap below the day, so that all members are seen there, of whose columns a phone shows two.
-Below it, each member has a column, at least 200 dp wide, so that more columns than fit scroll sideways: the name and a button that opens the dialog of a new task with the context of the member.
-Below the names stand the tasks of the day, each with a box to tick it off, its text, which opens its dialog, and its stars; an overdue task says since when in the color of an error, and a completed one is struck through.
-The tasks take at most two fifths of the height and scroll beyond that; the calendar below shares the rest among its hours, at least from 07:00 to 21:00, as the week does, with a line at the current minute of today.
-The calendar of a member draws the blocks of the `calendar.txt` of the list first and the appointments over them (`DayColumn`), each with its start and its end, as the hours are too low to read the end from; a click on an appointment opens its task.
+Below it stands the day as a calendar with a column per member under the name of the member, at least 120 dp wide, so that a phone shows three members and more columns than fit scroll sideways.
+The calendar shares its height among its hours, at least from 07:00 to 21:00, as the week does, with a line at the current minute of today; in a window too low for the day, it scrolls and starts an hour before now.
+The calendar of a member draws the blocks of the `calendar.txt` of the list first and the appointments over them (`DayColumn`), each with its start and, in a column of 180 dp or more, its end, as the hours are too low to read the end from; a click on an appointment opens its task.
+The text of a block stays in view while the start of the block is scrolled out of it, so that a block that runs now says what it is.
+The tasks of the day stand apart from the calendar, as a column of the calendar is too narrow for their texts: per member the name, a button that opens the dialog of a new task with the context of the member, and the tasks.
+A task has a box to tick it off, its text, which opens its dialog, and its stars; an overdue task says since when in the color of an error, and a completed one is struck through.
+In a window that is higher than wide, or narrower than 600 dp, the tasks stand below the calendar, as many members beside each other as have 240 dp each; they take at most two fifths of the height.
+In a window that is wider than high, such as a tablet or a phone held across, the height is needed for the hours: the tasks stand beside the calendar in a pane of 320 dp, the members below each other.
+Tasks that do not fit scroll, and *More tasks below* says so until the last one is in view.
 The buttons that float above the other views, for a new task and for the search, are left out: they would cover the calendar, each member has a button for a new task, and there is nothing to search.
-The answers to the flow: ticking a task is what is done most, so the tasks stand above the calendar; it takes effect at once and is undone by the same box; a failure to write is shown as any other; the period is kept in the settings of the device as `rankingPeriod`, the day is not, as the view is to show today; on a phone, everything is reached by touch.
+The answers to the flow: the day is looked at first, so the calendar stands first, and ticking a task is what is done most, so the tasks are in view without scrolling, below or beside it; it takes effect at once and is undone by the same box; a failure to write is shown as any other; the period is kept in the settings of the device as `rankingPeriod`, the day is not, as the view is to show today; on a phone, everything is reached by touch.
 The filter does not apply, as the view shows the day of everybody: on a wide screen, the filter panel and the field of the search are left out, and the columns take the width.
 With Ctrl, 8 shows the view.
 
