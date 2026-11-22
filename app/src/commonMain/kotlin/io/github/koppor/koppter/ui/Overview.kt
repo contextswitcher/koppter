@@ -60,7 +60,7 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onToggle: (Entry) ->
     var selected by remember { mutableStateOf<String?>(null) }
     var showing by remember { mutableStateOf(false) }
     val shown = states.firstOrNull { it.name == selected }.takeIf { showing }
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp).testTag("overview")) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = FLOATING_BUTTONS_ROOM).testTag("overview")) {
         if (states.isEmpty()) Text(emptyText, Modifier.padding(16.dp))
         if (shown == null) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

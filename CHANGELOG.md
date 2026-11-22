@@ -31,6 +31,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Start* beside a task is a play button; the button *Plan* of the top bar is a word instead of the play icon.
 - An interval of weeks in `ice_recur.txt`, such as `weekly 2`, counts weeks from Monday to Sunday instead of from Sunday to Saturday: with an interval above one, the Sundays of an entry move by a week.
 
+### Fixed
+
+- The buttons that float at the bottom right no longer cover the evening hours of *Today* and *Week* or the end of *Inbox* and *Overview*.
+
 ## [2026-11-20] - 2026-11-20
 
 ### Added

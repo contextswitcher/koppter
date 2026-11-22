@@ -1973,9 +1973,11 @@ class AppTest {
 
         onNodeWithTag("week-title").assertTextEquals("Week 46 · 2026-11-09 to 2026-11-15")
         onAllNodesWithTag("week-block").assertCountEquals(3)
-        // The hours share the height of the window.
+        // The hours share the height of the window and end above the buttons that float, which would cover the blocks of the evening.
         val window = onNodeWithTag("main-screen").fetchSemanticsNode().boundsInRoot.bottom
-        assertTrue(onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom > window - 24f)
+        val hours = onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom
+        assertTrue(hours > window - FLOATING_BUTTONS_ROOM.value - 24f)
+        assertTrue(hours <= onNodeWithTag("new-task").fetchSemanticsNode().boundsInRoot.top)
         onNodeWithTag("week-next").performClick()
         onAllNodesWithTag("week-block").assertCountEquals(0)
         onNodeWithTag("week-next").performClick()

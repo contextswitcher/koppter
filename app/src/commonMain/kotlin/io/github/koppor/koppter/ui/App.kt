@@ -96,6 +96,9 @@ import kotlinx.coroutines.launch
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
 private val WIDE = 840.dp
 
+/** The room below the end of a view, so that the buttons that float at the bottom cover nothing that is scrolled to its end. */
+internal val FLOATING_BUTTONS_ROOM = 88.dp
+
 private const val RELOAD_INTERVAL_MILLIS = 2_000L
 
 /** Short enough that a device left open sees the changes of others before the user edits the same task. */
