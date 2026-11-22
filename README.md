@@ -931,6 +931,7 @@ The [latest release](https://github.com/contextswitcher/koppter/releases/latest)
 
 There is one release per day on which something changed, named after that day.
 The version of a desktop package is that day as `YY.M.D`, such as `26.11.14`.
+The Android application shows *Update* in its top bar when there is a newer release, and installs it after the system asked.
 A watch has neither a browser nor a file manager: its file is installed from a computer with `adb install koppter-wear-<date>.apk`, after *ADB debugging* and *Wireless debugging* were switched on in the developer options of the watch and the computer was paired with `adb pair` and connected with `adb connect`.
 The desktop packages bring their own Java runtime.
 They are not signed: Windows and macOS warn before they open them, and macOS opens the application only after it is allowed under *Privacy & Security* in the system settings.

@@ -837,6 +837,17 @@ class AppTest {
         assertEquals(true, restarted)
     }
 
+    // [utest->dsn~android-update~1]
+    @Test
+    fun theButtonOfAnUpdateSaysWhatItDoes() = runComposeUiTest {
+        var label by mutableStateOf("Update")
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 22) })
+        setContent { App(controller, "todo.txt", update = {}, updateLabel = label) }
+        onNodeWithTag("restart-to-update").assertTextEquals("Update")
+        label = "Downloading update"
+        onNodeWithTag("restart-to-update").assertTextEquals("Downloading update")
+    }
+
     // [utest->dsn~note-images~1]
     @Test
     fun anImageIsAttachedToTheNoteOfATaskAndShownInItsDialog() = runComposeUiTest {

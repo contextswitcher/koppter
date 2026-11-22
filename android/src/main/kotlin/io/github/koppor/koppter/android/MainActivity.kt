@@ -5,6 +5,7 @@ import android.content.ComponentName
 import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.content.Intent
+import android.content.pm.PackageInstaller
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -12,7 +13,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import io.github.koppor.koppter.sync.GitSetup
@@ -33,8 +36,11 @@ import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.LocalDateTime
+import kotlin.time.Duration.Companion.hours
 
 /** The number of characters of the log that are shared: what an intent carries safely, and more than a report needs. */
 private const val SHARED_LOG_LENGTH = 60_000
@@ -114,6 +120,11 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    // [impl->dsn~android-update~1]
+    /** The tag of a release newer than the running one, `null` while there is none. */
+    private var newerRelease by mutableStateOf<String?>(null)
+    private var installing by mutableStateOf(false)
+
     private lateinit var controller: TodoController
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,6 +146,17 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) intent?.dataString?.let(controller::openLink)
         val keyboard = resources.configuration.keyboard != Configuration.KEYBOARD_NOKEYS
         setContent {
+            val scope = rememberCoroutineScope()
+            // [impl->dsn~android-update~1]
+            // Only an APK of the release workflow has a version to compare; a build of a developer is never offered one.
+            if (BuildConfig.VERSION_NAME != "0") {
+                LaunchedEffect(Unit) {
+                    while (true) {
+                        newerRelease = withContext(Dispatchers.IO) { latestReleaseTag() }?.takeIf { it != "v${BuildConfig.VERSION_NAME}" }
+                        delay(6.hours)
+                    }
+                }
+            }
             App(
                 controller, "todo.txt in the storage of the application", chooseFile = ::chooseFile, chooseFolder = ::chooseFolder, git = gitActions, keyboard = keyboard,
                 shareLog = ::shareLog,
@@ -153,6 +175,21 @@ class MainActivity : ComponentActivity() {
                 homeScreen = homeScreen,
                 onHomeScreen = ::offerAsHomeScreen,
                 apps = ::otherApps,
+                update = newerRelease?.let { tag ->
+                    {
+                        if (!installing) {
+                            installing = true
+                            scope.launch {
+                                runCatching { withContext(Dispatchers.IO) { installRelease(tag) } }.onFailure {
+                                    installing = false
+                                    controller.report("Update not downloaded", it)
+                                    controller.error = "Update not downloaded: ${it.message}"
+                                }
+                            }
+                        }
+                    }
+                },
+                updateLabel = if (installing) "Downloading update" else "Update",
             )
         }
     }
@@ -161,6 +198,23 @@ class MainActivity : ComponentActivity() {
     // [impl->dsn~android-links~1]
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        // [impl->dsn~android-update~1]
+        if (intent.action == INSTALL_STATUS) {
+            when (intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
+                // The confirmation of the system, which also asks once for the permission to install from koppter.
+                @Suppress("DEPRECATION")
+                PackageInstaller.STATUS_PENDING_USER_ACTION -> intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)?.let(::startActivity)
+                // On success, the system ends the application to replace it; nothing is left to show.
+                PackageInstaller.STATUS_SUCCESS -> {}
+                // Cancel in the dialog of the system leaves no trace; the button offers the update again.
+                PackageInstaller.STATUS_FAILURE_ABORTED -> installing = false
+                else -> {
+                    installing = false
+                    controller.error = "Update not installed: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}"
+                }
+            }
+            return
+        }
         intent.dataString?.let(controller::openLink)
     }
 

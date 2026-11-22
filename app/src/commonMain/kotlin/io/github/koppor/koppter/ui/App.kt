@@ -130,6 +130,8 @@ fun App(
     takePhoto: (suspend () -> List<ByteArray>)? = null,
     /** Ends the application so that a newer version of it starts; `null` unless there is one and something starts it. */
     update: (() -> Unit)? = null,
+    /** The words of the button of [update]. */
+    updateLabel: String = "Restart to update",
     /** Gives the parts of the window that the platform draws, such as the title bar on Windows, the dark or the light variant. */
     windowVariant: (dark: Boolean) -> Unit = {},
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
@@ -212,7 +214,7 @@ fun App(
             LocalProjectEditor provides projectEditor,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave, homeScreen, onHomeScreen, apps)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, updateLabel, backHandler, leave, homeScreen, onHomeScreen, apps)
         }
     }
 }
@@ -265,6 +267,7 @@ private fun MainScreen(
     pickImage: (suspend () -> List<ByteArray>)?,
     takePhoto: (suspend () -> List<ByteArray>)?,
     update: (() -> Unit)?,
+    updateLabel: String,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
     homeScreen: Boolean?,
@@ -435,7 +438,8 @@ private fun MainScreen(
             val barActions: @Composable RowScope.() -> Unit = {
                 // [impl->dsn~restart-to-update~1]
                 // Words, as no icon tells that the application ends and comes back.
-                update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text("Restart to update") } }
+                // [impl->dsn~android-update~1]
+                update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text(updateLabel) } }
                 controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
                 if (controller.canSchedule) {
                     // [impl->dsn~plan-dialog~1]
@@ -449,8 +453,8 @@ private fun MainScreen(
             Scaffold(
                 topBar = {
                     if (!wideNow) TopAppBar(
-                        // A phone has no room for the name beside the button Apps; as the home screen, the application needs no name.
-                        title = { if (!startsApps) Text("koppter") },
+                        // A phone has no room for the name beside the button Apps or the one of an update; as the home screen, the application needs no name.
+                        title = { if (!startsApps && update == null) Text("koppter") },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                 Icon(Icons.Default.Menu, contentDescription = "Filter")

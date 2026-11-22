@@ -125,6 +125,17 @@ Covers:
 
 Needs: dsn
 
+### Update from GitHub
+`req~android-update~1`
+
+A user who installed the APK of a release on GitHub learns in the application that there is a newer release and installs it from there, without looking for the file in a browser.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Agenda on a watch
 `req~watch-agenda~1`
 
@@ -358,6 +369,22 @@ An address, such as that of a page in the local network, is not started from her
 Covers:
 
 * `req~android-apps~1`
+
+Needs: impl, utest
+
+### Update from the latest release
+`dsn~android-update~1`
+
+An APK of the release workflow, whose version name is the date of its release, asks GitHub at its start and every six hours for the tag of the latest release, from the redirect of `/releases/latest`; a build with the version name `0`, as of a developer, does not ask.
+If the tag is not that of the running version, the top bar shows the button *Update*, a word, as no icon tells that the application is replaced; the top bar of a narrow window leaves out the name koppter while it has the button, as with *Apps*; whenever the tag cannot be read, nothing is shown.
+A click downloads `koppter-<date>.apk` of that release off the main thread into a session of the package installer, while the button says *Downloading update* and does nothing more.
+The system then asks the user, the first time also for the permission to install applications from koppter, and installs the APK over the application, which has the same key and so keeps its data.
+The answers to the flow: the update is rare and the button stands first in the top bar while there is one; Cancel in the dialog of the system leaves the application as it was and offers the update again; a download or an installation that fails is named with its cause in the message at the bottom of the window; nothing is kept in the settings.
+The watch application is not updated this way: it has no top bar to offer it and is installed with `adb`.
+
+Covers:
+
+* `req~android-update~1`
 
 Needs: impl, utest
 

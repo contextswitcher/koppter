@@ -171,7 +171,7 @@ class ScreenshotTest {
         ),
     )
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false) {
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update") {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
         val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
@@ -180,7 +180,7 @@ class ScreenshotTest {
             "Books Calculator Calendar Camera Chrome Clock Contacts Drive evcc Files Gallery Gmail Health Hue Keep Maps Messages Music News Notes Phone Photos Podcasts Radio " +
                 "Recorder Settings Sheets Signal Spotify Translate Wallet Weather YouTube"
             ).split(" ").plus(listOf("Home Assistant Companion for Android", "Play Store", "Smart Life", "Voice Access")).map { DeviceApp(it) {} }
-        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }) }
+        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }, update = update, updateLabel = updateLabel) }
     }
 
     @Test
@@ -327,8 +327,8 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
-            start(homeScreen = homeScreen, members = members)
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, updateLabel: String? = null, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start(homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty())
             open()
             save("review/$size-$name.png")
         }
@@ -364,6 +364,8 @@ class ScreenshotTest {
         }
         // What a device shows whose home screen is the application.
         screen("home", homeScreen = true) {}
+        // [utest->dsn~android-update~1]
+        screen("update", updateLabel = "Update") {}
         screen("apps", homeScreen = true) { onNodeWithTag("open-apps").performClick() }
         // The last ones: the clock that runs and the time away stay in the file.
         storage.keepsWrites = true

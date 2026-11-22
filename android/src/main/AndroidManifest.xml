@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- [impl->dsn~android-block-notification~1] -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- [impl->dsn~android-update~1] -->
+    <!-- For the update from the latest release on GitHub; the system asks the user before each installation. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- The system drops the alarm of the next block when the device restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
