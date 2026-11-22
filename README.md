@@ -184,8 +184,9 @@ A repository that is not cloned yet is given by its address, such as `git@github
 *Choose file* and *Choose folder* do the same with a file and with the `todo.txt` file of a folder: the settings close and show its tasks.
 On the desktop, it uses the SSH configuration of the user for that; on Android, the key that the settings show.
 A click on that key copies it.
-With the address of a repository of GitHub in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and tick *Allow write access*.
-The address of a page of the repository on GitHub, such as `https://github.com/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+With the address of a repository of GitHub, GitLab or Codeberg in the field, the button below the key copies the key and opens the page of the repository that adds a deploy key: paste the key there and allow write access, as the text below the button describes.
+The address of a page of the repository on one of these servers, such as `https://github.com/user/todo` or `https://codeberg.org/user/todo`, is taken as well: pasted into the field, it becomes the address for SSH.
+Other servers, such as one of GitLab of its own, work with their address for SSH, such as `git@git.example.org:user/todo.git`; the key is added there by hand.
 With an address in the field, *Check connection* tells whether the server is reached and lets the device read the repository, without cloning it; if not, it shows the reason.
 On Android, a file chosen with *Choose file* is opened alone, as the document picker gives no access to the files next to it; a folder chosen with *Choose folder* has them.
 On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also where there is none yet: a folder that is the clone of a git repository is committed and synchronized.

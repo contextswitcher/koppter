@@ -1,4 +1,4 @@
-personal_ws-1.1 en 130 utf-8
+personal_ws-1.1 en 133 utf-8
 OneNote
 GTD
 APIs
@@ -129,3 +129,6 @@ Integrations
 ADB
 subagent
 ux
+Codeberg
+Forgejo
+GitLab

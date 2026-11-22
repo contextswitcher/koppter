@@ -98,20 +98,49 @@ interface GitSetupActions {
 /** Whether the text names a git repository on a server rather than a file: a URL, or the form `user@host:path` of SSH. */
 fun isGitAddress(text: String): Boolean = Regex("(ssh|git|https?)://.+|[\\w.-]+@[\\w.-]+:.+").matches(text)
 
+/** A server whose pages for a repository and for its deploy keys follow from the path of the repository. */
+internal class Forge(
+    val name: String,
+    val host: String,
+    /** The path of the repository at the start of the path of one of its pages. */
+    val repositoryPath: Regex,
+    val keyPage: (path: String) -> String,
+    val keySteps: String,
+)
+
+// GitLab allows nested groups, and its pages below a repository start with `/-/`; GitHub and Codeberg have owner and name only.
+private val OWNER_AND_NAME = Regex("([\\w.-]+/[\\w.-]+?)(?:\\.git)?(?:[/?#].*)?")
+
+internal val FORGES = listOf(
+    Forge("GitHub", "github.com", OWNER_AND_NAME, { "https://github.com/$it/settings/keys/new" }, "paste the key, tick \"Allow write access\" and add the key"),
+    Forge(
+        "GitLab", "gitlab.com", Regex("([\\w.-]+(?:/[\\w.-]+?)+?)(?:\\.git)?(?:/-/.*|[?#].*|/)?"),
+        { "https://gitlab.com/$it/-/settings/repository#js-deploy-keys-settings" },
+        "choose \"Add new key\" under \"Deploy keys\", paste the key, tick \"Grant write permissions to this key\" and add the key",
+    ),
+    Forge("Codeberg", "codeberg.org", OWNER_AND_NAME, { "https://codeberg.org/$it/settings/keys" }, "choose \"Add deploy key\", paste the key, tick \"Enable write access\" and add the key"),
+)
+
 /**
- * The address for SSH of a repository of GitHub that is given as the address of one of its pages, which is what the browser offers to copy;
+ * The address for SSH of a repository of one of the [FORGES] that is given as the address of one of its pages, which is what the browser offers to copy;
  * any other text as it is. The application has an SSH key and no password for HTTPS.
  */
 // [impl->dsn~git-setup-dialog~1]
-internal fun sshAddress(text: String): String =
-    Regex("https?://(?:www\\.)?github\\.com/([\\w.-]+)/([\\w.-]+?)(?:\\.git)?(?:[/?#].*)?").matchEntire(text)
-        ?.let { "git@github.com:${it.groupValues[1]}/${it.groupValues[2]}.git" } ?: text
+internal fun sshAddress(text: String): String = FORGES.firstNotNullOfOrNull { forge ->
+    Regex("https?://(?:www\\.)?${Regex.escape(forge.host)}/(.+)").matchEntire(text)
+        ?.let { forge.repositoryPath.matchEntire(it.groupValues[1]) }
+        ?.let { "git@${forge.host}:${it.groupValues[1]}.git" }
+} ?: text
 
-/** The page of GitHub that adds a deploy key to the repository of the address; `null` for an address of another server. */
+/** The server and the page of it that adds a deploy key to the repository of the address; `null` for an address of another server. */
 // [impl->dsn~git-setup-dialog~1]
-internal fun deployKeyPage(address: String): String? =
-    Regex("(?:ssh://)?git@github\\.com[:/]([\\w.-]+)/([\\w.-]+?)(?:\\.git)?/?").matchEntire(sshAddress(address.trim()))
-        ?.let { "https://github.com/${it.groupValues[1]}/${it.groupValues[2]}/settings/keys/new" }
+internal fun deployKeyPage(address: String): Pair<Forge, String>? {
+    val ssh = sshAddress(address.trim())
+    return FORGES.firstNotNullOfOrNull { forge ->
+        Regex("(?:ssh://)?git@${Regex.escape(forge.host)}[:/]([\\w.-]+(?:/[\\w.-]+?)+?)(?:\\.git)?/?").matchEntire(ssh)
+            ?.let { forge to forge.keyPage(it.groupValues[1]) }
+    }
+}
 
 /** Scales offered for the names of the priorities: the letters of the format, numbers, and steps of the Fibonacci sequence. */
 private val PRIORITY_PRESETS = listOf(
@@ -257,7 +286,7 @@ fun SettingsDialog(
                                 supportingText = {
                                     Text(
                                         "Empty: $defaultTodoFile" +
-                                            (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub becomes that form.") +
+                                            (if (git == null) "" else "\nAn address such as git@github.com:user/todo.git is cloned with the button Clone, which then shows the tasks of the clone. The address of a page of a repository of GitHub, GitLab or Codeberg becomes that form.") +
                                             "\nA file in a git repository is committed after every change and synchronized with the remote repository." +
                                             "\nThe files next to the todo.txt file belong to it: notes, ice_recur.txt, ${ConfigFile.NAME} and calendar.txt.",
                                     )
@@ -855,12 +884,12 @@ private fun CommitterField(
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
-private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: String?) {
+private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: Pair<Forge, String>?) {
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
     var copied by remember { mutableStateOf(false) }
     Text(
-        "Public SSH key of this device. Register it with the git server, for GitHub as a deploy key with write access. " +
+        "Public SSH key of this device. Register it with the git server as a deploy key with write access. " +
             if (copied) "Copied to the clipboard." else "A tap on the key copies it.",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.testTag("settings-public-key-help"),
@@ -877,16 +906,17 @@ private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHan
     ) {
         Text(publicKey, fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
     }
-    // The API of GitHub for deploy keys needs a login with the rights of an administrator; the page in the browser has that login already.
+    // The APIs for deploy keys need a login with the rights of an administrator; the page in the browser has that login already.
     if (deployKeyPage != null) {
+        val (forge, page) = deployKeyPage
         OutlinedButton(
             onClick = {
                 clipboard.setText(AnnotatedString(publicKey))
                 copied = true
-                uriHandler.openUri(deployKeyPage)
+                uriHandler.openUri(page)
             },
             modifier = Modifier.testTag("settings-add-key"),
-        ) { Text("Copy the key and open GitHub to add it") }
-        Text("On the page of GitHub, paste the key, tick \"Allow write access\" and add the key.", style = MaterialTheme.typography.bodySmall)
+        ) { Text("Copy the key and open ${forge.name} to add it") }
+        Text("On the page of ${forge.name}, ${forge.keySteps}.", style = MaterialTheme.typography.bodySmall)
     }
 }

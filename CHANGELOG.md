@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The view *Family* shows a day with a column per member of a family, each a list: the tasks of the day to tick off, and below them a calendar with the tasks that have a time and with the blocks of the `calendar.txt` of the list. The view is there once the file has such lists.
 - Completing a task gives its member stars: one, or the number of the tag `stars:`, as in `Mow the lawn stars:3`. The family view shows the place and the stars of each member for the day, the week, the month, the quarter or the year.
 - *Calendars of the members* in the settings takes the addresses of published calendars of the members of a family. The device writes the times of their events as blocks named `Absent` into the `calendar.txt` of the list of the member, where the family view of every device shows them; what the events are stays on that device.
+- For a repository on GitLab or Codeberg, as for one on GitHub, the settings take the address of a page of the repository and turn it into the address for SSH, and a button copies the key of the device and opens the page of the repository that adds it as a deploy key.
 - A directory next to a todo.txt file that has a todo.txt file of its own is a list as well, shown with the context named after the directory, such as `@anna` for `anna/todo.txt`. The members of a family keep their lists in one repository that way, which a device clones once.
 
 ### Changed

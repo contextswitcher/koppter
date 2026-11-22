@@ -2603,14 +2603,20 @@ class AppTest {
         onNodeWithTag("settings-add-key").performScrollTo().performClick()
         assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
         assertEquals(listOf("https://github.com/demo-user/todo/settings/keys/new"), opened)
-        assertEquals("https://github.com/demo-user/my.todo/settings/keys/new", deployKeyPage(" ssh://git@github.com/demo-user/my.todo.git "))
+        assertEquals("https://github.com/demo-user/my.todo/settings/keys/new", deployKeyPage(" ssh://git@github.com/demo-user/my.todo.git ")?.second)
+        assertEquals("https://codeberg.org/demo-user/todo/settings/keys", deployKeyPage("git@codeberg.org:demo-user/todo.git")?.second)
+        assertEquals("https://gitlab.com/group/sub/todo/-/settings/repository#js-deploy-keys-settings", deployKeyPage("git@gitlab.com:group/sub/todo.git")?.second)
+        assertEquals("GitLab", deployKeyPage("https://gitlab.com/group/todo")?.first?.name)
         for (other in listOf("git@example.org:demo-user/todo.git", "/home/user/todo.txt", "")) assertEquals(null, deployKeyPage(other))
 
         assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo"))
         assertEquals("git@github.com:demo-user/todo.git", sshAddress("https://github.com/demo-user/todo.git"))
         assertEquals("git@github.com:demo-user/my.todo.git", sshAddress("http://www.github.com/demo-user/my.todo/pull/10?diff=split"))
+        assertEquals("git@codeberg.org:demo-user/todo.git", sshAddress("https://codeberg.org/demo-user/todo/src/branch/main"))
+        assertEquals("git@gitlab.com:group/sub/todo.git", sshAddress("https://gitlab.com/group/sub/todo/-/tree/main"))
+        assertEquals("git@gitlab.com:group/todo.git", sshAddress("https://gitlab.com/group/todo.git"))
         // Another server may offer no SSH, and an address for SSH stays as it is.
-        for (other in listOf("https://example.org/demo-user/todo.git", "git@github.com:demo-user/todo.git", "https://github.com/demo-user", "/home/user/todo.txt")) assertEquals(other, sshAddress(other))
+        for (other in listOf("https://example.org/demo-user/todo.git", "git@github.com:demo-user/todo.git", "https://github.com/demo-user", "https://gitlab.com/group", "/home/user/todo.txt")) assertEquals(other, sshAddress(other))
     }
 
     // [utest->dsn~settings-dialog~1]

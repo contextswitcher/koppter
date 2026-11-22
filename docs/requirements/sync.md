@@ -370,9 +370,10 @@ If the clone fails, the dialog stays and shows the reason in the color for error
 The reason is the message of the failure followed by its causes (`failureText`), as the library that clones often reports only that the connection ended; the failure also goes to the log.
 The dialog scrolls to the message of a clone or a check, which stands at the field, above the buttons.
 The button *Check connection* below the field, next to those that choose a file or a folder and before *Clone*, is enabled while the field holds such an address: it asks the server for the repository without cloning it and shows *Connected*, or *Not connected* with the reason as for a clone that fails.
-The address of a page of a repository of GitHub, as the browser has it, becomes the address for SSH of that repository (`sshAddress`) when it is pasted and before it is cloned: the application has an SSH key and no password for HTTPS.
+The address of a page of a repository of GitHub, GitLab or Codeberg (`gitlab.com` and `codeberg.org`, not a server of their own), as the browser has it, becomes the address for SSH of that repository (`sshAddress`) when it is pasted and before it is cloned: the application has an SSH key and no password for HTTPS.
 The dialog shows the public key of the device where the actions have one; a click on the key copies it to the clipboard.
-While the field holds the address of a repository of GitHub, a button below the key copies the key and opens the page of that repository that adds a deploy key (`deployKeyPage`) in the browser.
+While the field holds the address of a repository of one of these servers, a button below the key copies the key and opens the page of that repository that adds a deploy key (`deployKeyPage`) in the browser; the text below the button names the steps on that page.
+A server of its own is not recognized, as its name does not tell whether it runs GitLab, Forgejo or something else.
 The application does not add the key itself: the API for deploy keys needs a login with the rights of an administrator of the repository, which the browser has and the application has not.
 The Android application passes actions with the key of the application; the desktop application passes actions without a key, which clone into the data directory with the SSH configuration of the user.
 
