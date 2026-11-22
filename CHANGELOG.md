@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- In a wide window, the bar with the name koppter is gone: synchronization, *Plan*, the scheduled tasks and the settings stand at the end of the row of the views, which leaves the tasks a line more.
 - On a phone, the agenda shows the time and the buttons of a block above its card, which takes the whole width.
 - On macOS, the title bar of the window follows the light or dark variant of the colors, as on Windows.
 - *Cancel* in the dialog of a new task keeps what was entered as a draft, with which the next new task starts; *Discard*, after Esc or the back button, removes it.

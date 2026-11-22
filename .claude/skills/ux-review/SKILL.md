@@ -40,7 +40,7 @@ These were decided; neither the change nor the reviewer reopens them without a w
 * A pane that holds text has no fixed width: it takes the room that is left, or a handle changes its width and the settings keep it.
 * A list shows all its entries or says that it is cut.
 * The views are one row of switches of which one is always selected, Today and List first.
-  A switch of that row selects a view and nothing else: an action such as Plan is a button of the top bar, and an option of the list belongs to the filter panel, where the switches Open and Done stand last.
+  A switch of that row selects a view and nothing else: an action such as Plan is a button of the top bar, which a wide window does not have: there, these buttons end the row of the switches, and an option of the list belongs to the filter panel, where the switches Open and Done stand last.
 * Words instead of an icon where no icon tells what happens.
 * A default of Material is not a decision: check the height of a field, the first day of a week (Monday, decision 0049) and whatever follows the locale of the system.
 

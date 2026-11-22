@@ -16,9 +16,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -421,30 +424,30 @@ private fun MainScreen(
             gesturesEnabled = !wideNow,
             drawerContent = { if (!wideNow) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
+            // A wide window has no top bar: the title of the window names the application, and its buttons end the row of the views.
+            val barActions: @Composable RowScope.() -> Unit = {
+                // [impl->dsn~restart-to-update~1]
+                // Words, as no icon tells that the application ends and comes back.
+                update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text("Restart to update") } }
+                controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
+                if (controller.canSchedule) {
+                    // [impl->dsn~plan-dialog~1]
+                    // A word: the play icon starts the clock of a task.
+                    TextButton(onClick = { planning = controller.planSettings }, modifier = Modifier.testTag("open-plan")) { Text("Plan") }
+                    BarButton(Icons.Default.DateRange, "Scheduled tasks", "open-schedule") { schedule = controller.schedule() }
+                }
+                BarButton(Icons.Default.Settings, "Settings", "open-settings") { showSettings = true }
+            }
             Scaffold(
                 topBar = {
-                    TopAppBar(
+                    if (!wideNow) TopAppBar(
                         title = { Text("koppter") },
                         navigationIcon = {
-                            if (!wideNow) {
-                                IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Filter")
-                                }
+                            IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
+                                Icon(Icons.Default.Menu, contentDescription = "Filter")
                             }
                         },
-                        actions = {
-                            // [impl->dsn~restart-to-update~1]
-                            // Words, as no icon tells that the application ends and comes back.
-                            update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text("Restart to update") } }
-                            controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
-                            if (controller.canSchedule) {
-                                // [impl->dsn~plan-dialog~1]
-                                // A word: the play icon starts the clock of a task.
-                                TextButton(onClick = { planning = controller.planSettings }, modifier = Modifier.testTag("open-plan")) { Text("Plan") }
-                                BarButton(Icons.Default.DateRange, "Scheduled tasks", "open-schedule") { schedule = controller.schedule() }
-                            }
-                            BarButton(Icons.Default.Settings, "Settings", "open-settings") { showSettings = true }
-                        },
+                        actions = barActions,
                     )
                 },
                 floatingActionButton = {
@@ -496,7 +499,7 @@ private fun MainScreen(
                         val away = controller::goAway.takeIf { controller.canSchedule && controller.awaySince == null }
                         running?.let { RunningClock(it, now, onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }, onAway = away) }
                         controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
-                        ViewOptions(controller)
+                        ViewOptions(controller, if (wideNow) barActions else null)
                         // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
                         if (wideNow && filtered) searchField(Modifier.padding(8.dp))
                         val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
@@ -663,18 +666,22 @@ private fun MainScreen(
  */
 // [impl->dsn~view-options~1]
 @Composable
-private fun ViewOptions(controller: TodoController) {
+private fun ViewOptions(controller: TodoController, actions: (@Composable RowScope.() -> Unit)?) {
     Column(Modifier.padding(horizontal = 8.dp)) {
-        // Each row is one line that scrolls sideways: in a narrow window, wrapped rows would take the place of the tasks.
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (view in controller.views) {
-                FilterChip(
-                    selected = controller.view == view,
-                    onClick = { controller.view = view },
-                    label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} (${controller.inbox.size})" else view.title) },
-                    modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
-                )
+        // The buttons of the top bar, in a wide window, go to a line of their own where all switches would not fit next to them.
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, itemVerticalAlignment = Alignment.CenterVertically) {
+            // Each row is one line that scrolls sideways: in a narrow window, wrapped rows would take the place of the tasks.
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (view in controller.views) {
+                    FilterChip(
+                        selected = controller.view == view,
+                        onClick = { controller.view = view },
+                        label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} (${controller.inbox.size})" else view.title) },
+                        modifier = Modifier.testTag("${view.name.lowercase()}-switch"),
+                    )
+                }
             }
+            if (actions != null) Row(verticalAlignment = Alignment.CenterVertically, content = actions)
         }
         val list = controller.view == View.LIST
         val overview = controller.view == View.OVERVIEW

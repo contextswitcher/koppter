@@ -873,6 +873,7 @@ Needs: impl, utest
 `dsn~main-screen~1`
 
 The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button of the same size to its left instead of the field.
+A wide window has no top bar: the title of the window already names the application, and the buttons of the top bar stand at the end of the row of the switches for the view, which leaves the filter panel and the tasks a line more.
 A button of the top bar shows its description while the pointer rests on it.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
