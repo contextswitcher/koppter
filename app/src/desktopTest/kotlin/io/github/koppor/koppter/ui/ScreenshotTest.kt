@@ -333,8 +333,16 @@ class ScreenshotTest {
         screen("edit") {
             // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.
             onNodeWithTag("list-switch").performClick()
-            // The description, in the last line of the card: on a phone, the middle of this card is a label that opens a link.
-            onNodeWithText("Prepare the slides for the team meeting").performTouchInput { click(Offset(width * 0.3f, height - 12f)) }
+            // The description itself: on a phone, the middle of this card is a label that opens a link.
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-dialog").assertExists()
+        }
+        screen("edit-more") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-dialog").assertExists()
+            onNodeWithTag("edit-context-more").performScrollTo().performClick()
+            onNodeWithTag("edit-context-rest").performScrollTo()
         }
         // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
         screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }

@@ -542,6 +542,13 @@ class TodoController(
     val contexts: List<String> get() = file.entries.flatMap { it.task.contexts }.flatMap { it.withAncestors() }.distinct().sortedWith(hierarchyOrder)
     val hashtags: List<String> get() = file.entries.flatMap { it.task.hashtags }.distinct().sorted()
     val priorities: List<Char> get() = file.entries.mapNotNull { it.task.priority }.distinct().sorted()
+    /** How many open tasks carry each project, context and hashtag, keyed with its sign (`+`, `@`, `#`); a name counts for the names above it as well. */
+    val nameUses: Map<String, Int>
+        get() = file.entries.filter { !it.task.completed }.flatMap { entry ->
+            entry.task.projects.flatMap { it.withAncestors() }.distinct().map { "+$it" } +
+                entry.task.contexts.flatMap { it.withAncestors() }.distinct().map { "@$it" } +
+                entry.task.hashtags.map { "#$it" }
+        }.groupingBy { it }.eachCount()
 
     fun load() {
         guarded {

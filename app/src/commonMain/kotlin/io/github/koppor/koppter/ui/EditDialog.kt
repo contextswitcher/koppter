@@ -47,6 +47,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -144,6 +145,8 @@ fun EditDialog(
     knownContexts: List<String>,
     knownHashtags: List<String>,
     today: LocalDate,
+    /** How many open tasks carry a name, keyed with its sign; the most used names are offered first. */
+    nameUses: Map<String, Int> = emptyMap(),
     /** The contexts that a task takes with a project. */
     contextsOf: (String) -> List<String> = { emptyList() },
     /** The other tasks of the file, which the task can wait for or be waited for by. */
@@ -377,11 +380,11 @@ fun EditDialog(
                     NameList("Project", "+", projects, knownProjects, { chosen ->
                         contexts = (contexts + (chosen - projects).flatMap(contextsOf)).distinct()
                         projects = chosen
-                    }, "edit-project", projectColors())
-                    NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors())
+                    }, "edit-project", projectColors(), nameUses)
+                    NameList("Context", "@", contexts, knownContexts, { contexts = it }, "edit-context", contextColors(), nameUses)
                     // [impl->dsn~hashtags-in-ui~1]
                     // "#123" in a line is a word of the description, not a hashtag.
-                    NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), outlined = true, valid = Task::isHashtagName)
+                    NameList("Hashtag", "#", hashtags, knownHashtags, { hashtags = it }, "edit-hashtag", hashtagColors(), nameUses, outlined = true, valid = Task::isHashtagName)
                     // [impl->dsn~edit-dependencies~1]
                     WithHelp("The tasks that are to be done before this one (id: here, p: there).") { TaskChoice("Waits for", waits, others, { waits = it }, "edit-waits") }
                     WithHelp("The tasks that are to be done after this one (p: here, id: there).") { TaskChoice("Before", before, others, { before = it }, "edit-before") }
@@ -804,7 +807,7 @@ private fun TaskChoice(label: String, chosen: Set<Int>, others: List<Entry>, onC
     }
 }
 
-/** The projects, contexts or hashtags of the task as removable chips, the known names as suggestions, and a field of the size of a chip to add one. */
+/** The projects, contexts or hashtags of the task as removable chips, the most used known names as suggestions, the others behind *More…*, and a field of the size of a chip to search and add one. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun NameList(
@@ -816,6 +819,8 @@ private fun NameList(
     tag: String,
     /** Container and content color of a name of the task: those of its label in the list. */
     chipColors: Pair<Color, Color>,
+    /** How many open tasks carry a name, keyed with its sign. */
+    uses: Map<String, Int>,
     outlined: Boolean = false,
     /** Whether the name is one that the todo.txt line keeps as this kind of metadata. */
     valid: (String) -> Boolean = { true },
@@ -826,9 +831,13 @@ private fun NameList(
         if (clean.isNotEmpty() && clean !in names && valid(clean)) onChange(names + clean)
         input = ""
     }
-    // The names of the task first, then the known names that can be added with one click.
+    var more by remember { mutableStateOf(false) }
     // Any part of the name counts, so that a name below another one is found by its last level: `rea` finds `research>reading`.
-    val suggestions = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }
+    val matching = known.filter { it !in names && it.contains(input.trim().removePrefix(sign), ignoreCase = true) }
+    // A file has dozens of names; all of them as chips push the fields below out of view.
+    // So without typed text only the most used ones are chips, and the others scroll in one row behind *More…*.
+    val top = if (input.isBlank()) matching.sortedByDescending { uses["$sign$it"] ?: 0 }.take(TOP_NAMES) else matching
+    val rest = if (input.isBlank()) matching - top.toSet() else emptyList()
     val colors = MaterialTheme.colorScheme
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         for (name in names) {
@@ -846,8 +855,19 @@ private fun NameList(
                 modifier = Modifier.testTag("$tag-$name"),
             )
         }
-        for (name in suggestions) {
+        for (name in top) {
             SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
+        }
+        if (rest.isNotEmpty()) {
+            // A button, not a chip: as a chip it read as one more name.
+            TextButton(onClick = { more = !more }, modifier = Modifier.testTag("$tag-more")) { Text(if (more) "Less" else "More (${rest.size})…") }
+        }
+        if (more && rest.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("$tag-rest"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (name in rest) {
+                    SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
+                }
+            }
         }
         BasicTextField(
             value = input,
@@ -868,3 +888,6 @@ private fun NameList(
         )
     }
 }
+
+/** The number of known names that are chips before *More…*. */
+private const val TOP_NAMES = 3

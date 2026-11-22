@@ -799,7 +799,9 @@ class AppTest {
 
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-heading").assertTextEquals("New task")
-        // More names than a row or two hold.
+        // More names than a row or two hold: the others are behind More.
+        onNodeWithTag("edit-project-suggest-Box12").assertDoesNotExist()
+        onNodeWithTag("edit-project-more").performScrollTo().performClick()
         onNodeWithTag("edit-project-suggest-Box12").assertExists()
 
         fun width() = onNodeWithTag("edit-dialog").fetchSemanticsNode().size.width
@@ -1441,6 +1443,21 @@ class AppTest {
         onNodeWithTag("edit-context-add").performScrollTo().performTextInput("rea")
         onNodeWithTag("edit-context-suggest-research>reading").performClick()
         onNodeWithTag("edit-line").assertTextEquals("(A) Thank Mom @phone @research>reading due:2026-11-20")
+    }
+
+    // [utest->dsn~edit-dialog~1]
+    @Test
+    fun onlyTheMostUsedNamesAreChipsAndTheOthersAreBehindMore() = runComposeUiTest {
+        storage.text += "A @zz\nB @zz\nC @zz\nD @yy\nE @yy\nF @xx\nG @ww\nH @ww\nI @ww\nJ @ww\n"
+        start()
+        openTask("Thank Mom")
+        onNodeWithTag("edit-context-suggest-ww").assertExists()
+        onNodeWithTag("edit-context-suggest-zz").assertExists()
+        onNodeWithTag("edit-context-suggest-yy").assertExists()
+        onNodeWithTag("edit-context-suggest-xx").assertDoesNotExist()
+        onNodeWithTag("edit-context-more").performScrollTo().performClick()
+        onNodeWithTag("edit-context-suggest-xx").performScrollTo().performClick()
+        onNodeWithTag("edit-line").assertTextEquals("(A) Thank Mom @phone @xx due:2026-11-20")
     }
 
     // [utest->dsn~context-hierarchy~1]

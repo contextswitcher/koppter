@@ -561,6 +561,7 @@ private fun MainScreen(
             knownProjects = controller.projects,
             knownContexts = controller.contexts,
             knownHashtags = controller.hashtags,
+            nameUses = remember(entry) { controller.nameUses },
             contextsOf = controller::contextsOf,
             today = controller.today(),
             width = controller.settings.editWidth,

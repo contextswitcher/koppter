@@ -694,8 +694,10 @@ Needs: impl, utest
 The resulting line is shown below the fields in a monospaced font.
 A heading names the dialog: *New task* or *Edit task*.
 The description starts with the cursor at its end.
-Projects, contexts and hashtags are chips: those of the task, then all known ones to add with a click, then a field of the size of a chip for another name.
-Typing into that field narrows the known ones to those that contain the typed text, so that a context below another one is found by its last level.
+Projects, contexts and hashtags are chips: those of the task, then the three known ones that the most open tasks carry, to add with a click, then *More…*, then a field of the size of a chip to search for a name or add another one.
+Adding a known name is what the user does here most often, and a file has dozens of them: all as chips would push the fields below out of view on a phone.
+*More…* shows the other known names in one row that scrolls sideways, in the order of the hierarchy; *Less* hides them again.
+Typing into the field shows, instead, all known ones that contain the typed text, so that a context below another one is found by its last level.
 A chip of the task has the colors of its label in the list (`projectColors`, `contextColors`, `hashtagColors`).
 The calendar of the deadline has the button *Use due date* while the task has a due date, as the two are often the same day.
 The calendar of a date starts its weeks on Monday, whatever the locale of the system (`mondayFirstLocale`, [decision 0049](../decisions/0049-weeks-start-on-monday.md)).
