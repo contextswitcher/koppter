@@ -25,6 +25,7 @@ import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.Settings
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.storage.SharedLists
+import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
@@ -341,6 +342,8 @@ class ScreenshotTest {
             save("review/$size-$name.png")
         }
         screen("list") {}
+        screen("synchronizing") { storage.onStatus(SyncStatus(SyncState.RUNNING)) }
+        screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }
         screen("week") { onNodeWithTag("week-switch").performClick() }
         screen("today") { onNodeWithTag("today-switch").performClick() }
         screen("edit") {

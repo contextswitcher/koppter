@@ -30,7 +30,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.DrawerValue
@@ -38,6 +37,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -67,7 +67,10 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.addPathNodes
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -443,7 +446,7 @@ private fun MainScreen(
                 // Words, as no icon tells that the application ends and comes back.
                 // [impl->dsn~android-update~1]
                 update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text(updateLabel) } }
-                controller.syncStatus?.let { SyncIndicator(it, onSync = controller::sync) }
+                controller.syncStatus?.let { SyncIndicator(it, words = wideNow, onSync = controller::sync) }
                 if (controller.canSchedule) {
                     // [impl->dsn~plan-dialog~1]
                     // A word: the play icon starts the clock of a task.
@@ -457,7 +460,8 @@ private fun MainScreen(
                 topBar = {
                     if (!wideNow) TopAppBar(
                         // A phone has no room for the name beside the button Apps or the one of an update; as the home screen, the application needs no name.
-                        title = { if (!startsApps && update == null) Text("koppter") },
+                        // The cause of a failed synchronization stands in the place of the name: the title is what the bar fits between its buttons, which words among them push out of view.
+                        title = { if (controller.syncStatus?.state == SyncState.FAILED) SyncFailure(controller.syncStatus) else if (!startsApps && update == null) Text("koppter") },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                 Icon(Icons.Default.Menu, contentDescription = "Filter")
@@ -758,34 +762,49 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
 /** A button of the top bar. Its description is its tooltip as well, as an icon alone does not tell what it does. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BarButton(icon: ImageVector, description: String, tag: String, onClick: () -> Unit) {
+private fun BarButton(icon: ImageVector, description: String, tag: String, enabled: Boolean = true, tint: Color = LocalContentColor.current, onClick: () -> Unit) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
         tooltip = { PlainTooltip { Text(description) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, modifier = Modifier.testTag(tag)) { Icon(icon, contentDescription = description) }
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) { Icon(icon, contentDescription = description, tint = tint) }
     }
 }
 
 /** Shows whether the file is synchronized; a click synchronizes now. */
 // [impl->dsn~sync-status~1]
 @Composable
-private fun SyncIndicator(status: SyncStatus, onSync: () -> Unit) {
-    val (text, color) = when (status.state) {
-        SyncState.IDLE -> "Synchronized" to MaterialTheme.colorScheme.onSurfaceVariant
-        SyncState.RUNNING -> "Synchronizing" to MaterialTheme.colorScheme.onSurfaceVariant
-        SyncState.FAILED -> "Not synchronized: ${status.message}" to MaterialTheme.colorScheme.error
+private fun SyncIndicator(status: SyncStatus, words: Boolean, onSync: () -> Unit) {
+    if (words) SyncFailure(status)
+    when (status.state) {
+        SyncState.IDLE -> BarButton(Synchronized, "Synchronized. Synchronize now", "sync-now", onClick = onSync)
+        SyncState.RUNNING -> BarButton(Synchronizing, "Synchronizing", "sync-now", enabled = false, onClick = onSync)
+        // With the cause, as the words beside the button are cut where the bar is narrow.
+        SyncState.FAILED -> BarButton(NotSynchronized, "Synchronize now. Not synchronized: ${status.message}", "sync-now", tint = MaterialTheme.colorScheme.error, onClick = onSync)
     }
-    Text(
-        text,
-        color = color,
+}
+
+/**
+ * Why the file is not synchronized, and nothing while it is.
+ * Words only for a failure, which has a cause to tell: beside a status in words, a phone has no room for the name of the application.
+ */
+// [impl->dsn~sync-status~1]
+@Composable
+private fun SyncFailure(status: SyncStatus?) {
+    if (status?.state == SyncState.FAILED) Text(
+        "Not synchronized: ${status.message}",
+        color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.labelMedium,
-        maxLines = 2,
+        maxLines = 3,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.widthIn(max = 360.dp).testTag("sync-status"),
     )
-    IconButton(onClick = onSync, enabled = status.state != SyncState.RUNNING, modifier = Modifier.testTag("sync-now")) {
-        Icon(Icons.Default.Refresh, contentDescription = "Synchronize now")
-    }
 }
+
+// The icons published_with_changes, sync and sync_problem of the Material icons (Apache License 2.0), which the core set of the icons does not have.
+// All three are the arrows of a synchronization, so that the button reads as the one that synchronizes in every status.
+private fun syncIcon(name: String, path: String) = ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f).addPath(addPathNodes(path), fill = SolidColor(Color.Black)).build()
+private val Synchronized = syncIcon("Synchronized", "M17.66 9.53l-7.07 7.07-4.24-4.24 1.41-1.41 2.83 2.83 5.66-5.66 1.41 1.41zM4 12c0-2.33 1.02-4.42 2.62-5.88L9 8.5v-6H3l2.2 2.2C3.24 6.52 2 9.11 2 12c0 5.19 3.95 9.45 9 9.95v-2.02c-3.94-.49-7-3.86-7-7.93zm18 0c0-5.19-3.95-9.45-9-9.95v2.02c3.94.49 7 3.86 7 7.93 0 2.33-1.02 4.42-2.62 5.88L15 15.5v6h6l-2.2-2.2c1.96-1.82 3.2-4.41 3.2-7.3z")
+private val Synchronizing = syncIcon("Synchronizing", "M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z")
+private val NotSynchronized = syncIcon("NotSynchronized", "M3 12c0 2.21.91 4.2 2.36 5.64L3 20h6v-6l-2.24 2.24C5.68 15.15 5 13.66 5 12c0-2.61 1.67-4.83 4-5.65V4.26C5.55 5.15 3 8.27 3 12zm8 5h2v-2h-2v2zM21 4h-6v6l2.24-2.24C18.32 8.85 19 10.34 19 12c0 2.61-1.67 4.83-4 5.65v2.09c3.45-.89 6-4.01 6-7.74 0-2.21-.91-4.2-2.36-5.64L21 4zm-10 9h2V7h-2v6z")

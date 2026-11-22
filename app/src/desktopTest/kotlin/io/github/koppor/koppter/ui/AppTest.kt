@@ -15,6 +15,7 @@ import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertIsOff
@@ -2407,13 +2408,19 @@ class AppTest {
         val controller = TodoController(Settings(), { syncing }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
 
-        onNodeWithTag("sync-status").assertTextEquals("Synchronized")
+        onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronized. Synchronize now")
+        onNodeWithTag("sync-status").assertDoesNotExist()
         assertEquals(1, syncing.synchronizations)
         onNodeWithTag("sync-now").performClick()
         assertEquals(2, syncing.synchronizations)
 
+        syncing.onStatus(SyncStatus(SyncState.RUNNING))
+        onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronizing").assertIsNotEnabled()
+
         syncing.onStatus(SyncStatus(SyncState.FAILED, "no network"))
         onNodeWithTag("sync-status").assertTextEquals("Not synchronized: no network")
+        onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronize now. Not synchronized: no network").performClick()
+        assertEquals(3, syncing.synchronizations)
 
         openTask("Post signs")
         onNodeWithTag("edit-dates").assertTextEquals("Added 2026-11-01 (from the git history)")
@@ -2440,7 +2447,7 @@ class AppTest {
     @Test
     fun aPlainFileHasNoSynchronizationStatus() = runComposeUiTest {
         start()
-        onNodeWithTag("sync-status").assertDoesNotExist()
+        onNodeWithTag("sync-now").assertDoesNotExist()
     }
 
     // [utest->dsn~committer~1]
