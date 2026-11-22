@@ -138,6 +138,8 @@ fun App(
     homeScreen: Boolean? = null,
     /** Offers the application as the home screen of the device or stops offering it. */
     onHomeScreen: (Boolean) -> Unit = {},
+    /** Reads the other applications of the device, which the user starts from here while this one is the home screen; `null` on a platform without [homeScreen]. */
+    apps: (suspend () -> List<DeviceApp>)? = null,
 ) {
     val dark = when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
@@ -210,7 +212,7 @@ fun App(
             LocalProjectEditor provides projectEditor,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave, homeScreen, onHomeScreen)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, backHandler, leave, homeScreen, onHomeScreen, apps)
         }
     }
 }
@@ -267,7 +269,9 @@ private fun MainScreen(
     leave: () -> Unit,
     homeScreen: Boolean?,
     onHomeScreen: (Boolean) -> Unit,
+    apps: (suspend () -> List<DeviceApp>)?,
 ) {
+    var showApps by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Editing?>(null) }
     var draft by remember { mutableStateOf<Draft?>(null) }
     var showSettings by remember { mutableStateOf(false) }
@@ -424,6 +428,9 @@ private fun MainScreen(
             gesturesEnabled = !wideNow,
             drawerContent = { if (!wideNow) ModalDrawerSheet { filterPanel(Modifier) { scope.launch { drawer.close() } } } },
         ) {
+            // [impl->dsn~android-apps~1]
+            // Only as the home screen: elsewhere, the home screen of the system lists the applications.
+            val startsApps = homeScreen == true && apps != null
             // A wide window has no top bar: the title of the window names the application, and its buttons end the row of the views.
             val barActions: @Composable RowScope.() -> Unit = {
                 // [impl->dsn~restart-to-update~1]
@@ -436,12 +443,14 @@ private fun MainScreen(
                     TextButton(onClick = { planning = controller.planSettings }, modifier = Modifier.testTag("open-plan")) { Text("Plan") }
                     BarButton(Icons.Default.DateRange, "Scheduled tasks", "open-schedule") { schedule = controller.schedule() }
                 }
+                if (startsApps) TextButton(onClick = { showApps = true }, modifier = Modifier.testTag("open-apps")) { Text("Apps") }
                 BarButton(Icons.Default.Settings, "Settings", "open-settings") { showSettings = true }
             }
             Scaffold(
                 topBar = {
                     if (!wideNow) TopAppBar(
-                        title = { Text("koppter") },
+                        // A phone has no room for the name beside the button Apps; as the home screen, the application needs no name.
+                        title = { if (!startsApps) Text("koppter") },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                 Icon(Icons.Default.Menu, contentDescription = "Filter")
@@ -589,6 +598,7 @@ private fun MainScreen(
             onDraft = { draft = it },
         )
     }
+    if (showApps && apps != null) AppsDialog(apps, onDismiss = { showApps = false })
     planning?.let {
         PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
     }

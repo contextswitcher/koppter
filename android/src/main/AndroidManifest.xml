@@ -8,6 +8,15 @@
     <!-- The system drops the alarm of the next block when the device restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- [impl->dsn~android-apps~1] -->
+    <!-- As the home screen, koppter lists the applications that a home screen starts; without this, the system hides them from it. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".KoppterApplication"
         android:allowBackup="true"

@@ -175,7 +175,12 @@ class ScreenshotTest {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
         val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
-        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen) }
+        // As many as a device has, so that the list is cut, and a name that is too long for its place.
+        val apps = (
+            "Books Calculator Calendar Camera Chrome Clock Contacts Drive evcc Files Gallery Gmail Health Hue Keep Maps Messages Music News Notes Phone Photos Podcasts Radio " +
+                "Recorder Settings Sheets Signal Spotify Translate Wallet Weather YouTube"
+            ).split(" ").plus(listOf("Home Assistant Companion for Android", "Play Store", "Smart Life", "Voice Access")).map { DeviceApp(it) {} }
+        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }) }
     }
 
     @Test
@@ -357,6 +362,9 @@ class ScreenshotTest {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-tab-device").performClick()
         }
+        // What a device shows whose home screen is the application.
+        screen("home", homeScreen = true) {}
+        screen("apps", homeScreen = true) { onNodeWithTag("open-apps").performClick() }
         // The last ones: the clock that runs and the time away stay in the file.
         storage.keepsWrites = true
         screen("clock") {

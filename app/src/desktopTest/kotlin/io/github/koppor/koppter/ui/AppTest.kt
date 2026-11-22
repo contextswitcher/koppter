@@ -2249,6 +2249,34 @@ class AppTest {
         onNodeWithTag("settings-dialog").assertExists()
     }
 
+    // [utest->dsn~android-apps~1]
+    @Test
+    fun asTheHomeScreenTheApplicationStartsTheOtherApplicationsOfTheDevice() = runComposeUiTest {
+        val started = mutableListOf<String>()
+        var homeScreen by mutableStateOf<Boolean?>(false)
+        val apps = listOf(DeviceApp("evcc") { started += "evcc" }, DeviceApp("Camera") { error("no camera") }, DeviceApp("Hue") { started += "Hue" })
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt", homeScreen = homeScreen, apps = { apps }) }
+        // Elsewhere, the home screen of the system lists the applications.
+        onNodeWithTag("open-apps").assertDoesNotExist()
+        homeScreen = true
+        onNodeWithTag("open-apps").performClick()
+        // By name, whatever the case.
+        onAllNodesWithTag("app").assertCountEquals(3)
+        onAllNodesWithTag("app")[1].assertTextEquals("evcc")
+        // Cancel starts nothing.
+        onNodeWithTag("apps-cancel").performClick()
+        onNodeWithTag("apps-dialog").assertDoesNotExist()
+        assertEquals(emptyList(), started)
+        // One that does not start says so and leaves the list open.
+        onNodeWithTag("open-apps").performClick()
+        onNodeWithText("Camera").performClick()
+        onNodeWithTag("apps-failure").assertTextEquals("Camera was not started: no camera")
+        onNodeWithText("Hue").performClick()
+        assertEquals(listOf("Hue"), started)
+        onNodeWithTag("apps-dialog").assertDoesNotExist()
+    }
+
     // [utest->dsn~android-home-screen~1]
     @Test
     fun theSettingsOfferTheHomeScreenWhereThePlatformHasOneAndPassTheChoiceAtSave() = runComposeUiTest {

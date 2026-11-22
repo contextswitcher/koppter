@@ -18,6 +18,7 @@ import androidx.compose.runtime.setValue
 import io.github.koppor.koppter.sync.GitSetup
 import io.github.koppor.koppter.storage.logSince
 import io.github.koppor.koppter.ui.App
+import io.github.koppor.koppter.ui.DeviceApp
 import io.github.koppor.koppter.ui.GitSetupActions
 import io.github.koppor.koppter.ui.TodoController
 import io.github.vinceglb.filekit.FileKit
@@ -99,6 +100,20 @@ class MainActivity : ComponentActivity() {
         if (offer) runCatching { startActivity(Intent(Settings.ACTION_HOME_SETTINGS)) }
     }
 
+    // [impl->dsn~android-apps~1]
+    private suspend fun otherApps(): List<DeviceApp> = withContext(Dispatchers.IO) {
+        val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        packageManager.queryIntentActivities(launcher, 0).filter { it.activityInfo.packageName != packageName }.map { found ->
+            DeviceApp(found.loadLabel(packageManager).toString()) {
+                // As a home screen starts it: the application comes back as it was left, in a task of its own.
+                startActivity(
+                    Intent(launcher).setClassName(found.activityInfo.packageName, found.activityInfo.name)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED),
+                )
+            }
+        }
+    }
+
     private lateinit var controller: TodoController
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -137,6 +152,7 @@ class MainActivity : ComponentActivity() {
                 leave = { moveTaskToBack(true) },
                 homeScreen = homeScreen,
                 onHomeScreen = ::offerAsHomeScreen,
+                apps = ::otherApps,
             )
         }
     }

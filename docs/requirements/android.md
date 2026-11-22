@@ -114,6 +114,17 @@ Covers:
 
 Needs: dsn
 
+### Other applications from the home screen
+`req~android-apps~1`
+
+On a device whose home screen is koppter, such as a tablet in a hallway, the user starts another application of the device from koppter, such as the one for the lights, and returns with the home button.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Agenda on a watch
 `req~watch-agenda~1`
 
@@ -330,6 +341,23 @@ The application does not lock the device to itself: the notifications and the se
 Covers:
 
 * `req~android-home-screen~1`
+
+Needs: impl, utest
+
+### Applications of the device
+`dsn~android-apps~1`
+
+While koppter is the home screen, the buttons of the top bar have *Apps* before the settings, a word, as the user looks for the other applications; without it, there is no way to them but the settings of the system.
+A device with another home screen does not show the button: there, the home button leads to the applications.
+The top bar of a narrow window leaves out the name koppter while it has the button, for which a phone has no room beside it.
+`AppsDialog` lists what `MainActivity` reads from the package manager: the activities that a home screen starts, without koppter, by their names in the order of the alphabet, as words beside each other as far as the width holds them, each at least 160 dp wide, and *More apps below* while some are out of view; the manifest declares that query, without which the system hides the other applications.
+A click starts the application in a task of its own, as a home screen does, and closes the dialog; the home button returns to koppter.
+The answers to the flow: starting an application is all that is done here, so the list stands below the title and scrolls alone, the title and Cancel stay in view; Cancel, Esc, a click beside the dialog and back close it and start nothing; an application that the system does not start is named with the cause in the color of an error above the list, which stays open; nothing is kept; the list is read off the main thread, and the dialog says so until it is there.
+An address, such as that of a page in the local network, is not started from here: a browser of the list shows it.
+
+Covers:
+
+* `req~android-apps~1`
 
 Needs: impl, utest
 

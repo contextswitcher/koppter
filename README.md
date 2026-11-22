@@ -768,7 +768,8 @@ A device that is to show nothing but the tasks, such as a tablet on a desk, star
 *Offer koppter as the home screen of this device*, in the tab *Device* of the settings, makes koppter one of the home apps of the device; after *Save*, Android shows its setting for the home app, where koppter is chosen.
 
 * Without that setting, Android does not list koppter among the home apps.
-* The other applications stay installed and are reached through the settings of Android; koppter does not lock the device.
+* *Apps*, next to the settings, lists the other applications of the device and starts the one that is chosen, such as the one for the lights; the home button returns to koppter.
+  koppter does not lock the device.
 * Whether the screen stays on and whether the device asks for a PIN is set in the settings of Android.
 
 ## Watch
