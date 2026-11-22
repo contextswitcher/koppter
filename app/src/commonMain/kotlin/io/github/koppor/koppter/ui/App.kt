@@ -602,7 +602,13 @@ private fun MainScreen(
             onDraft = { draft = it },
         )
     }
-    if (showApps && apps != null) AppsDialog(apps, onDismiss = { showApps = false })
+    if (showApps && apps != null) {
+        AppsDialog(
+            apps, controller.settings.appStarts,
+            onStarted = { controller.updateSettings(controller.settings.copy(appStarts = withStart(controller.settings.appStarts, it))) },
+            onDismiss = { showApps = false },
+        )
+    }
     planning?.let {
         PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
     }

@@ -118,6 +118,7 @@ Needs: dsn
 `req~android-apps~1`
 
 On a device whose home screen is koppter, such as a tablet in a hallway, the user starts another application of the device from koppter, such as the one for the lights, and returns with the home button.
+The applications are recognized by their icons, and those that the user starts most often are found first.
 
 Covers:
 
@@ -361,9 +362,13 @@ Needs: impl, utest
 While koppter is the home screen, the buttons of the top bar have *Apps* before the settings, a word, as the user looks for the other applications; without it, there is no way to them but the settings of the system.
 A device with another home screen does not show the button: there, the home button leads to the applications.
 The top bar of a narrow window leaves out the name koppter while it has the button, for which a phone has no room beside it.
-`AppsDialog` lists what `MainActivity` reads from the package manager: the activities that a home screen starts, without koppter, by their names in the order of the alphabet, as words beside each other as far as the width holds them, each at least 160 dp wide, and *More apps below* while some are out of view; the manifest declares that query, without which the system hides the other applications.
+`AppsDialog` lists what `MainActivity` reads from the package manager: the activities that a home screen starts, without koppter, each with its icon and its name; the manifest declares that query, without which the system hides the other applications.
+Below *Most used* stand the five applications that were started most often from the dialog, the most used first, in one row where the width gives each 120 dp; below *All* stand all applications, those five as well, by their names in the order of the alphabet, so that an application keeps its place whether it is used much or not.
+Before the first start, the dialog has the list of all alone, without the headings.
+The applications stand beside each other as far as the width holds them, each at least 160 dp wide, and *More apps below* says so while some are out of view.
 A click starts the application in a task of its own, as a home screen does, and closes the dialog; the home button returns to koppter.
-The answers to the flow: starting an application is all that is done here, so the list stands below the title and scrolls alone, the title and Cancel stay in view; Cancel, Esc, a click beside the dialog and back close it and start nothing; an application that the system does not start is named with the cause in the color of an error above the list, which stays open; nothing is kept; the list is read off the main thread, and the dialog says so until it is there.
+The setting `appStarts` of the device counts the starts, one line per application as `package/activity=number` (`appStarts`, `withStart`); an application that did not start is not counted.
+The answers to the flow: starting an application is all that is done here, so the list stands below the title and scrolls alone, the title and Cancel stay in view; Cancel, Esc, a click beside the dialog and back close it and start nothing; an application that the system does not start is named with the cause in the color of an error above the list, which stays open; of what is chosen, the number of starts alone is kept; the list is read off the main thread, and the dialog says so until it is there.
 An address, such as that of a page in the local network, is not started from here: a browser of the list shows it.
 
 Covers:

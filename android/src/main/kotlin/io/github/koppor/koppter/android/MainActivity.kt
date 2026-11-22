@@ -1,5 +1,8 @@
 package io.github.koppor.koppter.android
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import androidx.compose.ui.graphics.asImageBitmap
 import android.Manifest
 import android.content.ComponentName
 import android.content.pm.PackageManager
@@ -109,8 +112,15 @@ class MainActivity : ComponentActivity() {
     // [impl->dsn~android-apps~1]
     private suspend fun otherApps(): List<DeviceApp> = withContext(Dispatchers.IO) {
         val launcher = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val size = (48 * resources.displayMetrics.density).toInt()
         packageManager.queryIntentActivities(launcher, 0).filter { it.activityInfo.packageName != packageName }.map { found ->
-            DeviceApp(found.loadLabel(packageManager).toString()) {
+            // An icon that is not drawn leaves the name.
+            val icon = runCatching {
+                Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).also { bitmap ->
+                    found.loadIcon(packageManager).apply { setBounds(0, 0, size, size) }.draw(Canvas(bitmap))
+                }.asImageBitmap()
+            }.getOrNull()
+            DeviceApp("${found.activityInfo.packageName}/${found.activityInfo.name}", found.loadLabel(packageManager).toString(), icon) {
                 // As a home screen starts it: the application comes back as it was left, in a task of its own.
                 startActivity(
                     Intent(launcher).setClassName(found.activityInfo.packageName, found.activityInfo.name)
