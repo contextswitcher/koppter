@@ -77,11 +77,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.todotxt.Entry
+import io.github.koppor.koppter.todotxt.Group
 import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
@@ -108,6 +110,7 @@ fun Agenda(
     days: Int = 7,
     running: Entry? = null,
     onClock: (Entry) -> Unit = {},
+    groupsOf: (List<Entry>) -> List<Group>? = { null },
 ) {
     // A block is counted once, also when the button is hit twice.
     val counted = remember { mutableStateListOf<TextBlock>() }
@@ -126,7 +129,7 @@ fun Agenda(
                     modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-day-$day"),
                 )
                 if (ofDay.isEmpty()) Text("No block", Modifier.padding(start = 4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
-                for (block in ofDay) {
+                val blockRow = @Composable { block: TextBlock ->
                     val entry = entryOf(block)
                     val time = @Composable {
                         Text(CalendarTxt.timesText(block.span), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(96.dp))
@@ -170,6 +173,19 @@ fun Agenda(
                             actions()
                         }
                     }
+                }
+                // [impl->dsn~today-groups~1]
+                // Within a group, the blocks keep the order of the day; a task in two groups shows in both, as in the list.
+                val groups = if (offset == 0) groupsOf(ofDay.mapNotNull(entryOf).distinct()) else null
+                if (groups == null) {
+                    ofDay.forEach { blockRow(it) }
+                } else {
+                    for (group in groups) {
+                        Text(group.title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp, start = 4.dp).testTag("agenda-group"))
+                        ofDay.filter { entryOf(it) in group.entries }.forEach { blockRow(it) }
+                    }
+                    // A block whose task has changed since planning belongs to no group.
+                    ofDay.filter { entryOf(it) == null }.forEach { blockRow(it) }
                 }
                 if (offset == 0 && dueUnplanned.isNotEmpty()) {
                     Text(
@@ -520,6 +536,7 @@ fun Today(
     calendarWidth: Int = 400,
     onCalendarWidth: (Int) -> Unit = {},
     appointments: CalendarAppointments? = null,
+    groupsOf: (List<Entry>) -> List<Group>? = { null },
 ) {
     // [impl->dsn~outlook-appointments~1]
     LaunchedEffect(today, appointments != null) { appointments?.onShow(today, today.plus(DatePeriod(days = 1))) }
@@ -549,7 +566,7 @@ fun Today(
             // The agenda keeps 600 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen.
             val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 600.dp)
             Row(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock) }
+                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf) }
                 if (wide) {
                     val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
                     // [impl->dsn~today-resize~1]

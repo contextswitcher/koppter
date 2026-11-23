@@ -1956,6 +1956,27 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
+    // [utest->dsn~today-groups~1]
+    @Test
+    fun todayIsDividedAsTheList() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  10:00-11:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(view = "TODAY"), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 + 15 })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("group-none").assertTextEquals(NO_GROUPS_TODAY)
+        onAllNodesWithTag("agenda-group").assertCountEquals(0)
+
+        onNodeWithTag("group-PROJECT").performClick()
+        onAllNodesWithTag("agenda-group").assertCountEquals(2)
+        onAllNodesWithTag("agenda-group")[0].assertTextEquals("+GarageSale")
+        onAllNodesWithTag("agenda-group")[1].assertTextEquals("No project")
+        onAllNodesWithTag("agenda-block").assertCountEquals(2)
+        // The choice is the one of the list.
+        assertEquals(GroupKey.PROJECT, controller.listGroupKey)
+    }
+
     // [utest->dsn~plan-filter~1]
     @Test
     fun theFilterAppliesToThePlan() = runDesktopComposeUiTest(width = 1100, height = 860) {
