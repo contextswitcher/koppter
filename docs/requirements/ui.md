@@ -694,7 +694,8 @@ Needs: impl, utest
 The resulting line is shown below the fields in a monospaced font.
 A heading names the dialog: *New task* or *Edit task*.
 The description starts with the cursor at its end.
-Projects, contexts and hashtags are chips: those of the task, then the three known ones that the most open tasks carry, to add with a click, then *More…*, then a field of the size of a chip to search for a name or add another one.
+Projects, contexts and hashtags are chips: those of the task, then the three known ones that the most open tasks carry, to add with a click, then *More…*.
+A field of the size of a chip to search for a name or add another one stands at the right end of the row in a dialog at least 600 dp wide, so that the three fields stand one below the other; in a narrower one it follows the chips, as a column of its own would leave one chip per line.
 Adding a known name is what the user does here most often, and a file has dozens of them: all as chips would push the fields below out of view on a phone.
 *More…* shows the other known names in one row that scrolls sideways, in the order of the hierarchy; *Less* hides them again.
 Typing into the field shows, instead, all known ones that contain the typed text, so that a context below another one is found by its last level.
@@ -716,6 +717,7 @@ Needs: impl, utest
 `dsn~edit-dependencies~1`
 
 Below the hashtags, `EditDialog` has the rows *Waits for* and *Before*: the chosen tasks as chips, and a field whose text suggests up to five open tasks whose description contains it.
+The two labels have the same width, so that the two fields start at the same place.
 `waitsFor` and `waitingFor` fill the rows from the tags `id:` and `p:` of the tasks of the file, as topydo writes them.
 `withDependencies` writes the choice back: a task that the task waits for gets `p:` with the `id:` of the task, a task that waits for it gives its `id:` to a `p:` of the task, and a task that needs an `id:` and has none gets the next free number.
 Removing a chip removes only the tag of that dependency.
