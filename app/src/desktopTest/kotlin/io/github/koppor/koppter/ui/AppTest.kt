@@ -27,6 +27,7 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
@@ -1675,10 +1676,14 @@ class AppTest {
         onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
         onNodeWithTag("time-map-paint-black").performClick()
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
+        // A second click with the same color takes it away again; the brush covers half an hour.
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 81.5f / 96)) }
+        assertEquals("Mon-Fri 08:00-12:00 13:00-17:00", onNodeWithTag("time-map-definition").fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
+        onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
         onNodeWithTag("time-map-save").performScrollTo().performClick()
         onNodeWithTag("time-map-editor").assertDoesNotExist()
         // The other map stays as it was typed.
-        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:15 black")
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:30 black")
         onNodeWithTag("plan-map-Evenings").assertTextContains("Mon-Thu 19:00-21:00")
 
         // A typed definition shows on the grid.
@@ -1711,6 +1716,15 @@ class AppTest {
         onNodeWithTag("time-map-dates").performTextReplacement("2026-12-24..2026-12-26")
         onNodeWithTag("time-map-save").performScrollTo().performClick()
         onNodeWithTag("plan-map-General 2026-12-25").assertDoesNotExist()
+        onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
+        // A chosen date goes in at the cursor, at the end after a replacement.
+        onNodeWithTag("time-map-dates").performTextReplacement("2026-12-24 ")
+        onNodeWithTag("time-map-pick-date").performClick()
+        onAllNodesWithText(" 15, ", substring = true, useUnmergedTree = true).onFirst().performClick()
+        onNodeWithTag("time-map-date-ok").performClick()
+        val picked = onNodeWithTag("time-map-dates").fetchSemanticsNode().config[SemanticsProperties.EditableText].text
+        assertTrue(Regex("2026-12-24 \\d{4}-\\d{2}-15").matches(picked), picked)
+        onNodeWithTag("time-map-cancel").performScrollTo().performClick()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
         onNodeWithTag("time-map-delete").performScrollTo().performClick()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").assertDoesNotExist()

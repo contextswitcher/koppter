@@ -544,7 +544,7 @@ private fun phraseColor(start: Int?, color: Color) = VisualTransformation { text
     TransformedText(marked, OffsetMapping.Identity)
 }
 
-private const val MILLIS_PER_DAY = 86_400_000L
+internal const val MILLIS_PER_DAY = 86_400_000L
 
 /** A clock, which the icons that come with Compose lack: the path of the Material icon "access time". */
 private val Clock: ImageVector by lazy {

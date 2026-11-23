@@ -49,7 +49,9 @@ Needs: dsn
 ### Painting a time map
 `req~time-map-editor~1`
 
-The user paints a time map on the days of a week, from 00:00 to 24:00 in quarters of an hour, with green, yellow, red, black or the eraser, and saves or reverts what was painted.
+The user paints a time map on the days of a week, from 00:00 to 24:00 in half hours, with green, yellow, red, black or the eraser, and saves or reverts what was painted.
+A stroke that starts on its own color erases.
+The user picks the dates of a time map from a calendar.
 
 Covers:
 
@@ -392,7 +394,9 @@ Needs: impl, utest
 
 The plan dialog lists the time maps, each with its name, dates and definition; a click on one, or on *Edit*, which shows while the pointer is over it, opens `TimeMapEditor`, and *Add time map* opens it for a new map.
 The editor edits the name, the dates and the definition, which can be typed or painted, and deletes the map.
-`TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the cells that a press or a drag touches with the chosen color, or clears them with the eraser.
+`TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the half hours that a press or a drag touches with the chosen color, or clears them with the eraser; quarters of an hour are typed.
+A press on a half hour that has the chosen color already clears what the stroke touches, so that the same color undoes a stroke without a change to the eraser.
+The button with the calendar in the field of the dates opens a calendar whose weeks start on Monday; *OK* puts the chosen date into the field at the cursor, or in place of the selected text, and leaves the cursor behind it, so that `..` or a space for a range or a list is typed next; *Cancel* leaves the field as it was.
 `TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
 A typed definition is shown on the cells, and painting writes the definition.
 A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved, except on dates, where it is `none`; a map restricted to another one keeps the name of that map in front.

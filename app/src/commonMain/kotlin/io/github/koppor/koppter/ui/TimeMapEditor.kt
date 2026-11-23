@@ -19,7 +19,15 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Button
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePickerState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -40,14 +48,19 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.Paint
 import io.github.koppor.koppter.plan.TimeMaps
 import kotlin.math.abs
+import kotlinx.datetime.LocalDate
 
 private val DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
+private const val HALF_HOURS = TimeMaps.CELLS_PER_DAY / 2
 
 /** The height of a cell of a quarter of an hour: a day fits on the screen of a laptop. */
 private val CELL_HEIGHT = 5.dp
@@ -63,10 +76,11 @@ private fun color(paint: Paint): Color = when (paint) {
 
 /**
  * Edits the name, the dates and the definition of the entry [key] of the time maps [entries], or of a new one for `null`.
- * The definition is typed or painted on the days of a week: the chosen color, or none with the eraser, goes to each quarter of an hour that is touched.
+ * The definition is typed or painted on the days of a week: the chosen color, or none with the eraser, goes to each half hour that is touched; a stroke that starts on its own color erases.
  * Painting writes the definition; the name of the map whose times restrict it stays in front.
  */
 // [impl->dsn~time-map-editor~1]
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (key: String, definition: String) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
     val others = entries.filter { it.first != key }
@@ -74,7 +88,9 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
     val initialName = key?.substringBefore(' ') ?: ""
     val initialDates = key?.substringAfter(' ', "") ?: ""
     var name by remember { mutableStateOf(initialName) }
-    var dates by remember { mutableStateOf(initialDates) }
+    var datesField by remember { mutableStateOf(TextFieldValue(initialDates)) }
+    val dates = datesField.text
+    var picking by remember { mutableStateOf(false) }
     var text by remember { mutableStateOf(initialText) }
     val newKey = listOf(name.trim(), dates.trim()).filter(String::isNotEmpty).joinToString(" ")
     val maps = TimeMaps(others + (newKey to text))
@@ -111,12 +127,36 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.weight(1f).testTag("time-map-name"))
                     OutlinedTextField(
-                        dates, { dates = it },
+                        datesField, { datesField = it },
                         label = { Text("Only on dates (optional)") },
                         placeholder = { Text("2026-12-24..2027-01-06 2027-04-02") },
                         singleLine = true,
+                        trailingIcon = {
+                            IconButton(onClick = { picking = true }, Modifier.testTag("time-map-pick-date")) { Icon(Icons.Default.DateRange, contentDescription = "Choose a date") }
+                        },
                         modifier = Modifier.weight(2f).testTag("time-map-dates"),
                     )
+                }
+                if (picking) {
+                    // [impl->adr~week-starts-on-monday~1]
+                    val state = remember { DatePickerState(locale = mondayFirstLocale()) }
+                    DatePickerDialog(
+                        onDismissRequest = { picking = false },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                // The date goes in at the cursor as it is: the user types the separators of ranges and lists.
+                                state.selectedDateMillis?.let {
+                                    val date = LocalDate.fromEpochDays((it / MILLIS_PER_DAY).toInt()).toString()
+                                    val at = datesField.selection
+                                    datesField = TextFieldValue(dates.replaceRange(at.min, at.max, date), TextRange(at.min + date.length))
+                                }
+                                picking = false
+                            }, Modifier.testTag("time-map-date-ok")) { Text("OK") }
+                        },
+                        dismissButton = { TextButton(onClick = { picking = false }) { Text("Cancel") } },
+                    ) {
+                        DatePicker(state)
+                    }
                 }
                 Text(
                     "Green: tasks are planned here. Yellow and then red: only for a task that would otherwise be done after its due date or not before its barrier. " +
@@ -147,31 +187,35 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
                     }
                     Canvas(
                         Modifier.weight(1f).height(CELL_HEIGHT * TimeMaps.CELLS_PER_DAY).testTag("time-map-grid").pointerInput(Unit) {
+                            // The brush covers half an hour, two cells: finer times are typed.
                             fun cellOf(position: Offset) = Pair(
                                 (position.x / size.width * 7).toInt().coerceIn(0, 6),
-                                (position.y / size.height * TimeMaps.CELLS_PER_DAY).toInt().coerceIn(0, TimeMaps.CELLS_PER_DAY - 1),
+                                (position.y / size.height * HALF_HOURS).toInt().coerceIn(0, HALF_HOURS - 1),
                             )
 
                             // A fast drag reports positions several cells apart: the cells between them are painted as well.
-                            fun paint(from: Pair<Int, Int>, to: Pair<Int, Int>) {
+                            fun paint(from: Pair<Int, Int>, to: Pair<Int, Int>, color: Paint?) {
                                 val steps = maxOf(abs(to.first - from.first), abs(to.second - from.second), 1)
                                 for (step in 0..steps) {
                                     val day = from.first + (to.first - from.first) * step / steps
-                                    val cell = from.second + (to.second - from.second) * step / steps
-                                    paint(day * TimeMaps.CELLS_PER_DAY + cell, brush)
+                                    val half = from.second + (to.second - from.second) * step / steps
+                                    for (cell in 2 * half..2 * half + 1) paint(day * TimeMaps.CELLS_PER_DAY + cell, color)
                                 }
                             }
                             awaitEachGesture {
                                 val down = awaitFirstDown()
                                 var last = cellOf(down.position)
-                                paint(last, last)
+                                val start = last.first * TimeMaps.CELLS_PER_DAY + 2 * last.second
+                                // Pressing where the color already is takes it away, so a stroke is undone with the same brush.
+                                val stroke = brush.takeUnless { cells[start] == it && cells[start + 1] == it }
+                                paint(last, last, stroke)
                                 down.consume()
                                 // The drag paints and does not scroll what lies around the grid.
                                 while (true) {
                                     val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
                                     if (!change.pressed) break
                                     val next = cellOf(change.position)
-                                    paint(last, next)
+                                    paint(last, next, stroke)
                                     last = next
                                     change.consume()
                                 }
@@ -185,6 +229,8 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
                             val cell = index % TimeMaps.CELLS_PER_DAY
                             drawRect(paint?.let { paints.getValue(it) } ?: empty, Offset(day * width, cell * height), Size(width, height))
                         }
+                        // Fainter lines at the half hours show the steps of the brush.
+                        for (hour in 0 until 24) drawLine(line.copy(alpha = 0.4f), Offset(0f, (hour * 4 + 2) * height), Offset(size.width, (hour * 4 + 2) * height))
                         for (hour in 0..24) drawLine(line, Offset(0f, hour * 4 * height), Offset(size.width, hour * 4 * height))
                         for (day in 0..7) drawLine(line, Offset(day * width, 0f), Offset(day * width, size.height))
                     }
