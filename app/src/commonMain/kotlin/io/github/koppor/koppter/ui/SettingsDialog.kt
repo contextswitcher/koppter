@@ -18,6 +18,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -180,6 +181,8 @@ fun SettingsDialog(
     memberCalendars: String? = null,
     /** The members of the family, whose names the field of their calendars takes. */
     members: List<String> = emptyList(),
+    /** The member whose plan the device keeps, blank for none; `null` if the tasks have no members. */
+    planMember: String? = null,
     /** The projects and contexts of the file, offered while one is typed into a field of `koppter.yml`. */
     knownProjects: List<String> = emptyList(),
     knownContexts: List<String> = emptyList(),
@@ -224,6 +227,8 @@ fun SettingsDialog(
         Family.calendars(memberCalendars.orEmpty()).filter { (named, _) -> members.none { it.equals(named, ignoreCase = true) } } +
             members.flatMap { member -> calendarsOfMembers[member].orEmpty().split(Regex("\\s+")).filter(String::isNotEmpty).map { member to it } }
         ).joinToString("\n") { (member, address) -> "$member = $address" }
+    // The list by its own name, as the setting may have another case.
+    var planOf by remember { mutableStateOf(members.firstOrNull { it.equals(planMember, ignoreCase = true) }.orEmpty()) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
     var contextSwitcherSync by remember { mutableStateOf(settings.contextSwitcherSync) }
     var home by remember { mutableStateOf(homeScreen == true) }
@@ -402,6 +407,27 @@ fun SettingsDialog(
                                     )
                                 }
                             }
+                            // [impl->dsn~busy-plan~1]
+                            if (planMember != null) {
+                                Text("Busy times from the plan", style = MaterialTheme.typography.titleMedium)
+                                Text(
+                                    "The family view of every device shows the times that the plan of this device takes as Busy, in the column of the member whose device this is. " +
+                                        "A task of the list of that member, which the family has anyway, stands there with its text; what the other tasks are stays on this device. " +
+                                        "The times are written after planning and every half an hour. Nobody takes them back, and is the choice for a shared device.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Text("This device belongs to")
+                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    for (member in listOf("") + members) {
+                                        FilterChip(
+                                            selected = planOf == member,
+                                            onClick = { planOf = member },
+                                            label = { Text(member.ifEmpty { "Nobody" }) },
+                                            modifier = Modifier.testTag("settings-plan-member-${member.ifEmpty { "nobody" }}"),
+                                        )
+                                    }
+                                }
+                            }
                             if (git != null) {
                                 Text("Git repository", style = MaterialTheme.typography.titleMedium)
                                 // [impl->dsn~committer~1]
@@ -560,7 +586,7 @@ fun SettingsDialog(
                     TextButton(onClick = onDismiss) { Text("Cancel") }
                     fun save(file: String) = onSave(
                         settings.copy(
-                            todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
+                            todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), planMember = if (planMember == null) settings.planMember else planOf, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
                             outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
                             contextSwitcherSync = contextSwitcherSync,

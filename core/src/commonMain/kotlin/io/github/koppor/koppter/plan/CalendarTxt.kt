@@ -27,6 +27,9 @@ object CalendarTxt {
     /** The text of a block for a time at which a member of a family is not there; what the member does then is not told. */
     const val ABSENT = "Absent"
 
+    /** The text of a block for a time that the plan of a member takes; `Busy: ` stands before what a task is, where the family may know it. */
+    const val BUSY = "Busy"
+
     private val DAY_LINE = Regex("^(\\d{4}-\\d{2}-\\d{2}) w\\d{2} [A-Z][a-z]{2}(?:  (.*))?$")
     private val BLOCK = Regex("^(\\d{2}):(\\d{2})-(\\d{2}):(\\d{2}) (.*)$")
     private val NEXT_BLOCK = Regex("\\. (?=\\d{2}:\\d{2}-\\d{2}:\\d{2} )")
@@ -72,22 +75,26 @@ object CalendarTxt {
     }
 
     /**
-     * The file of the list of a member with the absences from today on replaced by [absent]:
-     * the blocks named [ABSENT] of the days from today on give way to the given times, joined where they touch.
+     * The file of the list of a member with the absences from today on replaced by [absent], and the times of the plan of the member by [busy]:
+     * the blocks named [ABSENT], or those that start with [BUSY], of the days from today on give way to the given ones; absences are joined where they touch.
+     * Without [absent], or without [busy], the blocks of that kind stay, as another device of the member may write them.
      * Everything else stays: the other blocks and texts of these days, the lines of the days before today and the lines that are no day.
      * A day without anything has no line.
      */
     // [impl->dsn~absences~1]
-    fun withAbsences(existing: String, absent: Map<LocalDate, List<Span>>, today: LocalDate): String {
+    // [impl->dsn~busy-plan~1]
+    fun withAbsences(existing: String, absent: Map<LocalDate, List<Span>>?, today: LocalDate, busy: List<TextBlock>? = null): String {
         val lines = existing.lines().filter(String::isNotBlank)
+        fun replaced(text: String?) = absent != null && text == ABSENT || busy != null && (text == BUSY || text?.startsWith("$BUSY: ") == true)
         val kept = lines.mapNotNull { line -> dateOf(line)?.takeIf { it >= today }?.let { it to line } }.groupBy({ it.first }) { (_, line) ->
             DAY_LINE.matchEntire(line)!!.groupValues[2].split(NEXT_BLOCK).map(String::trim)
-                .filter { it.isNotEmpty() && BLOCK.matchEntire(it)?.groupValues?.get(5) != ABSENT }
+                .filter { it.isNotEmpty() && !replaced(BLOCK.matchEntire(it)?.groupValues?.get(5)) }
         }.mapValues { it.value.flatten() }
-        val days = (kept.keys + absent.keys.filter { it >= today }).distinct().sorted()
-        val written = days.mapNotNull { day ->
+        val new = absent.orEmpty().flatMap { (day, spans) -> spans.joined().map { TextBlock(day, it, ABSENT) } } + busy.orEmpty()
+        val added = new.filter { it.date >= today }.groupBy({ it.date }) { "${timesText(it.span)} ${it.text}" }
+        val written = (kept.keys + added.keys).distinct().sorted().mapNotNull { day ->
             // A text without a time stands first, as it holds for the whole day.
-            val events = (kept[day].orEmpty() + absent[day].orEmpty().joined().map { "${timesText(it)} $ABSENT" })
+            val events = (kept[day].orEmpty() + added[day].orEmpty())
                 .sortedBy { event -> BLOCK.matchEntire(event)?.destructured?.let { (hours, minutes) -> hours.toInt() * 60 + minutes.toInt() } ?: -1 }
             if (events.isEmpty()) null else dayLine(day, events.joinToString(". "))
         }

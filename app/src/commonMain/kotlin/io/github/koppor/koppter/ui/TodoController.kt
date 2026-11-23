@@ -717,27 +717,45 @@ class TodoController(
     var absenceProblems by mutableStateOf(emptyList<String>())
         private set
 
+    /** The member whose plan this device keeps, as the settings name it; `null` if the tasks have no members. */
+    val planMember: String? get() = settings.planMember.takeIf { members.isNotEmpty() }
+
+    /** The member whose busy times this device wrote and has to take back, as the settings name another one now. */
+    private var formerPlanMember by mutableStateOf<String?>(null)
+
+    /** Whether this device has absences or busy times of members to write, see [updateAbsences]. */
+    val writesAbsences: Boolean get() = !memberCalendars.isNullOrBlank() || !planMember.isNullOrBlank() || formerPlanMember != null
+
     /**
      * Reads the calendars of the members that the settings of this device name and writes the times of their events, for the next four weeks,
      * as absences into the `calendar.txt` of the list of each member, where every device of the family reads them.
      * A member one of whose calendars cannot be read keeps the absences that are there, and the failure is reported.
+     * The times of the plan of this device are written the same way for the member whose plan it is, see [Family.busy].
      */
     // [impl->dsn~absences~1]
+    // [impl->dsn~busy-plan~1]
     suspend fun updateAbsences() {
-        val fetch = fetch ?: return
         val lists = storage as? SharedLists ?: return
         val problems = mutableListOf<String>()
-        for ((named, addresses) in Family.calendars(settings.memberCalendars).groupBy({ it.first }, { it.second })) {
+        val calendars = if (fetch == null) emptyMap() else Family.calendars(settings.memberCalendars).groupBy({ it.first }, { it.second })
+        val planOf = settings.planMember.trim().ifEmpty { null }
+        val until = today().plus(DatePeriod(days = ABSENCE_DAYS))
+        val former = formerPlanMember?.takeUnless { it.equals(planOf, ignoreCase = true) }
+        formerPlanMember = null
+        for (named in (calendars.keys + listOfNotNull(planOf, former)).distinctBy { it.lowercase() }) {
             val member = members.firstOrNull { it.equals(named, ignoreCase = true) }
             if (member == null) {
-                problems += "Calendar of $named: there is no list of that name"
+                // A list that is gone has no busy times to take back.
+                if (named == former) continue
+                problems += "${if (named in calendars) "Calendar" else "Plan"} of $named: there is no list of that name"
                 continue
             }
             try {
+                val addresses = calendars.entries.filter { it.key.equals(named, ignoreCase = true) }.flatMap { it.value }
                 val absent = mutableMapOf<LocalDate, List<Span>>()
                 for (address in addresses) {
                     try {
-                        busyTimes(fetch(address), today(), today().plus(DatePeriod(days = ABSENCE_DAYS)), TimeZone.currentSystemDefault())
+                        busyTimes(fetch!!(address), today(), until, TimeZone.currentSystemDefault())
                             .forEach { (date, spans) -> absent[date] = absent[date].orEmpty() + spans }
                     } catch (e: Exception) {
                         // The address is a secret: only its host is shown, and the message of the exception, which may name it, stays out of the log.
@@ -746,8 +764,15 @@ class TodoController(
                         error("Calendar of $member at $host was not read: ${e.message ?: e}")
                     }
                 }
+                val busy = if (!member.equals(planOf, ignoreCase = true)) emptyList<TextBlock>().takeIf { member.equals(former, ignoreCase = true) } else Family.busy(
+                    planBlocks.orEmpty().filter { it.date <= until },
+                    planNames.entries.associate { (entry, name) -> name to entry.task },
+                    member,
+                    members,
+                )
                 val existing = lists.readCompanionOf(member, CalendarTxt.NAME).orEmpty()
-                val new = CalendarTxt.withAbsences(existing, absent, today())
+                // Absences stay without a calendar on this device, as another device of the member may know one.
+                val new = CalendarTxt.withAbsences(existing, absent.takeIf { addresses.isNotEmpty() }, today(), busy)
                 if (new != existing) lists.writeCompanionOf(member, CalendarTxt.NAME, new, "Update the absences of @$member")
             } catch (e: Exception) {
                 problems += e.message ?: e.toString()
@@ -796,6 +821,8 @@ class TodoController(
             }
         }
         val result = plan(settings, busy, problems) ?: return null
+        // [impl->dsn~busy-plan~1]
+        if (!planMember.isNullOrBlank()) updateAbsences()
         // [impl->dsn~outlook-blocks~1]
         val weeks = this.settings.outlookWeeks
         if (bridge == null || weeks == 0) return result
@@ -1244,6 +1271,8 @@ class TodoController(
         val fileChanged = new.todoFile != settings.todoFile || new.sharedLists != settings.sharedLists
         // [impl->dsn~committer~1]
         val committerChanged = new.committerName != settings.committerName || new.committerEmail != settings.committerEmail
+        // [impl->dsn~busy-plan~1]
+        if (new.planMember != settings.planMember && settings.planMember.isNotBlank()) formerPlanMember = settings.planMember
         settings = new
         guarded { saveSettings(new) }
         if (fileChanged || committerChanged) {

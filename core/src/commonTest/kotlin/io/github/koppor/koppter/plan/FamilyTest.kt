@@ -151,4 +151,54 @@ class FamilyTest {
         assertEquals(written, CalendarTxt.withAbsences(written, absent, today))
         assertEquals("", CalendarTxt.withAbsences("", emptyMap(), today))
     }
+
+    // [utest->dsn~busy-plan~1]
+    @Test
+    fun thePlanTellsTheFamilyWhenAMemberIsBusyAndNamesOnlyTheTasksOfTheirList() {
+        val tasks = listOf("File the tax return +office", "Practice the piano @anna", "Mow the lawn @ben", "See the dentist @anna tt:30m").associate {
+            Task.parse(it).let { task -> CalendarTxt.text(task) to task }
+        }
+        fun block(start: Int, end: Int, text: String) = TextBlock(today, Span(start * 60, end * 60), text)
+        val busy = Family.busy(
+            listOf(
+                block(8, 9, "File the tax return +office"),
+                // A block without a task of that name, such as one of a task that was completed since, is not named either.
+                block(9, 10, "Call the bank"),
+                block(10, 11, "Practice the piano @anna"),
+                block(11, 12, "Mow the lawn @ben"),
+                block(13, 14, "Travel: See the dentist @anna"),
+                block(14, 15, "See the dentist @anna"),
+                block(16, 17, "File the tax return +office"),
+            ),
+            tasks, "anna", members,
+        )
+        assertEquals(
+            listOf("10-11 Busy: Practice the piano", "13-14 Busy: Travel: See the dentist", "14-15 Busy: See the dentist", "8-10 Busy", "16-17 Busy"),
+            busy.map { "${it.span.start / 60}-${it.span.end / 60} ${it.text}" },
+        )
+    }
+
+    // [utest->dsn~busy-plan~1]
+    @Test
+    fun theBusyTimesFromTodayOnAreReplacedAndTheAbsencesStayWithoutACalendar() {
+        val existing = """
+            2026-11-20 w47 Fri  08:00-09:00 Busy
+            2026-11-21 w47 Sat  08:00-09:00 Absent. 09:00-10:00 Busy. 10:00-11:00 Busy: Practice the piano. 12:00-13:00 Busy bees
+            2026-11-22 w47 Sun  09:00-10:00 Busy
+        """.trimIndent() + "\n"
+        val busy = listOf(TextBlock(today, Span(14 * 60, 15 * 60), "Busy: See the dentist"), TextBlock(today, Span(7 * 60, 8 * 60), "Busy"))
+        val written = CalendarTxt.withAbsences(existing, null, today, busy)
+        assertEquals(
+            """
+            2026-11-20 w47 Fri  08:00-09:00 Busy
+            2026-11-21 w47 Sat  07:00-08:00 Busy. 08:00-09:00 Absent. 12:00-13:00 Busy bees. 14:00-15:00 Busy: See the dentist
+            """.trimIndent() + "\n",
+            written,
+        )
+        // A device that knows the calendars and not the plan leaves the busy times.
+        assertEquals(
+            "2026-11-21 w47 Sat  07:00-08:00 Busy. 09:00-09:30 Absent\n",
+            CalendarTxt.withAbsences("2026-11-21 w47 Sat  07:00-08:00 Busy. 08:00-09:00 Absent\n", mapOf(today to listOf(Span(9 * 60, 9 * 60 + 30))), today),
+        )
+    }
 }

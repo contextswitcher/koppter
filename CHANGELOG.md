@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [Unreleased]
+
+### Added
+
+- *Busy times from the plan* in the settings names the member of a family whose plan the device keeps. The device writes the times of the plan as blocks named `Busy` into the `calendar.txt` of the list of the member, where the family view of every device shows them; a task of the list of the member is named, and what the other tasks are stays on that device.
+
 ## [2026-11-22] - 2026-11-22
 
 ### Added
@@ -358,6 +364,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-22...HEAD
 [2026-11-22]: https://github.com/contextswitcher/koppter/compare/v2026-11-21...v2026-11-22
 [2026-11-21]: https://github.com/contextswitcher/koppter/compare/v2026-11-20...v2026-11-21
 [2026-11-20]: https://github.com/contextswitcher/koppter/compare/v2026-11-19...v2026-11-20

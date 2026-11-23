@@ -123,6 +123,9 @@ class PlanConfig(
     }
 }
 
+/** What stands before the text of a block for the way to a task or back from it. */
+internal const val TRAVEL = "Travel: "
+
 /**
  * A time in which a task is to be worked on.
  *
@@ -131,7 +134,7 @@ class PlanConfig(
  */
 data class Block(val date: LocalDate, val span: Span, val entry: Entry, val travel: Boolean = false, val name: String? = null) {
     /** What the plan shows for the block. */
-    val text: String get() = (if (travel) "Travel: " else "") + (name ?: CalendarTxt.text(entry.task))
+    val text: String get() = (if (travel) TRAVEL else "") + (name ?: CalendarTxt.text(entry.task))
 }
 
 /**

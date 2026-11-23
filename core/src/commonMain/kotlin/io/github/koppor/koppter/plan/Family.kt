@@ -63,6 +63,25 @@ object Family {
         if (member.isEmpty() || address.isEmpty()) null else member.removePrefix("@") to address
     }
 
+    /**
+     * What the plan of a device tells the family about its [member], from the blocks of the plan and the tasks by their names in it:
+     * a task of the list of the member is named, as that list is with the family anyway; any other block is a time that is taken, joined with those it touches, and what it is stays on the device.
+     * A block of a task of another member is left out, as it is not the time of this one.
+     */
+    // [impl->dsn~busy-plan~1]
+    fun busy(blocks: List<TextBlock>, tasks: Map<String, Task>, member: String, members: List<String>): List<TextBlock> {
+        val (named, hidden) = blocks.mapNotNull { block ->
+            val travel = block.text.startsWith(TRAVEL)
+            val task = tasks[block.text.removePrefix(TRAVEL)]
+            when (task?.let { memberOf(it, members) }) {
+                null -> block.copy(text = CalendarTxt.BUSY)
+                member -> block.copy(text = "${CalendarTxt.BUSY}: ${if (travel) TRAVEL else ""}${task.description}")
+                else -> null
+            }
+        }.partition { it.text != CalendarTxt.BUSY }
+        return named + hidden.groupBy { it.date }.flatMap { (day, same) -> same.map { it.span }.joined().map { TextBlock(day, it, CalendarTxt.BUSY) } }
+    }
+
     /** The tasks of a member that have a time on the day, completed or not, each for its duration or for [DEFAULT_DURATION]. */
     // [impl->dsn~family-day~1]
     fun appointments(entries: List<Entry>, member: String, members: List<String>, day: LocalDate): List<Appointment> =

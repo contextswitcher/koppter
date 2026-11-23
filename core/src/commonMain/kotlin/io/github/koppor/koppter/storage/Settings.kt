@@ -75,6 +75,8 @@ data class Settings(
     val memberCalendars: String = "",
     /** How often each application of the device was started from the list of the applications, one per line as `application=number`. */
     val appStarts: String = "",
+    /** The member of a family whose plan this device keeps, see [io.github.koppor.koppter.plan.Family.busy]; blank on a device that is shared. */
+    val planMember: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -102,6 +104,7 @@ data class Settings(
         RANKING_PERIOD to rankingPeriod,
         MEMBER_CALENDARS to memberCalendars,
         APP_STARTS to appStarts,
+        PLAN_MEMBER to planMember,
     )
 
     companion object {
@@ -129,6 +132,7 @@ data class Settings(
         private const val RANKING_PERIOD = "rankingPeriod"
         private const val MEMBER_CALENDARS = "memberCalendars"
         private const val APP_STARTS = "appStarts"
+        private const val PLAN_MEMBER = "planMember"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -156,6 +160,7 @@ data class Settings(
             rankingPeriod = properties[RANKING_PERIOD] ?: Settings().rankingPeriod,
             memberCalendars = properties[MEMBER_CALENDARS].orEmpty(),
             appStarts = properties[APP_STARTS].orEmpty(),
+            planMember = properties[PLAN_MEMBER].orEmpty(),
         )
     }
 }

@@ -3658,4 +3658,34 @@ class AppTest {
             controller.settings.memberCalendars,
         )
     }
+
+    // [utest->dsn~busy-plan~1]
+    @Test
+    fun thePlanOfTheDeviceOfAMemberBecomesBusyTimesInTheCalendarOfTheList() = runComposeUiTest {
+        val main = MemoryStorage("File the tax return\n").apply {
+            companions["calendar.txt"] = "2026-11-12 w46 Thu  09:00-10:00 File the tax return. 10:00-10:30 Feed the cat @anna. 11:00-12:00 Mow the lawn @ben\n"
+        }
+        val anna = MemoryStorage("Feed the cat\n").apply { companions["calendar.txt"] = "2026-11-12 w46 Thu  07:00-07:30 Absent. 08:00-09:00 Busy\n" }
+        val ben = MemoryStorage("Mow the lawn\n")
+        val lists = SharedLists(main, listOf("anna" to anna, "ben" to ben))
+        val controller = TodoController(Settings(view = "FAMILY", planMember = "Anna"), { lists }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        waitUntil { anna.changes.isNotEmpty() }
+
+        // The task of the main file is a time only, that of the list of the member is named, and that of another member is not hers.
+        assertEquals("2026-11-12 w46 Thu  07:00-07:30 Absent. 09:00-10:00 Busy. 10:00-10:30 Busy: Feed the cat\n", anna.companions["calendar.txt"])
+        assertEquals(null, ben.companions["calendar.txt"])
+        onNodeWithText("10:00-10:30 Feed the cat").assertExists()
+        onNodeWithText("09:00-10:00 Busy").assertExists()
+        onNodeWithText("File the tax return", substring = true).assertDoesNotExist()
+
+        // The settings name the member by the list; nobody takes the busy times back and leaves the absence.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-plan-member-anna").performScrollTo().assertIsSelected()
+        onNodeWithTag("settings-plan-member-nobody").performClick()
+        onNodeWithTag("settings-save").performClick()
+        assertEquals("", controller.settings.planMember)
+        waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  07:00-07:30 Absent\n" }
+        onNodeWithText("09:00-10:00 Busy").assertDoesNotExist()
+    }
 }

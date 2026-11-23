@@ -204,9 +204,8 @@ fun App(
     }
     // [impl->dsn~absences~1]
     // Whatever view is shown: the device of a member that knows the calendars keeps the absences current for the others.
-    val memberCalendars = controller.memberCalendars
-    LaunchedEffect(controller, memberCalendars) {
-        while (!memberCalendars.isNullOrBlank()) {
+    LaunchedEffect(controller, controller.memberCalendars, controller.planMember) {
+        while (controller.writesAbsences) {
             controller.updateAbsences()
             delay(ABSENCE_REFRESH)
         }
@@ -684,6 +683,7 @@ private fun MainScreen(
             projectContexts = controller.projectContextsText,
             memberCalendars = controller.memberCalendars,
             members = controller.members,
+            planMember = controller.planMember,
             // [impl->dsn~config-completion~1]
             knownProjects = controller.projects,
             knownContexts = controller.contexts,

@@ -736,6 +736,11 @@ A family uses koppter together, such as on a tablet in the hallway: the view *Fa
 * A member who has calendars elsewhere, such as that of an employer, enters their addresses under *Calendars of the members* in the tab *File* of the settings, on a device of their own; the address is the one for the [calendars with busy times](#calendars).
   That device writes the times of the events, for four weeks ahead, as blocks named `Absent` into the `calendar.txt` of the member, every half an hour while it runs; the other devices show them and learn neither the address nor what the events are ([decision 0053](docs/decisions/0053-absences-of-a-member-as-blocks-in-the-calendar-txt-of-the-list.md)).
   Events of whole days are left out.
+* A member who plans tasks on a device of their own chooses themselves under *Busy times from the plan* in the same tab.
+  That device writes the times of its [plan](#planning), for four weeks ahead, into the `calendar.txt` of the member as blocks named `Busy`.
+  A task of the list of the member is named, as in `Busy: Repair the fence`; what the tasks of the own file are stays on that device.
+  So a task whose content the family may see is given the context of the member, which moves it into that list.
+  Choosing *Nobody* takes the blocks back.
 * The button *+* beside a name adds a task of that member, and the arrows show the days before and after.
 * The filter does not apply to this view.
 

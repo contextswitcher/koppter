@@ -416,6 +416,8 @@ internal fun DayColumn(
                 modifier = Modifier.padding(start = if (beside) half else 0.dp).padding(horizontal = 2.dp).fillMaxWidth()
                     .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
                     .height(hourHeight * block.span.length / 60)
+                    // A block that follows another one at once is told apart from it.
+                    .padding(bottom = 1.dp)
                     .clickable(enabled = entry != null) { entry?.let(onOpen) }
                     .testTag("week-block"),
             ) {

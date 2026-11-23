@@ -173,7 +173,7 @@ class ScreenshotTest {
             Parents' evening due:2026-11-12 at:19:30 dur:1h
             x 2026-11-09 Repair the bike stars:3
             """,
-            "09:00-17:00 Absent",
+            "09:00-12:00 Absent. 13:00-15:00 Busy. 15:00-16:00 Busy: Buy the groceries",
         ),
     )
 
@@ -379,6 +379,10 @@ class ScreenshotTest {
         screen("settings-members", members = true) {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-member-calendar-Carl").performScrollTo()
+        }
+        screen("settings-plan-member", members = true, settings = Settings(planMember = "Carl")) {
+            onNodeWithTag("open-settings").performClick()
+            onNodeWithTag("settings-plan-member-nobody").performScrollTo()
         }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
         screen("time-map") {

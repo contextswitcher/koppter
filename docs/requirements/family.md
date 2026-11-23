@@ -41,6 +41,19 @@ Covers:
 
 Needs: dsn
 
+### Busy times from the plan of a member
+`req~busy-plan~1`
+
+A member names, on a device of their own, that its plan is theirs.
+The family view of every device then shows the times that this plan takes in the column of the member as busy.
+It names a task of the list of the member, which the family has anyway, and does not tell what any other task is.
+
+Covers:
+
+* `feat~family~1`
+
+Needs: dsn
+
 ## Design
 
 ### Stars and ranking
@@ -117,5 +130,29 @@ Covers:
 
 * `req~absences~1`
 * `adr~absences-in-calendar-txt~1`
+
+Needs: impl, utest
+
+### Busy times in the calendar.txt of a member
+`dsn~busy-plan~1`
+
+The setting `planMember` of the device holds the member whose plan the device keeps, and is blank on a shared device.
+The tab *File* of the settings dialog chooses it below the calendars of the members, while the tasks have members: under *Busy times from the plan*, a text that says what the family sees and when it is written, and behind *This device belongs to* the choice of *Nobody* or one of the members, of which one is always selected.
+`Family.busy` turns the blocks of the plan, those of the `calendar.txt` next to the main file, into what the family learns.
+A block of a task of the list of the member becomes `Busy:` with the description of the task, as that list is in the repository of the family anyway; this is how the content of a task is shared, and a task of a child, which is in the list of the child, is therefore always named.
+A block of a task of another member is left out.
+Any other block, such as one of a task of the main file, becomes `Busy`, joined with those it touches, so that neither the text nor the number of the tasks leaves the device.
+The family view shows such a block with the description alone, as `Busy:` is there for the file, to tell which blocks the plan wrote.
+`TodoController.updateAbsences` passes them, for 28 days from today, to `CalendarTxt.withAbsences`, which replaces the blocks named `Busy`, or starting with `Busy:`, of the days from today on.
+A device without the plan of the member leaves these blocks, and one without a calendar of the member leaves the absences, as two devices of a member may write the two.
+The blocks are written with the absences, at the start and every 30 minutes (`dsn~absences~1`), and after the tasks were planned.
+A member that is no list is reported as a calendar of such a member is.
+`TodoController.updateSettings` remembers a member that the settings named before, and the next writing, which follows at once, takes the busy times of that member back, so that *Nobody* leaves none behind.
+`DayColumn` leaves a gap below each block, as a busy time and a named task often follow each other at once and would read as one block.
+The answers to the flow: the choice is set once per device and therefore stands last in its tab; Save keeps it and starts the writing, Cancel leaves it as it was; what was written shows in the family view, as does a failure.
+
+Covers:
+
+* `req~busy-plan~1`
 
 Needs: impl, utest
