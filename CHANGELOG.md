@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
-## [Unreleased]
+## [2026-11-22] - 2026-11-22
 
 ### Added
 
@@ -358,7 +358,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
-[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-21...HEAD
+[2026-11-22]: https://github.com/contextswitcher/koppter/compare/v2026-11-21...v2026-11-22
 [2026-11-21]: https://github.com/contextswitcher/koppter/compare/v2026-11-20...v2026-11-21
 [2026-11-20]: https://github.com/contextswitcher/koppter/compare/v2026-11-19...v2026-11-20
 [2026-11-19]: https://github.com/contextswitcher/koppter/compare/v2026-11-18...v2026-11-19
