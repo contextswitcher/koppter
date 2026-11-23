@@ -255,6 +255,7 @@ private val LATEX_REFRESH = 1.minutes
 
 /** What the list is without groups. */
 internal const val NO_GROUPS = "no groups: by priority, then due date"
+internal const val NO_GROUPS_TODAY = "no groups: by time"
 
 /** The task whose edit dialog is open; `entry` is null for a task that is not in the file yet. */
 /**
@@ -568,6 +569,7 @@ private fun MainScreen(
                                 calendarWidth = controller.settings.todayCalendarWidth,
                                 onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
                                 appointments = appointments,
+                                groupsOf = controller::listGroupsOf,
                             )
                         } else if (controller.view == View.WEEK) {
                             Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
@@ -746,7 +748,9 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
         // On a line of its own: among the buttons, the words take their room, so that a phone loses the last buttons and a wide window moves them to the next line until the next success.
         // In a wide window, the line ends below the button.
         SyncFailure(controller.syncStatus, Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 4.dp), if (actions != null) TextAlign.End else TextAlign.Start)
-        val list = controller.view == View.LIST
+        // [impl->dsn~today-groups~1]
+        // Today shares the groups of the list: one choice divides both.
+        val list = controller.view == View.LIST || controller.view == View.TODAY
         val overview = controller.view == View.OVERVIEW
         if (!list && !overview && !controller.board) return
         Row(
@@ -776,7 +780,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
             if (list && controller.listGroupKey == null) {
                 // No switch is selected then, which alone does not tell how the tasks are ordered.
                 Text(
-                    NO_GROUPS,
+                    if (controller.view == View.TODAY) NO_GROUPS_TODAY else NO_GROUPS,
                     Modifier.testTag("group-none"),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

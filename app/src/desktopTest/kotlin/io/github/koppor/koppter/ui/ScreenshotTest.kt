@@ -343,10 +343,17 @@ class ScreenshotTest {
             save("review/$size-$name.png")
         }
         screen("list") {}
+        screen("overdue-tooltip") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("group-PRIORITY").performScrollTo().performClick()
+            onNodeWithTag("overdue-separator", useUnmergedTree = true).performMouseInput { moveTo(center) }
+            mainClock.advanceTimeBy(1_000)
+        }
         screen("synchronizing") { storage.onStatus(SyncStatus(SyncState.RUNNING)) }
         screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }
         screen("week") { onNodeWithTag("week-switch").performClick() }
         screen("today") { onNodeWithTag("today-switch").performClick() }
+        screen("today-groups", settings = Settings(listGroup = "PROJECT")) { onNodeWithTag("today-switch").performClick() }
         screen("edit") {
             // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.
             onNodeWithTag("list-switch").performClick()

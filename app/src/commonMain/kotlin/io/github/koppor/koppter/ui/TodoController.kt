@@ -538,8 +538,12 @@ class TodoController(
     val listGroups: List<Group>
         get() = listGroupKey?.let(::groupsBy) ?: listParts(visible, today())
 
-    private fun groupsBy(key: GroupKey): List<Group> {
-        val groups = groupEntries(visible, key, today())
+    /** [entries] divided as the list is, for the tasks of `Today`; `null` while the list has no groups. */
+    // [impl->dsn~today-groups~1]
+    fun listGroupsOf(entries: List<Entry>): List<Group>? = listGroupKey?.let { groupsBy(it, entries) }
+
+    private fun groupsBy(key: GroupKey, entries: List<Entry> = visible): List<Group> {
+        val groups = groupEntries(entries, key, today())
         return if (key != GroupKey.PRIORITY) groups
         else groups.map { group -> group.value?.singleOrNull()?.let { group.copy(title = priorityNames.name(it)) } ?: group }
     }
