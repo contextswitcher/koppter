@@ -360,6 +360,12 @@ class ScreenshotTest {
             onNodeWithTag("edit-context-more").performScrollTo().performClick()
             onNodeWithTag("edit-context-rest").performScrollTo()
         }
+        screen("edit-names") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-dialog").assertExists()
+            onNodeWithTag("edit-before-add").performScrollTo()
+        }
         // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
         screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }
         screen("settings-members", members = true) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.key
@@ -776,7 +777,8 @@ private fun TaskChoice(label: String, chosen: Set<Int>, others: List<Entry>, onC
     // Without text no suggestions: a file has too many tasks to offer them all.
     val suggestions = if (input.isBlank()) emptyList() else others.filter { !it.task.completed && it.index !in chosen && it.task.description.contains(input.trim(), ignoreCase = true) }.take(5)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
+        // A fixed width, so that the search fields of *Waits for* and *Before* start at the same place.
+        Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically).width(72.dp))
         for (entry in others.filter { it.index in chosen }) {
             InputChip(
                 selected = true,
@@ -839,36 +841,7 @@ private fun NameList(
     val top = if (input.isBlank()) matching.sortedByDescending { uses["$sign$it"] ?: 0 }.take(TOP_NAMES) else matching
     val rest = if (input.isBlank()) matching - top.toSet() else emptyList()
     val colors = MaterialTheme.colorScheme
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        for (name in names) {
-            InputChip(
-                selected = true,
-                onClick = { onChange(names - name) },
-                label = { Text("$sign$name") },
-                trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $kind $name") },
-                colors = InputChipDefaults.inputChipColors(
-                    selectedContainerColor = chipColors.first,
-                    selectedLabelColor = chipColors.second,
-                    selectedTrailingIconColor = chipColors.second,
-                ),
-                border = if (outlined) InputChipDefaults.inputChipBorder(true, selected = true, selectedBorderColor = colors.outline, selectedBorderWidth = 1.dp) else null,
-                modifier = Modifier.testTag("$tag-$name"),
-            )
-        }
-        for (name in top) {
-            SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
-        }
-        if (rest.isNotEmpty()) {
-            // A button, not a chip: as a chip it read as one more name.
-            TextButton(onClick = { more = !more }, modifier = Modifier.testTag("$tag-more")) { Text(if (more) "Less" else "More (${rest.size})…") }
-        }
-        if (more && rest.isNotEmpty()) {
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("$tag-rest"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                for (name in rest) {
-                    SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
-                }
-            }
-        }
+    val field: @Composable (Modifier) -> Unit = { modifier ->
         BasicTextField(
             value = input,
             onValueChange = { if (it.endsWith(' ')) add(it) else input = it },
@@ -877,7 +850,7 @@ private fun NameList(
             cursorBrush = SolidColor(colors.primary),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { add(input) }),
-            modifier = Modifier.align(Alignment.CenterVertically).width(150.dp).height(32.dp)
+            modifier = modifier.width(150.dp).height(32.dp)
                 .border(1.dp, colors.outline, MaterialTheme.shapes.small).testTag("$tag-add"),
             decorationBox = { field ->
                 Box(Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.CenterStart) {
@@ -886,6 +859,47 @@ private fun NameList(
                 }
             },
         )
+    }
+    BoxWithConstraints {
+        // Wide: the field at the right end of a row of its own, so that the fields of projects, contexts and hashtags stand one below the other.
+        // Narrow: after the chips, as a column of its own would leave the chips one per line.
+        val wide = maxWidth >= 600.dp
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            FlowRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (name in names) {
+                    InputChip(
+                        selected = true,
+                        onClick = { onChange(names - name) },
+                        label = { Text("$sign$name") },
+                        trailingIcon = { Icon(Icons.Default.Close, contentDescription = "Remove $kind $name") },
+                        colors = InputChipDefaults.inputChipColors(
+                            selectedContainerColor = chipColors.first,
+                            selectedLabelColor = chipColors.second,
+                            selectedTrailingIconColor = chipColors.second,
+                        ),
+                        border = if (outlined) InputChipDefaults.inputChipBorder(true, selected = true, selectedBorderColor = colors.outline, selectedBorderWidth = 1.dp) else null,
+                        modifier = Modifier.testTag("$tag-$name"),
+                    )
+                }
+                for (name in top) {
+                    SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
+                }
+                if (rest.isNotEmpty()) {
+                    // A button, not a chip: as a chip it read as one more name.
+                    TextButton(onClick = { more = !more }, modifier = Modifier.testTag("$tag-more")) { Text(if (more) "Less" else "More (${rest.size})…") }
+                }
+                if (more && rest.isNotEmpty()) {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("$tag-rest"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (name in rest) {
+                            SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
+                        }
+                    }
+                }
+                if (!wide) field(Modifier.align(Alignment.CenterVertically))
+            }
+            // The top padding centers the field on the first row of chips, which are 48 dp high with their touch area.
+            if (wide) field(Modifier.padding(top = 8.dp))
+        }
     }
 }
 

@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- In the dialog of a task, the fields to add a project, a context or a hashtag stand one below the other at the right, and the search fields of *Waits for* and *Before* start at the same place.
 - The icon of the button that synchronizes shows whether the file is synchronized, being synchronized or not synchronized; the top bar adds words only for a failure, with its cause. The name of the application is no longer broken into two lines on a phone.
 
 ## [2026-11-21] - 2026-11-21
