@@ -21,6 +21,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The icon of the button that synchronizes shows whether the file is synchronized, being synchronized or not synchronized; words remain only for a failure, with its cause. The name of the application is no longer broken into two lines on a phone.
 - While a synchronization runs, the arrows of the button turn. Its tooltip names the minute of the last synchronization that succeeded.
 - The cause of a failed synchronization stands on a line of its own below the views, so that it is not cut on a phone and the buttons stay in their place.
+- The line between the overdue tasks and the others in a group of the list has a tooltip that says what it separates.
 
 ## [2026-11-21] - 2026-11-21
 
