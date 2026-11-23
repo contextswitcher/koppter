@@ -746,6 +746,20 @@ Covers:
 
 Needs: impl, utest
 
+### Groups of today
+`dsn~today-groups~1`
+
+`Today` shows the switches of the groups of the list and shares the choice `listGroupKey` with it.
+With an attribute, `TodoController.listGroupsOf` divides the tasks of the blocks of today with `groupEntries`, and the agenda shows each group below a heading, its blocks in the order of the day.
+A block whose task has changed since planning stands after the groups, and the tasks that are due without a block stay below them.
+
+Covers:
+
+* `req~agenda~1`
+* `req~list-groups~1`
+
+Needs: impl, utest
+
 ### State of the plan in the labels
 `dsn~plan-state~1`
 
