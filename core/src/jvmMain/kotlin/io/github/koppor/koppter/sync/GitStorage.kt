@@ -8,6 +8,7 @@ import io.github.koppor.koppter.storage.FileStorage
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
+import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import kotlinx.datetime.LocalDate
 import org.eclipse.jgit.api.Git
@@ -189,7 +190,8 @@ class GitStorage(
         // A merge is one for the whole repository, so it covers the lists in the other directories as well, which have storages of their own.
         val inDirectories = (filesOf(ours) + filesOf(theirs)).distinct()
         fun named(vararg names: String) = inDirectories.filter { it.substringAfterLast('/') in names }
-        for (file in (listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME)) + named(TODO_FILE, ICE_RECUR_FILE, TimeLog.NAME)).distinct()) {
+        // [impl->dsn~archive~1]
+        for (file in (listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME), sibling(DONE_FILE)) + named(TODO_FILE, ICE_RECUR_FILE, TimeLog.NAME, DONE_FILE)).distinct()) {
             val (inBase, inOurs, inTheirs) = bothChanged(file) ?: continue
             val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
             merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")
