@@ -268,6 +268,18 @@ Covers:
 
 Needs: impl, utest
 
+### Canceling a drag
+`dsn~drag-cancel~1`
+
+Esc cancels the drag of a task in the list or of a card on the board: the description at the pointer and the line go away, and releasing the button changes nothing.
+
+Covers:
+
+* `req~list-step~1`
+* `req~board-move~1`
+
+Needs: impl, utest
+
 ### Scrolling while a task is dragged
 `dsn~drag-scroll~1`
 

@@ -393,6 +393,20 @@ class AppTest {
         assertEquals("(A) Thank Mom @phone due:2026-11-20\n(A) Paint the fence\n", storage.text)
     }
 
+    // [utest->dsn~drag-cancel~1]
+    @Test
+    fun escCancelsADrag() = runComposeUiTest {
+        storage.text += "Paint the fence\n"
+        start()
+        val before = storage.text
+        dragTo("Paint the fence", "Schedule pickup", before = true)
+        onNodeWithTag("main-screen").performKeyInput { pressKey(Key.Escape) }
+        onNodeWithTag("task-dragged").assertDoesNotExist()
+        onNodeWithTag("drop-line").assertDoesNotExist()
+        onNodeWithTag("task-list").performMouseInput { release() }
+        assertEquals(before, storage.text)
+    }
+
     // [utest->dsn~drag-scroll~1]
     @Test
     fun theListScrollsWhileATaskIsHeldAtItsEdge() = runComposeUiTest {
