@@ -487,8 +487,11 @@ fun SettingsDialog(
                             }
                         }
                         "Colors" -> {
-                            RadioRow(ColorTheme.entries.map { it to it.title }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
-                            RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
+                            RadioRow(ColorTheme.entries.map { it to it.title + it.dark?.let { dark -> if (dark) " (dark)" else " (light)" }.orEmpty() }, settings.theme, tag = "settings-theme", onSelect = { onColors(it, settings.appearance) })
+                            // A palette with one variant leaves nothing to choose.
+                            if (settings.theme.dark == null) {
+                                RadioRow(Appearance.entries.map { it to it.title }, settings.appearance, tag = "settings-appearance", onSelect = { onColors(settings.theme, it) })
+                            }
                         }
                         "Integrations" -> {
                             if (outlookBlocks != null) {

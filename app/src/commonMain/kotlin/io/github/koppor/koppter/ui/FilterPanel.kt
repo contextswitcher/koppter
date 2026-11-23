@@ -300,9 +300,10 @@ private fun Option(label: String, checked: Boolean, tag: String, onChange: (Bool
 }
 
 /** One of several options; the tag of an option is [tag] followed by its label. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun <T> RadioRow(options: List<Pair<T, String>>, selected: T, tag: String, onSelect: (T) -> Unit) {
-    Row {
+    FlowRow {
         for ((option, label) in options) {
             Row(
                 Modifier.selectable(selected = selected == option, onClick = { onSelect(option) }, role = Role.RadioButton)

@@ -22,6 +22,7 @@ import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
+import io.github.koppor.koppter.storage.ColorTheme
 import io.github.koppor.koppter.storage.Settings
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.storage.SharedLists
@@ -378,6 +379,11 @@ class ScreenshotTest {
             onNodeWithTag("plan-add-map").performScrollTo().performClick()
         }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
+        screen("list-matrix", settings = Settings(theme = ColorTheme.MATRIX)) {}
+        screen("settings-colors", settings = Settings(theme = ColorTheme.DAWN)) {
+            onNodeWithTag("open-settings").performClick()
+            onNodeWithTag("settings-tab-colors").performClick()
+        }
         // The tab that Android alone has.
         screen("settings-device", homeScreen = false) {
             onNodeWithTag("open-settings").performClick()

@@ -10,14 +10,16 @@ import kotlin.test.assertTrue
 class ThemeTest {
     // [utest->dsn~color-themes~1]
     @Test
-    fun eachThemeHasALightAndADarkVariantWithReadableText() {
+    fun eachThemeHasItsVariantsWithReadableText() {
         assertEquals(Color(0xFFECEFF4), colorScheme(ColorTheme.NORD, dark = false).background)
         assertEquals(Color(0xFF2E3440), colorScheme(ColorTheme.NORD, dark = true).background)
         assertEquals(Color(0xFF8DA101), colorScheme(ColorTheme.EVERFOREST, dark = false).primary)
 
         for (theme in ColorTheme.entries) {
-            assertTrue(colorScheme(theme, dark = true).background.luminance() < colorScheme(theme, dark = false).background.luminance())
-            for (dark in listOf(false, true)) {
+            val variants = theme.dark?.let { listOf(it) } ?: listOf(false, true)
+            if (theme.dark == null) assertTrue(colorScheme(theme, dark = true).background.luminance() < colorScheme(theme, dark = false).background.luminance())
+            for (dark in variants) {
+                assertEquals(dark, colorScheme(theme, dark).background.luminance() < 0.5f, "$theme")
                 val colors = colorScheme(theme, dark)
                 val pairs = listOf(
                     colors.onSurface to colors.surface,

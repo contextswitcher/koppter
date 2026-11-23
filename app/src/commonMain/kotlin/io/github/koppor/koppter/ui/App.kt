@@ -157,7 +157,7 @@ fun App(
     /** Reads the other applications of the device, which the user starts from here while this one is the home screen; `null` on a platform without [homeScreen]. */
     apps: (suspend () -> List<DeviceApp>)? = null,
 ) {
-    val dark = when (controller.settings.appearance) {
+    val dark = controller.settings.theme.dark ?: when (controller.settings.appearance) {
         Appearance.SYSTEM -> isSystemInDarkTheme()
         Appearance.LIGHT -> false
         Appearance.DARK -> true

@@ -241,7 +241,7 @@ Needs: dsn
 ### Color themes
 `req~color-themes~1`
 
-The user chooses the colors of the application: the palette Nord or Everforest, each light, dark or as the system is set.
+The user chooses the colors of the application: the palette Nord or Everforest, each light, dark or as the system is set, or one of the themes Muted Slate, Dawn and Matrix of the task manager tuxedo, each in its only variant.
 
 Covers:
 
@@ -980,12 +980,14 @@ Needs: impl, utest
 `colorScheme` fills the roles of the Material color scheme with the colors of the chosen palette in its light or dark variant.
 A container color is the color of its role mixed into the color of the cards; the text on an accent color is the end of the palette with the higher contrast.
 The palette and the variant are settings; `App` asks the system for the variant if the setting leaves it to the system.
+A palette with one variant names it in `ColorTheme.dark`, which overrides the setting of the variant; the settings dialog hides that setting while such a palette is chosen.
 A choice in the settings dialog is saved and applied at once, so that the user sees the colors behind the dialog.
 
 Covers:
 
 * `req~color-themes~1`
 * `adr~colors-from-published-palettes~1`
+* `adr~palettes-with-one-variant~1`
 
 Needs: impl, utest
 

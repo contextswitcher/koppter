@@ -2259,6 +2259,11 @@ class AppTest {
         assertEquals(ColorTheme.EVERFOREST to Appearance.DARK, saved.theme to saved.appearance)
         onNodeWithTag("settings-theme-Everforest").assertIsSelected()
         assertEquals(saved, Settings.fromProperties(saved.toProperties()))
+
+        // A palette with only one variant has no choice of the variant.
+        onNodeWithTag("settings-theme-Dawn (light)").performScrollTo().performClick()
+        assertEquals(ColorTheme.DAWN, saved.theme)
+        onNodeWithTag("settings-appearance-Dark").assertDoesNotExist()
     }
 
     // [utest->dsn~share-log~1]

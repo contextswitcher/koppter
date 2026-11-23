@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- The settings offer the colors Muted Slate, Dawn and Matrix of the task manager tuxedo. Each exists in one variant only, which its name in the settings states, and the choice of light or dark is hidden while one of them is chosen.
+
 ### Changed
 
 - The editor of a time map paints half hours instead of quarters of an hour, and a press on the chosen color erases it. A button in the field of its dates picks a date from a calendar and puts it in at the cursor.

@@ -95,6 +95,52 @@ private val EVERFOREST_DARK = Palette(
     context = Color(0xFFD699B6), // purple
 )
 
+// The themes of the task manager tuxedo, which have one variant each: https://github.com/webstonehq/tuxedo/blob/main/src/theme.rs
+// Its color dim is meant for completed tasks and is too faint for labels; subtle is its status_fg instead.
+// Priorities A, B and C take pri_a, pri_b and pri_c, whatever their hue.
+private val MUTED_SLATE = Palette(
+    dark = true,
+    background = Color(0xFF1A1D23), // bg
+    raised = Color(0xFF1F232B), // panel
+    variant = Color(0xFF2A2F38), // border
+    text = Color(0xFFC8CCD4), // fg
+    subtle = Color(0xFFA8B0BC), // status_fg
+    accent = Color(0xFF8AA9C9),
+    red = Color(0xFFE07A7A), // pri_a
+    orange = Color(0xFFD4B06A), // pri_b
+    yellow = Color(0xFF7AA67A), // pri_c
+    project = Color(0xFF7FB3A8),
+    context = Color(0xFFC89A6E),
+)
+private val DAWN = Palette(
+    dark = false,
+    background = Color(0xFFFAF6F0),
+    raised = Color(0xFFF3EDE2),
+    variant = Color(0xFFE0D6C4),
+    text = Color(0xFF3D3528),
+    subtle = Color(0xFF5A4F3D),
+    accent = Color(0xFFA35D3A),
+    red = Color(0xFFB8483A),
+    orange = Color(0xFFA3722A),
+    yellow = Color(0xFF5A7A3A),
+    project = Color(0xFF3A7A6A),
+    context = Color(0xFFA35D3A),
+)
+private val MATRIX = Palette(
+    dark = true,
+    background = Color(0xFF0A120A),
+    raised = Color(0xFF0F1A0F),
+    variant = Color(0xFF1A2A1A),
+    text = Color(0xFF7FCC7F),
+    subtle = Color(0xFF7FCC7F),
+    accent = Color(0xFF9FFF9F),
+    red = Color(0xFFFF8C8C),
+    orange = Color(0xFFFFD66E),
+    yellow = Color(0xFF9FFF9F),
+    project = Color(0xFF9FFF9F),
+    context = Color(0xFFFFB56E),
+)
+
 /** The contrast ratio of two colors as WCAG defines it, from 1 to 21. */
 internal fun contrast(a: Color, b: Color): Float {
     val (low, high) = listOf(a.luminance(), b.luminance()).sorted()
@@ -108,6 +154,9 @@ internal fun contrast(a: Color, b: Color): Float {
 private fun palette(theme: ColorTheme, dark: Boolean) = when (theme) {
     ColorTheme.NORD -> if (dark) NORD_DARK else NORD_LIGHT
     ColorTheme.EVERFOREST -> if (dark) EVERFOREST_DARK else EVERFOREST_LIGHT
+    ColorTheme.MUTED_SLATE -> MUTED_SLATE
+    ColorTheme.DAWN -> DAWN
+    ColorTheme.MATRIX -> MATRIX
 }
 
 /** The green of the palette, for what is fine; the Material color scheme has no role for it. */

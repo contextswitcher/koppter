@@ -1,7 +1,16 @@
 package io.github.koppor.koppter.storage
 
-/** The palette the colors of the application come from. */
-enum class ColorTheme(val title: String) { NORD("Nord"), EVERFOREST("Everforest") }
+/**
+ * The palette the colors of the application come from.
+ * [dark] is the variant of a palette that has only one, which the setting of the variant does not change; `null` for a palette with both.
+ */
+enum class ColorTheme(val title: String, val dark: Boolean? = null) {
+    NORD("Nord"),
+    EVERFOREST("Everforest"),
+    MUTED_SLATE("Muted Slate", dark = true),
+    DAWN("Dawn", dark = false),
+    MATRIX("Matrix", dark = true),
+}
 
 /** Whether the colors are light or dark. */
 enum class Appearance(val title: String) { SYSTEM("As the system"), LIGHT("Light"), DARK("Dark") }
