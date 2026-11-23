@@ -43,7 +43,7 @@ The comparison follows its README of November 2026: the column for tuxedo states
 | Platforms | A terminal on Linux, macOS and Windows | Android, Wear OS, and Windows and Linux desktops; no terminal |
 | Operation | The keyboard alone: `j` and `k` move the marked task, `x` completes it, `dd` deletes it, `p` changes its priority; the keys are set in a file | Mouse and touch; keys open the views, the search and the dialog of a new task, and none acts on a task of the list |
 | Command line | The commands of the todo.txt command line, such as `add`, `do`, `pri` and `list`, with the output as JSON if wanted | The check of a file only |
-| Completed tasks | *Archive* moves them to `done.txt`; a view shows that file by the day of completion, puts a task back and deletes one | Stay in the `todo.txt` file, below *Done* |
+| Completed tasks | *Archive* moves them to `done.txt`; a view shows that file by the day of completion, puts a task back and deletes one | Stay in the `todo.txt` file, below *Done*; those completed before the last month are moved to `done.txt` at the start of a month, and the application does not show that file |
 | Undo | 50 steps | None; in a git repository, the history holds each change |
 | Several tasks at once | A visual mode marks tasks, which are then completed, deleted or copied together | None |
 | Copying | The line of a task, or its text without metadata, to the clipboard | The link to a label; the line is selected by hand in the edit dialog |
@@ -61,7 +61,13 @@ The comparison follows its README of November 2026: the column for tuxedo states
 | Changes by other programs | Read within a quarter of a second | Read within two seconds |
 | Board, plan, agenda, overview, dependencies, hashtags, levels of projects and contexts | None | Yes |
 
-What koppter does not have and tuxedo has is, in the order of its use to someone who has koppter already: work on the list with the keyboard alone, undo, an archive of the completed tasks, changes to several tasks at once, searches with a name, the commands of the todo.txt command line, and recurrence in words.
+What koppter does not have and tuxedo has is, in the order of its use to someone who has koppter already: work on the list with the keyboard alone, undo, a view of the archived tasks, changes to several tasks at once, searches with a name, the commands of the todo.txt command line, and recurrence in words.
+None of these is planned yet.
+
+An interface for the terminal is not planned either.
+`TodoController` needs only the runtime of Compose, so that a library such as [Mosaic](https://github.com/JakeWharton/mosaic), which is Compose for the terminal, could show its state; the list, the filter, the inbox and the agenda fit a terminal, the board and the editor of time maps do not.
+Against it stand a second interface to keep in step and the start of a Java virtual machine, which takes about a second.
+Keys that act on a marked task of the list, and undo, would give the desktop application most of what tuxedo offers at the keyboard.
 
 ## Applications still to compare
 

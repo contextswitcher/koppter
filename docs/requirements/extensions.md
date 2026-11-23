@@ -200,6 +200,19 @@ Covers:
 
 Needs: dsn
 
+### Archive of completed tasks
+`req~archive~1`
+
+At the start of a month, the application moves the tasks that were completed before the month before it from the todo.txt file to the file `done.txt` next to it, as the todo.txt command line names its archive.
+The todo.txt file so keeps the tasks completed in the last month, which a comparison of two versions of the file shows, and does not grow with every completed task.
+A moved task carries the day on which it was completed.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Editor of the scheduled tasks
 `req~scheduled-tasks-editor~1`
 
@@ -826,6 +839,22 @@ With a synchronizing storage, the run waits for a running synchronization, and a
 Covers:
 
 * `req~scheduled-tasks~1`
+
+Needs: impl, utest
+
+### Archive
+`dsn~archive~1`
+
+`archive` returns the file without the tasks that were completed before the first day of the month before today, and their lines for `done.txt`.
+As the day of the month does not count, it finds tasks once a month, and two devices find the same ones.
+The day of completion is the completion date of the line, or else the one that the history tells; a line for `done.txt` gets both dates that are known, as the history of that file does not tell them.
+A completed task stays if its day of completion is not known, if it has the tag `ol:` or `tex:`, as its line hides the item of Outlook or the TODO of LaTeX, if an open task names its `id:` with `p:`, or if it belongs to a shared list, whose file and ranking it stays in.
+`TodoController` looks for such tasks once per day for a storage with files next to the todo.txt file, not while a synchronization runs; it appends the lines that `done.txt` does not have yet, and writes that file before the todo.txt file, with the change *Archive completed tasks*.
+`GitStorage` merges `done.txt` with `mergeLines`.
+
+Covers:
+
+* `req~archive~1`
 
 Needs: impl, utest
 

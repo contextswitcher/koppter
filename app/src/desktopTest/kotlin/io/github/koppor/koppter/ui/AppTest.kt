@@ -187,7 +187,7 @@ class AppTest {
         // A card merges the semantics of its content; the labels are found in the unmerged tree only.
         onAllNodes(hasText("+GarageSale") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertCountEquals(2)
         onNode(hasText("2026-11-20") and hasAnyAncestor(hasTestTag("task-labels")), useUnmergedTree = true).assertExists()
-        onNodeWithTag("overdue-separator").assertDoesNotExist()
+        onNodeWithTag("overdue-separator", useUnmergedTree = true).assertDoesNotExist()
     }
 
     // [utest->dsn~visible-tasks~1]
@@ -217,13 +217,15 @@ class AppTest {
 
         // Within a group, a line is the border.
         controller.listGroupKey = GroupKey.PROJECT
-        val line = onNodeWithTag("overdue-separator").fetchSemanticsNode().boundsInRoot
+        val line = onNodeWithTag("overdue-separator", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue(bounds("Return the books").bottom <= line.top)
         assertTrue(line.bottom <= bounds("Write the report").top)
+        onNodeWithTag("overdue-separator", useUnmergedTree = true).performMouseInput { moveTo(center) }
+        waitUntil { onAllNodesWithText("Overdue tasks above, the others below").fetchSemanticsNodes().isNotEmpty() }
 
         // Without groups, the two kinds stand below a heading each, and the completed tasks below a third one.
         controller.listGroupKey = null
-        onNodeWithTag("overdue-separator").assertDoesNotExist()
+        onNodeWithTag("overdue-separator", useUnmergedTree = true).assertDoesNotExist()
         assertTrue(bounds("Overdue (1)").bottom <= bounds("Return the books").top)
         assertTrue(bounds("Return the books").bottom <= bounds("Next (1)").top)
         assertTrue(bounds("Next (1)").bottom <= bounds("Write the report").top)
@@ -3264,6 +3266,18 @@ class AppTest {
         onAllNodesWithTag("task-done")[0].performClick()
         mainClock.advanceTimeBy(2_500)
         assertEquals(1, storage.text.lines().count { "Check mail" in it })
+    }
+
+    // [utest->dsn~archive~1]
+    @Test
+    fun tasksCompletedBeforeTheLastMonthAreMovedToDoneTxt() = runComposeUiTest {
+        storage.text = "x 2026-09-30 Call Mom\nx 2026-10-01 Buy milk\nWater the plants\n"
+        storage.companions["done.txt"] = "x 2026-08-01 Pay the rent\n"
+        start()
+        mainClock.advanceTimeBy(2_500)
+        assertEquals("x 2026-10-01 Buy milk\nWater the plants\n", storage.text)
+        assertEquals("x 2026-08-01 Pay the rent\nx 2026-09-30 Call Mom\n", storage.companions["done.txt"])
+        assertEquals("Archive completed tasks", storage.changes.last())
     }
 
     // [utest->dsn~ice-recur-suggestion~1]

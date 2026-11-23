@@ -372,7 +372,7 @@ private fun WithPath(path: String, label: @Composable () -> Unit) {
 /** Shows the label with the text when the pointer rests on it. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WithTooltip(text: String, label: @Composable () -> Unit) {
+internal fun WithTooltip(text: String, label: @Composable () -> Unit) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
         tooltip = { PlainTooltip { Text(text) } },

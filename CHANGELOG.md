@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- At the start of a month, the tasks that were completed before the last month are moved from todo.txt to `done.txt` next to it, each with the day on which it was completed. The tasks completed lately stay in todo.txt.
 - *Today* offers the switches *by priority*, *by project*, *by context*, *by hashtag* and *by due date* of the list and divides the blocks of the day into groups. The choice applies to the list as well.
 - The settings offer the colors Muted Slate, Dawn and Matrix of the task manager tuxedo. Each exists in one variant only, which its name in the settings states, and the choice of light or dark is hidden while one of them is chosen.
 
@@ -21,6 +22,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The icon of the button that synchronizes shows whether the file is synchronized, being synchronized or not synchronized; words remain only for a failure, with its cause. The name of the application is no longer broken into two lines on a phone.
 - While a synchronization runs, the arrows of the button turn. Its tooltip names the minute of the last synchronization that succeeded.
 - The cause of a failed synchronization stands on a line of its own below the views, so that it is not cut on a phone and the buttons stay in their place.
+- The line between the overdue tasks and the others in a group of the list has a tooltip that says what it separates.
 
 ## [2026-11-21] - 2026-11-21
 
