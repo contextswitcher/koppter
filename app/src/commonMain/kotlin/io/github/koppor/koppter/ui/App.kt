@@ -25,7 +25,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -290,6 +299,19 @@ private fun MainScreen(
 ) {
     var showApps by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Editing?>(null) }
+    // [impl->dsn~main-screen~1]
+    // The floating buttons would cover the row at the bottom edge; they give way while the user scrolls down.
+    // A scroll that moves nothing is at the end or the start of a list, or in one too short to scroll: it brings them back.
+    var floatingShown by remember { mutableStateOf(true) }
+    val floatingScroll = remember {
+        object : NestedScrollConnection {
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (consumed.y != 0f || available.y != 0f) floatingShown = consumed.y >= 0f
+                return Offset.Zero
+            }
+        }
+    }
+    LaunchedEffect(controller.view) { floatingShown = true }
     var draft by remember { mutableStateOf<Draft?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
@@ -480,20 +502,22 @@ private fun MainScreen(
                 floatingActionButton = {
                     // [impl->dsn~family-view~1]
                     // The family view has a button for a new task per member and nothing to search; buttons that float would cover its calendar.
-                    if (controller.view != View.FAMILY) Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                        if (!wideNow) {
-                            SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
-                                Icon(Icons.Default.Search, contentDescription = "Search")
+                    if (controller.view != View.FAMILY) AnimatedVisibility(floatingShown, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            if (!wideNow) {
+                                SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
+                                    Icon(Icons.Default.Search, contentDescription = "Search")
+                                }
                             }
-                        }
-                        SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
-                            Icon(Icons.Default.Add, contentDescription = "New task")
+                            SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
+                                Icon(Icons.Default.Add, contentDescription = "New task")
+                            }
                         }
                     }
                 },
                 snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
-                Row(Modifier.padding(padding).fillMaxSize()) {
+                Row(Modifier.padding(padding).fillMaxSize().nestedScroll(floatingScroll)) {
                     // [impl->dsn~family-view~1]
                     // The family view shows the day of everybody, which no filter narrows, and its columns take the width.
                     val filtered = controller.view != View.FAMILY

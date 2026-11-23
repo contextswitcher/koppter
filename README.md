@@ -1017,6 +1017,7 @@ These projects served as models; [docs/related-work.md](docs/related-work.md) co
 * [Web Todo.txt](https://github.com/EpocDotFr/webtodotxt) — model for the filter panel.
 * [Simpletask](https://github.com/cdelahousse/simpletask-android) — Android todo.txt app with file-based synchronization.
 * [topydo](https://github.com/topydo/topydo) — model for the Kanban columns.
+* [tuxedo](https://github.com/webstonehq/tuxedo) — todo.txt manager for the terminal; source of the colors Muted Slate, Dawn and Matrix.
 
 ## License
 

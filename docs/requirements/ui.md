@@ -879,6 +879,7 @@ Needs: impl, utest
 The main screen consists of the top bar, the filter panel, the switches for the view, the field for the text of the filter below them where the window is wide, the task list and a button for a new task, which opens the edit dialog; a narrower window has a search button of the same size to its left instead of the field.
 A wide window has no top bar: the title of the window already names the application, and the buttons of the top bar stand at the end of the row of the switches for the view, which leaves the filter panel and the tasks a line more.
 A button of the top bar shows its description while the pointer rests on it.
+The buttons for a new task and for the search float above the list: they slide away while the user scrolls down, so that they cover no task, and return with a scroll up, at the end of the list and with another view.
 Errors of the storage are shown in a snackbar.
 The texts use two sizes of the type scale of Material (`compactTypography`): the medium body size for texts, fields, buttons and titles, and the small body size for labels and remarks; a title differs from a text by its weight.
 That suits a window on a desktop and keeps a field of one line at the same height whether it is empty or filled.
@@ -888,7 +889,7 @@ Covers:
 
 * `req~filter-panel~1`
 
-Needs: impl
+Needs: impl, utest
 
 ### Keyboard shortcuts
 `dsn~keyboard-shortcuts~1`

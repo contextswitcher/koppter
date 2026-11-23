@@ -39,6 +39,8 @@ import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeLeft
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
@@ -428,6 +430,17 @@ class AppTest {
         onNodeWithText("Task 40").assertExists()
         onNodeWithTag("task-list").performTouchInput { up() }
         assertEquals(listOf("Task 39", "Task 40", "Task 1"), storage.text.trim().lines().takeLast(3))
+    }
+
+    // [utest->dsn~main-screen~1]
+    @Test
+    fun theFloatingButtonsGiveWayWhileTheListScrollsDown() = runComposeUiTest {
+        storage.text = (1..40).joinToString("") { "Task $it\n" }
+        start()
+        onNodeWithTag("task-list").performTouchInput { swipeUp() }
+        onNodeWithTag("new-task").assertDoesNotExist()
+        onNodeWithTag("task-list").performTouchInput { swipeDown() }
+        onNodeWithTag("new-task").assertExists()
     }
 
     // [utest->dsn~drag-scroll~1]
