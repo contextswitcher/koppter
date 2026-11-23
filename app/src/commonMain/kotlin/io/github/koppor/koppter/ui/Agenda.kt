@@ -78,6 +78,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.CalendarTxt
@@ -151,20 +152,16 @@ fun Agenda(
                                     onWorked(entry, block.span.length)
                                 },
                                 modifier = Modifier.testTag("agenda-worked"),
-                            ) { Text("+${Task.durationText(block.span.length.minutes)} spent") }
+                            ) { Text("+${Task.durationText(block.span.length.minutes)}${if (narrow) "\n" else " "}spent", textAlign = TextAlign.Center) }
                         }
                         if (entry != null && offset == 0) ClockButton(entry, running, onClock)
                     }
                     if (narrow) {
-                        // On a phone, the card takes the whole width: the time and the buttons stand above it.
-                        // The space above the time keeps the buttons with the card below them.
-                    Column(Modifier.padding(top = 8.dp).testTag("agenda-block")) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                time()
-                                Box(Modifier.weight(1f))
-                                actions()
-                            }
-                            card()
+                        // On a phone, the time and the buttons stand in two lines beside the card, so that a block takes one row and more of the day is in view.
+                        Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(CalendarTxt.timesText(block.span).replace("-", "\n"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge)
+                            Box(Modifier.weight(1f)) { card() }
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) { actions() }
                         }
                     } else {
                         Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

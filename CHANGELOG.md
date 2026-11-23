@@ -9,18 +9,21 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- At the start of a month, the tasks that were completed before the last month are moved from todo.txt to `done.txt` next to it, each with the day on which it was completed. The tasks completed lately stay in todo.txt.
 - *Today* offers the switches *by priority*, *by project*, *by context*, *by hashtag* and *by due date* of the list and divides the blocks of the day into groups. The choice applies to the list as well.
 - The settings offer the colors Muted Slate, Dawn and Matrix of the task manager tuxedo. Each exists in one variant only, which its name in the settings states, and the choice of light or dark is hidden while one of them is chosen.
 
 ### Changed
 
 - The menu of a task opens at the mouse pointer. For a task from Outlook, it offers *Focus in Outlook*.
+- On a phone, a block of *Today* and *Agenda* takes one row: its time and buttons stand beside the card. The rows of the switches fade at the edge behind which more switches lie.
 - The buttons for a new task and for the search slide away while the list is scrolled down, so that they cover no task, and return when it is scrolled up or at its end.
 - The editor of a time map paints half hours instead of quarters of an hour, and a press on the chosen color erases it. A button in the field of its dates picks a date from a calendar and puts it in at the cursor.
 - In the dialog of a task, the fields to add a project, a context or a hashtag stand one below the other at the right, and the search fields of *Waits for* and *Before* start at the same place.
 - The icon of the button that synchronizes shows whether the file is synchronized, being synchronized or not synchronized; words remain only for a failure, with its cause. The name of the application is no longer broken into two lines on a phone.
 - While a synchronization runs, the arrows of the button turn. Its tooltip names the minute of the last synchronization that succeeded.
 - The cause of a failed synchronization stands on a line of its own below the views, so that it is not cut on a phone and the buttons stay in their place.
+- The line between the overdue tasks and the others in a group of the list has a tooltip that says what it separates.
 
 ## [2026-11-21] - 2026-11-21
 

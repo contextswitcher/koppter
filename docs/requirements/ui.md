@@ -581,6 +581,7 @@ Needs: impl, utest
 `dsn~overdue-separator~1`
 
 `TaskList` draws a line between the last overdue task and the first task that is not overdue, in each group that has tasks of both kinds.
+When the pointer rests on the line, or after a long press on it on a phone, a tooltip says that the overdue tasks stand above it.
 The list without groups has none, as its overdue tasks stand below a heading of their own.
 
 Covers:

@@ -154,7 +154,12 @@ fun TaskList(
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         // [impl->dsn~overdue-separator~1]
                         if (position == firstNotOverdue && position > 0) {
-                            HorizontalDivider(Modifier.padding(top = 2.dp).testTag("overdue-separator"), thickness = 2.dp)
+                            // The line alone is too thin to rest the pointer on; the box around it holds the tooltip.
+                            WithTooltip("Overdue tasks above, the others below") {
+                                Box(Modifier.fillMaxWidth().height(12.dp).testTag("overdue-separator"), contentAlignment = Alignment.Center) {
+                                    HorizontalDivider(thickness = 2.dp)
+                                }
+                            }
                         }
                         Box(Modifier.cardDrag(drag, group.title to entry) { target()?.let { (target, before) -> onDrop(entry, target.second, before) } }) {
                             TaskCard(entry, today, onToggle = { onToggle(entry) }, onOpen = { onOpen(entry) }) {
