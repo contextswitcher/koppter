@@ -16,6 +16,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- On a phone, a block of *Today* and *Agenda* takes one row: its time and buttons stand beside the card. The rows of the switches fade at the edge behind which more switches lie.
 - The buttons for a new task and for the search slide away while the list is scrolled down, so that they cover no task, and return when it is scrolled up or at its end.
 - The editor of a time map paints half hours instead of quarters of an hour, and a press on the chosen color erases it. A button in the field of its dates picks a date from a calendar and puts it in at the cursor.
 - In the dialog of a task, the fields to add a project, a context or a hashtag stand one below the other at the right, and the search fields of *Waits for* and *Before* start at the same place.

@@ -81,7 +81,10 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -732,7 +735,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
         // The buttons of the top bar, in a wide window, go to a line of their own where all switches would not fit next to them.
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, itemVerticalAlignment = Alignment.CenterVertically) {
             // Each row is one line that scrolls sideways: in a narrow window, wrapped rows would take the place of the tasks.
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.sidewaysScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (view in controller.views) {
                     FilterChip(
                         selected = controller.view == view,
@@ -754,7 +757,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
         val overview = controller.view == View.OVERVIEW
         if (!list && !overview && !controller.board) return
         Row(
-            Modifier.horizontalScroll(rememberScrollState()),
+            Modifier.sidewaysScroll(),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -796,6 +799,22 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
             }
         }
     }
+}
+
+/**
+ * Scrolls sideways and fades the edge behind which more switches lie: on a phone, a switch cut at the edge
+ * does not tell that the row goes on.
+ */
+@Composable
+private fun Modifier.sidewaysScroll(): Modifier {
+    val state = rememberScrollState()
+    val background = MaterialTheme.colorScheme.background
+    return drawWithContent {
+        drawContent()
+        val fade = 48.dp.toPx()
+        if (state.canScrollBackward) drawRect(Brush.horizontalGradient(listOf(background, background.copy(alpha = 0f)), 0f, fade), size = Size(fade, size.height))
+        if (state.canScrollForward) drawRect(Brush.horizontalGradient(listOf(background.copy(alpha = 0f), background), size.width - fade, size.width), Offset(size.width - fade, 0f), Size(fade, size.height))
+    }.horizontalScroll(state)
 }
 
 /** A button of the top bar. Its description is its tooltip as well, as an icon alone does not tell what it does. */

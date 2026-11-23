@@ -698,7 +698,7 @@ Needs: impl, utest
 `timelog.txt` next to todo.txt holds a line per time, such as `2026-11-21 16:50-17:20 Write the report +Work`, with the text of the task as `calendar.txt` has it; a time over midnight is a line per day, the first one ending at `24:00`.
 `TimeLog.append` adds a line whenever a clock stops: by *Stop*, by the start of another task and by the completion of the task.
 *Away*, in the bar of the clock that runs and, while no clock runs, at the top of *Today*, shown while the user is not away, stops the clock that runs and appends an open line such as `2026-11-21 17:20- Away`; a bar above every view then shows the time away with *Back*, which, like starting a clock, replaces the open line by a closed one.
-The answers to the flow: *Away* and *Back* take effect at once and are undone by the other; a failure to write the file is shown like any other; the time away survives a restart and is seen on another device, as it is in the file; on a phone, both are buttons that need no keyboard; the top bar has no room for *Away* there, and the agenda puts the time and the buttons of a block above its card.
+The answers to the flow: *Away* and *Back* take effect at once and are undone by the other; a failure to write the file is shown like any other; the time away survives a restart and is seen on another device, as it is in the file; on a phone, both are buttons that need no keyboard; the top bar has no room for *Away* there, and the agenda puts the time and the buttons of a block in two lines beside its card.
 `GitStorage` merges the file line by line, as todo.txt, since both devices only add lines.
 
 Covers:
