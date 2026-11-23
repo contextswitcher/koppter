@@ -309,7 +309,7 @@ class ScreenshotTest {
     @Test
     fun rendersDueMenu() = runDesktopComposeUiTest(width = 1100, height = 520) {
         start()
-        onNodeWithText("Submit the travel expense report").performMouseInput { rightClick() }
+        onAllNodesWithTag("task-description", useUnmergedTree = true)[0].performMouseInput { rightClick() }
         save("due-menu.png")
     }
 

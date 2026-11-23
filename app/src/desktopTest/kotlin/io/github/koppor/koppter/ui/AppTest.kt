@@ -257,6 +257,8 @@ class AppTest {
         onNodeWithText("Thank Mom").performMouseInput { rightClick() }
         onNodeWithTag("due-2026-12-12").assertExists()
         onNodeWithTag("due-none").assertDoesNotExist()
+        // A task without an item of Outlook is not offered to show one.
+        onNodeWithTag("menu-outlook").assertDoesNotExist()
     }
 
     // [utest->dsn~deadline~1]
@@ -1189,6 +1191,7 @@ class AppTest {
     // [utest->dsn~outlook-items~1]
     // [utest->dsn~outlook-tag~1]
     // [utest->dsn~outlook-complete~1]
+    // [utest->dsn~due-menu~1]
     @Test
     fun theItemsOfOutlookAreShownAndBecomeALineWhenOneGetsAContext() = runComposeUiTest {
         val mail = "00000000A1B2C3D4"
@@ -1210,6 +1213,11 @@ class AppTest {
         assertEquals(1, opened.size)
         assertTrue(opened.single() in setOf(mail, task))
         onNodeWithTag("edit-dialog").assertDoesNotExist()
+        // So does the menu of the card.
+        onNodeWithText("Book the hotel", useUnmergedTree = true).performMouseInput { rightClick() }
+        onNodeWithTag("menu-outlook").assertTextEquals("Focus in Outlook").performClick()
+        assertEquals(task, opened.last())
+        onNodeWithTag("due-menu").assertDoesNotExist()
 
         // In the inbox, the item shows where it comes from, and the contexts below it are choices.
         controller.view = View.INBOX

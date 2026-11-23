@@ -592,9 +592,11 @@ Needs: impl, utest
 ### Menu of the due date
 `dsn~due-menu~1`
 
-A click with the secondary mouse button on a task card, or a click on the label of its due date, opens a menu with the days of `dueChoices`: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month, each day once and in the order of the days; a weekend stands for its Sunday.
+A click with the secondary mouse button on a task card opens a menu at the pointer; a click on the label of its due date opens it below the label.
+The menu offers the days of `dueChoices`: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month, each day once and in the order of the days; a weekend stands for its Sunday.
 A weekend and a week end on their Sunday, as in the dates that are typed in words.
 Choosing a day calls `TodoController.setDue`, which sets the `due:` tag and leaves the rest of the line as it is.
+For a task that names an item of Outlook in its tag `ol:`, *Focus in Outlook* follows the days and shows the item in Outlook, as the label *Outlook* does.
 For a task with a due date, the menu ends with *No due date*, which removes the tag.
 The cards of the board and of the agenda are the same `TaskCard` and have the menu as well.
 
