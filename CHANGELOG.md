@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- *Today* offers the switches *by priority*, *by project*, *by context*, *by hashtag* and *by due date* of the list and divides the blocks of the day into groups. The choice applies to the list as well.
 - The settings offer the colors Muted Slate, Dawn and Matrix of the task manager tuxedo. Each exists in one variant only, which its name in the settings states, and the choice of light or dark is hidden while one of them is chosen.
 
 ### Changed
