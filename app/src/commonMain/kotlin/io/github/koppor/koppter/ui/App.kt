@@ -25,6 +25,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DateRange
@@ -67,6 +72,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -79,6 +85,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.storage.ConfigFile
@@ -95,6 +102,7 @@ import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.launch
+import kotlinx.datetime.LocalDateTime
 
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
 private val WIDE = 840.dp
@@ -446,7 +454,7 @@ private fun MainScreen(
                 // Words, as no icon tells that the application ends and comes back.
                 // [impl->dsn~android-update~1]
                 update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text(updateLabel) } }
-                controller.syncStatus?.let { SyncIndicator(it, words = wideNow, onSync = controller::sync) }
+                controller.syncStatus?.let { SyncIndicator(it, controller.lastSynchronized, onSync = controller::sync) }
                 if (controller.canSchedule) {
                     // [impl->dsn~plan-dialog~1]
                     // A word: the play icon starts the clock of a task.
@@ -460,8 +468,7 @@ private fun MainScreen(
                 topBar = {
                     if (!wideNow) TopAppBar(
                         // A phone has no room for the name beside the button Apps or the one of an update; as the home screen, the application needs no name.
-                        // The cause of a failed synchronization stands in the place of the name: the title is what the bar fits between its buttons, which words among them push out of view.
-                        title = { if (controller.syncStatus?.state == SyncState.FAILED) SyncFailure(controller.syncStatus) else if (!startsApps && update == null) Text("koppter") },
+                        title = { if (!startsApps && update == null) Text("koppter") },
                         navigationIcon = {
                             IconButton(onClick = { scope.launch { drawer.open() } }, modifier = Modifier.testTag("open-filter")) {
                                 Icon(Icons.Default.Menu, contentDescription = "Filter")
@@ -711,6 +718,10 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
             }
             if (actions != null) Row(verticalAlignment = Alignment.CenterVertically, content = actions)
         }
+        // [impl->dsn~sync-status~1]
+        // On a line of its own: among the buttons, the words take their room, so that a phone loses the last buttons and a wide window moves them to the next line until the next success.
+        // In a wide window, the line ends below the button.
+        SyncFailure(controller.syncStatus, Modifier.fillMaxWidth().padding(horizontal = 12.dp).padding(bottom = 4.dp), if (actions != null) TextAlign.End else TextAlign.Start)
         val list = controller.view == View.LIST
         val overview = controller.view == View.OVERVIEW
         if (!list && !overview && !controller.board) return
@@ -762,26 +773,37 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
 /** A button of the top bar. Its description is its tooltip as well, as an icon alone does not tell what it does. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BarButton(icon: ImageVector, description: String, tag: String, enabled: Boolean = true, tint: Color = LocalContentColor.current, onClick: () -> Unit) {
+private fun BarButton(icon: ImageVector, description: String, tag: String, enabled: Boolean = true, tint: Color? = null, iconModifier: Modifier = Modifier, onClick: () -> Unit) {
     TooltipBox(
         positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
         tooltip = { PlainTooltip { Text(description) } },
         state = rememberTooltipState(),
     ) {
-        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) { Icon(icon, contentDescription = description, tint = tint) }
+        // The color of the content is read inside the button, which fades it while it is disabled.
+        IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.testTag(tag)) { Icon(icon, contentDescription = description, modifier = iconModifier, tint = tint ?: LocalContentColor.current) }
     }
 }
 
-/** Shows whether the file is synchronized; a click synchronizes now. */
+/** Shows whether the file is synchronized, and since when; a click synchronizes now. */
 // [impl->dsn~sync-status~1]
 @Composable
-private fun SyncIndicator(status: SyncStatus, words: Boolean, onSync: () -> Unit) {
-    if (words) SyncFailure(status)
+private fun SyncIndicator(status: SyncStatus, last: LocalDateTime?, onSync: () -> Unit) {
     when (status.state) {
-        SyncState.IDLE -> BarButton(Synchronized, "Synchronized. Synchronize now", "sync-now", onClick = onSync)
-        SyncState.RUNNING -> BarButton(Synchronizing, "Synchronizing", "sync-now", enabled = false, onClick = onSync)
+        SyncState.IDLE -> BarButton(Synchronized, "Synchronized${last?.let { " at ${it.date} ${it.time}" }.orEmpty()}. Synchronize now", "sync-now", onClick = onSync)
+        SyncState.RUNNING -> {
+            // Against the clock, as the arrows of the icon point.
+            val angle by rememberInfiniteTransition().animateFloat(0f, -360f, infiniteRepeatable(tween(1500, easing = LinearEasing)))
+            // In the color of the other buttons: faded as a disabled button is, the arrows are hardly seen, and their turning tells that a click does nothing now.
+            BarButton(Synchronizing, "Synchronizing", "sync-now", enabled = false, tint = LocalContentColor.current, iconModifier = Modifier.rotate(angle), onClick = onSync)
+        }
         // With the cause, as the words beside the button are cut where the bar is narrow.
-        SyncState.FAILED -> BarButton(NotSynchronized, "Synchronize now. Not synchronized: ${status.message}", "sync-now", tint = MaterialTheme.colorScheme.error, onClick = onSync)
+        SyncState.FAILED -> BarButton(
+            NotSynchronized,
+            "Synchronize now. Not synchronized: ${status.message}${last?.let { ". Last synchronized at ${it.date} ${it.time}" }.orEmpty()}",
+            "sync-now",
+            tint = MaterialTheme.colorScheme.error,
+            onClick = onSync,
+        )
     }
 }
 
@@ -789,16 +811,16 @@ private fun SyncIndicator(status: SyncStatus, words: Boolean, onSync: () -> Unit
  * Why the file is not synchronized, and nothing while it is.
  * Words only for a failure, which has a cause to tell: beside a status in words, a phone has no room for the name of the application.
  */
-// [impl->dsn~sync-status~1]
 @Composable
-private fun SyncFailure(status: SyncStatus?) {
+private fun SyncFailure(status: SyncStatus?, modifier: Modifier, textAlign: TextAlign) {
     if (status?.state == SyncState.FAILED) Text(
         "Not synchronized: ${status.message}",
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.labelMedium,
+        textAlign = textAlign,
         maxLines = 3,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.widthIn(max = 360.dp).testTag("sync-status"),
+        modifier = modifier.testTag("sync-status"),
     )
 }
 

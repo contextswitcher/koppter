@@ -2405,7 +2405,7 @@ class AppTest {
             }
             override fun dates() = mapOf("Post signs +GarageSale" to TaskDates(added = LocalDate(2026, 11, 1)))
         }
-        val controller = TodoController(Settings(), { syncing }, today = { LocalDate(2026, 11, 12) })
+        val controller = TodoController(Settings(), { syncing }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 2 })
         setContent { App(controller, "todo.txt") }
 
         onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronized. Synchronize now")
@@ -2421,6 +2421,11 @@ class AppTest {
         onNodeWithTag("sync-status").assertTextEquals("Not synchronized: no network")
         onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronize now. Not synchronized: no network").performClick()
         assertEquals(3, syncing.synchronizations)
+
+        syncing.onStatus(SyncStatus(SyncState.IDLE))
+        onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronized at 2026-11-12 14:02. Synchronize now")
+        syncing.onStatus(SyncStatus(SyncState.FAILED, "no network"))
+        onNodeWithTag("sync-now").assertContentDescriptionEquals("Synchronize now. Not synchronized: no network. Last synchronized at 2026-11-12 14:02")
 
         openTask("Post signs")
         onNodeWithTag("edit-dates").assertTextEquals("Added 2026-11-01 (from the git history)")

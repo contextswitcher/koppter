@@ -332,6 +332,10 @@ class TodoController(
     var syncStatus by mutableStateOf<SyncStatus?>(null)
         private set
 
+    /** When a synchronization last succeeded; `null` before the first one. */
+    var lastSynchronized by mutableStateOf<LocalDateTime?>(null)
+        private set
+
     private var storage = storageFor(settings)
     private var loadedVersion: Any? = null
 
@@ -345,11 +349,15 @@ class TodoController(
         load()
         val syncing = storage as? SyncingStorage
         syncStatus = syncing?.let { SyncStatus(SyncState.IDLE) }
+        lastSynchronized = null
         syncing?.onStatus = { status ->
             // [impl->dsn~failure-log~1]
             if (status.state == SyncState.FAILED) log("Synchronization failed: ${status.message}", status.cause)
             // A storage that was replaced in the settings may still report.
-            if (storage === syncing) syncStatus = status
+            if (storage === syncing) {
+                syncStatus = status
+                if (status.state == SyncState.IDLE) lastSynchronized = now()
+            }
         }
         sync()
     }

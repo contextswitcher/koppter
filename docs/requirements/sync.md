@@ -262,10 +262,11 @@ Needs: impl, utest
 `dsn~sync-status~1`
 
 For a synchronizing storage, the top bar shows one button that starts a synchronization and whose icon is the status: the arrows of a synchronization around a check mark, alone, or around an exclamation mark.
-Its description, which is its tooltip, names the status and, for a failure, the cause in full.
-Only a failure adds words, in the color of an error next to the button: it has a cause to tell, and beside a status in words, a phone breaks the name of the application into two lines.
-On a phone, these words are the title of the bar in the place of the name, as the bar fits its title between its buttons and words among the buttons push the last ones out of view.
-While a synchronization runs, the button is disabled.
+While a synchronization runs, the button is disabled and its arrows turn, as arrows that stand still read as an offer to synchronize; they keep the color of the other buttons, as the faded color of a disabled button is hardly seen.
+Its description, which is its tooltip, names the status, the minute of the last synchronization that succeeded and, for a failure, the cause in full.
+Only a failure adds words, in the color of an error: it has a cause to tell, and beside a status in words, a phone breaks the name of the application into two lines.
+These words stand on a line of their own below the row of the views, in the width of the window.
+Among the buttons, they take the room of the buttons: a phone loses the last ones out of view, and a wide window moves them to the next line until the next success.
 The controller starts a synchronization when it opens a file; the storage starts one after every write.
 
 Covers:
