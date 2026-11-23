@@ -367,6 +367,10 @@ class ScreenshotTest {
             onNodeWithTag("settings-member-calendar-Carl").performScrollTo()
         }
         screen("plan") { onNodeWithTag("open-plan").performClick() }
+        screen("time-map") {
+            onNodeWithTag("open-plan").performClick()
+            onNodeWithTag("plan-add-map").performScrollTo().performClick()
+        }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
         // The tab that Android alone has.
         screen("settings-device", homeScreen = false) {

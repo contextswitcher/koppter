@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The editor of a time map paints half hours instead of quarters of an hour, and a press on the chosen color erases it. A button in the field of its dates picks a date from a calendar and puts it in at the cursor.
 - The icon of the button that synchronizes shows whether the file is synchronized, being synchronized or not synchronized; the top bar adds words only for a failure, with its cause. The name of the application is no longer broken into two lines on a phone.
 
 ## [2026-11-21] - 2026-11-21
