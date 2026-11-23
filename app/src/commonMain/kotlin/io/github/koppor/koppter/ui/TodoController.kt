@@ -47,7 +47,9 @@ import io.github.koppor.koppter.todotxt.listParts
 import io.github.koppor.koppter.todotxt.isWithin
 import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.PriorityNames
+import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
+import io.github.koppor.koppter.todotxt.archive
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
@@ -910,6 +912,36 @@ class TodoController(
         }
         if (version != loadedVersion) load() else loadConfig()
         addScheduledTasks()
+        archiveCompleted()
+    }
+
+    /** The day of the last look for tasks to archive: the history is read for it, which is too slow for every reload. */
+    private var archiveChecked: LocalDate? = null
+
+    /**
+     * Moves the tasks that were completed before the last month to `done.txt`.
+     * It waits for a running synchronization, as the scheduled tasks do, so that the devices archive the same file.
+     */
+    // [impl->dsn~archive~1]
+    private fun archiveCompleted() {
+        val today = today()
+        val files = storage as? CompanionFiles ?: return
+        if (archiveChecked == today || syncStatus?.state == SyncState.RUNNING) return
+        guarded {
+            val dates = if (file.entries.any { it.task.completed && it.task.completionDate == null }) (storage as? SyncingStorage)?.dates().orEmpty() else emptyMap()
+            // The task of a list stays in its file: the ranking of its member counts it, and `done.txt` is that of the main file.
+            val archived = archive(file, dates, today) { Family.memberOf(it, members) != null }
+            if (archived != null) {
+                val done = files.readCompanion(DONE_FILE).orEmpty().lines().filter { it.isNotBlank() }
+                // Before the todo.txt file, so that a failure in between leaves a task in both files instead of in none;
+                // the lines that are there already are those of such a failure.
+                files.writeCompanion(DONE_FILE, (done + archived.done.filterNot { it in done }).joinToString("\n", postfix = "\n"))
+                storage.write(archived.file.serialize(), "Archive completed tasks")
+                file = archived.file
+                loadedVersion = storage.version()
+            }
+            archiveChecked = today
+        }
     }
 
     /**

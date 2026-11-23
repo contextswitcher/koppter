@@ -172,11 +172,12 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | `notes/<name>-<number>.jpg` | An [image](#images-of-a-task) that the note shows |
 | `koppter.yml` | Configuration of this application that belongs to the `todo.txt` file: the [board columns defined by filters](#board), the [share actions](#sharing-to-koppter-on-android), the [names of the priorities](#names-for-priorities), the [links of projects and contexts](#links-of-projects-and-contexts), [what a new task starts with](#what-a-new-task-starts-with), the [contexts of projects](#contexts-of-projects), and the time maps and barriers for [planning](#planning) |
 | `ice_recur.txt` | Schedules of [recurring tasks](#recurring-tasks) in the format of the ice_recur add-on, such as `weekly ; day Monday - (B) Plan the week` |
+| `done.txt` | The [tasks completed more than a month ago](#archive-of-completed-tasks) |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
 
 If these files lie in a git repository, the application commits every change and synchronizes with the remote repository.
-Changes of two devices are merged without a conflict to resolve: `todo.txt` and `ice_recur.txt` line by line, where a line that both devices changed differently is kept in both versions, and of two plans the one made last is taken.
+Changes of two devices are merged without a conflict to resolve: `todo.txt`, `ice_recur.txt` and `done.txt` line by line, where a line that both devices changed differently is kept in both versions, and of two plans the one made last is taken.
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
@@ -193,6 +194,18 @@ On the desktop, *Choose folder* takes the `todo.txt` file of the folder, also wh
 The dialogs are those of the platform, shown through [FileKit](https://github.com/vinceglb/FileKit) ([decision 0036](docs/decisions/0036-file-dialogs-and-document-access-through-filekit.md)).
 
 A file in OneDrive, or in another storage service, is used through the platform ([decision 0011](docs/decisions/0011-onedrive-through-the-platform.md)): on Android, choose it with *Choose file*, or its folder with *Choose folder*, in the settings; on the desktop, choose it in the synchronized folder.
+
+## Archive of completed tasks
+
+A completed task stays in the `todo.txt` file for the rest of its month and the month after it, so that a comparison of two versions of the file shows what was done lately.
+At the start of a month, the application moves the tasks that were completed before the last month to the file `done.txt` next to the `todo.txt` file, the archive of the todo.txt command line: in December, those completed up to October.
+In a git repository, this is one commit, *Archive completed tasks*.
+
+* A line in `done.txt` carries the day on which the task was completed, and the day on which it was added if that is known: `x 2026-10-05 2026-09-01 Call Mom`.
+* A task whose day of completion is not known stays: one that was completed without a date in a file that is not in a git repository.
+* A task that stands for an [item of Outlook](#tasks-of-outlook) or a TODO of a LaTeX document stays, as does one that an open task waits for and one of a shared list.
+* The application does not show the tasks of `done.txt`; to get one back, move its line to the `todo.txt` file.
+* A single file chosen through the document picker of Android has no archive.
 
 ## Checking a file
 

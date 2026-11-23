@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- At the start of a month, the tasks that were completed before the last month are moved from todo.txt to `done.txt` next to it, each with the day on which it was completed. The tasks completed lately stay in todo.txt.
 - The settings offer the colors Muted Slate, Dawn and Matrix of the task manager tuxedo. Each exists in one variant only, which its name in the settings states, and the choice of light or dark is hidden while one of them is chosen.
 
 ### Changed

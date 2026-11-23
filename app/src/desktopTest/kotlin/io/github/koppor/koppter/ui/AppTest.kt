@@ -3232,6 +3232,18 @@ class AppTest {
         assertEquals(1, storage.text.lines().count { "Check mail" in it })
     }
 
+    // [utest->dsn~archive~1]
+    @Test
+    fun tasksCompletedBeforeTheLastMonthAreMovedToDoneTxt() = runComposeUiTest {
+        storage.text = "x 2026-09-30 Call Mom\nx 2026-10-01 Buy milk\nWater the plants\n"
+        storage.companions["done.txt"] = "x 2026-08-01 Pay the rent\n"
+        start()
+        mainClock.advanceTimeBy(2_500)
+        assertEquals("x 2026-10-01 Buy milk\nWater the plants\n", storage.text)
+        assertEquals("x 2026-08-01 Pay the rent\nx 2026-09-30 Call Mom\n", storage.companions["done.txt"])
+        assertEquals("Archive completed tasks", storage.changes.last())
+    }
+
     // [utest->dsn~ice-recur-suggestion~1]
     @Test
     fun withoutAScheduleFileTheEditorSuggestsTheWeeklyReview() = runComposeUiTest {
