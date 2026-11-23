@@ -70,6 +70,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import kotlin.math.max
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.layout.Layout
@@ -119,7 +125,7 @@ fun TaskList(
     var area by remember { mutableStateOf<Rect?>(null) }
     DragScroll(drag, list) { area }
     Box(
-        modifier.fillMaxSize().onGloballyPositioned {
+        modifier.fillMaxSize().cancelDrag(drag).onGloballyPositioned {
             drag.origin = it.positionInRoot()
             area = it.boundsInRoot()
         },
@@ -179,6 +185,7 @@ private class CardDrag<K : Any> {
     var pointer by mutableStateOf(Offset.Zero)
     var origin by mutableStateOf(Offset.Zero)
     val cards = mutableStateMapOf<K, Rect>()
+    val focus = FocusRequester()
 
     /**
      * The card to drop on, and whether the pointer is in its upper half, where the dragged card comes before it.
@@ -220,15 +227,27 @@ private fun <K : Any> Modifier.cardDrag(state: CardDrag<K>, key: K, onDrop: () -
             } ?: return@awaitEachGesture
             state.pointer = coordinates?.localToRoot(start.position) ?: return@awaitEachGesture
             state.dragged = key
+            state.focus.requestFocus()
             val dropped = drag(start.id) { change ->
                 state.pointer += change.positionChange()
                 change.consume()
             }
-            if (dropped) drop()
-            state.dragged = null
+            // Esc cleared the card while the button stayed pressed: the release then drops nothing.
+            if (dropped && state.dragged == key) drop()
+            if (state.dragged == key) state.dragged = null
         }
     }
 }
+
+/**
+ * Lets Esc cancel a drag.
+ * Keys only reach a focused element, and the focus may be outside the list, so a drag moves it here.
+ */
+// [impl->dsn~drag-cancel~1]
+private fun Modifier.cancelDrag(state: CardDrag<*>): Modifier =
+    focusRequester(state.focus).onPreviewKeyEvent {
+        (it.key == Key.Escape && state.dragged != null).also { cancel -> if (cancel) state.dragged = null }
+    }.focusable()
 
 /**
  * Scrolls the list while a card is held near its upper or lower edge, or beyond it: the nearer to the edge, the faster.
@@ -467,7 +486,7 @@ fun Board(
     var area by remember { mutableStateOf<Rect?>(null) }
     DragScroll(drag, columns, sideways = true) { area }
     Box(
-        modifier.fillMaxSize().onGloballyPositioned {
+        modifier.fillMaxSize().cancelDrag(drag).onGloballyPositioned {
             drag.origin = it.positionInRoot()
             area = it.boundsInRoot()
         },
