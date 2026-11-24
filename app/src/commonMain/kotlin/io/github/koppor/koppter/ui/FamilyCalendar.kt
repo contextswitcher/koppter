@@ -59,8 +59,8 @@ import kotlinx.datetime.plus
 /** A column of the calendar still shows the start and a word of a block; with more members than fit, the columns scroll sideways. */
 private val MIN_CALENDAR_WIDTH = 120.dp
 
-/** From this width of its column on, a block has the room to name its end as well. */
-private val ENDS_WIDTH = 180.dp
+/** From this width of its column on, the times and the title of a block fit on one line. */
+private val TIMES_BESIDE_WIDTH = 180.dp
 
 /** The tasks of a member still show some words of a task beside the box and the stars. */
 private val MIN_TASKS_WIDTH = 240.dp
@@ -113,6 +113,7 @@ fun FamilyCalendar(
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (choice in RankingPeriod.entries) {
                     FilterChip(
+                        colors = selectedChipColors(),
                         selected = choice == period,
                         onClick = { onPeriod(choice) },
                         label = { Text(choice.title) },
@@ -145,8 +146,8 @@ fun FamilyCalendar(
             val calendars: @Composable (Modifier) -> Unit = { modifier ->
                 MemberCalendars(
                     // [impl->dsn~busy-plan~1]
-                    // A task that is named stands as itself: `Busy:` is there for the file, to tell which blocks the plan wrote.
-                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ")) } },
+                    // A task or an event that is named stands as itself: `Busy:` and `Absent:` are there for the file, to tell which blocks a device wrote.
+                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ").removePrefix("${CalendarTxt.ABSENT}: ")) } },
                     members.associateWith { Family.appointments(entries, it, members, day) },
                     day, nowMinute.takeIf { day == today }, onOpen, modifier,
                 )
@@ -218,7 +219,8 @@ private fun MemberCalendars(
                                 blocks.getValue(member) + tasks.keys, firstHour, lastHour, hourHeight,
                                 entryOf = { tasks[it] }, suffixOf = { "" }, onOpen = onOpen, highlight = false,
                                 nowMinute = nowMinute,
-                                ends = width >= ENDS_WIDTH,
+                                ends = true,
+                                titleFirst = width < TIMES_BESIDE_WIDTH,
                                 scroll = scroll,
                             )
                         }

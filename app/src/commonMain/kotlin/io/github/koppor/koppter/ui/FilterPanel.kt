@@ -152,8 +152,8 @@ fun FilterPanel(
                     },
                 ),
             )
-            FilterChip(selected = open, onClick = { show(!open, done) }, label = { Text("Open") }, modifier = Modifier.testTag("filter-open"))
-            FilterChip(selected = done, onClick = { show(open, !done) }, label = { Text("Done") }, modifier = Modifier.testTag("filter-done"))
+            FilterChip(colors = selectedChipColors(), selected = open, onClick = { show(!open, done) }, label = { Text("Open") }, modifier = Modifier.testTag("filter-open"))
+            FilterChip(colors = selectedChipColors(), selected = done, onClick = { show(open, !done) }, label = { Text("Done") }, modifier = Modifier.testTag("filter-done"))
         }
 
         OutlinedButton(

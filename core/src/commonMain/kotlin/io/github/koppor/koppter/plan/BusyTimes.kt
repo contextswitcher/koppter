@@ -24,8 +24,13 @@ import kotlin.time.Duration
 // ponytail: a moved occurrence of a repeating event counts at its old and its new time, and a time zone that the platform
 // does not know by its name, such as those Outlook writes, is taken as the given zone. A library for iCalendar if that shows.
 // [impl->dsn~busy-times~1]
-fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> {
-    val result = mutableMapOf<LocalDate, MutableList<Span>>()
+fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> =
+    events(ics, from, to, zone, sideline).groupBy({ it.date }) { it.span }.mapValues { it.value.joined() }
+
+/** The events that [busyTimes] counts, each part of a day with the title of its event. */
+// [impl->dsn~absence-titles~1]
+fun events(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): List<TextBlock> {
+    val result = mutableListOf<TextBlock>()
     // A line that starts with a blank continues the line before it.
     val lines = ics.replace("\r\n", "\n").replace(Regex("\n[ \t]"), "").lines()
     var event: MutableMap<String, Pair<String, String>>? = null
@@ -44,7 +49,7 @@ fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sidel
             }
         }
     }
-    return result.mapValues { it.value.joined() }
+    return result
 }
 
 private val DATE_TIME = Regex("^(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})(Z?)$")
@@ -77,7 +82,7 @@ private fun dateTime(parameters: String, value: String, zone: TimeZone): LocalDa
 // [impl->dsn~sideline~1]
 fun sidelined(title: String, sideline: List<String>): Boolean = sideline.any { it.isNotBlank() && title.contains(it.trim(), ignoreCase = true) }
 
-private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String>, result: MutableMap<LocalDate, MutableList<Span>>) {
+private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String>, result: MutableList<TextBlock>) {
     fun value(name: String) = event[name]?.second?.trim()
     if (value("STATUS") == "CANCELLED" || value("TRANSP") == "TRANSPARENT" || value("X-MICROSOFT-CDO-BUSYSTATUS") == "FREE") return
     if (value("UID").orEmpty().endsWith("@koppter")) return
@@ -88,6 +93,8 @@ private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, 
         start.date.daysUntil(end.date) * MINUTES_PER_DAY + end.time.toSecondOfDay() / 60 - start.time.toSecondOfDay() / 60
     } ?: value("DURATION")?.let { Duration.parseIsoStringOrNull(it)?.inWholeMinutes?.toInt() } ?: return
     if (minutes <= 0) return
+    // A title is one line without the escapes of iCalendar.
+    val title = value("SUMMARY").orEmpty().replace(Regex("\\\\[nN]"), " ").replace(Regex("\\\\(.)"), "$1").trim()
 
     fun add(date: LocalDate) {
         // An event that runs over midnight takes time of the following days.
@@ -96,7 +103,7 @@ private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, 
         var left = minutes
         while (left > 0 && day <= to) {
             val length = minOf(left, MINUTES_PER_DAY - first)
-            if (day >= from) result.getOrPut(day) { mutableListOf() } += Span(first, first + length)
+            if (day >= from) result += TextBlock(day, Span(first, first + length), title)
             left -= length
             first = 0
             day = day.plus(DatePeriod(days = 1))
