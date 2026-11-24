@@ -365,6 +365,19 @@ data class Task(
             return "$date ${(minutes!! / 60).toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}"
         }
 
+        /**
+         * A start date written as its distance before [due], such as `7d` or `1w`; `null` for another text.
+         * The file keeps the date: other todo.txt tools read only a date in `t:`.
+         */
+        // [impl->dsn~start-before-due~1]
+        fun startBefore(text: String, due: LocalDate): LocalDate? {
+            val match = DAYS_BEFORE.matchEntire(text) ?: return null
+            val days = match.groupValues[1].toIntOrNull() ?: return null
+            return due.minus(if (match.groupValues[2] == "w") 7 * days else days, DateTimeUnit.DAY)
+        }
+
+        private val DAYS_BEFORE = Regex("^(\\d{1,4})([dw])$")
+
         fun parseDate(text: String): LocalDate? = try {
             LocalDate.parse(text)
         } catch (_: IllegalArgumentException) {

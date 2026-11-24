@@ -689,6 +689,21 @@ Covers:
 
 Needs: impl, utest
 
+### Start date before the due date
+`dsn~start-before-due~1`
+
+The field *Start date* of `EditDialog` takes a date or the distance before the due date, such as `7d` or `1w` (`Task.startBefore`).
+Below the field, the dialog shows the other form: *Starts* and the date for a distance, the distance for a date.
+While the dialog is open, a distance follows a change of the due date; the file gets the date, as other todo.txt tools read only a date in `t:`, and a recurrence keeps the distance from then on.
+A distance without a due date is an error of the field.
+The calendar of the field and its context menu offer *1 week before due* and *3 days before due*, which write the distance into the field, each with a sentence on its meaning while the pointer rests on it.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Choosing times and durations in the edit dialog
 `dsn~edit-pickers~1`
 
