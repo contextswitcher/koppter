@@ -225,6 +225,51 @@ class TodoController(
 
     private var memberBlocks by mutableStateOf(emptyMap<String, List<TextBlock>>())
 
+    /** The `koppter.yml` of the list of each member that has one. */
+    private var memberConfigs by mutableStateOf(emptyMap<String, String>())
+
+    /** The time maps of the list of a member, the first of which says when the tasks of the member are done; none if the tasks are not planned. */
+    // [impl->dsn~member-plan~1]
+    fun timeMapsOf(member: String): List<Pair<String, String>> = ConfigFile.entries(memberConfigs[member].orEmpty(), ConfigFile.TIME_MAPS)
+
+    /** Writes the time maps of the list of a member, for every device of the family. */
+    // [impl->dsn~member-plan~1]
+    fun setTimeMaps(member: String, maps: List<Pair<String, String>>) = guarded {
+        val lists = storage as? SharedLists ?: return@guarded
+        lists.writeCompanionOf(member, ConfigFile.NAME, ConfigFile.withEntries(memberConfigs[member].orEmpty(), ConfigFile.TIME_MAPS, maps), "Set the times for the tasks of @$member")
+        loadConfig()
+    }
+
+    /** What the plans of the members are made from: a change of it means planning anew. */
+    val memberPlanKey: Any
+        get() = members.filter { timeMapsOf(it).isNotEmpty() }.map { member ->
+            Triple(member, memberConfigs[member], file.entries.map { it.task }.filter { !it.completed && Family.memberOf(it, members) == member })
+        } to today()
+
+    /**
+     * Plans the open tasks of each member whose list has a time map and writes the blocks, for four weeks, into the `calendar.txt` of the list.
+     * Every device does so and comes to the same plan, so that the file changes only when the tasks, the time map or the other blocks did.
+     */
+    // [impl->dsn~member-plan~1]
+    fun updateMemberPlans() {
+        val lists = storage as? SharedLists ?: return
+        var written = false
+        for (member in members.filter { timeMapsOf(it).isNotEmpty() }) {
+            try {
+                val existing = lists.readCompanionOf(member, CalendarTxt.NAME).orEmpty()
+                val planned = Family.planned(file.entries, member, members, ConfigFile.planConfig(memberConfigs[member].orEmpty()), CalendarTxt.blocks(existing), today(), ABSENCE_DAYS)
+                val new = CalendarTxt.withAbsences(existing, null, today(), planned = planned)
+                if (new != existing) {
+                    lists.writeCompanionOf(member, CalendarTxt.NAME, new, "Plan the tasks of @$member")
+                    written = true
+                }
+            } catch (e: Exception) {
+                log("The tasks of $member were not planned", e)
+            }
+        }
+        if (written) loadConfig()
+    }
+
     /** The blocks of the `calendar.txt` of the list of a member, such as the times at which the member is absent. */
     fun blocksOf(member: String): List<TextBlock> = memberBlocks[member].orEmpty()
 
@@ -636,6 +681,13 @@ class TodoController(
                 blocksOf(member)
             }
         }
+        memberConfigs = members.mapNotNull { member ->
+            try {
+                lists?.readCompanionOf(member, ConfigFile.NAME)?.let { member to it }
+            } catch (_: Exception) {
+                memberConfigs[member]?.let { member to it }
+            }
+        }.toMap()
     }
 
     /** Replaces the columns the user defined by those in the text, one per line as `title = filter expression`. */
@@ -817,6 +869,8 @@ class TodoController(
         }
         absenceProblems = problems
         loadConfig()
+        // The tasks of a member are planned around the absences.
+        updateMemberPlans()
     }
 
     /** The addresses of the calendars with busy times; `null` if the platform cannot read them. */

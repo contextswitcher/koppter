@@ -3770,4 +3770,37 @@ class AppTest {
         assertEquals("anna = https://calendar.example.org/club.ics", controller.settings.memberCalendars)
         waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  16:00-17:30 Absent\n" }
     }
+
+    // [utest->dsn~member-plan~1]
+    @Test
+    fun theTasksOfAMemberWithATimeMapArePlannedIntoTheCalendarOfTheList() = runComposeUiTest {
+        val anna = MemoryStorage("Feed the cat\n").apply {
+            companions["koppter.yml"] = "time-maps:\n  Tasks: 15:00-18:00\n"
+            companions["calendar.txt"] = "2026-11-12 w46 Thu  15:00-15:30 Absent\n"
+        }
+        val ben = MemoryStorage("Mow the lawn\n")
+        val lists = SharedLists(storage, listOf("anna" to anna, "ben" to ben))
+        val controller = TodoController(Settings(view = "FAMILY"), { lists }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        waitUntil { anna.changes.isNotEmpty() }
+        assertEquals("2026-11-12 w46 Thu  15:00-15:30 Absent. 15:30-16:00 Planned: Feed the cat\n", anna.companions["calendar.txt"])
+        assertEquals(listOf("Plan the tasks of @anna"), anna.changes)
+        onNodeWithText("15:30-16:00 Feed the cat").assertExists()
+        // A member without a time map is not planned.
+        assertEquals(null, ben.companions["calendar.txt"])
+
+        // The times of a member are painted or typed in the family view, and the tasks are planned at once.
+        onNodeWithTag("family-times-ben").performScrollTo().performClick()
+        onNodeWithText("Times for the tasks of ben").assertExists()
+        onNodeWithTag("time-map-name").assertDoesNotExist()
+        onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
+        onNodeWithTag("time-map-save").performClick()
+        waitUntil { ben.companions["calendar.txt"] != null }
+        assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
+        assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))
+
+        // A task that is done has no time any more.
+        onAllNodesWithTag("family-toggle")[0].performClick()
+        waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  15:00-15:30 Absent\n" }
+    }
 }

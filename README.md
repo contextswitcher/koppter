@@ -742,6 +742,8 @@ A family uses koppter together, such as on a tablet in the hallway: the view *Fa
   A task of the list of the member is named, as in `Busy: Repair the fence`; what the tasks of the own file are stays on that device.
   So a task whose content the family may see is given the context of the member, which moves it into that list.
   Choosing *Nobody* takes the blocks back.
+* *Times* beside a name sets the times of the week at which that member does their tasks, such as the afternoons of a child, painted as a [time map](#planning).
+  The open tasks of the member, those without a due date included, are then planned into these times around the other blocks of the calendar and stand in the column of the member; every device of the family does so, and the times are kept in the `koppter.yml` in the directory of the member.
 * The button *+* beside a name adds a task of that member, and the arrows show the days before and after.
 * The filter does not apply to this view.
 

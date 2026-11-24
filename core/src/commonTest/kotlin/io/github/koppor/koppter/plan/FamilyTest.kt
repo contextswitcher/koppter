@@ -216,4 +216,26 @@ class FamilyTest {
         assertEquals("2026-11-21 w47 Sat  10:00-11:00 Swimming. 16:00-17:30 Absent: Training, juniors. 18:00-20:00 Absent\n", written)
         assertEquals(written, CalendarTxt.withAbsences(written, mapOf(today to listOf(Span(19 * 60, 20 * 60))), today, titled = titled))
     }
+
+    // [utest->dsn~member-plan~1]
+    @Test
+    fun theTasksOfAMemberArePlannedIntoTheirTimeMapAroundTheOtherBlocks() {
+        val entries = entries("Feed the cat @anna", "Tidy the room @anna dur:1h due:2026-11-21", "Choir @anna due:2026-11-21 at:16:00 dur:1h", "Mow the lawn @ben", "x 2026-11-20 Done @anna")
+        val config = PlanConfig(TimeMaps(listOf(Family.TIME_MAP to "15:00-18:00")))
+        val blocks = listOf(
+            TextBlock(today, Span(15 * 60, 15 * 60 + 30), "Absent"),
+            // What was planned before does not stand in the way of the new plan.
+            TextBlock(today, Span(15 * 60 + 30, 18 * 60), "Planned: Old"),
+        )
+        val planned = Family.planned(entries, "anna", members, config, blocks, today, 28)
+        // The appointment keeps its time and has no block; the task of an hour is not cut, so the short one takes the half hour before the appointment.
+        assertEquals(
+            listOf("2026-11-21 15:30-16:00 Planned: Feed the cat", "2026-11-21 17:00-18:00 Planned: Tidy the room"),
+            planned.map { "${it.date} ${CalendarTxt.timesText(it.span)} ${it.text}" },
+        )
+        assertEquals(
+            "2026-11-21 w47 Sat  15:00-15:30 Absent. 15:30-16:00 Planned: Feed the cat. 17:00-18:00 Planned: Tidy the room\n",
+            CalendarTxt.withAbsences("2026-11-21 w47 Sat  15:00-15:30 Absent. 15:30-18:00 Planned: Old\n", null, today, planned = planned),
+        )
+    }
 }
