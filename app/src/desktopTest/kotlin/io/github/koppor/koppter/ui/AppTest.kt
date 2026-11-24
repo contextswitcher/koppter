@@ -263,6 +263,21 @@ class AppTest {
         onNodeWithTag("menu-outlook").assertDoesNotExist()
     }
 
+    // [utest->dsn~deadline-menu~1]
+    @Test
+    fun theContextMenuOfTheDeadlineSetsAQuarter() = runComposeUiTest {
+        storage.text += "File the tax return @home\n"
+        start()
+        openTask("File the tax return")
+        onNodeWithTag("edit-deadline").performMouseInput { rightClick() }
+        // Today is in the fourth quarter of 2026: the menu starts with the second quarter of 2027.
+        onNodeWithText("in 2 weeks").assertExists()
+        onNodeWithText("Q2 2027").performClick()
+        onNodeWithTag("edit-deadline").assertTextContains("2027-06-30")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        assertEquals("File the tax return @home deadline:2027-06-30", storage.text.lines()[4])
+    }
+
     // [utest->dsn~deadline~1]
     @Test
     fun aDeadlineStandsNextToTheDueDateAndIsNotMoved() = runComposeUiTest {

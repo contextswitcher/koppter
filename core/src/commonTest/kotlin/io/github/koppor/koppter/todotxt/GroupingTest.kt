@@ -140,4 +140,23 @@ class GroupingTest {
         val moved = moveToGroup(tagged[0].task, GroupKey.HASHTAG, groups.first { it.title == "#todo" }, groups.first { it.title == "#doing" }, today)
         assertEquals("Call Mom #family #doing", moved?.toLine())
     }
+
+    // [utest->dsn~deadline-menu~1]
+    @Test
+    fun theDeadlineMenuOffersWeeksAndTheQuarterAfterTheNext() {
+        assertEquals(
+            listOf(
+                "in 2 weeks" to LocalDate(2026, 12, 8),
+                "in 4 weeks" to LocalDate(2026, 12, 22),
+                "in 8 weeks" to LocalDate(2027, 1, 19),
+                "Q2 2027" to LocalDate(2027, 6, 30),
+                "Q3 2027" to LocalDate(2027, 9, 30),
+                "Q4 2027" to LocalDate(2027, 12, 31),
+            ),
+            deadlineChoices(LocalDate(2026, 11, 24)),
+        )
+        // In the first quarter, the quarters reach into the next year.
+        assertEquals(listOf("Q3 2027", "Q4 2027", "Q1 2028"), deadlineChoices(LocalDate(2027, 3, 31)).drop(3).map { it.first })
+        assertEquals(LocalDate(2028, 3, 31), deadlineChoices(LocalDate(2027, 3, 31)).last().second)
+    }
 }
