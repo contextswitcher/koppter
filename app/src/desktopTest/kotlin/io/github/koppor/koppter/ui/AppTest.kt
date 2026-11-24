@@ -1869,6 +1869,19 @@ class AppTest {
         onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
     }
 
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aSavedTimeMapStaysAfterCloseWithoutPlanning() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        addTimeMap("General", "Mon-Fri 08:00-17:00")
+        onNodeWithTag("plan-close").performScrollTo().performClick()
+        onNodeWithTag("discard-dialog").assertDoesNotExist()
+        assertTrue("Mon-Fri 08:00-17:00" in storage.companions.getValue("koppter.yml"))
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
+    }
+
     private fun ComposeUiTest.addTimeMap(name: String, definition: String) {
         onNodeWithTag("plan-add-map").performScrollTo().performClick()
         onNodeWithTag("time-map-name").performTextInput(name)

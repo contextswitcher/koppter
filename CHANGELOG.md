@@ -11,6 +11,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - A link to a page of OneNote, as *Copy Link to Page* copies it, is kept as the tag `onenote:` and shown as a label with the name of the page, which opens the page; the address for the browser that OneNote copies with it is dropped.
 
+### Fixed
+
+- *Save* in the editor of a time map writes the time map at once, so that it is kept when the plan dialog is closed without planning.
+
 ## [2026-11-23] - 2026-11-23
 
 ### Added

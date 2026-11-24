@@ -59,6 +59,8 @@ fun PlanDialog(
     /** The addresses of the calendars with busy times; `null` if the platform cannot read them. */
     calendars: String?,
     onPlan: suspend (PlanSettings, calendars: String?) -> PlanResult?,
+    /** Saves the time maps at once, as the editor of a map has a *Save* of its own. */
+    onSaveTimeMaps: (String) -> Unit,
     onDismiss: () -> Unit,
     today: LocalDate,
 ) {
@@ -141,23 +143,27 @@ fun PlanDialog(
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 editing?.let { key ->
+                    fun save(lines: String) {
+                        timeMaps = lines
+                        onSaveTimeMaps(lines)
+                        saved = listOf(lines) + saved.drop(1)
+                        editing = null
+                    }
                     TimeMapEditor(
                         key.ifEmpty { null },
                         maps,
                         onSave = { newKey, definition ->
                             val line = "$newKey = $definition"
                             // Only the line of the map changes; the others stay as they were typed.
-                            timeMaps = if (key.isEmpty()) {
-                                (timeMaps.trimEnd() + "\n" + line).trimStart()
-                            } else {
-                                timeMaps.lines().joinToString("\n") { if (ConfigFile.parseLines(it).firstOrNull()?.first == key) line else it }
-                            }
-                            editing = null
+                            save(
+                                if (key.isEmpty()) {
+                                    (timeMaps.trimEnd() + "\n" + line).trimStart()
+                                } else {
+                                    timeMaps.lines().joinToString("\n") { if (ConfigFile.parseLines(it).firstOrNull()?.first == key) line else it }
+                                },
+                            )
                         },
-                        onDelete = {
-                            timeMaps = timeMaps.lines().filterNot { ConfigFile.parseLines(it).firstOrNull()?.first == key }.joinToString("\n")
-                            editing = null
-                        },
+                        onDelete = { save(timeMaps.lines().filterNot { ConfigFile.parseLines(it).firstOrNull()?.first == key }.joinToString("\n")) },
                         onDismiss = { editing = null },
                     )
                 }
