@@ -54,6 +54,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
+import io.github.koppor.koppter.todotxt.MarkdownLink
+import io.github.koppor.koppter.todotxt.bareAddresses
+import io.github.koppor.koppter.todotxt.markdownLinks
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextLinkStyles
@@ -104,12 +107,6 @@ val LocalShowProject = staticCompositionLocalOf<(String) -> Unit> { {} }
 /** Sets the due date of a task of the list, as the menu of a task card does. */
 val LocalSetDue = staticCompositionLocalOf<(Entry, LocalDate?) -> Unit> { { _, _ -> } }
 
-// The address ends before a mark that ends a sentence or closes a bracket around it.
-private val WEB_ADDRESS = Regex("https?://\\S*[^\\s.,;:!?)\\]]")
-
-/** The parts of a text that are addresses of the web. */
-internal fun webAddresses(text: String): List<IntRange> = WEB_ADDRESS.findAll(text).map { it.range }.toList()
-
 /** The number of characters of an address that a task shows. */
 private const val ADDRESS_LENGTH = 50
 
@@ -136,13 +133,16 @@ fun LinkedText(
     val cut = mutableListOf<Pair<IntRange, String>>()
     val shown = buildAnnotatedString {
         var end = 0
-        for (range in webAddresses(text)) {
-            append(text.substring(end, range.first))
-            val address = text.substring(range)
+        // [impl->dsn~link-titles~1]
+        val links = (markdownLinks(text) + bareAddresses(text).map { MarkdownLink(it, shortened(text.substring(it)), text.substring(it)) })
+            .sortedBy { it.range.first }
+        for (link in links) {
+            append(text.substring(end, link.range.first))
             val start = length
-            withLink(LinkAnnotation.Url(address, linkStyle)) { append(shortened(address)) }
-            if (address.length > ADDRESS_LENGTH) cut += (start until length) to address
-            end = range.last + 1
+            withLink(LinkAnnotation.Url(link.address, linkStyle)) { append(link.label) }
+            // A title hides its address as a cut address does.
+            if (link.label != link.address) cut += (start until length) to link.address
+            end = link.range.last + 1
         }
         append(text.substring(end))
     }

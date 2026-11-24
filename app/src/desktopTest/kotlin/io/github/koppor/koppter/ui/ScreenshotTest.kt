@@ -20,6 +20,8 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performMouseInput
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.storage.Appearance
@@ -115,7 +117,7 @@ class ScreenshotTest {
             (C) Renew the library card @errands>city #someday due:2026-11-20 deadline:2026-11-27
             Water the plants @home due:2026-11-12 rec:1w
             Book the train to Hamburg +Vacation @computer @waiting
-            Compare prices for a new bike +Vacation #money #someday
+            Compare prices for a new bike, see [Bike test 2026](https://example.org/bikes) +Vacation #money #someday
             Find a present for Dad +Family due:2026-11-12
             Back up the photos @computer>backup due:2026-12-01 rec:+1m
             x Thank Mom for the meatballs +Family @phone
@@ -350,6 +352,11 @@ class ScreenshotTest {
             onNodeWithTag("group-PRIORITY").performScrollTo().performClick()
             onNodeWithTag("overdue-separator", useUnmergedTree = true).performMouseInput { moveTo(center) }
             mainClock.advanceTimeBy(1_000)
+        }
+        // [utest->dsn~link-titles~1]
+        screen("link-title") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("task-list").performScrollToNode(hasText("Bike test 2026", substring = true))
         }
         screen("synchronizing") { storage.onStatus(SyncStatus(SyncState.RUNNING)) }
         screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }

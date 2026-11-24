@@ -658,6 +658,8 @@ private fun MainScreen(
                     controller.replace(entry, task, note, images, changed)
                 }
                 editing = null
+                // [impl->dsn~link-titles~1]
+                scope.launch { controller.addLinkTitles(task.body) }
             },
             onDelete = {
                 entry?.let(controller::delete)

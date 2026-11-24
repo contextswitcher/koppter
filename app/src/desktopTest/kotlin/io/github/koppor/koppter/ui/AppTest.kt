@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.ui.test.assert
+import io.github.koppor.koppter.todotxt.webAddresses
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -1530,6 +1531,28 @@ class AppTest {
         assertEquals(address, storage.text.trim().lines().last())
 
         assertEquals("https://example.org/a", shortened("https://example.org/a"))
+    }
+
+    // [utest->dsn~link-titles~1]
+    @Test
+    fun aSavedAddressShowsTheTitleOfItsPage() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        val controller = TodoController(
+            Settings(), { storage }, today = { LocalDate(2026, 11, 12) },
+            fetch = { address -> if ("gone" in address) error("HTTP 404") else "<html><head><title>A [good] read @home</title></head></html>" },
+        )
+        setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
+
+        addTask("Read https://example.org/post and https://example.org/gone")
+        waitUntil { "[A (good) read home]" in storage.text }
+        assertEquals("Read [A (good) read home](https://example.org/post) and https://example.org/gone", storage.text.trim().lines().last())
+        onNodeWithText("A (good) read home", substring = true).performFirstLinkClick()
+        assertEquals(listOf("https://example.org/post"), opened)
     }
 
     // [utest->dsn~links~1]

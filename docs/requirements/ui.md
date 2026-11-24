@@ -154,6 +154,7 @@ Needs: dsn
 
 An address of the web in the text of a task opens in the browser with a click.
 A long address takes little room, and the user sees the whole one on request.
+A task that is saved with an address shows the title of its page instead, as soon as the page is read.
 
 Covers:
 
@@ -496,6 +497,21 @@ An address of more than 50 characters is shown with its first 49 characters and 
 While the pointer of the mouse rests on a cut address, a tooltip shows the whole one.
 The tooltip does not react to a long press, which starts the drag of a card.
 A click on a link opens it through the `UriHandler` of the application and does not open the task.
+
+Covers:
+
+* `req~links~1`
+
+Needs: impl, utest
+
+### Titles of links
+`dsn~link-titles~1`
+
+After the edit dialog saves a task, `addLinkTitles` reads the page of each address of the web in it that is not yet part of a Markdown link, in the background.
+The title of the page (`pageTitle`) replaces the address in the file by the Markdown link `[title](address)` (`withLinkTitle`).
+Brackets in the title become parentheses, and a word of the title that would be a project, context, hashtag or tag loses that form, so that the link stays one link and adds no label.
+A page that cannot be read or has no title leaves the address, and so does a task that changed in the meantime.
+`LinkedText` shows a Markdown link with its title, and a tooltip shows its address while the pointer of the mouse rests on it.
 
 Covers:
 

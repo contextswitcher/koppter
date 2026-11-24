@@ -29,6 +29,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Filter.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Grouping.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/IceRecur.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Links.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Lint.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/PriorityNames.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Query.kt

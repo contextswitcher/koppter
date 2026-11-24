@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- A task that is saved in the edit dialog with an address of the web shows the title of the page instead of the address, once the page is read; the file keeps it as the Markdown link `[title](address)`, and the address appears when the pointer of the mouse rests on the title.
 - When the search text finds tasks that the current view does not show, a line below the search field says so, for example *2 matches in the file, 0 shown here*, and its button *Show in List* shows all of them in the list.
 - The field *Start date* in the edit dialog takes a distance before the due date, such as `7d` or `1w`, and shows the other form below it; its calendar and its context menu offer *1 week before due* and *3 days before due*. The file gets the date, and a recurrence keeps the distance.
 - The context menu of the field *Deadline* in the edit dialog offers *in 2 weeks*, *in 4 weeks*, *in 8 weeks* and the ends of the three quarters after the next one, such as *Q2 2027*.

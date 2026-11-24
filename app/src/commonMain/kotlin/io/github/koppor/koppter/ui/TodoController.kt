@@ -38,6 +38,9 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.sync.TaskDates
+import io.github.koppor.koppter.todotxt.bareAddresses
+import io.github.koppor.koppter.todotxt.pageTitle
+import io.github.koppor.koppter.todotxt.withLinkTitle
 import io.github.koppor.koppter.todotxt.Entry
 import io.github.koppor.koppter.todotxt.Completion
 import io.github.koppor.koppter.todotxt.Filter
@@ -1200,6 +1203,27 @@ class TodoController(
             write(new, "Complete task: ${entry.task.description}")
             // [impl->dsn~outlook-complete~1]
             entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId -> guarded { outlook?.complete(entryId) } }
+        }
+    }
+
+    /**
+     * Turns each bare address of the web in the task with [body] into a Markdown link with the title of its page, once the page is read.
+     * An address whose page cannot be read or has no title stays as it is; so does a task that was changed meanwhile.
+     */
+    // [impl->dsn~link-titles~1]
+    suspend fun addLinkTitles(body: String) {
+        val fetch = fetch ?: return
+        var current = body
+        for (address in bareAddresses(body).map(body::substring).distinct()) {
+            val title = try {
+                pageTitle(fetch(address))
+            } catch (e: Exception) {
+                log("No title for a link: ${e::class.simpleName}", null)
+                null
+            } ?: continue
+            val entry = file.entries.firstOrNull { it.task.body == current } ?: return
+            current = withLinkTitle(current, address, title)
+            replace(entry, entry.task.copy(body = current))
         }
     }
 
