@@ -3,6 +3,7 @@ package io.github.koppor.koppter.ui
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import io.github.koppor.koppter.plan.Family
+import io.github.koppor.koppter.plan.MemberCalendar
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -216,17 +217,22 @@ fun SettingsDialog(
     var todoFile by remember { mutableStateOf(settings.todoFile) }
     var sharedLists by remember { mutableStateOf(settings.sharedLists) }
     // [impl->dsn~absences~1]
-    // The addresses of each member as its field holds them, several separated by blanks.
+    // [impl->dsn~absence-titles~1]
+    // A field per calendar of each member, and one for a member without any, each with whether the titles are told.
     val calendarsOfMembers = remember {
-        mutableStateMapOf<String, String>().apply {
-            for (member in members) this[member] = Family.calendars(memberCalendars.orEmpty()).filter { it.first.equals(member, ignoreCase = true) }.joinToString(" ") { it.second }
+        mutableStateMapOf<String, List<Pair<String, Boolean>>>().apply {
+            for (member in members) {
+                this[member] = Family.calendars(memberCalendars.orEmpty()).filter { it.member.equals(member, ignoreCase = true) }.map { it.address to it.titles } + ("" to false)
+            }
         }
     }
-    /** The setting: a line per address, and the lines of members that are no list at present as they were. */
+    /** The setting: a line per address, several of a field separated by blanks, and the lines of members that are no list at present as they were. */
     fun memberCalendarsText(): String = (
-        Family.calendars(memberCalendars.orEmpty()).filter { (named, _) -> members.none { it.equals(named, ignoreCase = true) } } +
-            members.flatMap { member -> calendarsOfMembers[member].orEmpty().split(Regex("\\s+")).filter(String::isNotEmpty).map { member to it } }
-        ).joinToString("\n") { (member, address) -> "$member = $address" }
+        Family.calendars(memberCalendars.orEmpty()).filter { calendar -> members.none { it.equals(calendar.member, ignoreCase = true) } } +
+            members.flatMap { member ->
+                calendarsOfMembers[member].orEmpty().flatMap { (addresses, titles) -> addresses.split(Regex("\\s+")).filter(String::isNotEmpty).map { MemberCalendar(member, it, titles) } }
+            }
+        ).joinToString("\n") { it.line }
     // The list by its own name, as the setting may have another case.
     var planOf by remember { mutableStateOf(members.firstOrNull { it.equals(planMember, ignoreCase = true) }.orEmpty()) }
     var writeDates by remember { mutableStateOf(settings.writeDates) }
@@ -391,20 +397,39 @@ fun SettingsDialog(
                                 Text("Calendars of the members", style = MaterialTheme.typography.titleMedium)
                                 Text(
                                     "The address stays on this device. The times of the events of the calendar are written into the list of the member as Absent, " +
-                                        "which every device of the family shows, without what the events are. " +
+                                        "which every device of the family shows, without what the events are unless the calendar is marked so. " +
                                         "Enter the link to the iCalendar file, as Outlook and Google Calendar publish it for a calendar, on a device of the member and not on a shared one; several links are separated by a blank.",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                                 for (member in members) {
-                                    OutlinedTextField(
-                                        value = calendarsOfMembers[member].orEmpty(),
-                                        onValueChange = { calendarsOfMembers[member] = it },
-                                        label = { Text("Calendar of $member (optional)") },
-                                        singleLine = true,
-                                        // An address is no word that a keyboard should correct.
-                                        keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
-                                        modifier = Modifier.fillMaxWidth().testTag("settings-member-calendar-$member"),
-                                    )
+                                    calendarsOfMembers[member].orEmpty().forEachIndexed { index, (address, titles) ->
+                                        fun set(new: Pair<String, Boolean>) {
+                                            // A field that is filled is followed by an empty one, for a further calendar of the member.
+                                            calendarsOfMembers[member] = calendarsOfMembers[member].orEmpty().toMutableList().also { it[index] = new }
+                                                .let { if (it.last().first.isBlank()) it else it + ("" to false) }
+                                        }
+                                        val tag = member + if (index > 0) "-$index" else ""
+                                        OutlinedTextField(
+                                            value = address,
+                                            onValueChange = { set(it to titles) },
+                                            label = { Text("${if (index == 0) "Calendar" else "Further calendar"} of $member (optional)") },
+                                            singleLine = true,
+                                            // An address is no word that a keyboard should correct.
+                                            keyboardOptions = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri),
+                                            modifier = Modifier.fillMaxWidth().testTag("settings-member-calendar-$tag"),
+                                        )
+                                        // [impl->dsn~absence-titles~1]
+                                        // Nothing to decide without a calendar.
+                                        if (address.isNotBlank()) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                modifier = Modifier.fillMaxWidth().toggleable(titles, role = Role.Checkbox) { set(address to it) }.testTag("settings-member-titles-$tag"),
+                                            ) {
+                                                Checkbox(checked = titles, onCheckedChange = null, modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp))
+                                                Text("Show the family what the events of this calendar are, instead of Absent", modifier = Modifier.padding(bottom = 12.dp))
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             // [impl->dsn~busy-plan~1]
@@ -413,7 +438,7 @@ fun SettingsDialog(
                                 Text(
                                     "The family view of every device shows the times that the plan of this device takes as Busy, in the column of the member whose device this is. " +
                                         "A task of the list of that member, which the family has anyway, stands there with its text; what the other tasks are stays on this device. " +
-                                        "The times are written after planning and every half an hour. Nobody takes them back, and is the choice for a shared device.",
+                                        "The times are written after planning and every half an hour. On a shared device, choose Nobody, which also takes the times back.",
                                     style = MaterialTheme.typography.bodySmall,
                                 )
                                 Text("This device belongs to")

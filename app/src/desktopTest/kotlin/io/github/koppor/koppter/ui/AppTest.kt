@@ -3703,4 +3703,27 @@ class AppTest {
         waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  07:00-07:30 Absent\n" }
         onNodeWithText("09:00-10:00 Busy").assertDoesNotExist()
     }
+
+    // [utest->dsn~absence-titles~1]
+    @Test
+    fun aCalendarOfAMemberThatIsMarkedSoTellsWhatItsEventsAre() = runComposeUiTest {
+        val anna = MemoryStorage("Feed the cat\n")
+        val lists = SharedLists(storage, listOf("anna" to anna))
+        val event = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Training\r\nDTSTART:20261112T160000\r\nDTEND:20261112T173000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        val controller = TodoController(
+            Settings(view = "FAMILY", memberCalendars = "anna = https://calendar.example.org/club.ics titles"), { lists }, today = { LocalDate(2026, 11, 12) },
+            fetch = { event },
+        )
+        setContent { App(controller, "todo.txt") }
+        waitUntil { anna.changes.isNotEmpty() }
+        assertEquals("2026-11-12 w46 Thu  16:00-17:30 Absent: Training\n", anna.companions["calendar.txt"])
+        onNodeWithText("16:00-17:30 Training").assertExists()
+
+        // Without the mark, the event is a time again.
+        onNodeWithTag("open-settings").performClick()
+        onNodeWithTag("settings-member-titles-anna").performScrollTo().assertIsOn().performClick()
+        onNodeWithTag("settings-save").performClick()
+        assertEquals("anna = https://calendar.example.org/club.ics", controller.settings.memberCalendars)
+        waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  16:00-17:30 Absent\n" }
+    }
 }

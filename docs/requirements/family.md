@@ -41,6 +41,18 @@ Covers:
 
 Needs: dsn
 
+### Calendars of a member whose events are told
+`req~absence-titles~1`
+
+A member marks, for each of their calendars, whether the family may know what its events are, such as for the calendar of a club.
+The family view then shows the events of such a calendar with their titles.
+
+Covers:
+
+* `feat~family~1`
+
+Needs: dsn
+
 ### Busy times from the plan of a member
 `req~busy-plan~1`
 
@@ -154,5 +166,21 @@ The answers to the flow: the choice is set once per device and therefore stands 
 Covers:
 
 * `req~busy-plan~1`
+
+Needs: impl, utest
+
+### Titles of the events of a calendar
+`dsn~absence-titles~1`
+
+A line of `memberCalendars` with the word `titles` behind the address names a calendar whose titles are told (`MemberCalendar`).
+The settings dialog has a field per calendar of a member and an empty one behind them for a further calendar, and below a field with an address the box *Show the family what the events of this calendar are, instead of Absent*, which is off for a new address, as an address is that of a private calendar more often than not.
+`events` reads the events of a calendar as `busyTimes` does, each with its title.
+`CalendarTxt.withAbsences` writes an event of such a calendar as `Absent:` with the title, and replaces the blocks that start so with the absences; an event without a title is an absence like the others.
+The family view shows such a block with the title alone, as it does for `Busy:`.
+The answers to the flow: the box stands at its calendar and is changed rarely; Save keeps it and starts the reading, which writes the titles or takes them back; Cancel leaves it as it was.
+
+Covers:
+
+* `req~absence-titles~1`
 
 Needs: impl, utest

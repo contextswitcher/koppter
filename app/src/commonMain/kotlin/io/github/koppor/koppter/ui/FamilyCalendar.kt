@@ -145,8 +145,8 @@ fun FamilyCalendar(
             val calendars: @Composable (Modifier) -> Unit = { modifier ->
                 MemberCalendars(
                     // [impl->dsn~busy-plan~1]
-                    // A task that is named stands as itself: `Busy:` is there for the file, to tell which blocks the plan wrote.
-                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ")) } },
+                    // A task or an event that is named stands as itself: `Busy:` and `Absent:` are there for the file, to tell which blocks a device wrote.
+                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ").removePrefix("${CalendarTxt.ABSENT}: ")) } },
                     members.associateWith { Family.appointments(entries, it, members, day) },
                     day, nowMinute.takeIf { day == today }, onOpen, modifier,
                 )
