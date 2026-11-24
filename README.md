@@ -816,6 +816,7 @@ The [notifications](#notifications-on-android) of the phone reach the watch with
 On Windows, the list shows the open items of the To-Do list of the classic Outlook next to the tasks of the file: the flagged mails and the tasks of all accounts.
 They are read through [AnchorHub](https://github.com/contextswitcher/anchorhub), which has to be installed in `%LOCALAPPDATA%\Programs\AnchorHub`, and read again every two minutes while Outlook is running ([decision 0039](docs/decisions/0039-outlook-through-anchorhub.md)).
 The file stays as it is until an item is changed.
+An AnchorHub that lacks a command which koppter needs is reported as too old where the action failed, such as in the plan dialog; its latest release replaces the file `ankd.exe` there.
 
 * An item shows its subject, the hashtag `#outlook`, its due date and the label *Outlook*; a click on the label opens the item in Outlook.
   The hashtag stays in the line that is written for the item, so that a filter for `#outlook` shows the items and the tasks that came from them.

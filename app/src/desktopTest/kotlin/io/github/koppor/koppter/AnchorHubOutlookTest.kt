@@ -10,6 +10,16 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class AnchorHubOutlookTest {
+    // [utest->dsn~anchorhub-version~1]
+    @Test
+    fun aMissingCommandIsNamedFromTheVersionOfAnchorHub() {
+        assertEquals("AnchorHub is too old: it does not know outlook-busy. Install its latest release.", missingCommand("", "outlook-busy"))
+        val version = """{"version":"2026-11-18+abc","commands":["version","outlook-todos","outlook-busy"]}"""
+        assertEquals(null, missingCommand(version, "outlook-busy"))
+        assertEquals("AnchorHub 2026-11-18 does not know outlook-sideline. Install its latest release.", missingCommand(version, "outlook-sideline"))
+        assertEquals(null, missingCommand("not json", "outlook-busy"))
+    }
+
     // [utest->dsn~outlook-items~1]
     @Test
     fun theItemsAreReadFromTheJsonOfAnchorHub() {

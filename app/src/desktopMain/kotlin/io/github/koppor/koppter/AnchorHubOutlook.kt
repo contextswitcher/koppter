@@ -19,6 +19,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import org.tinylog.Logger
+import java.io.IOException
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import kotlin.concurrent.thread
@@ -38,6 +39,9 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
 
     // [impl->dsn~outlook-complete~1]
     override fun complete(entryId: String) = inBackground("outlook-complete", entryId)
+
+    // An ankd without the command takes it for the start of the browser extension, prints nothing and exits with 0.
+    private fun silent(command: String) = command == "outlook-open" || command == "outlook-complete"
 
     /** Runs the command for the item on a thread of its own, so that the window does not wait for Outlook; a failure is logged. */
     private fun inBackground(command: String, entryId: String) {
@@ -76,10 +80,34 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
 
     private fun calendarArguments(calendar: String?) = calendar?.let { arrayOf("--calendar", it) } ?: emptyArray()
 
-    /** Runs `ankd` with the arguments and gives what it prints; [input], if given, is written to it as UTF-8. */
+    /**
+     * Runs `ankd` with the arguments and gives what it prints; [input], if given, is written to it as UTF-8.
+     * A command that answers and prints nothing fails, with the reason that `ankd version` gives.
+     */
+    // [impl->dsn~anchorhub-version~1]
     private fun run(vararg arguments: String, input: String? = null): String {
+        val command = arguments.first()
+        val output = execute(*arguments, input = input)
+        if (output.isBlank() && !silent(command)) {
+            val version = try {
+                execute("version")
+            } catch (e: Exception) {
+                Logger.warn(e, "AnchorHub version failed")
+                null
+            }
+            error(version?.let { missingCommand(it, command) } ?: "AnchorHub $command gave no answer")
+        }
+        return output
+    }
+
+    private fun execute(vararg arguments: String, input: String? = null): String {
         val process = ProcessBuilder(ankd.toString(), *arguments).redirectError(ProcessBuilder.Redirect.PIPE).start()
-        process.outputStream.use { stream -> input?.let { stream.write(it.toByteArray(Charsets.UTF_8)) } }
+        try {
+            process.outputStream.use { stream -> input?.let { stream.write(it.toByteArray(Charsets.UTF_8)) } }
+        } catch (e: IOException) {
+            // An ankd that does not know the command has ended before reading; its empty answer tells why.
+            Logger.debug(e, "AnchorHub {} did not read its input", arguments.first())
+        }
         // Read before waiting: a full pipe would block the program.
         var errors = ""
         val output = thread { errors = process.errorStream.readAllBytes().toString(Charsets.UTF_8).trim() }.let { reader ->
@@ -101,6 +129,20 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
             return Path(local, "Programs", "AnchorHub", "ankd.exe").takeIf { it.isRegularFile() }?.let(::AnchorHubOutlook)
         }
     }
+}
+
+/**
+ * Why AnchorHub cannot run [command], from what `ankd version` printed, or `null` when it lists the command
+ * or the answer cannot be read.
+ */
+// [impl->dsn~anchorhub-version~1]
+internal fun missingCommand(version: String, command: String): String? {
+    if (version.isBlank()) return "AnchorHub is too old: it does not know $command. Install its latest release."
+    val answer = runCatching { Json.parseToJsonElement(version.trim()).jsonObject }.getOrNull() ?: return null
+    val commands = answer["commands"]?.let { runCatching { it.jsonArray.map { c -> c.jsonPrimitive.content } }.getOrNull() } ?: return null
+    if (command in commands) return null
+    val name = answer["version"]?.jsonPrimitive?.contentOrNull?.substringBefore('+')
+    return "AnchorHub${name?.let { " $it" }.orEmpty()} does not know $command. Install its latest release."
 }
 
 /** The items that `ankd outlook-todos` prints as a JSON array; the fields that koppter does not show are ignored. */

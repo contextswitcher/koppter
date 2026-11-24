@@ -734,6 +734,21 @@ Covers:
 
 Needs: impl, utest
 
+### AnchorHub that is too old
+`dsn~anchorhub-version~1`
+
+An `ankd` that does not know a command starts the host of the browser extension instead, prints nothing and exits with 0; it also ends before it reads the request on its input.
+`AnchorHubOutlook` therefore takes an empty answer to a command that answers, all but `outlook-open` and `outlook-complete`, as a failure, and asks `ankd version`, which prints the version and the commands of the build.
+`missingCommand` makes the message from that answer: an empty one means AnchorHub is too old, a list without the command names the version that lacks it, and each says to install the latest release of AnchorHub.
+The list of commands is checked rather than the version, so that a build of AnchorHub of its own is judged by what it can do.
+The message appears where the failure of the action appears already, such as in the plan dialog or in the log for the list of Outlook; a failed write of the request is left to that check.
+
+Covers:
+
+* `adr~outlook-through-anchorhub~1`
+
+Needs: impl, utest
+
 ### TODOs of a LaTeX document in the list
 `dsn~latex-todos~1`
 
