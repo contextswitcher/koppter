@@ -689,6 +689,21 @@ Covers:
 
 Needs: impl, utest
 
+### Start date before the due date
+`dsn~start-before-due~1`
+
+The field *Start date* of `EditDialog` takes a date or the distance before the due date, such as `7d` or `1w` (`Task.startBefore`).
+Below the field, the dialog shows the other form: *Starts* and the date for a distance, the distance for a date.
+While the dialog is open, a distance follows a change of the due date; the file gets the date, as other todo.txt tools read only a date in `t:`, and a recurrence keeps the distance from then on.
+A distance without a due date is an error of the field.
+The calendar of the field and its context menu offer *1 week before due* and *3 days before due*, which write the distance into the field, each with a sentence on its meaning while the pointer rests on it.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Choosing times and durations in the edit dialog
 `dsn~edit-pickers~1`
 
@@ -808,7 +823,21 @@ Needs: impl, utest
 ### Matches of the filter text in the drawer
 `dsn~filter-matches~1`
 
-While the field for the text of the filter in the drawer has a text, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+While the field for the text of the filter in the drawer has a text and the view shows all its matches, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
+### Matches of the filter text that the view hides
+`dsn~filter-hidden-matches~1`
+
+While the text of the filter finds more tasks in the file, completed ones and those before their start date included, than the view shows, a line below the field reads, for example, *2 matches in the file, 0 shown here*.
+Its button *Show in List*, or *Show all* in the list, switches to the list and shows every task with the text: it keeps the text and resets the other criteria of the filter, *Top* and *Next*; in the drawer, it also closes the drawer.
+While the view shows all matches, the line is absent, so that it stands only where it explains why a match is missing.
+The views of the plan count the tasks of their days: today, the seven days of the agenda, and the current week.
 
 Covers:
 

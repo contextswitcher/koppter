@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.ui
 
 import io.github.koppor.koppter.outlook.OutlookCalendar
+import io.github.koppor.koppter.plan.Family
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.isMetaPressed
@@ -106,8 +107,6 @@ import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.SyncState
 import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.todotxt.Entry
-import io.github.koppor.koppter.todotxt.Completion
-import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
@@ -206,6 +205,9 @@ fun App(
     }
     // [impl->dsn~absences~1]
     // Whatever view is shown: the device of a member that knows the calendars keeps the absences current for the others.
+    // [impl->dsn~member-plan~1]
+    val memberPlanKey = controller.memberPlanKey
+    LaunchedEffect(controller, memberPlanKey) { controller.updateMemberPlans() }
     LaunchedEffect(controller, controller.memberCalendars, controller.planMember) {
         while (controller.writesAbsences) {
             controller.updateAbsences()
@@ -321,6 +323,8 @@ private fun MainScreen(
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
     var planning by remember { mutableStateOf<PlanSettings?>(null) }
+    /** The member whose time map is edited. */
+    var timesOf by remember { mutableStateOf<String?>(null) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -352,13 +356,7 @@ private fun MainScreen(
         if (event.type != KeyEventType.KeyDown || !(event.isCtrlPressed || event.isMetaPressed) || event.isAltPressed) return false
         val view = VIEW_KEYS.indexOf(event.key)
         fun search(all: Boolean) {
-            if (all) {
-                // Every task: also the completed ones and those before their threshold date, and not only the top ones.
-                controller.filter = Filter(completion = Completion.ALL, hideFuture = false)
-                controller.topOnly = false
-                controller.nextOnly = false
-                controller.view = View.LIST
-            }
+            if (all) controller.showAll()
             focusSearch()
         }
         when {
@@ -408,6 +406,23 @@ private fun MainScreen(
             "Search text", "filter-text", modifier.focusRequester(filterFocus),
         )
     }
+    // [impl->dsn~filter-hidden-matches~1]
+    // Only while the view hides some of the matches: a count that the list already shows explains nothing.
+    val hiddenMatches = controller.textMatches?.takeIf { (all, shown) -> shown < all }
+    val hiddenLine: @Composable (Modifier, () -> Unit) -> Unit = { modifier, afterShow ->
+        hiddenMatches?.let { (all, shown) ->
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = modifier) {
+                Text(
+                    "${if (all == 1) "1 match" else "$all matches"} in the file, $shown shown here",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f, fill = false).testTag("filter-hidden"),
+                )
+                TextButton(onClick = { controller.showAll(controller.filter.text); afterShow() }, modifier = Modifier.testTag("filter-show-all")) {
+                    Text(if (controller.view == View.LIST) "Show all" else "Show in List")
+                }
+            }
+        }
+    }
     val filterPanel: @Composable (Modifier, (() -> Unit)?) -> Unit = { modifier, onClose ->
         FilterPanel(
             filter = controller.filter,
@@ -428,7 +443,8 @@ private fun MainScreen(
                 searchField(Modifier.padding(bottom = 8.dp))
                 // [impl->dsn~filter-matches~1]
                 // The drawer covers the list, and the strip beside it that closes the drawer is narrow.
-                if (controller.filter.text.isNotBlank()) {
+                if (hiddenMatches != null) hiddenLine(Modifier.padding(bottom = 8.dp), onClose)
+                else if (controller.filter.text.isNotBlank()) {
                     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
                         val count = controller.visible.size
                         Text(
@@ -559,7 +575,10 @@ private fun MainScreen(
                             controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
                             ViewOptions(controller, if (wideNow) barActions else null)
                             // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
-                            if (wideNow && filtered) searchField(Modifier.padding(8.dp))
+                            if (wideNow && filtered) {
+                                searchField(Modifier.padding(8.dp))
+                                hiddenLine(Modifier.padding(start = 8.dp, end = 8.dp)) {}
+                            }
                             val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
                             val open: (Entry) -> Unit = { editing = Editing(it) }
                             if (controller.view == View.OVERVIEW) {
@@ -584,6 +603,7 @@ private fun MainScreen(
                                     controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
                                     controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
                                     onAdd = { editing = Editing(null, context = it) },
+                                    onTimes = { timesOf = it },
                                     problems = controller.absenceProblems,
                                 )
                             } else if (controller.view == View.INBOX) {
@@ -658,6 +678,26 @@ private fun MainScreen(
     }
     planning?.let {
         PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
+    }
+    // [impl->dsn~member-plan~1]
+    timesOf?.let { member ->
+        val maps = controller.timeMapsOf(member)
+        TimeMapEditor(
+            Family.TIME_MAP.takeIf { name -> maps.any { it.first == name } },
+            maps,
+            // The map stands first, as the first map is the one of tasks that name no other.
+            onSave = { _, definition ->
+                controller.setTimeMaps(member, listOf(Family.TIME_MAP to definition) + maps.filter { it.first != Family.TIME_MAP })
+                timesOf = null
+            },
+            onDelete = {
+                controller.setTimeMaps(member, maps.filter { it.first != Family.TIME_MAP })
+                timesOf = null
+            },
+            onDismiss = { timesOf = null },
+            title = "Times for the tasks of $member",
+            fixedName = Family.TIME_MAP,
+        )
     }
     schedule?.let {
         ScheduleDialog(

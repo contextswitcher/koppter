@@ -90,6 +90,8 @@ fun FamilyCalendar(
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
     onAdd: (String) -> Unit,
+    /** Opens the times at which the tasks of a member are planned. */
+    onTimes: (String) -> Unit = {},
     /** What kept the absences of members from being updated. */
     problems: List<String> = emptyList(),
 ) {
@@ -146,14 +148,14 @@ fun FamilyCalendar(
             val calendars: @Composable (Modifier) -> Unit = { modifier ->
                 MemberCalendars(
                     // [impl->dsn~busy-plan~1]
-                    // A task or an event that is named stands as itself: `Busy:` and `Absent:` are there for the file, to tell which blocks a device wrote.
-                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ").removePrefix("${CalendarTxt.ABSENT}: ")) } },
+                    // A task or an event that is named stands as itself: `Busy:`, `Absent:` and `Planned:` are there for the file, to tell which blocks a device wrote.
+                    members.associateWith { member -> blocksOf(member).filter { it.date == day }.map { it.copy(text = it.text.removePrefix("${CalendarTxt.BUSY}: ").removePrefix("${CalendarTxt.ABSENT}: ").removePrefix("${CalendarTxt.PLANNED}: ")) } },
                     members.associateWith { Family.appointments(entries, it, members, day) },
                     day, nowMinute.takeIf { day == today }, onOpen, modifier,
                 )
             }
             val tasks: @Composable (Modifier) -> Unit = { modifier ->
-                MemberTasks(members.associateWith { Family.todos(entries, it, members, day, today) }, today, onToggle, onOpen, onAdd, modifier)
+                MemberTasks(members.associateWith { Family.todos(entries, it, members, day, today) }, today, onToggle, onOpen, onAdd, onTimes, modifier)
             }
             // A window that is wider than high, such as a tablet or a phone held across, has few hours to give away:
             // the calendar keeps the height and the tasks stand beside it.
@@ -239,6 +241,7 @@ private fun MemberTasks(
     onToggle: (Entry) -> Unit,
     onOpen: (Entry) -> Unit,
     onAdd: (String) -> Unit,
+    onTimes: (String) -> Unit,
     modifier: Modifier,
 ) {
     val scroll = rememberScrollState()
@@ -249,7 +252,7 @@ private fun MemberTasks(
             FlowRow(Modifier.verticalScroll(scroll)) {
                 for ((member, own) in tasks) {
                     Column(Modifier.width(width).testTag("family-tasks-$member")) {
-                        MemberHeader(member, onAdd = { onAdd(member) }, Modifier.fillMaxWidth())
+                        MemberHeader(member, onAdd = { onAdd(member) }, Modifier.fillMaxWidth(), onTimes = { onTimes(member) })
                         if (own.isEmpty()) {
                             Text("No tasks", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -270,10 +273,12 @@ private fun MemberTasks(
 
 /** The name of a member and, with [onAdd], the button for a new task of the member. */
 @Composable
-private fun MemberHeader(member: String, onAdd: (() -> Unit)?, modifier: Modifier) {
+private fun MemberHeader(member: String, onAdd: (() -> Unit)?, modifier: Modifier, onTimes: (() -> Unit)? = null) {
     // As high as with the button, so that the names of the calendar and of the tasks look the same.
     Row(modifier.padding(start = 12.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(member, Modifier.weight(1f), style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // [impl->dsn~member-plan~1]
+        if (onTimes != null) TextButton(onClick = onTimes, modifier = Modifier.testTag("family-times-$member")) { Text("Times") }
         if (onAdd != null) {
             IconButton(onClick = onAdd, modifier = Modifier.testTag("family-add-$member")) {
                 Icon(Icons.Filled.Add, contentDescription = "New task of $member")

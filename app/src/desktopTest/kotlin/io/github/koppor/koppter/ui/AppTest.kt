@@ -278,6 +278,33 @@ class AppTest {
         assertEquals("File the tax return @home deadline:2027-06-30", storage.text.lines()[4])
     }
 
+    // [utest->dsn~start-before-due~1]
+    @Test
+    fun theStartDateIsGivenAsADistanceBeforeTheDueDate() = runComposeUiTest {
+        storage.text += "File the tax return @home\n"
+        start()
+        openTask("File the tax return")
+        // Without a due date, a distance has nothing to count from.
+        onNodeWithTag("edit-threshold").performTextReplacement("7d")
+        onNodeWithText("Needs a due date").assertExists()
+        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-due").performTextReplacement("2026-11-30")
+        onNodeWithText("Starts 2026-11-23").assertExists()
+        // The distance follows the due date.
+        onNodeWithTag("edit-due").performTextReplacement("2026-12-10")
+        onNodeWithText("Starts 2026-12-03").assertExists()
+        // For a date, the note gives the distance.
+        onNodeWithTag("edit-threshold").performTextReplacement("2026-12-03")
+        onNodeWithText("7 days before due").assertExists()
+        // The context menu offers the distances.
+        onNodeWithTag("edit-threshold").performMouseInput { rightClick() }
+        onNodeWithText("3 days before due").performClick()
+        onNodeWithTag("edit-threshold").assertTextContains("3d")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        // The file gets the date.
+        assertEquals("File the tax return @home due:2026-12-10 t:2026-12-07", storage.text.lines()[4])
+    }
+
     // [utest->dsn~deadline~1]
     @Test
     fun aDeadlineStandsNextToTheDueDateAndIsNotMoved() = runComposeUiTest {
@@ -1048,15 +1075,15 @@ class AppTest {
         // With the mouse, which rests on the button while the dialog opens.
         onNodeWithTag("new-task").performMouseInput { click() }
         onNodeWithTag("edit-threshold").assertTextContains("Start date")
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         onNodeWithTag("edit-threshold").performMouseInput { moveTo(center) }
         // Not at once: the pointer may be on its way to another field.
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         mainClock.advanceTimeBy(1_000)
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertExists()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertExists()
         onNodeWithTag("edit-duration").performMouseInput { moveTo(center) }
         mainClock.advanceTimeBy(1_000)
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         onNodeWithText("How long the task takes, such as 30m or 2h (dur:).").assertExists()
     }
 
@@ -2850,6 +2877,23 @@ class AppTest {
         onNodeWithText("Post signs").assertIsDisplayed()
     }
 
+    // [utest->dsn~filter-hidden-matches~1]
+    @Test
+    fun aViewThatHidesMatchesSaysSoAndShowsThemInTheList() = runDesktopComposeUiTest(width = 1280, height = 720) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-text").performTextInput("garage")
+        onNodeWithTag("filter-hidden").assertDoesNotExist()
+        controller.view = View.TODAY
+        onNodeWithTag("filter-hidden").assertTextEquals("2 matches in the file, 0 shown here")
+        onNodeWithTag("filter-show-all").assertTextEquals("Show in List").performClick()
+        assertEquals(View.LIST, controller.view)
+        assertEquals("garage", controller.filter.text)
+        onNodeWithTag("filter-hidden").assertDoesNotExist()
+        onNodeWithText("Post signs").assertIsDisplayed()
+    }
+
     // [utest->dsn~back~1]
     // [utest->dsn~filter-panel~1]
     @Test
@@ -3738,5 +3782,38 @@ class AppTest {
         onNodeWithTag("settings-save").performClick()
         assertEquals("anna = https://calendar.example.org/club.ics", controller.settings.memberCalendars)
         waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  16:00-17:30 Absent\n" }
+    }
+
+    // [utest->dsn~member-plan~1]
+    @Test
+    fun theTasksOfAMemberWithATimeMapArePlannedIntoTheCalendarOfTheList() = runComposeUiTest {
+        val anna = MemoryStorage("Feed the cat\n").apply {
+            companions["koppter.yml"] = "time-maps:\n  Tasks: 15:00-18:00\n"
+            companions["calendar.txt"] = "2026-11-12 w46 Thu  15:00-15:30 Absent\n"
+        }
+        val ben = MemoryStorage("Mow the lawn\n")
+        val lists = SharedLists(storage, listOf("anna" to anna, "ben" to ben))
+        val controller = TodoController(Settings(view = "FAMILY"), { lists }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        waitUntil { anna.changes.isNotEmpty() }
+        assertEquals("2026-11-12 w46 Thu  15:00-15:30 Absent. 15:30-16:00 Planned: Feed the cat\n", anna.companions["calendar.txt"])
+        assertEquals(listOf("Plan the tasks of @anna"), anna.changes)
+        onNodeWithText("15:30-16:00 Feed the cat").assertExists()
+        // A member without a time map is not planned.
+        assertEquals(null, ben.companions["calendar.txt"])
+
+        // The times of a member are painted or typed in the family view, and the tasks are planned at once.
+        onNodeWithTag("family-times-ben").performScrollTo().performClick()
+        onNodeWithText("Times for the tasks of ben").assertExists()
+        onNodeWithTag("time-map-name").assertDoesNotExist()
+        onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
+        onNodeWithTag("time-map-save").performClick()
+        waitUntil { ben.companions["calendar.txt"] != null }
+        assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
+        assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))
+
+        // A task that is done has no time any more.
+        onAllNodesWithTag("family-toggle")[0].performClick()
+        waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  15:00-15:30 Absent\n" }
     }
 }

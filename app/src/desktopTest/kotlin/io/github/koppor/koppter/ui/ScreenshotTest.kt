@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -16,6 +17,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.rightClick
@@ -155,7 +157,7 @@ class ScreenshotTest {
             x 2026-11-12 Empty the dishwasher
             x 2026-11-10 Do the homework stars:2
             """,
-            "08:00-13:00 School",
+            "08:00-13:00 School. 15:00-16:00 Planned: Tidy the room. 16:00-16:30 Planned: Feed the cat",
         ),
         "Ben" to Member(
             """
@@ -353,6 +355,11 @@ class ScreenshotTest {
         screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }
         screen("week") { onNodeWithTag("week-switch").performClick() }
         screen("today") { onNodeWithTag("today-switch").performClick() }
+        screen("today-hidden-matches") {
+            onNodeWithTag("today-switch").performClick()
+            if (width < 840) onNodeWithTag("open-search").performClick()
+            onNodeWithTag("filter-text").performTextInput("photos")
+        }
         screen("today-groups", settings = Settings(listGroup = "PROJECT")) { onNodeWithTag("today-switch").performClick() }
         screen("edit") {
             // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.
@@ -373,6 +380,17 @@ class ScreenshotTest {
             onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
             onNodeWithTag("edit-deadline").performScrollTo().performMouseInput { rightClick() }
         }
+        screen("edit-start-menu") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-threshold").performScrollTo().performTextReplacement("1w")
+            onNodeWithTag("edit-threshold").performMouseInput { rightClick() }
+        }
+        screen("edit-start-calendar") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithContentDescription("Choose Start date").performScrollTo().performClick()
+        }
         screen("edit-names") {
             onNodeWithTag("list-switch").performClick()
             onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
@@ -381,6 +399,10 @@ class ScreenshotTest {
         }
         // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
         screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }
+        screen("family-times", members = true) {
+            onNodeWithTag("family-switch").performScrollTo().performClick()
+            onNodeWithTag("family-times-Anna").performScrollTo().performClick()
+        }
         screen("settings-members", members = true) {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-member-calendar-Carl").performScrollTo()
