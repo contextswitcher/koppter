@@ -304,6 +304,7 @@ fun EditDialog(
                         val choices = (listOf<Char?>(null) + names.choices).let { if (priority in it) it else it + priority }
                         for (choice in choices) {
                             FilterChip(
+                                colors = selectedChipColors(),
                                 selected = priority == choice,
                                 onClick = { priority = choice },
                                 label = { Text(choice?.let(names::name) ?: "No priority") },
@@ -318,6 +319,7 @@ fun EditDialog(
                         Text("Due", style = MaterialTheme.typography.labelLarge, modifier = Modifier.align(Alignment.CenterVertically))
                         for ((title, date) in dueChoices(today)) {
                             FilterChip(
+                                colors = selectedChipColors(),
                                 selected = due.trim() == date.toString(),
                                 onClick = { due = if (due.trim() == date.toString()) "" else date.toString() },
                                 label = { Text(title) },

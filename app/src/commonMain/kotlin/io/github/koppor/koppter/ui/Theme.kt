@@ -1,9 +1,12 @@
 package io.github.koppor.koppter.ui
 
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -232,5 +235,17 @@ val compactTypography: Typography = Typography().run {
         titleLarge.text().copy(fontWeight = FontWeight.Bold), titleMedium.text(), titleSmall.text(),
         bodyLarge.text(), bodyMedium, bodySmall,
         labelLarge.text(), labelMedium.small(), labelSmall.small(),
+    )
+}
+
+// [impl->dsn~color-themes~1]
+/** The default colors of a selected chip are a pale container, which hardly stands out from an unselected chip; the accent does. */
+@Composable
+fun selectedChipColors() = MaterialTheme.colorScheme.run {
+    FilterChipDefaults.filterChipColors(
+        selectedContainerColor = primary,
+        selectedLabelColor = onPrimary,
+        selectedLeadingIconColor = onPrimary,
+        selectedTrailingIconColor = onPrimary,
     )
 }
