@@ -38,6 +38,7 @@ import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.todotxt.Entry
+import io.github.koppor.koppter.todotxt.Completion
 import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.Group
 import io.github.koppor.koppter.todotxt.BoardColumn
@@ -78,6 +79,8 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
+import kotlinx.datetime.minus
+import kotlinx.datetime.isoDayNumber
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.minutes
 
@@ -316,6 +319,37 @@ class TodoController(
     /** The visible open tasks without context, which wait for one. */
     // [impl->dsn~inbox~1]
     val inbox: List<Entry> get() = visible.filter { !it.task.completed && it.task.contexts.isEmpty() }
+
+    /**
+     * How many tasks the text of the filter finds in the file, done and before their start date included, and how many of them the view shows;
+     * `null` without a text and in the family view, which has no search.
+     */
+    // [impl->dsn~filter-hidden-matches~1]
+    val textMatches: Pair<Int, Int>?
+        get() {
+            if (filter.text.isBlank() || view == View.FAMILY) return null
+            val today = today()
+            val all = tasks.count { Filter(completion = Completion.ALL, text = filter.text, hideFuture = false).matches(it.task, today) }
+            fun planned(days: Set<LocalDate>) = shownBlocks.orEmpty().filter { it.date in days }.mapNotNull(::entryOf).toSet()
+            // ponytail: the week of today, not the week that the Week view was paged to.
+            val monday = today.minus(DatePeriod(days = today.dayOfWeek.isoDayNumber - 1))
+            val shown = when (view) {
+                View.TODAY -> (planned(setOf(today)) + dueUnplanned).size
+                View.AGENDA -> (planned((0..6).map { today.plus(DatePeriod(days = it)) }.toSet()) + dueUnplanned).size
+                View.WEEK -> planned((0..6).map { monday.plus(DatePeriod(days = it)) }.toSet()).size
+                View.INBOX -> inbox.size
+                else -> visible.size
+            }
+            return all to shown
+        }
+
+    /** Shows every task that has [text] in the list: also the completed ones, those before their start date, and not only the top or next ones. */
+    fun showAll(text: String = "") {
+        filter = Filter(completion = Completion.ALL, text = text, hideFuture = false)
+        topOnly = false
+        nextOnly = false
+        view = View.LIST
+    }
 
     /** Gives a task of the inbox its context. */
     fun assignContext(entry: Entry, context: String) = replace(entry, entry.task.edit(contexts = listOf(context)))

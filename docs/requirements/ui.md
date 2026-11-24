@@ -808,7 +808,21 @@ Needs: impl, utest
 ### Matches of the filter text in the drawer
 `dsn~filter-matches~1`
 
-While the field for the text of the filter in the drawer has a text, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+While the field for the text of the filter in the drawer has a text and the view shows all its matches, a line below it shows the number of visible tasks and the button *Go to results*, which closes the drawer.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
+### Matches of the filter text that the view hides
+`dsn~filter-hidden-matches~1`
+
+While the text of the filter finds more tasks in the file, completed ones and those before their start date included, than the view shows, a line below the field reads, for example, *2 matches in the file, 0 shown here*.
+Its button *Show in List*, or *Show all* in the list, switches to the list and shows every task with the text: it keeps the text and resets the other criteria of the filter, *Top* and *Next*; in the drawer, it also closes the drawer.
+While the view shows all matches, the line is absent, so that it stands only where it explains why a match is missing.
+The views of the plan count the tasks of their days: today, the seven days of the agenda, and the current week.
 
 Covers:
 

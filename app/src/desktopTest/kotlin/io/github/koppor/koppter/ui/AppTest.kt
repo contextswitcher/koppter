@@ -2837,6 +2837,23 @@ class AppTest {
         onNodeWithText("Post signs").assertIsDisplayed()
     }
 
+    // [utest->dsn~filter-hidden-matches~1]
+    @Test
+    fun aViewThatHidesMatchesSaysSoAndShowsThemInTheList() = runDesktopComposeUiTest(width = 1280, height = 720) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("filter-text").performTextInput("garage")
+        onNodeWithTag("filter-hidden").assertDoesNotExist()
+        controller.view = View.TODAY
+        onNodeWithTag("filter-hidden").assertTextEquals("2 matches in the file, 0 shown here")
+        onNodeWithTag("filter-show-all").assertTextEquals("Show in List").performClick()
+        assertEquals(View.LIST, controller.view)
+        assertEquals("garage", controller.filter.text)
+        onNodeWithTag("filter-hidden").assertDoesNotExist()
+        onNodeWithText("Post signs").assertIsDisplayed()
+    }
+
     // [utest->dsn~back~1]
     // [utest->dsn~filter-panel~1]
     @Test

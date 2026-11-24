@@ -16,6 +16,7 @@ import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.rightClick
@@ -353,6 +354,11 @@ class ScreenshotTest {
         screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }
         screen("week") { onNodeWithTag("week-switch").performClick() }
         screen("today") { onNodeWithTag("today-switch").performClick() }
+        screen("today-hidden-matches") {
+            onNodeWithTag("today-switch").performClick()
+            if (width < 840) onNodeWithTag("open-search").performClick()
+            onNodeWithTag("filter-text").performTextInput("photos")
+        }
         screen("today-groups", settings = Settings(listGroup = "PROJECT")) { onNodeWithTag("today-switch").performClick() }
         screen("edit") {
             // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.
