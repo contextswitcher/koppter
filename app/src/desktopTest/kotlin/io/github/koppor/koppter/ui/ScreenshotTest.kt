@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.toAwtImage
 import androidx.compose.ui.test.DesktopComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -372,6 +373,17 @@ class ScreenshotTest {
             onNodeWithTag("list-switch").performClick()
             onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
             onNodeWithTag("edit-deadline").performScrollTo().performMouseInput { rightClick() }
+        }
+        screen("edit-start-menu") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-threshold").performScrollTo().performTextReplacement("1w")
+            onNodeWithTag("edit-threshold").performMouseInput { rightClick() }
+        }
+        screen("edit-start-calendar") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithContentDescription("Choose Start date").performScrollTo().performClick()
         }
         screen("edit-names") {
             onNodeWithTag("list-switch").performClick()

@@ -121,6 +121,7 @@ import com.kez.picker.duration.DurationPicker
 import com.kez.picker.duration.rememberDurationPickerState
 import kotlinx.coroutines.delay
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.daysUntil
 import kotlin.time.Duration.Companion.minutes
 
 /**
@@ -223,7 +224,10 @@ fun EditDialog(
 
     val dueValid = due.isBlank() || Task.parseDate(due.trim()) != null
     val deadlineValid = deadline.isBlank() || Task.parseDeadline(deadline.trim()) != null
-    val thresholdValid = threshold.isBlank() || Task.parseDate(threshold.trim()) != null
+    val dueDate = Task.parseDate(due.trim())
+    // [impl->dsn~start-before-due~1]
+    val startDate = Task.parseDate(threshold.trim()) ?: dueDate?.let { Task.startBefore(threshold.trim(), it) }
+    val thresholdValid = threshold.isBlank() || startDate != null
     val recurrenceValid = recurrence.isBlank() || Recurrence.parse(recurrence.trim()) != null
     val durationValid = duration.isBlank() || Task.parseDuration(duration.trim()) != null
     val atValid = at.isBlank() || Task.parseTime(at.trim()) != null
@@ -235,7 +239,7 @@ fun EditDialog(
         .withTag(Task.DUE, due.trim())
         .withTag(Task.BY, by.trim())
         .withTag(Task.DEADLINE, deadline.trim())
-        .withTag(Task.THRESHOLD, threshold.trim())
+        .withTag(Task.THRESHOLD, startDate?.toString() ?: threshold.trim())
         .withTag(Task.RECURRENCE, recurrence.trim())
         .withTag(Task.DURATION, duration.trim())
         .withTag(Task.AT, at.trim())
@@ -339,13 +343,22 @@ fun EditDialog(
                             DateField(
                                 "Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"),
                                 // The deadline is often the day that the task is due on.
-                                shortcut = ("Use due date" to due.trim()).takeIf { due.isNotBlank() && dueValid },
+                                shortcuts = listOfNotNull(Shortcut("Use due date", due.trim()).takeIf { dueDate != null }),
                                 menu = deadlineChoices(today).map { (title, date) -> title to date.toString() },
                             )
                         }
                         // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
-                        WithHelp("The task is hidden and not planned before this day (t:).") {
-                            DateField("Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"))
+                        WithHelp("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.") {
+                            // [impl->dsn~start-before-due~1]
+                            val before = if (dueDate == null) emptyList() else startChoices
+                            DateField(
+                                "Start date", threshold, { threshold = it }, thresholdValid, field.testTag("edit-threshold"),
+                                shortcuts = before,
+                                menu = before.map { it.title to it.value },
+                                placeholder = "YYYY-MM-DD, 7d",
+                                note = startNote(threshold.trim(), startDate, dueDate),
+                                shown = startDate,
+                            )
                         }
                         WithHelp("Completing the task adds its next occurrence, such as 1w or +1m (rec:).") {
                             RecurrenceField(recurrence, { recurrence = it }, recurrenceValid, field.testTag("edit-recurrence"))
@@ -722,6 +735,26 @@ internal expect fun mondayFirstLocale(): CalendarLocale
 @Composable
 internal expect fun TextMenu(items: List<Pair<String, () -> Unit>>, content: @Composable () -> Unit)
 
+/** A button of the calendar of a [DateField], the value that it writes into the field and the sentence shown while the pointer rests on it. */
+private data class Shortcut(val title: String, val value: String, val help: String? = null)
+
+/** The distances before the due date that the start date offers. */
+private val startChoices = listOf(7 to "1w", 3 to "3d").map { (days, value) ->
+    Shortcut(
+        "${if (days == 7) "1 week" else "$days days"} before due", value,
+        "The task appears $days days before its due date, and again so after each recurrence ($value).",
+    )
+}
+
+/** The other form of the start date below its field: the date for a distance, the distance for a date; the error for a distance without due date. */
+private fun startNote(text: String, start: LocalDate?, due: LocalDate?): String? = when {
+    text.isEmpty() -> null
+    start == null -> "Needs a due date".takeIf { due == null && Task.startBefore(text, LocalDate(2000, 1, 1)) != null }
+    Task.parseDate(text) == null -> "Starts $start"
+    due == null -> null
+    else -> start.daysUntil(due).takeIf { it >= 0 }?.let { if (it == 1) "1 day before due" else "$it days before due" }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateField(
@@ -730,10 +763,15 @@ private fun DateField(
     onChange: (String) -> Unit,
     valid: Boolean,
     modifier: Modifier,
-    /** A button of the calendar and the value that it writes into the field. */
-    shortcut: Pair<String, String>? = null,
+    /** Buttons of the calendar. */
+    shortcuts: List<Shortcut> = emptyList(),
     /** Entries of the context menu of the field and the value that each writes into it. */
     menu: List<Pair<String, String>> = emptyList(),
+    placeholder: String = "YYYY-MM-DD",
+    /** A line below the field; an error if the field is not [valid]. */
+    note: String? = null,
+    /** The day that the calendar opens on. */
+    shown: LocalDate? = Task.parseDate(value.trim().substringBefore('T')),
 ) {
     var picking by remember { mutableStateOf(false) }
     TextMenu(menu.map { (title, date) -> title to { onChange(date) } }) {
@@ -741,8 +779,9 @@ private fun DateField(
             value = value,
             onValueChange = onChange,
             label = { Text(label) },
-            placeholder = { Text("YYYY-MM-DD") },
+            placeholder = { Text(placeholder) },
             isError = !valid,
+            supportingText = note?.let { { Text(it) } },
             singleLine = true,
             trailingIcon = {
                 IconButton(onClick = { picking = true }) { Icon(Icons.Default.DateRange, contentDescription = "Choose $label") }
@@ -755,7 +794,7 @@ private fun DateField(
         val state = remember {
             DatePickerState(
                 locale = mondayFirstLocale(),
-                initialSelectedDateMillis = Task.parseDate(value.trim().substringBefore('T'))?.let { it.toEpochDays() * MILLIS_PER_DAY },
+                initialSelectedDateMillis = shown?.let { it.toEpochDays() * MILLIS_PER_DAY },
             )
         }
         DatePickerDialog(
@@ -767,10 +806,12 @@ private fun DateField(
                 }) { Text("OK") }
             },
             dismissButton = {
-                Row {
-                    shortcut?.let { (title, date) -> TextButton(onClick = { onChange(date); picking = false }) { Text(title) } }
-                    TextButton(onClick = { onChange(""); picking = false }) { Text("No date") }
+                // Without a row of their own: the dialog wraps its buttons, which those of the start date need on a phone.
+                for (shortcut in shortcuts) {
+                    val button = @Composable { TextButton(onClick = { onChange(shortcut.value); picking = false }) { Text(shortcut.title) } }
+                    if (shortcut.help == null) button() else WithHelp(shortcut.help, button)
                 }
+                TextButton(onClick = { onChange(""); picking = false }) { Text("No date") }
             },
         ) {
             DatePicker(state)

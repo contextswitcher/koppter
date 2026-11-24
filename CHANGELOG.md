@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The field *Start date* in the edit dialog takes a distance before the due date, such as `7d` or `1w`, and shows the other form below it; its calendar and its context menu offer *1 week before due* and *3 days before due*. The file gets the date, and a recurrence keeps the distance.
 - The context menu of the field *Deadline* in the edit dialog offers *in 2 weeks*, *in 4 weeks*, *in 8 weeks* and the ends of the three quarters after the next one, such as *Q2 2027*.
 - *Busy times from the plan* in the settings names the member of a family whose plan the device keeps. The device writes the times of the plan as blocks named `Busy` into the `calendar.txt` of the list of the member, where the family view of every device shows them; a task of the list of the member is named, and what the other tasks are stays on that device.
 
