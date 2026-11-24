@@ -136,7 +136,7 @@ fun TaskList(
             state = list,
             modifier = Modifier.fillMaxSize().testTag("task-list"),
             // No padding at the top: tasks would show in it above a heading that stays there.
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = FLOATING_BUTTONS_ROOM),
+            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, bottom = LocalFloatingButtonsRoom.current),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             for (group in groups) {
@@ -543,7 +543,7 @@ fun Board(
                         DragScroll(drag, list) { columnBounds[index] }
                         LazyColumn(
                             state = list,
-                            contentPadding = PaddingValues(bottom = FLOATING_BUTTONS_ROOM),
+                            contentPadding = PaddingValues(bottom = LocalFloatingButtonsRoom.current),
                             verticalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             items(group.entries, key = { it.index }) { entry ->

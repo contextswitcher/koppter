@@ -118,7 +118,7 @@ fun Agenda(
     BoxWithConstraints {
         val narrow = maxWidth < 500.dp
         // The space below lets the last task scroll clear of the floating buttons.
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = FLOATING_BUTTONS_ROOM).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = LocalFloatingButtonsRoom.current).testTag("agenda"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
             for (offset in 0 until days) {
                 val day = today.plus(DatePeriod(days = offset))
@@ -264,8 +264,8 @@ fun Week(
             // On a phone, the days keep a readable width and the week scrolls sideways.
             val dayWidth = maxOf(110.dp, (maxWidth - 44.dp) / 7)
             // The hours share the height that is left, so that the week is seen at once; only in a very low window the week scrolls.
-            val hourHeight = maxOf(MIN_HOUR_HEIGHT, (maxHeight - 28.dp - FLOATING_BUTTONS_ROOM) / (lastHour - firstHour))
-            Row(Modifier.verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(bottom = FLOATING_BUTTONS_ROOM)) {
+            val hourHeight = maxOf(MIN_HOUR_HEIGHT, (maxHeight - 28.dp - LocalFloatingButtonsRoom.current) / (lastHour - firstHour))
+            Row(Modifier.verticalScroll(rememberScrollState()).horizontalScroll(rememberScrollState()).padding(bottom = LocalFloatingButtonsRoom.current)) {
                 Column(Modifier.width(44.dp).padding(top = 28.dp).testTag("week-hours")) {
                     for (hour in firstHour until lastHour) {
                         Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
@@ -589,8 +589,8 @@ fun Today(
                     val spans = ofDay.map { it.span } + appointmentSpans
                     val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8, nowMinute / 60)
                     val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
-                    val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp - FLOATING_BUTTONS_ROOM) / (lastHour - firstHour))
-                    Row(Modifier.width(shown).padding(top = 8.dp).verticalScroll(rememberScrollState()).padding(bottom = FLOATING_BUTTONS_ROOM).testTag("today-day")) {
+                    val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp - LocalFloatingButtonsRoom.current) / (lastHour - firstHour))
+                    Row(Modifier.width(shown).padding(top = 8.dp).verticalScroll(rememberScrollState()).padding(bottom = LocalFloatingButtonsRoom.current).testTag("today-day")) {
                         Column(Modifier.width(44.dp)) {
                             for (hour in firstHour until lastHour) {
                                 Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
@@ -629,7 +629,7 @@ fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String
     val keyboard = LocalKeyboard.current
     LaunchedEffect(Unit) { if (keyboard) focus.requestFocus() }
 
-    Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = FLOATING_BUTTONS_ROOM).testTag("inbox"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.verticalScroll(rememberScrollState()).padding(start = 8.dp, top = 8.dp, end = 8.dp, bottom = LocalFloatingButtonsRoom.current).testTag("inbox"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (entries.isEmpty()) {
             Text("Every task has a context.", Modifier.padding(4.dp), color = MaterialTheme.colorScheme.onSurfaceVariant)
         } else {

@@ -17,6 +17,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - The settings dialog takes the width of the window.
 - A selected chip, such as the current view or a choice in the settings, has the accent color, so that it stands out from the others.
+- In a wide window, the button for a new task stands at the top right, first among the buttons beside the views, instead of floating above the list.
 - In the narrow columns of the family view on a phone, a block names its title first and its start and end on the line below.
 
 ## [2026-11-22] - 2026-11-22

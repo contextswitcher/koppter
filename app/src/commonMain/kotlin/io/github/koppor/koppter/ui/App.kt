@@ -72,6 +72,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -119,8 +120,9 @@ import kotlinx.datetime.LocalDateTime
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
 private val WIDE = 840.dp
 
-/** The room below the end of a view, so that the buttons that float at the bottom cover nothing that is scrolled to its end. */
+/** The room below the end of a view, so that the buttons that float at the bottom cover nothing that is scrolled to its end; none where nothing floats. */
 internal val FLOATING_BUTTONS_ROOM = 88.dp
+internal val LocalFloatingButtonsRoom = compositionLocalOf { FLOATING_BUTTONS_ROOM }
 
 private const val RELOAD_INTERVAL_MILLIS = 2_000L
 
@@ -475,6 +477,9 @@ private fun MainScreen(
             val startsApps = homeScreen == true && apps != null
             // A wide window has no top bar: the title of the window names the application, and its buttons end the row of the views.
             val barActions: @Composable RowScope.() -> Unit = {
+                // [impl->dsn~main-screen~1]
+                // A wide window has room in the row, and a button there covers no task.
+                if (wideNow && controller.view != View.FAMILY) BarButton(Icons.Default.Add, "New task", "new-task") { editing = Editing(null) }
                 // [impl->dsn~restart-to-update~1]
                 // Words, as no icon tells that the application ends and comes back.
                 // [impl->dsn~android-update~1]
@@ -505,12 +510,10 @@ private fun MainScreen(
                 floatingActionButton = {
                     // [impl->dsn~family-view~1]
                     // The family view has a button for a new task per member and nothing to search; buttons that float would cover its calendar.
-                    if (controller.view != View.FAMILY) AnimatedVisibility(floatingShown, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
+                    if (controller.view != View.FAMILY && !wideNow) AnimatedVisibility(floatingShown, enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                            if (!wideNow) {
-                                SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
-                                    Icon(Icons.Default.Search, contentDescription = "Search")
-                                }
+                            SmallFloatingActionButton(onClick = { focusSearch() }, modifier = Modifier.testTag("open-search")) {
+                                Icon(Icons.Default.Search, contentDescription = "Search")
                             }
                             SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
                                 Icon(Icons.Default.Add, contentDescription = "New task")
@@ -520,84 +523,86 @@ private fun MainScreen(
                 },
                 snackbarHost = { SnackbarHost(snackbar) },
             ) { padding ->
-                Row(Modifier.padding(padding).fillMaxSize().nestedScroll(floatingScroll)) {
-                    // [impl->dsn~family-view~1]
-                    // The family view shows the day of everybody, which no filter narrows, and its columns take the width.
-                    val filtered = controller.view != View.FAMILY
-                    if (wideNow && filtered) {
-                        filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
-                        VerticalDivider()
-                    }
-                    Column(Modifier.weight(1f)) {
-                        // The line of the current time and the clock of the running task move on once a minute.
-                        val minute by androidx.compose.runtime.produceState(controller.minuteOfDay()) {
-                            while (true) {
-                                delay(60_000)
-                                value = controller.minuteOfDay()
-                            }
+                CompositionLocalProvider(LocalFloatingButtonsRoom provides if (wideNow) 0.dp else FLOATING_BUTTONS_ROOM) {
+                    Row(Modifier.padding(padding).fillMaxSize().nestedScroll(floatingScroll)) {
+                        // [impl->dsn~family-view~1]
+                        // The family view shows the day of everybody, which no filter narrows, and its columns take the width.
+                        val filtered = controller.view != View.FAMILY
+                        if (wideNow && filtered) {
+                            filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
+                            VerticalDivider()
                         }
-                        val running = controller.running
-                        val clock: (Entry) -> Unit = { if (it == running) controller.stop(it) else controller.start(it) }
-                        // [impl->dsn~outlook-appointments~1]
-                        val appointmentScope = rememberCoroutineScope()
-                        val sidelineWords = controller.sidelineWords
-                        val appointments = if (!controller.readsOutlook) null else CalendarAppointments(
-                            controller.appointments,
-                            onShow = controller::showAppointments,
-                            sidelined = { OutlookCalendar.isSidelined(it, sidelineWords) },
-                            onOpen = controller::openAppointment,
-                            onSideline = { appointment, on -> appointmentScope.launch { controller.setSideline(appointment, on) } },
-                        )
-                        val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))
-                        // [impl->dsn~time-log~1]
-                        val away = controller::goAway.takeIf { controller.canSchedule && controller.awaySince == null }
-                        running?.let { RunningClock(it, now, onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }, onAway = away) }
-                        controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
-                        ViewOptions(controller, if (wideNow) barActions else null)
-                        // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
-                        if (wideNow && filtered) searchField(Modifier.padding(8.dp))
-                        val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
-                        val open: (Entry) -> Unit = { editing = Editing(it) }
-                        if (controller.view == View.OVERVIEW) {
-                            // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
-                            androidx.compose.runtime.key(controller.overviewKey) {
-                                Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
+                        Column(Modifier.weight(1f)) {
+                            // The line of the current time and the clock of the running task move on once a minute.
+                            val minute by androidx.compose.runtime.produceState(controller.minuteOfDay()) {
+                                while (true) {
+                                    delay(60_000)
+                                    value = controller.minuteOfDay()
+                                }
                             }
-                        } else if (controller.view == View.AGENDA) {
-                            Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
-                        } else if (controller.view == View.TODAY) {
-                            Today(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
-                                onAway = away,
-                                calendarWidth = controller.settings.todayCalendarWidth,
-                                onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
-                                appointments = appointments,
-                                groupsOf = controller::listGroupsOf,
+                            val running = controller.running
+                            val clock: (Entry) -> Unit = { if (it == running) controller.stop(it) else controller.start(it) }
+                            // [impl->dsn~outlook-appointments~1]
+                            val appointmentScope = rememberCoroutineScope()
+                            val sidelineWords = controller.sidelineWords
+                            val appointments = if (!controller.readsOutlook) null else CalendarAppointments(
+                                controller.appointments,
+                                onShow = controller::showAppointments,
+                                sidelined = { OutlookCalendar.isSidelined(it, sidelineWords) },
+                                onOpen = controller::openAppointment,
+                                onSideline = { appointment, on -> appointmentScope.launch { controller.setSideline(appointment, on) } },
                             )
-                        } else if (controller.view == View.WEEK) {
-                            Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
-                        } else if (controller.view == View.FAMILY) {
-                            FamilyCalendar(
-                                controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
-                                controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
-                                onAdd = { editing = Editing(null, context = it) },
-                                problems = controller.absenceProblems,
-                            )
-                        } else if (controller.view == View.INBOX) {
-                            Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
-                        } else if (controller.board) {
-                            Board(
-                                controller.groups, controller.today(), controller::toggle, onOpen = { editing = Editing(it) },
-                                moved = controller::moved,
-                                onMove = controller::move,
-                                emptyText = emptyText,
-                                priorities = controller.groupKey == GroupKey.PRIORITY,
-                            )
-                        } else {
-                            TaskList(
-                                controller.listGroups, controller.today(),
-                                controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
-                                priorities = controller.listGroupKey == GroupKey.PRIORITY,
-                            )
+                            val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))
+                            // [impl->dsn~time-log~1]
+                            val away = controller::goAway.takeIf { controller.canSchedule && controller.awaySince == null }
+                            running?.let { RunningClock(it, now, onOpen = { editing = Editing(it) }, onStop = { controller.stop(it) }, onAway = away) }
+                            controller.awaySince?.let { AwayBar(it, now, onBack = controller::back) }
+                            ViewOptions(controller, if (wideNow) barActions else null)
+                            // A narrow screen gives the field no room above the list: there, it lies in the drawer, opened by the search button.
+                            if (wideNow && filtered) searchField(Modifier.padding(8.dp))
+                            val emptyText = if (controller.file.entries.isEmpty()) "No tasks" else "No task matches the filter"
+                            val open: (Entry) -> Unit = { editing = Editing(it) }
+                            if (controller.view == View.OVERVIEW) {
+                                // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
+                                androidx.compose.runtime.key(controller.overviewKey) {
+                                    Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
+                                }
+                            } else if (controller.view == View.AGENDA) {
+                                Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
+                            } else if (controller.view == View.TODAY) {
+                                Today(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                                    onAway = away,
+                                    calendarWidth = controller.settings.todayCalendarWidth,
+                                    onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
+                                    appointments = appointments,
+                                    groupsOf = controller::listGroupsOf,
+                                )
+                            } else if (controller.view == View.WEEK) {
+                                Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
+                            } else if (controller.view == View.FAMILY) {
+                                FamilyCalendar(
+                                    controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
+                                    controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
+                                    onAdd = { editing = Editing(null, context = it) },
+                                    problems = controller.absenceProblems,
+                                )
+                            } else if (controller.view == View.INBOX) {
+                                Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
+                            } else if (controller.board) {
+                                Board(
+                                    controller.groups, controller.today(), controller::toggle, onOpen = { editing = Editing(it) },
+                                    moved = controller::moved,
+                                    onMove = controller::move,
+                                    emptyText = emptyText,
+                                    priorities = controller.groupKey == GroupKey.PRIORITY,
+                                )
+                            } else {
+                                TaskList(
+                                    controller.listGroups, controller.today(),
+                                    controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
+                                    priorities = controller.listGroupKey == GroupKey.PRIORITY,
+                                )
+                            }
                         }
                     }
                 }

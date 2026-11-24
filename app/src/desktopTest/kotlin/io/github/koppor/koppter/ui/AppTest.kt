@@ -467,7 +467,7 @@ class AppTest {
 
     // [utest->dsn~main-screen~1]
     @Test
-    fun theFloatingButtonsGiveWayWhileTheListScrollsDown() = runComposeUiTest {
+    fun theFloatingButtonsGiveWayWhileTheListScrollsDown() = runDesktopComposeUiTest(width = 412, height = 760) {
         storage.text = (1..40).joinToString("") { "Task $it\n" }
         start()
         onNodeWithTag("task-list").performTouchInput { swipeUp() }
@@ -1045,7 +1045,8 @@ class AppTest {
     @Test
     fun aFieldOfTheDialogShowsItsHelpWhileThePointerRestsOnIt() = runComposeUiTest {
         start()
-        onNodeWithTag("new-task").performClick()
+        // With the mouse, which rests on the button while the dialog opens.
+        onNodeWithTag("new-task").performMouseInput { click() }
         onNodeWithTag("edit-threshold").assertTextContains("Start date")
         onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
         onNodeWithTag("edit-threshold").performMouseInput { moveTo(center) }
@@ -1145,6 +1146,19 @@ class AppTest {
         onNodeWithTag("filter-text").assertIsDisplayed().assertIsFocused().performTextInput("mom")
         // The filter applies to the week as well, so the week stays.
         onNodeWithTag("week").assertExists()
+    }
+
+    // [utest->dsn~main-screen~1]
+    @Test
+    fun theButtonForANewTaskOfAWideWindowStandsBesideTheSettings() = runDesktopComposeUiTest(width = 1280, height = 720) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        val add = onNodeWithTag("new-task").fetchSemanticsNode().boundsInRoot
+        val settings = onNodeWithTag("open-settings").fetchSemanticsNode().boundsInRoot
+        assertEquals(settings.center.y, add.center.y)
+        assertTrue(add.right <= settings.left)
+        onNodeWithTag("new-task").performClick()
+        onNodeWithTag("edit-dialog").assertExists()
     }
 
     // [utest->dsn~filter-panel~1]
@@ -2061,11 +2075,10 @@ class AppTest {
 
         onNodeWithTag("week-title").assertTextEquals("Week 46 · 2026-11-09 to 2026-11-15")
         onAllNodesWithTag("week-block").assertCountEquals(3)
-        // The hours share the height of the window and end above the buttons that float, which would cover the blocks of the evening.
+        // The hours share the height of the window; a wide window has no buttons that float and would cover the blocks of the evening.
         val window = onNodeWithTag("main-screen").fetchSemanticsNode().boundsInRoot.bottom
         val hours = onNodeWithTag("week-hours").fetchSemanticsNode().boundsInRoot.bottom
-        assertTrue(hours > window - FLOATING_BUTTONS_ROOM.value - 24f)
-        assertTrue(hours <= onNodeWithTag("new-task").fetchSemanticsNode().boundsInRoot.top)
+        assertTrue(hours > window - 24f)
         onNodeWithTag("week-next").performClick()
         onAllNodesWithTag("week-block").assertCountEquals(0)
         onNodeWithTag("week-next").performClick()

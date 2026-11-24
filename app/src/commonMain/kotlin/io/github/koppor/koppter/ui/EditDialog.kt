@@ -10,6 +10,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.MutatorMutex
 import androidx.compose.foundation.border
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -520,7 +521,8 @@ private fun NoteImage(name: String, bytes: ByteArray?) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun WithHelp(help: String, field: @Composable () -> Unit) {
-    val tooltip = rememberTooltipState(isPersistent = true)
+    // Not the mutex that all tooltips share: the tooltip of the button that opened the dialog holds it, as the pointer never left that button.
+    val tooltip = rememberTooltipState(isPersistent = true, mutatorMutex = remember { MutatorMutex() })
     val interactions = remember { MutableInteractionSource() }
     val hovered by interactions.collectIsHoveredAsState()
     LaunchedEffect(hovered) {
