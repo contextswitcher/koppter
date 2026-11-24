@@ -368,6 +368,11 @@ class ScreenshotTest {
             onNodeWithTag("edit-context-more").performScrollTo().performClick()
             onNodeWithTag("edit-context-rest").performScrollTo()
         }
+        screen("edit-deadline-menu") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-deadline").performScrollTo().performMouseInput { rightClick() }
+        }
         screen("edit-names") {
             onNodeWithTag("list-switch").performClick()
             onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()

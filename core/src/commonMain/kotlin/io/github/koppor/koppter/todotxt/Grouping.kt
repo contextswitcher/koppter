@@ -4,6 +4,7 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
+import kotlinx.datetime.number
 import kotlinx.datetime.plus
 
 /** The attribute whose values form the columns of the board. */
@@ -119,6 +120,22 @@ fun dueDays(today: LocalDate): List<Pair<String, LocalDate>> = listOf(
     "in a month" to today.plus(DatePeriod(months = 1)),
     // In the choices, a day keeps its first name: on a Sunday, this weekend is today, and on a Thursday, three days from now are this weekend.
 )
+
+/**
+ * The days that the context menu of the deadline offers: in two, four and eight weeks, then the last day of each of three quarters.
+ * The quarters start with the one after the next, since a deadline in the current or the next quarter is reached by the weeks.
+ */
+// [impl->dsn~deadline-menu~1]
+fun deadlineChoices(today: LocalDate): List<Pair<String, LocalDate>> {
+    val weeks = listOf(2, 4, 8).map { "in $it weeks" to today.plus(DatePeriod(days = 7 * it)) }
+    val current = today.year * 4 + (today.month.number - 1) / 3
+    val quarters = (current + 2..current + 4).map { q ->
+        val year = q / 4
+        val number = q % 4 + 1
+        "Q$number $year" to LocalDate(year, number * 3, 1).plus(DatePeriod(months = 1)).minus(DatePeriod(days = 1))
+    }
+    return weeks + quarters
+}
 
 /**
  * The task as it is after the user moved it from one column of the board to another.

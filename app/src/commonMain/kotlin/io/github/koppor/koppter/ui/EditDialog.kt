@@ -113,6 +113,7 @@ import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.waitingFor
 import io.github.koppor.koppter.todotxt.waitsFor
 import io.github.koppor.koppter.todotxt.withDependencies
+import io.github.koppor.koppter.todotxt.deadlineChoices
 import io.github.koppor.koppter.todotxt.dueChoices
 import com.kez.picker.Picker
 import com.kez.picker.PickerDefaults
@@ -341,6 +342,7 @@ fun EditDialog(
                                 "Deadline", deadline, { deadline = it }, deadlineValid, field.testTag("edit-deadline"),
                                 // The deadline is often the day that the task is due on.
                                 shortcut = ("Use due date" to due.trim()).takeIf { due.isNotBlank() && dueValid },
+                                menu = deadlineChoices(today).map { (title, date) -> title to date.toString() },
                             )
                         }
                         // Called the threshold date by Simpletask and the start date by topydo; the tag is the same.
@@ -718,6 +720,10 @@ private fun RecurrenceField(value: String, onChange: (String) -> Unit, valid: Bo
 @OptIn(ExperimentalMaterial3Api::class)
 internal expect fun mondayFirstLocale(): CalendarLocale
 
+/** Adds entries to the context menu of the text field in [content]; the desktop and Android build these menus each in their own way. */
+@Composable
+internal expect fun TextMenu(items: List<Pair<String, () -> Unit>>, content: @Composable () -> Unit)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateField(
@@ -728,20 +734,24 @@ private fun DateField(
     modifier: Modifier,
     /** A button of the calendar and the value that it writes into the field. */
     shortcut: Pair<String, String>? = null,
+    /** Entries of the context menu of the field and the value that each writes into it. */
+    menu: List<Pair<String, String>> = emptyList(),
 ) {
     var picking by remember { mutableStateOf(false) }
-    OutlinedTextField(
-        value = value,
-        onValueChange = onChange,
-        label = { Text(label) },
-        placeholder = { Text("YYYY-MM-DD") },
-        isError = !valid,
-        singleLine = true,
-        trailingIcon = {
-            IconButton(onClick = { picking = true }) { Icon(Icons.Default.DateRange, contentDescription = "Choose $label") }
-        },
-        modifier = modifier,
-    )
+    TextMenu(menu.map { (title, date) -> title to { onChange(date) } }) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = onChange,
+            label = { Text(label) },
+            placeholder = { Text("YYYY-MM-DD") },
+            isError = !valid,
+            singleLine = true,
+            trailingIcon = {
+                IconButton(onClick = { picking = true }) { Icon(Icons.Default.DateRange, contentDescription = "Choose $label") }
+            },
+            modifier = modifier,
+        )
+    }
     if (picking) {
         // [impl->adr~week-starts-on-monday~1]
         val state = remember {

@@ -53,6 +53,20 @@ Covers:
 
 Needs: dsn
 
+### Context menu of the deadline
+`dsn~deadline-menu~1`
+
+The context menu of the field *Deadline* in `EditDialog` offers, after the entries for the text, the days of `deadlineChoices`: in 2, 4 and 8 weeks, then the last days of three quarters, named such as *Q2 2027*.
+The quarters start with the one after the next, as the weeks reach the current and the next quarter.
+Choosing an entry writes its day into the field; *Save* writes it into the task, *Cancel* leaves no trace.
+On Android, the entries appear where Compose shows its own text menu; the calendar of the field remains the way there.
+
+Covers:
+
+* `req~deadline~1`
+
+Needs: impl, utest
+
 ### Dependencies in the edit dialog
 `req~edit-dependencies~1`
 
