@@ -59,11 +59,12 @@ jobs:
           overwrite: true
 
   # The packages of the desktop application, so that a change that breaks the packaging on one system shows at once.
+  # macOS is left to the daily release: its runners are often not to be had, which failed runs that had nothing wrong.
   package:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:

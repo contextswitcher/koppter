@@ -402,7 +402,7 @@ The button with the calendar in the field of the dates opens a calendar whose we
 A typed definition is shown on the cells, and painting writes the definition.
 A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved, except on dates, where it is `none`; a map restricted to another one keeps the name of that map in front.
 A map needs a name without spaces, and a name with dates that no other map has; what `TimeMaps` does not understand is shown, but does not prevent saving, as the map that a definition names may follow.
-Saving replaces the line of the map and leaves the other lines as they were typed; the time maps are saved with the next planning.
+Saving or deleting a map writes the time maps to `koppter.yml` at once, without planning; the line of the map is replaced and the other lines stay as they were typed.
 
 Covers:
 

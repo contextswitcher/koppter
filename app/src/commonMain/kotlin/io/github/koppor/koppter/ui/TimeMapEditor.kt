@@ -304,9 +304,13 @@ fun TimeMapEditor(
                         TimeMaps(others + (newKey to typed)).cells(newKey).forEachIndexed { index, paint -> cells[index] = paint }
                     },
                     label = { Text("Definition") },
-                    supportingText = { Text(warning ?: "Mon-Fri 08:00-12:00 13:00-17:00, Mon-Fri 07:00-08:00 yellow") },
+                    // Room for two lines, as a warning may take that.
+                    supportingText = { Text(warning ?: "Mon-Fri 08:00-12:00 13:00-17:00, Mon-Fri 07:00-08:00 yellow", minLines = 2) },
                     isError = warning != null,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    // A fixed height: painting changes the definition with each cell, and a field that grows and shrinks moves the grid under the pointer.
+                    minLines = 5,
+                    maxLines = 5,
                     modifier = Modifier.fillMaxWidth().testTag("time-map-definition"),
                 )
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

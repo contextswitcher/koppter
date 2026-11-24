@@ -1880,6 +1880,19 @@ class AppTest {
         onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
     }
 
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aSavedTimeMapStaysAfterCloseWithoutPlanning() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        addTimeMap("General", "Mon-Fri 08:00-17:00")
+        onNodeWithTag("plan-close").performScrollTo().performClick()
+        onNodeWithTag("discard-dialog").assertDoesNotExist()
+        assertTrue("Mon-Fri 08:00-17:00" in storage.companions.getValue("koppter.yml"))
+        onNodeWithTag("open-plan").performClick()
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
+    }
+
     private fun ComposeUiTest.addTimeMap(name: String, definition: String) {
         onNodeWithTag("plan-add-map").performScrollTo().performClick()
         onNodeWithTag("time-map-name").performTextInput(name)
@@ -3863,7 +3876,7 @@ class AppTest {
         onNodeWithText("Times for the tasks of ben").assertExists()
         onNodeWithTag("time-map-name").assertDoesNotExist()
         onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
-        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
         waitUntil { ben.companions["calendar.txt"] != null }
         assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
         assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))
