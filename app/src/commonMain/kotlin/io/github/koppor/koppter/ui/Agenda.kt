@@ -382,6 +382,8 @@ internal fun DayColumn(
     day: LocalDate? = null,
     /** Whether a block names its end as well, where the grid is too coarse to read it from. */
     ends: Boolean = false,
+    /** Whether a block names its title before its times, in a column too narrow for both on one line: a short block then still shows what it is. */
+    titleFirst: Boolean = false,
     /** What scrolls the column from its top on: the text of a block then stays in view while the start of the block is scrolled out of it. */
     scroll: ScrollState? = null,
 ) {
@@ -422,7 +424,10 @@ internal fun DayColumn(
                     .testTag("week-block"),
             ) {
                 Text(
-                    "${CalendarTxt.timesText(block.span).let { if (ends) it else it.substringBefore('-') }} ${entry?.let { it.task.description + suffixOf(it) } ?: block.text}",
+                    CalendarTxt.timesText(block.span).let { if (ends) it else it.substringBefore('-') }.let { times ->
+                        val title = entry?.let { it.task.description + suffixOf(it) } ?: block.text
+                        if (titleFirst) "$title\n$times" else "$times $title"
+                    },
                     style = MaterialTheme.typography.labelSmall,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp).then(

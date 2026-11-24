@@ -738,6 +738,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
             Row(Modifier.sidewaysScroll(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 for (view in controller.views) {
                     FilterChip(
+                        colors = selectedChipColors(),
                         selected = controller.view == view,
                         onClick = { controller.view = view },
                         label = { Text(if (view == View.INBOX && controller.inbox.isNotEmpty()) "${view.title} (${controller.inbox.size})" else view.title) },
@@ -763,6 +764,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
         ) {
             for (key in if (overview) OVERVIEW_KEYS else GroupKey.entries) {
                 FilterChip(
+                    colors = selectedChipColors(),
                     selected = when {
                         list -> controller.listGroupKey
                         overview -> controller.overviewKey
@@ -791,6 +793,7 @@ private fun ViewOptions(controller: TodoController, actions: (@Composable RowSco
             }
             if (controller.board && controller.boardColumns.isNotEmpty()) {
                 FilterChip(
+                    colors = selectedChipColors(),
                     selected = controller.groupKey == null,
                     onClick = { controller.groupKey = null },
                     label = { Text("by filter") },

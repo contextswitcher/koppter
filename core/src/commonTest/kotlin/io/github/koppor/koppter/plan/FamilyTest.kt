@@ -115,9 +115,10 @@ class FamilyTest {
     @Test
     fun theCalendarsOfTheMembersAreLinesOfAMemberAndAnAddress() {
         assertEquals(
-            listOf("Anna" to "https://example.org/a.ics?key=1", "Ben" to "https://example.org/b.ics", "Anna" to "https://example.org/school.ics"),
-            Family.calendars("Anna = https://example.org/a.ics?key=1\n\n@Ben=https://example.org/b.ics\nAnna = https://example.org/school.ics\nno address\nCarl =\n"),
+            listOf(MemberCalendar("Anna", "https://example.org/a.ics?key=1"), MemberCalendar("Ben", "https://example.org/b.ics"), MemberCalendar("Anna", "https://example.org/school.ics", titles = true)),
+            Family.calendars("Anna = https://example.org/a.ics?key=1\n\n@Ben=https://example.org/b.ics\nAnna = https://example.org/school.ics  titles\nno address\nCarl =\n"),
         )
+        assertEquals("Anna = https://example.org/school.ics titles", MemberCalendar("Anna", "https://example.org/school.ics", titles = true).line)
     }
 
     // [utest->dsn~absences~1]
@@ -200,5 +201,19 @@ class FamilyTest {
             "2026-11-21 w47 Sat  07:00-08:00 Busy. 09:00-09:30 Absent\n",
             CalendarTxt.withAbsences("2026-11-21 w47 Sat  07:00-08:00 Busy. 08:00-09:00 Absent\n", mapOf(today to listOf(Span(9 * 60, 9 * 60 + 30))), today),
         )
+    }
+
+    // [utest->dsn~absence-titles~1]
+    @Test
+    fun theEventsOfACalendarWhoseTitlesAreToldSayWhatTheyAre() {
+        val ics = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Training\\, juniors\r\nDTSTART:20261121T160000\r\nDTEND:20261121T173000\r\nEND:VEVENT\r\n" +
+            "BEGIN:VEVENT\r\nDTSTART:20261121T180000\r\nDTEND:20261121T190000\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+        val titled = events(ics, today, today, kotlinx.datetime.TimeZone.UTC)
+        assertEquals(listOf("Training, juniors", ""), titled.map { it.text })
+        val existing = "2026-11-21 w47 Sat  08:00-09:00 Absent: Old. 10:00-11:00 Swimming\n"
+        val written = CalendarTxt.withAbsences(existing, mapOf(today to listOf(Span(19 * 60, 20 * 60))), today, titled = titled)
+        // The event without a title joins the absences whose titles are not told.
+        assertEquals("2026-11-21 w47 Sat  10:00-11:00 Swimming. 16:00-17:30 Absent: Training, juniors. 18:00-20:00 Absent\n", written)
+        assertEquals(written, CalendarTxt.withAbsences(written, mapOf(today to listOf(Span(19 * 60, 20 * 60))), today, titled = titled))
     }
 }

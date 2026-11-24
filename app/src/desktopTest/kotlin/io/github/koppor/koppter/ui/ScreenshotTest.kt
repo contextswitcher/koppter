@@ -166,7 +166,7 @@ class ScreenshotTest {
             x 2026-11-11 Wash the car stars:5
             x 2026-11-12 Water the plants
             """,
-            "08:00-15:00 Absent",
+            "08:00-13:00 Absent. 14:30-15:30 Absent: Dentist",
         ),
         "Carl" to Member(
             """
@@ -397,7 +397,7 @@ class ScreenshotTest {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-member-calendar-Carl").performScrollTo()
         }
-        screen("settings-plan-member", members = true, settings = Settings(planMember = "Carl")) {
+        screen("settings-plan-member", members = true, settings = Settings(planMember = "Carl", memberCalendars = "Ben = https://calendar.example.org/club.ics titles\nCarl = https://calendar.example.org/work.ics")) {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-plan-member-nobody").performScrollTo()
         }

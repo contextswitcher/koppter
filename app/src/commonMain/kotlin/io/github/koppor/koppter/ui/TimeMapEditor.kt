@@ -167,6 +167,7 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     for (paint in Paint.entries + null) {
                         FilterChip(
+                            colors = selectedChipColors(),
                             selected = brush == paint,
                             onClick = { brush = paint },
                             label = { Text(paint?.word?.replaceFirstChar(Char::uppercase) ?: "Erase") },

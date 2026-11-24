@@ -26,6 +26,12 @@ enum class RankingPeriod(val title: String) {
 /** A member in a ranking; members with the same stars share a place. */
 data class Rank(val member: String, val stars: Int, val place: Int)
 
+/** A calendar of a member at an address; [titles] if the family may know what its events are. */
+data class MemberCalendar(val member: String, val address: String, val titles: Boolean = false) {
+    /** The line of the settings. */
+    val line: String get() = "$member = $address" + if (titles) " ${Family.TITLES}" else ""
+}
+
 /** A task of a member that has a time on a day. */
 data class Appointment(val span: Span, val entry: Entry)
 
@@ -53,15 +59,20 @@ object Family {
     }
 
     /**
-     * The calendars of the members as the settings name them, one per line as `member = address`: each member with an address.
+     * The calendars of the members as the settings name them, one per line as `member = address`, or `member = address titles`
+     * for a calendar of which the family may know what its events are.
      * A line without an equals sign or without an address is left out.
      */
     // [impl->dsn~absences~1]
-    fun calendars(setting: String): List<Pair<String, String>> = setting.lines().mapNotNull { line ->
+    // [impl->dsn~absence-titles~1]
+    fun calendars(setting: String): List<MemberCalendar> = setting.lines().mapNotNull { line ->
         val member = line.substringBefore('=', "").trim()
-        val address = line.substringAfter('=', "").trim()
-        if (member.isEmpty() || address.isEmpty()) null else member.removePrefix("@") to address
+        val words = line.substringAfter('=', "").trim().split(Regex("\\s+"))
+        if (member.isEmpty() || words[0].isEmpty()) null else MemberCalendar(member.removePrefix("@"), words[0], words.getOrNull(1) == TITLES)
     }
+
+    /** The word behind the address of a calendar whose titles are told. */
+    const val TITLES = "titles"
 
     /**
      * What the plan of a device tells the family about its [member], from the blocks of the plan and the tasks by their names in it:

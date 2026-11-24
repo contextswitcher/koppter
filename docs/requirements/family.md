@@ -41,6 +41,18 @@ Covers:
 
 Needs: dsn
 
+### Calendars of a member whose events are told
+`req~absence-titles~1`
+
+A member marks, for each of their calendars, whether the family may know what its events are, such as for the calendar of a club.
+The family view then shows the events of such a calendar with their titles.
+
+Covers:
+
+* `feat~family~1`
+
+Needs: dsn
+
 ### Busy times from the plan of a member
 `req~busy-plan~1`
 
@@ -94,7 +106,7 @@ Its first row has the buttons for the day before and the day after, the day, whi
 On a narrow screen, the periods and the ranking wrap below the day, so that all members are seen there, of whose columns a phone shows two.
 Below it stands the day as a calendar with a column per member under the name of the member, at least 120 dp wide, so that a phone shows three members and more columns than fit scroll sideways.
 The calendar shares its height among its hours, at least from 07:00 to 21:00, as the week does, with a line at the current minute of today; in a window too low for the day, it scrolls and starts an hour before now.
-The calendar of a member draws the blocks of the `calendar.txt` of the list first and the appointments over them (`DayColumn`), each with its start and, in a column of 180 dp or more, its end, as the hours are too low to read the end from; a click on an appointment opens its task.
+The calendar of a member draws the blocks of the `calendar.txt` of the list first and the appointments over them (`DayColumn`), each with its start and its end, as the hours are too low to read the end from; in a column narrower than 180 dp, the title stands first and the times on the line below, so that a short block still says what it is and a long one shows its whole title; a click on an appointment opens its task.
 The text of a block stays in view while the start of the block is scrolled out of it, so that a block that runs now says what it is.
 The tasks of the day stand apart from the calendar, as a column of the calendar is too narrow for their texts: per member the name, a button that opens the dialog of a new task with the context of the member, and the tasks.
 A task has a box to tick it off, its text, which opens its dialog, and its stars; an overdue task says since when in the color of an error, and a completed one is struck through.
@@ -154,5 +166,21 @@ The answers to the flow: the choice is set once per device and therefore stands 
 Covers:
 
 * `req~busy-plan~1`
+
+Needs: impl, utest
+
+### Titles of the events of a calendar
+`dsn~absence-titles~1`
+
+A line of `memberCalendars` with the word `titles` behind the address names a calendar whose titles are told (`MemberCalendar`).
+The settings dialog has a field per calendar of a member and an empty one behind them for a further calendar, and below a field with an address the box *Show the family what the events of this calendar are, instead of Absent*, which is off for a new address, as an address is that of a private calendar more often than not.
+`events` reads the events of a calendar as `busyTimes` does, each with its title.
+`CalendarTxt.withAbsences` writes an event of such a calendar as `Absent:` with the title, and replaces the blocks that start so with the absences; an event without a title is an absence like the others.
+The family view shows such a block with the title alone, as it does for `Busy:`.
+The answers to the flow: the box stands at its calendar and is changed rarely; Save keeps it and starts the reading, which writes the titles or takes them back; Cancel leaves it as it was.
+
+Covers:
+
+* `req~absence-titles~1`
 
 Needs: impl, utest

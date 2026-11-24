@@ -736,6 +736,7 @@ A family uses koppter together, such as on a tablet in the hallway: the view *Fa
 * A member who has calendars elsewhere, such as that of an employer, enters their addresses under *Calendars of the members* in the tab *File* of the settings, on a device of their own; the address is the one for the [calendars with busy times](#calendars).
   That device writes the times of the events, for four weeks ahead, as blocks named `Absent` into the `calendar.txt` of the member, every half an hour while it runs; the other devices show them and learn neither the address nor what the events are ([decision 0053](docs/decisions/0053-absences-of-a-member-as-blocks-in-the-calendar-txt-of-the-list.md)).
   Events of whole days are left out.
+  With *Show the family what the events of this calendar are, instead of Absent* below an address, such as that of the calendar of a club, the events are written with their titles, as in `16:00-17:30 Absent: Training`, and the family view shows the titles.
 * A member who plans tasks on a device of their own chooses themselves under *Busy times from the plan* in the same tab.
   That device writes the times of its [plan](#planning), for four weeks ahead, into the `calendar.txt` of the member as blocks named `Busy`.
   A task of the list of the member is named, as in `Busy: Repair the fence`; what the tasks of the own file are stays on that device.

@@ -27,6 +27,7 @@ import io.github.koppor.koppter.plan.Planned
 import io.github.koppor.koppter.plan.Span
 import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.plan.busyTimes
+import io.github.koppor.koppter.plan.events
 import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.storage.NOTES_DIRECTORY
@@ -737,7 +738,7 @@ class TodoController(
     suspend fun updateAbsences() {
         val lists = storage as? SharedLists ?: return
         val problems = mutableListOf<String>()
-        val calendars = if (fetch == null) emptyMap() else Family.calendars(settings.memberCalendars).groupBy({ it.first }, { it.second })
+        val calendars = if (fetch == null) emptyMap() else Family.calendars(settings.memberCalendars).groupBy { it.member }
         val planOf = settings.planMember.trim().ifEmpty { null }
         val until = today().plus(DatePeriod(days = ABSENCE_DAYS))
         val former = formerPlanMember?.takeUnless { it.equals(planOf, ignoreCase = true) }
@@ -751,15 +752,17 @@ class TodoController(
                 continue
             }
             try {
-                val addresses = calendars.entries.filter { it.key.equals(named, ignoreCase = true) }.flatMap { it.value }
+                val ofMember = calendars.entries.filter { it.key.equals(named, ignoreCase = true) }.flatMap { it.value }
                 val absent = mutableMapOf<LocalDate, List<Span>>()
-                for (address in addresses) {
+                val titled = mutableListOf<TextBlock>()
+                for (calendar in ofMember) {
                     try {
-                        busyTimes(fetch!!(address), today(), until, TimeZone.currentSystemDefault())
-                            .forEach { (date, spans) -> absent[date] = absent[date].orEmpty() + spans }
+                        val events = events(fetch!!(calendar.address), today(), until, TimeZone.currentSystemDefault())
+                        // [impl->dsn~absence-titles~1]
+                        if (calendar.titles) titled += events else events.forEach { absent[it.date] = absent[it.date].orEmpty() + it.span }
                     } catch (e: Exception) {
                         // The address is a secret: only its host is shown, and the message of the exception, which may name it, stays out of the log.
-                        val host = address.substringAfter("://").substringBefore('/')
+                        val host = calendar.address.substringAfter("://").substringBefore('/')
                         log("Calendar of $member at $host was not read: ${e::class.simpleName}", null)
                         error("Calendar of $member at $host was not read: ${e.message ?: e}")
                     }
@@ -772,7 +775,7 @@ class TodoController(
                 )
                 val existing = lists.readCompanionOf(member, CalendarTxt.NAME).orEmpty()
                 // Absences stay without a calendar on this device, as another device of the member may know one.
-                val new = CalendarTxt.withAbsences(existing, absent.takeIf { addresses.isNotEmpty() }, today(), busy)
+                val new = CalendarTxt.withAbsences(existing, absent.takeIf { ofMember.isNotEmpty() }, today(), busy, titled)
                 if (new != existing) lists.writeCompanionOf(member, CalendarTxt.NAME, new, "Update the absences of @$member")
             } catch (e: Exception) {
                 problems += e.message ?: e.toString()
