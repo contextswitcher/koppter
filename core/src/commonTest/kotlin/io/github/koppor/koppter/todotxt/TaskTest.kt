@@ -340,4 +340,16 @@ class TaskTest {
         assertEquals("Write the report dur:4h spent:1h", running.stop(kotlinx.datetime.LocalDateTime(2026, 11, 19, 16, 0)).toLine())
         assertEquals(null, Task.parse("Write the report rec:1w started:2026-11-19T16:50").nextOccurrence(today)!!.started)
     }
+
+    // [utest->dsn~start-before-due~1]
+    @Test
+    fun aStartDateIsGivenAsItsDistanceBeforeTheDueDate() {
+        val due = LocalDate(2026, 11, 30)
+        assertEquals(LocalDate(2026, 11, 23), Task.startBefore("7d", due))
+        assertEquals(LocalDate(2026, 11, 16), Task.startBefore("2w", due))
+        assertEquals(due, Task.startBefore("0d", due))
+        assertNull(Task.startBefore("2026-11-23", due))
+        assertNull(Task.startBefore("-7d", due))
+        assertNull(Task.startBefore("1m", due))
+    }
 }

@@ -278,6 +278,33 @@ class AppTest {
         assertEquals("File the tax return @home deadline:2027-06-30", storage.text.lines()[4])
     }
 
+    // [utest->dsn~start-before-due~1]
+    @Test
+    fun theStartDateIsGivenAsADistanceBeforeTheDueDate() = runComposeUiTest {
+        storage.text += "File the tax return @home\n"
+        start()
+        openTask("File the tax return")
+        // Without a due date, a distance has nothing to count from.
+        onNodeWithTag("edit-threshold").performTextReplacement("7d")
+        onNodeWithText("Needs a due date").assertExists()
+        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-due").performTextReplacement("2026-11-30")
+        onNodeWithText("Starts 2026-11-23").assertExists()
+        // The distance follows the due date.
+        onNodeWithTag("edit-due").performTextReplacement("2026-12-10")
+        onNodeWithText("Starts 2026-12-03").assertExists()
+        // For a date, the note gives the distance.
+        onNodeWithTag("edit-threshold").performTextReplacement("2026-12-03")
+        onNodeWithText("7 days before due").assertExists()
+        // The context menu offers the distances.
+        onNodeWithTag("edit-threshold").performMouseInput { rightClick() }
+        onNodeWithText("3 days before due").performClick()
+        onNodeWithTag("edit-threshold").assertTextContains("3d")
+        onNodeWithTag("edit-save").performScrollTo().performClick()
+        // The file gets the date.
+        assertEquals("File the tax return @home due:2026-12-10 t:2026-12-07", storage.text.lines()[4])
+    }
+
     // [utest->dsn~deadline~1]
     @Test
     fun aDeadlineStandsNextToTheDueDateAndIsNotMoved() = runComposeUiTest {
@@ -1047,15 +1074,15 @@ class AppTest {
         start()
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-threshold").assertTextContains("Start date")
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         onNodeWithTag("edit-threshold").performMouseInput { moveTo(center) }
         // Not at once: the pointer may be on its way to another field.
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         mainClock.advanceTimeBy(1_000)
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertExists()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertExists()
         onNodeWithTag("edit-duration").performMouseInput { moveTo(center) }
         mainClock.advanceTimeBy(1_000)
-        onNodeWithText("The task is hidden and not planned before this day (t:).").assertDoesNotExist()
+        onNodeWithText("The task is hidden and not planned before this day (t:): a date, or a distance before the due date such as 7d or 1w.").assertDoesNotExist()
         onNodeWithText("How long the task takes, such as 30m or 2h (dur:).").assertExists()
     }
 
