@@ -3865,7 +3865,7 @@ class AppTest {
         onNodeWithText("Times for the tasks of ben").assertExists()
         onNodeWithTag("time-map-name").assertDoesNotExist()
         onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
-        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
         waitUntil { ben.companions["calendar.txt"] != null }
         assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
         assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))
