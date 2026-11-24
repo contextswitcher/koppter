@@ -275,7 +275,7 @@ fun SettingsDialog(
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("settings-dialog")) {
+        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.fillMaxWidth().testTag("settings-dialog")) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Settings", style = MaterialTheme.typography.titleLarge)
                 // [impl->dsn~settings-dialog~1]
@@ -445,6 +445,7 @@ fun SettingsDialog(
                                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     for (member in listOf("") + members) {
                                         FilterChip(
+                                            colors = selectedChipColors(),
                                             selected = planOf == member,
                                             onClick = { planOf = member },
                                             label = { Text(member.ifEmpty { "Nobody" }) },

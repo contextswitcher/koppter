@@ -13,6 +13,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - *Busy times from the plan* in the settings names the member of a family whose plan the device keeps. The device writes the times of the plan as blocks named `Busy` into the `calendar.txt` of the list of the member, where the family view of every device shows them; a task of the list of the member is named, and what the other tasks are stays on that device.
 - A calendar of a member of a family can be marked in the settings so that the family sees what its events are: the family view then shows the events of that calendar with their titles instead of as `Absent`.
 
+### Changed
+
+- The settings dialog takes the width of the window.
+- A selected chip, such as the current view or a choice in the settings, has the accent color, so that it stands out from the others.
+- In the narrow columns of the family view on a phone, a block names its title first and its start and end on the line below.
+
 ## [2026-11-22] - 2026-11-22
 
 ### Added
