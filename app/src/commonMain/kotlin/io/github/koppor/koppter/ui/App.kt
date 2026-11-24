@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.ui
 
 import io.github.koppor.koppter.outlook.OutlookCalendar
+import io.github.koppor.koppter.plan.Family
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.isMetaPressed
@@ -204,6 +205,9 @@ fun App(
     }
     // [impl->dsn~absences~1]
     // Whatever view is shown: the device of a member that knows the calendars keeps the absences current for the others.
+    // [impl->dsn~member-plan~1]
+    val memberPlanKey = controller.memberPlanKey
+    LaunchedEffect(controller, memberPlanKey) { controller.updateMemberPlans() }
     LaunchedEffect(controller, controller.memberCalendars, controller.planMember) {
         while (controller.writesAbsences) {
             controller.updateAbsences()
@@ -319,6 +323,8 @@ private fun MainScreen(
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
     var planning by remember { mutableStateOf<PlanSettings?>(null) }
+    /** The member whose time map is edited. */
+    var timesOf by remember { mutableStateOf<String?>(null) }
     val drawer = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
@@ -580,6 +586,7 @@ private fun MainScreen(
                                 controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
                                 controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
                                 onAdd = { editing = Editing(null, context = it) },
+                                onTimes = { timesOf = it },
                                 problems = controller.absenceProblems,
                             )
                         } else if (controller.view == View.INBOX) {
@@ -653,6 +660,26 @@ private fun MainScreen(
     }
     planning?.let {
         PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
+    }
+    // [impl->dsn~member-plan~1]
+    timesOf?.let { member ->
+        val maps = controller.timeMapsOf(member)
+        TimeMapEditor(
+            Family.TIME_MAP.takeIf { name -> maps.any { it.first == name } },
+            maps,
+            // The map stands first, as the first map is the one of tasks that name no other.
+            onSave = { _, definition ->
+                controller.setTimeMaps(member, listOf(Family.TIME_MAP to definition) + maps.filter { it.first != Family.TIME_MAP })
+                timesOf = null
+            },
+            onDelete = {
+                controller.setTimeMaps(member, maps.filter { it.first != Family.TIME_MAP })
+                timesOf = null
+            },
+            onDismiss = { timesOf = null },
+            title = "Times for the tasks of $member",
+            fixedName = Family.TIME_MAP,
+        )
     }
     schedule?.let {
         ScheduleDialog(

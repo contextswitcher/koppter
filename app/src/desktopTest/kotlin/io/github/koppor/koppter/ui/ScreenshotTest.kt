@@ -155,7 +155,7 @@ class ScreenshotTest {
             x 2026-11-12 Empty the dishwasher
             x 2026-11-10 Do the homework stars:2
             """,
-            "08:00-13:00 School",
+            "08:00-13:00 School. 15:00-16:00 Planned: Tidy the room. 16:00-16:30 Planned: Feed the cat",
         ),
         "Ben" to Member(
             """
@@ -381,6 +381,10 @@ class ScreenshotTest {
         }
         // On a phone, the switch lies outside of the row of the switches until it is scrolled there.
         screen("family", members = true) { onNodeWithTag("family-switch").performScrollTo().performClick() }
+        screen("family-times", members = true) {
+            onNodeWithTag("family-switch").performScrollTo().performClick()
+            onNodeWithTag("family-times-Anna").performScrollTo().performClick()
+        }
         screen("settings-members", members = true) {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-member-calendar-Carl").performScrollTo()

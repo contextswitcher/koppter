@@ -66,6 +66,18 @@ Covers:
 
 Needs: dsn
 
+### Tasks of a member planned into their times
+`req~member-plan~1`
+
+The family names, for a member, the times of the week at which the member does their tasks, such as the afternoons of a child.
+The family view then shows the open tasks of the member in these times of the day, around what else the calendar of the member holds; tasks without a due date are planned as well.
+
+Covers:
+
+* `feat~family~1`
+
+Needs: dsn
+
 ## Design
 
 ### Stars and ranking
@@ -182,5 +194,25 @@ The answers to the flow: the box stands at its calendar and is changed rarely; S
 Covers:
 
 * `req~absence-titles~1`
+
+Needs: impl, utest
+
+### Plan of the tasks of a member
+`dsn~member-plan~1`
+
+The times are the time map `Tasks` in the `koppter.yml` of the list of the member, where every device of the family reads them; it stands first there, as the first map is the one of tasks that name no other.
+*Times* beside the name of a member in the tasks of the family view opens `TimeMapEditor` for it, with the title *Times for the tasks of* the member without the fields for a name and dates, and with green and the eraser only, as one map has no times to weigh against others; `TodoController.setTimeMaps` writes the file, recorded as `Set the times for the tasks of @member`.
+`Family.planned` plans the open tasks of the member with the planner and the configuration of that file, around the blocks of the `calendar.txt` of the member that are no plan, for 28 days.
+A task with a time of the day keeps it and gets no block, as it is an appointment already.
+The day is planned from midnight and not from now, so that the plan of a day stays as it is and is not written anew over the day; a task that was not done at its time stays there until the next day.
+`TodoController.updateMemberPlans` writes the blocks as `Planned:` with the description of the task into the `calendar.txt` of the list, through `CalendarTxt.withAbsences`, which replaces the blocks that start so; the storage records it as `Plan the tasks of @member`.
+Every device does this, whenever the open tasks of the member, the configuration or the day change, and after the absences were written.
+The devices come to the same plan, so the file changes only when its inputs did; of two plans written at the same time, the synchronization takes the newer one, as for the plan of the main file.
+The family view shows such a block with the description alone.
+The answers to the flow: the times are set rarely, so the button is a word beside the name and not in the calendar; Save writes them and the tasks are planned at once, Cancel and Esc leave them, with the question the editor asks for changes; Delete removes the map, after which the blocks that are written stay until the map is set again; a failure to write shows as any other.
+
+Covers:
+
+* `req~member-plan~1`
 
 Needs: impl, utest

@@ -82,10 +82,19 @@ private fun color(paint: Paint): Color = when (paint) {
 // [impl->dsn~time-map-editor~1]
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (key: String, definition: String) -> Unit, onDelete: () -> Unit, onDismiss: () -> Unit) {
+fun TimeMapEditor(
+    key: String?,
+    entries: List<Pair<String, String>>,
+    onSave: (key: String, definition: String) -> Unit,
+    onDelete: () -> Unit,
+    onDismiss: () -> Unit,
+    /** The title of the dialog for a map whose name is given: the fields for the name and the dates are left out. */
+    title: String? = null,
+    fixedName: String? = null,
+) {
     val others = entries.filter { it.first != key }
     val initialText = entries.firstOrNull { it.first == key }?.second ?: ""
-    val initialName = key?.substringBefore(' ') ?: ""
+    val initialName = fixedName ?: key?.substringBefore(' ') ?: ""
     val initialDates = key?.substringAfter(' ', "") ?: ""
     var name by remember { mutableStateOf(initialName) }
     var datesField by remember { mutableStateOf(TextFieldValue(initialDates)) }
@@ -123,8 +132,8 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
     GuardedDialog(changed = listOf(name, dates, text) != listOf(initialName, initialDates, initialText), onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 720.dp).testTag("time-map-editor")) {
             Column(Modifier.verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(if (key == null) "New time map" else "Time map $key", style = MaterialTheme.typography.titleLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(title ?: if (key == null) "New time map" else "Time map $key", style = MaterialTheme.typography.titleLarge)
+                if (fixedName == null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.weight(1f).testTag("time-map-name"))
                     OutlinedTextField(
                         datesField, { datesField = it },
@@ -159,13 +168,18 @@ fun TimeMapEditor(key: String?, entries: List<Pair<String, String>>, onSave: (ke
                     }
                 }
                 Text(
-                    "Green: tasks are planned here. Yellow and then red: only for a task that would otherwise be done after its due date or not before its barrier. " +
-                        "Black: only for the tasks of this map; the other maps leave it free." +
-                        (parent?.let { " Only the times that $it has count." } ?: ""),
+                    // The one map of a member needs no colors that weigh times against each other or against other maps.
+                    if (fixedName != null) {
+                        "Paint the times of the week at which the tasks are done. The open tasks are planned into them."
+                    } else {
+                        "Green: tasks are planned here. Yellow and then red: only for a task that would otherwise be done after its due date or not before its barrier. " +
+                            "Black: only for the tasks of this map; the other maps leave it free." +
+                            (parent?.let { " Only the times that $it has count." } ?: "")
+                    },
                     style = MaterialTheme.typography.bodySmall,
                 )
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (paint in Paint.entries + null) {
+                    for (paint in if (fixedName != null) listOf(Paint.GREEN, null) else Paint.entries + null) {
                         FilterChip(
                             colors = selectedChipColors(),
                             selected = brush == paint,

@@ -30,6 +30,9 @@ object CalendarTxt {
     /** The text of a block for a time that the plan of a member takes; `Busy: ` stands before what a task is, where the family may know it. */
     const val BUSY = "Busy"
 
+    /** What stands before the task of a block that was planned into the time map of a member, see [Family.planned]. */
+    const val PLANNED = "Planned"
+
     private val DAY_LINE = Regex("^(\\d{4}-\\d{2}-\\d{2}) w\\d{2} [A-Z][a-z]{2}(?:  (.*))?$")
     private val BLOCK = Regex("^(\\d{2}):(\\d{2})-(\\d{2}):(\\d{2}) (.*)$")
     private val NEXT_BLOCK = Regex("\\. (?=\\d{2}:\\d{2}-\\d{2}:\\d{2} )")
@@ -78,6 +81,7 @@ object CalendarTxt {
      * The file of the list of a member with the absences from today on replaced by [absent], and the times of the plan of the member by [busy]:
      * the blocks named [ABSENT], or those that start with [BUSY], of the days from today on give way to the given ones; absences are joined where they touch.
      * The events of [titled] are absences that say what they are, as `Absent: ` and the title.
+     * The blocks of [planned] replace those that start with [PLANNED]; without it, these stay.
      * Without [absent], or without [busy], the blocks of that kind stay, as another device of the member may write them.
      * Everything else stays: the other blocks and texts of these days, the lines of the days before today and the lines that are no day.
      * A day without anything has no line.
@@ -85,10 +89,12 @@ object CalendarTxt {
     // [impl->dsn~absences~1]
     // [impl->dsn~busy-plan~1]
     // [impl->dsn~absence-titles~1]
-    fun withAbsences(existing: String, absent: Map<LocalDate, List<Span>>?, today: LocalDate, busy: List<TextBlock>? = null, titled: List<TextBlock> = emptyList()): String {
+    // [impl->dsn~member-plan~1]
+    fun withAbsences(existing: String, absent: Map<LocalDate, List<Span>>?, today: LocalDate, busy: List<TextBlock>? = null, titled: List<TextBlock> = emptyList(), planned: List<TextBlock>? = null): String {
         val lines = existing.lines().filter(String::isNotBlank)
         fun replaced(text: String?) = absent != null && (text == ABSENT || text?.startsWith("$ABSENT: ") == true) ||
-            busy != null && (text == BUSY || text?.startsWith("$BUSY: ") == true)
+            busy != null && (text == BUSY || text?.startsWith("$BUSY: ") == true) ||
+            planned != null && text?.startsWith("$PLANNED: ") == true
         val kept = lines.mapNotNull { line -> dateOf(line)?.takeIf { it >= today }?.let { it to line } }.groupBy({ it.first }) { (_, line) ->
             DAY_LINE.matchEntire(line)!!.groupValues[2].split(NEXT_BLOCK).map(String::trim)
                 .filter { it.isNotEmpty() && !replaced(BLOCK.matchEntire(it)?.groupValues?.get(5)) }
@@ -96,7 +102,7 @@ object CalendarTxt {
         // An event without a title is an absence like those whose titles are not told.
         val named = titled.filter { absent != null && it.text.isNotBlank() }.map { it.copy(text = "$ABSENT: ${it.text.replace(NEXT_BLOCK, ", ")}") }.distinct()
         val unnamed = (absent.orEmpty().toList() + titled.filter { it.text.isBlank() }.map { it.date to listOf(it.span) }).groupBy({ it.first }) { it.second }
-        val new = unnamed.flatMap { (day, spans) -> spans.flatten().joined().map { TextBlock(day, it, ABSENT) } } + named + busy.orEmpty()
+        val new = unnamed.flatMap { (day, spans) -> spans.flatten().joined().map { TextBlock(day, it, ABSENT) } } + named + busy.orEmpty() + planned.orEmpty()
         val added = new.filter { it.date >= today }.groupBy({ it.date }) { "${timesText(it.span)} ${it.text}" }
         val written = (kept.keys + added.keys).distinct().sorted().mapNotNull { day ->
             // A text without a time stands first, as it holds for the whole day.

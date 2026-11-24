@@ -8,6 +8,7 @@ import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.isoDayNumber
 import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /** The times over which the stars of the members are added up. */
 enum class RankingPeriod(val title: String) {
@@ -91,6 +92,25 @@ object Family {
             }
         }.partition { it.text != CalendarTxt.BUSY }
         return named + hidden.groupBy { it.date }.flatMap { (day, same) -> same.map { it.span }.joined().map { TextBlock(day, it, CalendarTxt.BUSY) } }
+    }
+
+    /** The name of the time map in the configuration of the list of a member that says when the tasks of the member are done. */
+    const val TIME_MAP = "Tasks"
+
+    /**
+     * When a member does their open tasks: these are planned into the time maps of [config], the first of which the family view edits,
+     * around the other [blocks] of the calendar of the member, for [days] from [today] on.
+     * A task with a time of the day keeps that time and has no block, as it is an appointment of the member already.
+     */
+    // ponytail: the plan of a day starts at midnight and not now, so that it stays as it is over the day and is not written anew every half an hour;
+    // a task that was not done at its time stays there until the next day. Plan from now on if the family wants the rest of the day planned anew.
+    // [impl->dsn~member-plan~1]
+    fun planned(entries: List<Entry>, member: String, members: List<String>, config: PlanConfig, blocks: List<TextBlock>, today: LocalDate, days: Int): List<TextBlock> {
+        val busy = blocks.filterNot { it.text.startsWith("${CalendarTxt.PLANNED}: ") }.groupBy({ it.date }) { it.span }
+        val until = today.plus(DatePeriod(days = days))
+        return plan(entries.filter { memberOf(it.task, members) == member }, config, busy, today, 0).blocks
+            .filter { it.entry.task.at == null && it.date <= until }
+            .map { TextBlock(it.date, it.span, "${CalendarTxt.PLANNED}: ${if (it.travel) TRAVEL else ""}${it.entry.task.description}") }
     }
 
     /** The tasks of a member that have a time on the day, completed or not, each for its duration or for [DEFAULT_DURATION]. */
