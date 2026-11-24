@@ -396,6 +396,7 @@ The plan dialog lists the time maps, each with its name, dates and definition; a
 The editor edits the name, the dates and the definition, which can be typed or painted, and deletes the map.
 `TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the half hours that a press or a drag touches with the chosen color, or clears them with the eraser; quarters of an hour are typed.
 A press on a half hour that has the chosen color already clears what the stroke touches, so that the same color undoes a stroke without a change to the eraser.
+While the mouse rests on a painted cell, a label beside the pointer names the day and the begin and end of the block of that color around it, such as `Sat 09:00-11:00`; a phone has no hover and shows no label.
 The button with the calendar in the field of the dates opens a calendar whose weeks start on Monday; *OK* puts the chosen date into the field at the cursor, or in place of the selected text, and leaves the cursor behind it, so that `..` or a space for a range or a list is typed next; *Cancel* leaves the field as it was.
 `TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
 A typed definition is shown on the cells, and painting writes the definition.

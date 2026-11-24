@@ -423,6 +423,14 @@ class ScreenshotTest {
             onNodeWithTag("open-plan").performClick()
             onNodeWithTag("plan-add-map").performScrollTo().performClick()
         }
+        screen("time-map-block") {
+            onNodeWithTag("open-plan").performClick()
+            onNodeWithTag("plan-map-General").performScrollTo().performClick()
+            // The width and height of the mouse input are not those of the grid in this window: its own size places the pointer.
+            val grid = onNodeWithTag("time-map-grid").fetchSemanticsNode().size
+            onNodeWithTag("time-map-grid").performMouseInput { moveTo(Offset(grid.width * 9 / 14f, grid.height * 40.5f / 96)) }
+            onNodeWithTag("time-map-block").assertExists()
+        }
         screen("settings") { onNodeWithTag("open-settings").performClick() }
         screen("list-matrix", settings = Settings(theme = ColorTheme.MATRIX)) {}
         screen("settings-colors", settings = Settings(theme = ColorTheme.DAWN)) {

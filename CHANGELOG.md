@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- In the editor of a time map, the mouse over a painted block shows its day and its begin and end time, such as *Sat 09:00-11:00*.
 - A link to a page of OneNote, as *Copy Link to Page* copies it, is kept as the tag `onenote:` and shown as a label with the name of the page, which opens the page; the address for the browser that OneNote copies with it is dropped.
 
 ## [2026-11-23] - 2026-11-23
