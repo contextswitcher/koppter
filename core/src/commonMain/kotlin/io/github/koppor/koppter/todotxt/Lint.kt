@@ -51,7 +51,7 @@ private val VALUES: Map<String, Pair<String, (String) -> Any?>> = mapOf(
     Task.BY to ("a time as HH:MM" to Task::parseTime),
 )
 
-private val KEYS = VALUES.keys + setOf(Task.NOTE, Task.ID, Task.PARENT, Task.CONTEXT_SWITCHER, Task.OUTLOOK, Task.LATEX)
+private val KEYS = VALUES.keys + setOf(Task.NOTE, Task.ID, Task.PARENT, Task.CONTEXT_SWITCHER, Task.OUTLOOK, Task.ONENOTE, Task.LATEX)
 
 /**
  * What the application does not read from the tasks the way it was probably meant.

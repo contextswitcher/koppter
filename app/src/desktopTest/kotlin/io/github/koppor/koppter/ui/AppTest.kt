@@ -1401,6 +1401,28 @@ class AppTest {
         assertEquals(1, outlook.cleared)
     }
 
+    // [utest->dsn~onenote-tag~1]
+    @Test
+    fun aPastedLinkOfOneNoteBecomesALabelThatOpensThePage() = runComposeUiTest {
+        val opened = mutableListOf<String>()
+        val links = object : UriHandler {
+            override fun openUri(uri: String) {
+                opened += uri
+            }
+        }
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { CompositionLocalProvider(LocalUriHandler provides links) { App(controller, "todo.txt") } }
+        val link = "onenote:https://d.docs.live.net/0123456789ABCDEF/Documents/Work.one#Review&section-id={8D0158A8-979F-4ABA-9DC2-77F6F43A00C8}&page-id={666AC41B-1C96-448D-AF38-3DEF10279206}&end"
+
+        // OneNote copies an address for the browser next to its own link.
+        addTask("Read the review https://onedrive.live.com/view.aspx?resid=0123456789ABCDEF%21514904&wd=target%28Work.one%29&end $link")
+        assertEquals("Read the review $link", storage.text.trim().lines().last())
+
+        onNodeWithTag("label-onenote", useUnmergedTree = true).performClick()
+        assertEquals(listOf(link), opened)
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+    }
+
     // [utest->dsn~context-switcher-tag~1]    @Test
     fun theLabelOfAContextSwitcherTaskSwitchesToItAndAPastedLinkBecomesTheTag() = runComposeUiTest {
         val opened = mutableListOf<String>()

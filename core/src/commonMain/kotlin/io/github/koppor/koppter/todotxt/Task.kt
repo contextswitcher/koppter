@@ -77,6 +77,11 @@ data class Task(
         return copy(body = (tokens.filterNot(CONTEXT_SWITCHER_LINK::matches) + ids.map { "$CONTEXT_SWITCHER:$it" }).joinToString(" "))
     }
 
+    /** Drops the address for the browser that OneNote copies together with its own link: both lead to the same page. */
+    // [impl->dsn~onenote-tag~1]
+    fun withoutOneNoteWebLinks(): Task =
+        if (tag(ONENOTE) == null || tokens.none(ONENOTE_WEB_LINK::matches)) this else copy(body = tokens.filterNot(ONENOTE_WEB_LINK::matches).joinToString(" "))
+
     /** The day to have the task done by; a task without that tag is due on its deadline. */
     // [impl->dsn~deadline~1]
     val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline
@@ -260,6 +265,9 @@ data class Task(
         const val NOTE = "note"
         const val CONTEXT_SWITCHER = "cs"
         const val OUTLOOK = "ol"
+
+        /** The link of OneNote without its scheme `onenote:`, so that a pasted link is the tag as it stands. */
+        const val ONENOTE = "onenote"
         const val LATEX = "tex"
         const val DURATION = "dur"
         const val AT = "at"
@@ -302,6 +310,15 @@ data class Task(
         // [impl->dsn~context-switcher-tag~1]
         fun contextSwitcherId(input: String): String =
             input.trim().let { CONTEXT_SWITCHER_LINK.matchEntire(it)?.groupValues?.get(1) ?: it }.replace(WHITESPACE, "%20")
+
+        /** The name of the page that a link of OneNote leads to, as its fragment has it; `null` for a link without one. */
+        // [impl->dsn~onenote-tag~1]
+        fun oneNotePage(link: String): String? = link.substringAfter('#', "").substringBefore('&').ifEmpty { null }
+            ?.let { name -> PERCENT_ENCODED.replace(name) { run -> run.value.split('%').drop(1).map { it.toInt(16).toByte() }.toByteArray().decodeToString() } }
+
+        // A run of bytes is decoded at once: a letter such as ä takes two bytes in UTF-8.
+        private val PERCENT_ENCODED = Regex("(%[0-9A-Fa-f]{2})+")
+        private val ONENOTE_WEB_LINK = Regex("^https://onedrive\\.live\\.com/view\\.aspx\\?\\S*wd=target.*$")
 
         private val CONTEXT_SWITCHER_LINK = Regex("^contextswitcher://(?:task|switch)/(.+)$")
 

@@ -313,6 +313,21 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                         .testTag("label-outlook"),
                 )
             }
+            // [impl->dsn~onenote-tag~1]
+            // The name of a page can be longer than the card is wide.
+            key == Task.ONENOTE -> WithTooltip(Task.oneNotePage(value) ?: value) {
+                val page = Task.oneNotePage(value)
+                Label(
+                    page?.let { if (it.length > 30) it.take(29).trimEnd() + "…" else it } ?: "OneNote",
+                    linkColors().first,
+                    linkColors().second,
+                    Modifier.clip(RoundedCornerShape(percent = 50))
+                        .clickable(onClickLabel = "Open the page in OneNote", role = Role.Button) { uriHandler.openUri("${Task.ONENOTE}:$value") }
+                        .pointerHoverIcon(PointerIcon.Hand)
+                        .testTag("label-onenote"),
+                    key = if (page == null) null else "OneNote:",
+                )
+            }
             // [impl->dsn~latex-todos~1]
             // The value is a hash, which says nothing to the user.
             // [impl->dsn~latex-open~1]

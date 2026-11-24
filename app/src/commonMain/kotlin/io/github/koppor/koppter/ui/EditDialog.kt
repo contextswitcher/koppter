@@ -249,6 +249,8 @@ fun EditDialog(
         // A link pasted into the description counts only while the field is empty.
         .withTag(Task.CONTEXT_SWITCHER, Task.contextSwitcherId(contextSwitcher))
         .let { if (contextSwitcher.isBlank()) it.withContextSwitcherTags() else it }
+        // [impl->dsn~onenote-tag~1]
+        .withoutOneNoteWebLinks()
         // [impl->dsn~notes~1]
         .let { if (originalNote == null) it else it.withTag(Task.NOTE, if (note.text.isBlank()) null else base.tag(Task.NOTE) ?: newNoteName) }
     // [impl->dsn~edit-dates~1]

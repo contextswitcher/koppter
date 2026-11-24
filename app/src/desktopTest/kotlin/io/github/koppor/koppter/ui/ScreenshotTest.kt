@@ -110,7 +110,7 @@ class ScreenshotTest {
 
         private var text = """
             (A) Call the landlord about the heating @phone due:2026-11-12
-            (A) Submit the travel expense report +Work @computer #money due:2026-11-10
+            (A) Submit the travel expense report +Work @computer #money due:2026-11-10 onenote:https://d.docs.live.net/0123456789ABCDEF/Documents/Work.one#Travel%20expenses&section-id={8D0158A8-979F-4ABA-9DC2-77F6F43A00C8}&page-id={666AC41B-1C96-448D-AF38-3DEF10279206}&end
             (B) Schedule Goodwill pickup +GarageSale @phone due:2026-11-14
             (B) Prepare the slides for the team meeting +Work @computer #meeting due:2026-11-17 dur:2h cs:work/team-meeting note:k3f.md
             (C) Post signs around the neighborhood +GarageSale @errands

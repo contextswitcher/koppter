@@ -227,6 +227,22 @@ class TaskTest {
         }
     }
 
+    // [utest->dsn~onenote-tag~1]
+    @Test
+    fun aPastedLinkOfOneNoteIsTheTagAndTheAddressForTheBrowserIsDropped() {
+        val link = "onenote:https://d.docs.live.net/0123456789ABCDEF/Documents/Work.one#%C3%84rger%20-%20Review&section-id={8D0158A8-979F-4ABA-9DC2-77F6F43A00C8}&page-id={666AC41B-1C96-448D-AF38-3DEF10279206}&end"
+        val web = "https://onedrive.live.com/view.aspx?resid=0123456789ABCDEF%21514904&id=documents&wd=target%28Work.one%7C8D0158A8%2F%29&end"
+        val task = Task.parse("Read the review $web $link").withoutOneNoteWebLinks()
+
+        assertEquals("Read the review $link", task.toLine())
+        assertEquals("Read the review", task.description)
+        assertEquals(link, "${Task.ONENOTE}:${task.tag(Task.ONENOTE)}")
+        assertEquals("Ärger - Review", Task.oneNotePage(task.tag(Task.ONENOTE)!!))
+        assertEquals(null, Task.oneNotePage("https://d.docs.live.net/0123456789ABCDEF/Documents/Work.one"))
+        // Without the link of OneNote, the address for the browser is all that leads to the page.
+        assertEquals("Read $web", Task.parse("Read $web").withoutOneNoteWebLinks().toLine())
+    }
+
     // [utest->dsn~context-switcher-tag~1]
     @Test
     fun aLinkOfContextSwitcherBecomesATagThatGivesTheLinkToSwitch() {

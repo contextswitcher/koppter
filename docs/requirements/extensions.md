@@ -137,6 +137,18 @@ Covers:
 
 Needs: dsn
 
+### Page of OneNote
+`req~onenote-link~1`
+
+A task refers to a page of OneNote, and the user opens the page from the task.
+The user pastes the link that OneNote copies for a page; the task shows a short label instead of the long link.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Items of Outlook
 `req~outlook-items~1`
 
@@ -688,6 +700,20 @@ Covers:
 
 * `req~context-switcher-link~1`
 * `adr~context-switcher-tag~1`
+
+Needs: impl, utest
+
+### Tag for a page of OneNote
+`dsn~onenote-tag~1`
+
+The tag `onenote:` holds the link of OneNote to a page without its scheme, so the link `onenote:https://…` that *Copy Link to Page* puts on the clipboard is the tag as it stands, and nothing has to be converted.
+`TaskLabels` shows the tag as a label that opens the link through the platform; the label names the page as the fragment of the link has it (`Task.oneNotePage`), cut after thirty characters, and its tooltip the whole name; a link without a page is shown as *OneNote*.
+OneNote copies an address of `onedrive.live.com` for the browser next to its link; when the task has the tag, the edit dialog drops that address (`Task.withoutOneNoteWebLinks`), so that no title is fetched for it and the description stays short.
+
+Covers:
+
+* `req~onenote-link~1`
+* `adr~onenote-tag~1`
 
 Needs: impl, utest
 
