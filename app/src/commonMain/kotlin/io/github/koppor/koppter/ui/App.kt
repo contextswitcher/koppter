@@ -627,15 +627,16 @@ private fun MainScreen(
                             } else if (controller.view == View.AGENDA) {
                                 Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
                             } else if (controller.view == View.TODAY) {
-                                Today(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                                Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
                                     onAway = away,
                                     calendarWidth = controller.settings.todayCalendarWidth,
                                     onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
                                     appointments = appointments,
                                     groupsOf = controller::listGroupsOf,
+                                    matches = controller::blockMatches,
                                 )
                             } else if (controller.view == View.WEEK) {
-                                Week(controller.shownBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments)
+                                Week(controller.planBlocks, controller::entryOf, controller::planSuffix, controller.today(), open, appointments, controller::blockMatches)
                             } else if (controller.view == View.FAMILY) {
                                 FamilyCalendar(
                                     controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,

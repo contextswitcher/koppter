@@ -2174,6 +2174,8 @@ class AppTest {
         onNodeWithTag("today").assertExists()
         onAllNodesWithTag("agenda-block").assertCountEquals(1)
         onAllNodesWithTag("week-block").assertCountEquals(1)
+        // The calendar keeps the other block in gray: its time is still taken.
+        onAllNodesWithTag("week-block-unmatched").assertCountEquals(1)
         onNodeWithTag("today-planned").assertTextEquals("30m planned")
     }
 

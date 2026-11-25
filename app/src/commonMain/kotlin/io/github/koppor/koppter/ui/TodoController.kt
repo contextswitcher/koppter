@@ -351,7 +351,10 @@ class TodoController(
      */
     // [impl->dsn~plan-filter~1]
     val shownBlocks: List<TextBlock>?
-        get() = if (filter.isDefault) planBlocks else planBlocks?.filter { block -> entryOf(block)?.let { filter.matches(it.task, today()) } == true }
+        get() = if (filter.isDefault) planBlocks else planBlocks?.filter(::blockMatches)
+
+    /** Whether the filter shows a block: without a filter every block, with one the blocks whose task matches it. */
+    fun blockMatches(block: TextBlock): Boolean = filter.isDefault || entryOf(block)?.let { filter.matches(it.task, today()) } == true
 
     /** The open tasks that the filter shows, that are due today or earlier and have no block today. */
     // [impl->dsn~agenda~1]

@@ -20,6 +20,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- With a filter, the calendars of Today and Week keep the blocks of the tasks that do not match it, in gray, instead of dropping them while the appointments of Outlook stay.
 - Painting in the editor of a time map no longer makes the dialog jump: the field of the definition and the line below it keep their height.
 - *Save* in the editor of a time map writes the time map at once, so that it is kept when the plan dialog is closed without planning.
 - An AnchorHub that is too old for the calendar of Outlook or for the sideline is reported as such, instead of as JSON input that ended early or as a pipe that has been ended.

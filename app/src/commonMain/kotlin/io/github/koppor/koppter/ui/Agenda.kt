@@ -250,6 +250,7 @@ fun Week(
     today: LocalDate,
     onOpen: (Entry) -> Unit,
     appointments: CalendarAppointments? = null,
+    matches: (TextBlock) -> Boolean = { true },
 ) {
     val thisWeek = today.minus(DatePeriod(days = today.dayOfWeek.isoDayNumber - 1))
     var monday by remember { mutableStateOf(thisWeek) }
@@ -293,7 +294,7 @@ fun Week(
                             color = if (day == today) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.height(28.dp).padding(start = 4.dp),
                         )
-                        DayColumn(ofWeek.filter { it.date == day }, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = day == today, appointments = appointments, day = day)
+                        DayColumn(ofWeek.filter { it.date == day }, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = day == today, appointments = appointments, day = day, matches = matches)
                     }
                 }
             }
@@ -400,6 +401,8 @@ internal fun DayColumn(
     titleFirst: Boolean = false,
     /** What scrolls the column from its top on: the text of a block then stays in view while the start of the block is scrolled out of it. */
     scroll: ScrollState? = null,
+    /** Whether a block matches the filter; one that does not is kept in gray, so that the day still shows its time as taken. */
+    matches: (TextBlock) -> Boolean = { true },
 ) {
     val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
     fun overlaps(a: Span, b: Span) = a.start < b.end && b.start < a.end
@@ -425,9 +428,11 @@ internal fun DayColumn(
         for (block in blocks) {
             val entry = entryOf(block)
             val beside = ofDay.any { overlaps(it.second, block.span) }
+            val matching = matches(block)
             Surface(
-                color = if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (entry != null) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                color = if (!matching) MaterialTheme.colorScheme.surface else if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = if (entry != null && matching) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                border = if (matching) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 shape = MaterialTheme.shapes.extraSmall,
                 modifier = Modifier.padding(start = if (beside) half else 0.dp).padding(horizontal = 2.dp).fillMaxWidth()
                     .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
@@ -435,7 +440,7 @@ internal fun DayColumn(
                     // A block that follows another one at once is told apart from it.
                     .padding(bottom = 1.dp)
                     .clickable(enabled = entry != null) { entry?.let(onOpen) }
-                    .testTag("week-block"),
+                    .testTag(if (matching) "week-block" else "week-block-unmatched"),
             ) {
                 Text(
                     CalendarTxt.timesText(block.span).let { if (ends) it else it.substringBefore('-') }.let { times ->
@@ -555,6 +560,7 @@ fun Today(
     onCalendarWidth: (Int) -> Unit = {},
     appointments: CalendarAppointments? = null,
     groupsOf: (List<Entry>) -> List<Group>? = { null },
+    matches: (TextBlock) -> Boolean = { true },
 ) {
     // [impl->dsn~outlook-appointments~1]
     LaunchedEffect(today, appointments != null) { appointments?.onShow(today, today.plus(DatePeriod(days = 1))) }
@@ -562,7 +568,7 @@ fun Today(
     val density = LocalDensity.current
     var shownWidth by remember(calendarWidth) { mutableStateOf(calendarWidth.dp) }
     val ofDay = blocks.orEmpty().filter { it.date == today }
-    val planned = ofDay.filter { entryOf(it) != null }.sumOf { it.span.length }
+    val planned = ofDay.filter { entryOf(it) != null && matches(it) }.sumOf { it.span.length }
     Column(Modifier.padding(8.dp).testTag("today")) {
         // The agenda below names the day; the sum of the planned time is what the day adds to it.
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -584,7 +590,7 @@ fun Today(
             // The agenda keeps 600 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen.
             val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 600.dp)
             Row(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) { Agenda(blocks, dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf) }
+                Box(Modifier.weight(1f)) { Agenda(blocks?.filter(matches), dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf) }
                 if (wide) {
                     val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
                     // [impl->dsn~today-resize~1]
@@ -610,7 +616,7 @@ fun Today(
                                 Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
                             }
                         }
-                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute, appointments = appointments, day = today)
+                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute, appointments = appointments, day = today, matches = matches)
                     }
                 }
             }

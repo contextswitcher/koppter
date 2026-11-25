@@ -727,6 +727,7 @@ Needs: impl, utest
 
 `Agenda`, `Week` and `Today` apply the filter as the list does: with a filter, they show the blocks whose open task matches it, and below the blocks of today the tasks due without a block that match it (`TodoController.shownBlocks`, `TodoController.dueUnplanned`).
 Without a filter, they show every block, also that of a task that is no longer open.
+The calendars of `Week` and `Today` keep the blocks that do not match the filter, in gray, as the appointments of Outlook stay as well: the time they take is still taken (`TodoController.blockMatches`).
 The options for the first tasks and the next actions do not apply, as they would hide planned tasks behind a cut that the plan does not know.
 
 Covers:

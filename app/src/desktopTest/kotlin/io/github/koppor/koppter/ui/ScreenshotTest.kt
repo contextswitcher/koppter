@@ -367,6 +367,11 @@ class ScreenshotTest {
             if (width < 840) onNodeWithTag("open-search").performClick()
             onNodeWithTag("filter-text").performTextInput("photos")
         }
+        screen("week-filtered") {
+            onNodeWithTag("week-switch").performClick()
+            if (width < 840) onNodeWithTag("open-search").performClick()
+            onNodeWithTag("filter-text").performTextInput("photos")
+        }
         screen("filter-search") {
             if (width < 840) onNodeWithTag("open-search").performClick()
             onNodeWithTag("filter-contexts-search").performScrollTo().performTextInput("o")
