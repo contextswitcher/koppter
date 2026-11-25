@@ -122,6 +122,8 @@ import io.github.koppor.koppter.todotxt.OVERVIEW_KEYS
 import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.minutes
+import io.github.koppor.koppter.storage.Settings
+import io.github.koppor.koppter.plan.sidelined
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 
@@ -217,6 +219,13 @@ fun App(
             }
         }
     }
+    // [impl->dsn~calendar-events~1]
+    LaunchedEffect(controller, controller.calendars) {
+        while (!controller.calendars.isNullOrBlank()) {
+            delay(CALENDAR_REFRESH)
+            controller.refreshCalendarEvents(reload = true)
+        }
+    }
     // [impl->dsn~absences~1]
     // Whatever view is shown: the device of a member that knows the calendars keeps the absences current for the others.
     // [impl->dsn~member-plan~1]
@@ -269,6 +278,9 @@ internal const val LEAVE_WARNING = "Back again leaves koppter."
 
 /** How often the To-Do list of Outlook is read again: each reading starts a process that asks Outlook. */
 private val OUTLOOK_REFRESH = 2.minutes
+
+/** How often the calendars with busy times are read again while a calendar view shows them; a published calendar is updated by its service only every few hours. */
+private val CALENDAR_REFRESH = 30.minutes
 
 /** How often the LaTeX documents are read again, so that a TODO written in the editor shows up while koppter is open. */
 private val LATEX_REFRESH = 1.minutes
@@ -606,12 +618,18 @@ private fun MainScreen(
                             // [impl->dsn~outlook-appointments~1]
                             val appointmentScope = rememberCoroutineScope()
                             val sidelineWords = controller.sidelineWords
-                            val appointments = if (!controller.readsOutlook) null else CalendarAppointments(
-                                controller.appointments,
+                            // [impl->dsn~calendar-events~1]
+                            val viewCalendars = controller.viewCalendars
+                            val appointments = if (viewCalendars.isEmpty()) null else CalendarAppointments(
+                                controller.appointments.takeIf { controller.showsCalendar(Settings.OUTLOOK_SOURCE) }.orEmpty(),
                                 onShow = controller::showAppointments,
                                 sidelined = { OutlookCalendar.isSidelined(it, sidelineWords) },
                                 onOpen = controller::openAppointment,
                                 onSideline = { appointment, on -> appointmentScope.launch { controller.setSideline(appointment, on) } },
+                                events = controller.calendarEvents,
+                                calendars = viewCalendars,
+                                onShowCalendar = { key, shown -> appointmentScope.launch { controller.setCalendarShown(key, shown) } },
+                                eventSidelined = { sidelined(it, sidelineWords) },
                             )
                             val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))
                             // [impl->dsn~time-log~1]

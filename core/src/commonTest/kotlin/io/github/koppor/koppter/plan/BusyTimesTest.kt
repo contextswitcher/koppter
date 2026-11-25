@@ -103,4 +103,12 @@ class BusyTimesTest {
         assertEquals(listOf(LocalDate(2026, 11, 12)), busyTimes(ics, from, to, berlin, listOf("Muggi", " ")).keys.toList())
         assertEquals(listOf(Span(660, 720)), busyTimes(ics, from, to, berlin, listOf("Muggi")).getValue(from))
     }
+
+    // [utest->dsn~calendar-events~1]
+    @Test
+    fun theNameOfTheCalendarIsThatOfTheFileAndNotThatOfAnEvent() {
+        val event = "BEGIN:VEVENT\r\nX-WR-CALNAME:Not this\r\nEND:VEVENT\r\n"
+        assertEquals("Lectures, winter", calendarName("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nX-WR-CALNAME:Lectures\\, \r\n winter\r\n${event}END:VCALENDAR\r\n"))
+        assertEquals(null, calendarName("BEGIN:VCALENDAR\r\n${event}END:VCALENDAR\r\n"))
+    }
 }

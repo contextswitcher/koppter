@@ -9,6 +9,8 @@ import androidx.compose.runtime.key
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import io.github.koppor.koppter.plan.Span
+import io.github.koppor.koppter.plan.lanes
+import androidx.compose.material3.Checkbox
 import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.outlook.OutlookBusy
 import kotlin.time.Duration.Companion.minutes
@@ -55,6 +57,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.ArrowDropDown
+import io.github.koppor.koppter.storage.Settings
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
@@ -224,20 +228,70 @@ private val MIN_CALENDAR_WIDTH = 260.dp
 internal val MIN_HOUR_HEIGHT = 20.dp
 
 /**
- * The appointments of Outlook that the calendar views show next to the blocks of the plan, and what the user does with one.
+ * The appointments of Outlook and the events of the calendars with busy times that the calendar views show next to the blocks of the plan, and what the user does with one.
  *
- * @param onShow reads the appointments of the days from the first to before the second, which the view shows
+ * @param all the appointments of Outlook, without those of a hidden calendar
+ * @param onShow reads the appointments and events of the days from the first to before the second, which the view shows
  * @param sidelined whether the time of the appointment counts as free for planning
+ * @param events the events of the calendars with busy times that are shown
+ * @param calendars the calendars that the view shows or hides
+ * @param onShowCalendar shows the calendar or hides it, by its key
+ * @param eventSidelined whether an event with the title counts as free for planning
  */
 // [impl->dsn~outlook-appointments~1]
+// [impl->dsn~calendar-events~1]
 class CalendarAppointments(
     val all: List<OutlookBusy>,
     val onShow: suspend (LocalDate, LocalDate) -> Unit,
     val sidelined: (OutlookBusy) -> Boolean,
     val onOpen: (OutlookBusy) -> Unit,
     val onSideline: (OutlookBusy, Boolean) -> Unit,
+    val events: List<CalendarEvent> = emptyList(),
+    val calendars: List<ViewCalendar> = emptyList(),
+    val onShowCalendar: (String, Boolean) -> Unit = { _, _ -> },
+    val eventSidelined: (String) -> Boolean = { false },
 ) {
     fun onDay(day: LocalDate): List<Pair<OutlookBusy, Span>> = OutlookCalendar.onDay(all, day)
+
+    fun eventsOn(day: LocalDate): List<CalendarEvent> = events.filter { it.block.date == day }.sortedBy { it.block.span.start }
+
+    /** The spans of all that is shown on the day, so that the view chooses its hours. */
+    fun spansOn(day: LocalDate): List<Span> = onDay(day).map { it.second } + eventsOn(day).map { it.block.span }
+}
+
+/** The calendars with a switch each, so that the user hides one whose events are not wanted in the view; planning keeps their times free all the same. */
+// [impl->dsn~calendar-events~1]
+@Composable
+private fun CalendarsButton(appointments: CalendarAppointments) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { menu = true }, modifier = Modifier.testTag("week-calendars")) {
+            Text("Calendars", softWrap = false)
+            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+        }
+        DropdownMenu(menu, onDismissRequest = { menu = false }, modifier = Modifier.testTag("week-calendars-menu")) {
+            Text(
+                "Shown in Week and Today",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+            for (calendar in appointments.calendars) {
+                DropdownMenuItem(
+                    text = { Text(calendar.name) },
+                    leadingIcon = { Checkbox(calendar.shown, onCheckedChange = null) },
+                    // The color by which the view tells its entries apart.
+                    trailingIcon = {
+                        val color = if (calendar.key == Settings.OUTLOOK_SOURCE) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.tertiary
+                        Box(Modifier.size(12.dp).background(color, MaterialTheme.shapes.extraSmall))
+                    },
+                    // The menu stays open, so that several calendars are switched at once.
+                    onClick = { appointments.onShowCalendar(calendar.key, !calendar.shown) },
+                    modifier = Modifier.testTag("week-calendar"),
+                )
+            }
+        }
+    }
 }
 
 /** The blocks of the plan of one week as a calendar: one column per day, the time running down; with [appointments], those of Outlook next to them. */
@@ -258,7 +312,7 @@ fun Week(
     // [impl->dsn~outlook-appointments~1]
     LaunchedEffect(monday, appointments != null) { appointments?.onShow(monday, monday.plus(DatePeriod(days = 7))) }
     val ofWeek = blocks.orEmpty().filter { it.date in days }
-    val spans = ofWeek.map { it.span } + days.flatMap { day -> appointments?.onDay(day).orEmpty().map { it.second } }
+    val spans = ofWeek.map { it.span } + days.flatMap { day -> appointments?.spansOn(day).orEmpty() }
     // Office hours at least, so that an empty week has a grid as well.
     val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8)
     val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18)
@@ -271,8 +325,10 @@ fun Week(
             IconButton(onClick = { monday = monday.plus(DatePeriod(days = 7)) }, modifier = Modifier.testTag("week-next")) {
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next week")
             }
-            Text("Week ${CalendarTxt.week(monday)} · $monday to ${days.last()}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("week-title"))
-            if (monday != thisWeek) TextButton(onClick = { monday = thisWeek }, modifier = Modifier.testTag("week-today")) { Text("This week") }
+            // On a phone, the title takes a second line, not the buttons beside it.
+            Text("Week ${CalendarTxt.week(monday)} · $monday to ${days.last()}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false).testTag("week-title"))
+            if (monday != thisWeek) TextButton(onClick = { monday = thisWeek }, modifier = Modifier.testTag("week-today")) { Text("This week", softWrap = false) }
+            if (!appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments!!)
         }
         if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -405,38 +461,42 @@ internal fun DayColumn(
     matches: (TextBlock) -> Boolean = { true },
 ) {
     val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
-    fun overlaps(a: Span, b: Span) = a.start < b.end && b.start < a.end
+    val events = day?.let { appointments?.eventsOn(it) }.orEmpty()
+    // [impl->dsn~calendar-lanes~1]
+    // Entries that take the same time stand side by side, appointments and events before the blocks of the plan.
+    val lanes = lanes(ofDay.map { it.second } + events.map { it.block.span } + blocks.map { it.span })
     BoxWithConstraints(
         Modifier.fillMaxWidth().height(hourHeight * (lastHour - firstHour))
             .background(if (highlight) MaterialTheme.colorScheme.surfaceVariant else Color.Transparent),
     ) {
-        // Where a block and an appointment take the same time, the appointment stands in the left half and the block in the right one.
-        val half = maxWidth / 2
+        val width = maxWidth
+        fun place(index: Int, span: Span): Modifier {
+            val lane = lanes[index]
+            return Modifier.offset(x = width * lane.index / lane.count, y = hourHeight * (span.start - firstHour * 60) / 60)
+                .width(width / lane.count).height(hourHeight * span.length / 60)
+        }
         for (hour in 0 until lastHour - firstHour) HorizontalDivider(Modifier.offset(y = hourHeight * hour))
         // [impl->dsn~outlook-appointments~1]
         if (appointments != null) {
-            for ((appointment, span) in ofDay) {
+            ofDay.forEachIndexed { index, (appointment, span) ->
                 key(appointment.entryId, appointment.start) {
-                    AppointmentBox(
-                        appointment, span, appointments,
-                        Modifier.offset(y = hourHeight * (span.start - firstHour * 60) / 60).height(hourHeight * span.length / 60)
-                            .then(if (blocks.any { overlaps(it.span, span) }) Modifier.width(half) else Modifier.fillMaxWidth()),
-                    )
+                    AppointmentBox(appointment, span, appointments, place(index, span))
                 }
             }
+            // [impl->dsn~calendar-events~1]
+            events.forEachIndexed { index, event ->
+                EventBox(event, appointments.eventSidelined(event.block.text), place(ofDay.size + index, event.block.span))
+            }
         }
-        for (block in blocks) {
+        blocks.forEachIndexed { index, block ->
             val entry = entryOf(block)
-            val beside = ofDay.any { overlaps(it.second, block.span) }
             val matching = matches(block)
             Surface(
                 color = if (!matching) MaterialTheme.colorScheme.surface else if (entry != null) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant,
                 contentColor = if (entry != null && matching) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
                 border = if (matching) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
                 shape = MaterialTheme.shapes.extraSmall,
-                modifier = Modifier.padding(start = if (beside) half else 0.dp).padding(horizontal = 2.dp).fillMaxWidth()
-                    .offset(y = hourHeight * (block.span.start - firstHour * 60) / 60)
-                    .height(hourHeight * block.span.length / 60)
+                modifier = place(ofDay.size + events.size + index, block.span).padding(horizontal = 2.dp)
                     // A block that follows another one at once is told apart from it.
                     .padding(bottom = 1.dp)
                     .clickable(enabled = entry != null) { entry?.let(onOpen) }
@@ -464,6 +524,32 @@ internal fun DayColumn(
                 Modifier.offset(y = hourHeight * (nowMinute - firstHour * 60) / 60).testTag("today-now"),
                 thickness = 2.dp,
                 color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
+}
+
+/** An event of a calendar with busy times in a calendar view; one on the sideline is pale. The application only reads these calendars, so a click does nothing. */
+// [impl->dsn~calendar-events~1]
+@Composable
+private fun EventBox(event: CalendarEvent, sidelined: Boolean, modifier: Modifier) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        color = if (sidelined) colors.tertiaryContainer.copy(alpha = 0.3f) else colors.tertiaryContainer,
+        contentColor = if (sidelined) colors.onSurface else colors.onTertiaryContainer,
+        shape = MaterialTheme.shapes.extraSmall,
+        border = if (sidelined) BorderStroke(1.dp, colors.outline) else null,
+        modifier = modifier.padding(horizontal = 2.dp).padding(bottom = 1.dp).testTag(if (sidelined) "calendar-event-sideline" else "calendar-event"),
+    ) {
+        // A bar on the left, as Outlook marks the entries of a calendar, tells an event from a block of the plan.
+        Row {
+            Box(Modifier.width(3.dp).fillMaxHeight().background(colors.tertiary))
+            Text(
+                "${CalendarTxt.timesText(event.block.span).substringBefore('-')} ${event.block.text.ifEmpty { "(no title)" }}",
+                style = MaterialTheme.typography.labelSmall,
+                textDecoration = if (sidelined) TextDecoration.LineThrough else null,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
             )
         }
     }
@@ -564,7 +650,7 @@ fun Today(
 ) {
     // [impl->dsn~outlook-appointments~1]
     LaunchedEffect(today, appointments != null) { appointments?.onShow(today, today.plus(DatePeriod(days = 1))) }
-    val appointmentSpans = appointments?.onDay(today).orEmpty().map { it.second }
+    val appointmentSpans = appointments?.spansOn(today).orEmpty()
     val density = LocalDensity.current
     var shownWidth by remember(calendarWidth) { mutableStateOf(calendarWidth.dp) }
     val ofDay = blocks.orEmpty().filter { it.date == today }

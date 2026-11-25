@@ -31,8 +31,7 @@ fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sidel
 // [impl->dsn~absence-titles~1]
 fun events(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): List<TextBlock> {
     val result = mutableListOf<TextBlock>()
-    // A line that starts with a blank continues the line before it.
-    val lines = ics.replace("\r\n", "\n").replace(Regex("\n[ \t]"), "").lines()
+    val lines = unfolded(ics)
     var event: MutableMap<String, Pair<String, String>>? = null
     for (line in lines) {
         when {
@@ -51,6 +50,16 @@ fun events(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline
     }
     return result
 }
+
+/** The name that the iCalendar file gives its calendar in `X-WR-CALNAME`, as Google Calendar and Outlook write it; `null` without one. */
+// [impl->dsn~calendar-events~1]
+fun calendarName(ics: String): String? =
+    unfolded(ics).takeWhile { it != "BEGIN:VEVENT" }
+        .firstOrNull { it.substringBefore(':').substringBefore(';').equals("X-WR-CALNAME", ignoreCase = true) }
+        ?.substringAfter(':')?.replace(Regex("\\\\(.)"), "$1")?.trim()?.takeIf(String::isNotEmpty)
+
+/** The lines of an iCalendar file, where a line that starts with a blank continues the line before it. */
+private fun unfolded(ics: String): List<String> = ics.replace("\r\n", "\n").replace(Regex("\n[ \t]"), "").lines()
 
 private val DATE_TIME = Regex("^(\\d{4})(\\d{2})(\\d{2})T(\\d{2})(\\d{2})(\\d{2})(Z?)$")
 

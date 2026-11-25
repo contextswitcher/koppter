@@ -258,6 +258,19 @@ Covers:
 
 Needs: dsn
 
+### Events of the calendars in the calendar views
+`req~calendar-events~1`
+
+The calendar views show the events of the calendars with busy times next to the appointments of Outlook and the blocks of the plan.
+Entries that take the same time stand side by side within the width of the day, as in the day view of Outlook.
+The user hides a calendar in the calendar views and shows it again; the choice is kept on the device, and planning keeps the times of a hidden calendar free all the same.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Views of the plan
 `req~agenda~1`
 
@@ -579,7 +592,7 @@ Needs: impl, utest
 `dsn~outlook-appointments~1`
 
 `Week` and `Today` ask through `CalendarAppointments.onShow` for the appointments of the days they show; `TodoController.showAppointments` reads them with `ankd outlook-busy` and `App` reads them again every two minutes.
-`DayColumn` draws those with a start time (`OutlookCalendar.onDay`, cut at midnight) at their times; where one overlaps a block, the appointment takes the left half and the block the right one.
+`DayColumn` draws those with a start time (`OutlookCalendar.onDay`, cut at midnight) at their times, side by side with what overlaps them (`dsn~calendar-lanes~1`).
 `AppointmentBox` fills an appointment with the color of its first category that AnchorHub passes as `#RRGGBB`, and without one with `secondaryContainer`; the text takes `onSurface` or `inverseOnSurface`, whichever stands out more from that color.
 The color of a category is data of Outlook, by which the user knows the appointment, and therefore the one color that does not come from the theme.
 A click opens a menu with *Open in Outlook*, which runs `ankd outlook-open` with the EntryID of the appointment, for a recurring one that of its series.
@@ -588,6 +601,38 @@ Whole-day appointments are not shown.
 Covers:
 
 * `req~outlook-appointments~1`
+
+Needs: impl, utest
+
+### Events of the calendars in the calendar views
+`dsn~calendar-events~1`
+
+`TodoController.showAppointments` also reads the events of the calendars with busy times on the days of the view (`events`, without sideline words); `refreshCalendarEvents` keeps each iCalendar file in memory, so that another week does not read the network again, and `App` reads them again every 30 minutes.
+`planWithCalendars` puts the files it reads into the same memory, so that the view shows what was planned with.
+A calendar that cannot be read is logged by its host and left out of the view; the plan reports it.
+`EventBox` draws an event in `tertiaryContainer` with a bar in `tertiary` on its left, apart from the appointments of Outlook and the blocks; one whose title holds a word of `dsn~sideline~1` is pale with a border and its text struck through.
+A click on an event does nothing, as the application only reads these calendars.
+The button *Calendars* of `Week` opens a menu, headed *Shown in Week and Today*, with a check box and the color of the entries for Outlook, where it is read, and for each calendar with busy times, named by the comment line above its address, else by `X-WR-CALNAME` of its file (`calendarName`), else by its host.
+The menu stays open while the user switches; `Today` shows the same calendars.
+The setting `hiddenCalendars` of the device lists the hidden ones, one per line, by address or as `outlook`; an address is a secret and stays on the device as `calendars` does.
+Planning reads all calendars, hidden or not.
+
+Covers:
+
+* `req~calendar-events~1`
+
+Needs: impl, utest
+
+### Entries side by side
+`dsn~calendar-lanes~1`
+
+`lanes` gives each entry of a day a column and the number of columns that its group shares.
+A group are the entries that overlap, directly or through others; an entry takes the first column that is free at its start, the earlier and then the longer entry first.
+`DayColumn` passes the appointments, the events and the blocks in this order, so that of entries with the same start and length the appointment stands left; an entry that overlaps nothing takes the whole width.
+
+Covers:
+
+* `req~calendar-events~1`
 
 Needs: impl, utest
 

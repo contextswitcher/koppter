@@ -79,6 +79,11 @@ data class Settings(
     val appStarts: String = "",
     /** The member of a family whose plan this device keeps, see [io.github.koppor.koppter.plan.Family.busy]; blank on a device that is shared. */
     val planMember: String = "",
+    /**
+     * The calendars that the calendar views leave out, one per line: the address of an iCalendar file of [calendars], or [OUTLOOK_SOURCE] for the calendar of Outlook.
+     * Planning keeps their times free all the same.
+     */
+    val hiddenCalendars: String = "",
 ) {
     // [impl->dsn~settings-file~1]
     fun toProperties(): Map<String, String> = mapOf(
@@ -108,6 +113,7 @@ data class Settings(
         MEMBER_CALENDARS to memberCalendars,
         APP_STARTS to appStarts,
         PLAN_MEMBER to planMember,
+        HIDDEN_CALENDARS to hiddenCalendars,
     )
 
     companion object {
@@ -137,6 +143,10 @@ data class Settings(
         private const val MEMBER_CALENDARS = "memberCalendars"
         private const val APP_STARTS = "appStarts"
         private const val PLAN_MEMBER = "planMember"
+        private const val HIDDEN_CALENDARS = "hiddenCalendars"
+
+        /** What [hiddenCalendars] names the calendar of Outlook by; it is no address. */
+        const val OUTLOOK_SOURCE = "outlook"
 
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
@@ -166,6 +176,7 @@ data class Settings(
             memberCalendars = properties[MEMBER_CALENDARS].orEmpty(),
             appStarts = properties[APP_STARTS].orEmpty(),
             planMember = properties[PLAN_MEMBER].orEmpty(),
+            hiddenCalendars = properties[HIDDEN_CALENDARS].orEmpty(),
         )
     }
 }

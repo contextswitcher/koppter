@@ -181,10 +181,21 @@ class ScreenshotTest {
         ),
     )
 
+    /** A calendar with busy times whose events overlap each other and the blocks of the plan. */
+    private val LECTURES = listOf(
+        "20261112T100000" to "20261112T113000" to "Programming",
+        "20261112T103000" to "20261112T120000" to "Office hour",
+        "20261112T140000" to "20261112T153000" to "Seminar",
+        "20261113T090000" to "20261113T110000" to "Software engineering",
+        "20261110T130000" to "20261110T140000" to "Lab",
+    ).joinToString("", "BEGIN:VCALENDAR\nX-WR-CALNAME:Lectures\n", "END:VCALENDAR\n") { (times, title) ->
+        "BEGIN:VEVENT\nDTSTART:${times.first}\nDTEND:${times.second}\nSUMMARY:$title\nEND:VEVENT\n"
+    }
+
     private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList()) {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
-        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
+        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else if (settings.calendars.isNotBlank()) ({ LECTURES }) else null)
         // As many as a device has, so that the list is cut, and a name that is too long for its place.
         val apps = (
             "Books Calculator Calendar Camera Chrome Clock Contacts Drive evcc Files Gallery Gmail Health Hue Keep Maps Messages Music News Notes Phone Photos Podcasts Radio " +
@@ -361,6 +372,12 @@ class ScreenshotTest {
         screen("synchronizing") { storage.onStatus(SyncStatus(SyncState.RUNNING)) }
         screen("not-synchronized") { storage.onStatus(SyncStatus(SyncState.FAILED, "git@example.org:family/tasks.git: connection refused")) }
         screen("week") { onNodeWithTag("week-switch").performClick() }
+        val lectures = Settings(calendars = "# Lectures\nhttps://calendar.example.org/lectures.ics")
+        screen("week-calendars", settings = lectures) { onNodeWithTag("week-switch").performClick() }
+        screen("week-calendars-menu", settings = lectures) {
+            onNodeWithTag("week-switch").performClick()
+            onNodeWithTag("week-calendars").performClick()
+        }
         screen("today") { onNodeWithTag("today-switch").performClick() }
         screen("today-hidden-matches") {
             onNodeWithTag("today-switch").performClick()

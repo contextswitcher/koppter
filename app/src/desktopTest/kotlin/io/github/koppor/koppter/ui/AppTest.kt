@@ -5,6 +5,8 @@ import io.github.koppor.koppter.todotxt.webAddresses
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.unit.width
 import androidx.compose.ui.test.withKeysDown
 import androidx.compose.ui.test.withKeyDown
 import androidx.compose.ui.test.assertIsFocused
@@ -1295,6 +1297,50 @@ class AppTest {
         waitUntil { onAllNodesWithTag("calendar-appointment-sideline", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
         onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).assertCountEquals(1)
     }
+
+    // [utest->dsn~calendar-events~1]
+    // [utest->dsn~calendar-lanes~1]
+    @Test
+    fun theWeekShowsTheEventsOfTheCalendarsBesideTheAppointmentsAndHidesACalendar() = runComposeUiTest {
+        val meeting = OutlookBusy(LocalDateTime(2026, 11, 12, 10, 0), LocalDateTime(2026, 11, 12, 11, 0), false, BusyStatus.BUSY, "Faculty board", "00000000AA")
+        val outlook = FakeOutlook(appointments = listOf(meeting))
+        val ics = "BEGIN:VCALENDAR\nX-WR-CALNAME:Lectures\nBEGIN:VEVENT\nDTSTART:20261112T100000\nDTEND:20261112T113000\nSUMMARY:Programming\nEND:VEVENT\n" +
+            "BEGIN:VEVENT\nDTSTART:20261113T140000\nDTEND:20261113T150000\nSUMMARY:Seminar\nEND:VEVENT\nEND:VCALENDAR\n"
+        var reads = 0
+        var settings = Settings(view = "WEEK", calendars = "# Family\nhttps://family.example.org/secret.ics\nhttps://calendar.example.org/secret.ics")
+        val controller = TodoController(
+            settings, { storage }, saveSettings = { settings = it }, today = { LocalDate(2026, 11, 12) }, outlook = outlook,
+            fetch = { address -> reads++; if ("family" in address) "BEGIN:VCALENDAR\nEND:VCALENDAR\n" else ics },
+        )
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().size == 2 }
+        waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        // The appointment and the lecture take the same time: they share the width of the day, the longer lecture to the left.
+        val appointment = onNodeWithTag("calendar-appointment", useUnmergedTree = true).getBoundsInRoot()
+        val lecture = onAllNodesWithTag("calendar-event", useUnmergedTree = true)[0].getBoundsInRoot()
+        val seminar = onAllNodesWithTag("calendar-event", useUnmergedTree = true)[1].getBoundsInRoot()
+        assertTrue(lecture.right <= appointment.left, "$appointment $lecture")
+        assertTrue(seminar.width > lecture.width * 1.5f, "$seminar $lecture")
+
+        onNodeWithTag("week-calendars").performClick()
+        // Named by the comment above the address, by the name in the file.
+        onAllNodesWithTag("week-calendar").assertCountEquals(3)
+        for ((index, name) in listOf("Outlook", "Family", "Lectures").withIndex()) onAllNodesWithTag("week-calendar")[index].assertTextContains(name)
+        onAllNodesWithTag("week-calendar")[2].performClick()
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+        assertEquals("https://calendar.example.org/secret.ics", settings.hiddenCalendars)
+        // Alone now, the appointment takes the whole width.
+        assertTrue(onNodeWithTag("calendar-appointment", useUnmergedTree = true).getBoundsInRoot().width > appointment.width * 1.5f)
+
+        onAllNodesWithTag("week-calendar")[0].performClick()
+        waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isEmpty() }
+        onAllNodesWithTag("week-calendar")[2].performClick()
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().size == 2 }
+        // Showing it again does not read the calendar again.
+        assertEquals(2, reads)
+        assertEquals("outlook", settings.hiddenCalendars)
+    }
+
     // [utest->dsn~outlook-items~1]
     // [utest->dsn~outlook-tag~1]
     // [utest->dsn~outlook-complete~1]

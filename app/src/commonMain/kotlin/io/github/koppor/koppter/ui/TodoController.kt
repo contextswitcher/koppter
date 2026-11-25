@@ -28,6 +28,7 @@ import io.github.koppor.koppter.plan.Span
 import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.plan.busyTimes
 import io.github.koppor.koppter.plan.events
+import io.github.koppor.koppter.plan.calendarName
 import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
 import io.github.koppor.koppter.storage.NOTES_DIRECTORY
@@ -102,13 +103,19 @@ private const val ABSENCE_DAYS = 28
 
 enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview"), FAMILY("Family") }
 
-/** The link that opens the dialog for a new task, in the forms that programs make of it. */
+/** An event of a calendar with busy times, which [calendar] names by its address, as a calendar view shows it. */
+data class CalendarEvent(val calendar: String, val block: TextBlock)
+
+/** A calendar that the calendar views show or hide: [key] is its address or [Settings.OUTLOOK_SOURCE], [name] what the user knows it by. */
+data class ViewCalendar(val key: String, val name: String, val shown: Boolean)
+
 /**
  * A line of [TodoController.agenda]: a day, or a task with the times of its block if it has one.
  * [name] is what [TodoController.entryNamed] finds the task by; a line without it has no open task.
  */
 data class AgendaLine(val day: LocalDate? = null, val text: String = "", val times: String? = null, val name: String? = null)
 
+/** The link that opens the dialog for a new task, in the forms that programs make of it. */
 private val NEW_TASK_LINK = Regex("koppter:(//)?new/?")
 
 class TodoController(
@@ -492,10 +499,88 @@ class TodoController(
     /** Reads the appointments of Outlook on the days from [from] to before [to], which a calendar view shows from now on. */
     // [impl->dsn~outlook-appointments~1]
     suspend fun showAppointments(from: LocalDate, to: LocalDate) {
-        if (shownDays != from to to) appointments = emptyList()
+        if (shownDays != from to to) {
+            appointments = emptyList()
+            calendarEvents = emptyList()
+        }
         shownDays = from to to
         refreshAppointments()
+        refreshCalendarEvents(reload = false)
     }
+
+    /** The events of the calendars with busy times on the days that a calendar view shows, without those of the hidden calendars. */
+    var calendarEvents by mutableStateOf<List<CalendarEvent>>(emptyList())
+        private set
+
+    /** The iCalendar files as they were read last, by address; reading one takes seconds, a change of the week should not. */
+    private val calendarTexts = mutableMapOf<String, String>()
+
+    /** The names that the iCalendar files give their calendars, by address. */
+    private var calendarNames by mutableStateOf<Map<String, String>>(emptyMap())
+
+    /** The addresses of the calendars with busy times, each with the comment of the line above it, which names the calendar; `null` without one. */
+    private val calendarLines: List<Pair<String, String?>>
+        get() {
+            if (fetch == null) return emptyList()
+            val lines = settings.calendars.lines().map(String::trim)
+            return lines.mapIndexedNotNull { index, line ->
+                if (line.isEmpty() || line.startsWith('#')) null
+                else line to lines.getOrNull(index - 1)?.takeIf { it.startsWith('#') }?.removePrefix("#")?.trim()?.takeIf(String::isNotEmpty)
+            }
+        }
+
+    private val calendarAddresses: List<String> get() = calendarLines.map { it.first }
+
+    /**
+     * The calendars that a calendar view can show or hide: that of Outlook, where it is read, and those with busy times.
+     * A calendar with busy times is named by the comment above its address, else by the name in its file, else by its host.
+     */
+    // [impl->dsn~calendar-events~1]
+    val viewCalendars: List<ViewCalendar>
+        get() {
+            val hidden = settings.hiddenCalendars.lines().toSet()
+            return listOfNotNull(Settings.OUTLOOK_SOURCE.takeIf { readsOutlook }).map { ViewCalendar(it, "Outlook", it !in hidden) } +
+                calendarLines.map { (address, comment) -> ViewCalendar(address, comment ?: calendarNames[address] ?: hostOf(address), address !in hidden) }
+        }
+
+    /** Whether the calendar views show the calendar, by its address or [Settings.OUTLOOK_SOURCE]. */
+    fun showsCalendar(key: String): Boolean = key !in settings.hiddenCalendars.lines()
+
+    /** Shows the calendar in the calendar views or hides it there; planning keeps its times free either way. */
+    // [impl->dsn~calendar-events~1]
+    suspend fun setCalendarShown(key: String, shown: Boolean) {
+        val hidden = settings.hiddenCalendars.lines().filter { it.isNotBlank() && it != key } + listOfNotNull(key.takeUnless { shown })
+        updateSettings(settings.copy(hiddenCalendars = hidden.joinToString("\n")))
+        refreshCalendarEvents(reload = false)
+    }
+
+    /**
+     * Reads the events of the shown calendars with busy times on the days that a calendar view shows, from the network with [reload] or where a calendar was not read before.
+     * A calendar that cannot be read is logged by its host and left out.
+     */
+    // [impl->dsn~calendar-events~1]
+    suspend fun refreshCalendarEvents(reload: Boolean) {
+        val fetch = fetch ?: return
+        val (from, to) = shownDays ?: return
+        val result = mutableListOf<CalendarEvent>()
+        for (address in calendarAddresses.filter(::showsCalendar)) {
+            val text = calendarTexts[address].takeUnless { reload } ?: try {
+                fetch(address).also { calendarTexts[address] = it }
+            } catch (e: Exception) {
+                // The message of the exception may name the address, which is a secret.
+                log("Calendar of ${hostOf(address)} was not read: ${e::class.simpleName}", null)
+                continue
+            }
+            calendarName(text)?.let { if (calendarNames[address] != it) calendarNames = calendarNames + (address to it) }
+            result += withContext(Dispatchers.Default) {
+                events(text, from, to.minus(DatePeriod(days = 1)), TimeZone.currentSystemDefault()).map { CalendarEvent(address, it) }
+            }
+        }
+        // Another view may have asked for other days meanwhile.
+        if (shownDays == from to to) calendarEvents = result
+    }
+
+    private fun hostOf(address: String) = address.substringAfter("://").substringBefore('/')
 
     /** Reads the appointments of the days that a calendar view shows again; what fails is logged and leaves them as they were. */
     // [impl->dsn~outlook-appointments~1]
@@ -904,16 +989,20 @@ class TodoController(
         // A line starting with # is a comment, such as the name of the calendar above its address.
         if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }) {
             try {
-                busyTimes(fetch(address), today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline)
+                val text = fetch(address)
+                // The calendar views show what was planned with.
+                calendarTexts[address] = text
+                busyTimes(text, today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline)
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 // The address is a secret: only its host is shown.
-                val host = address.substringAfter("://").substringBefore('/')
+                val host = hostOf(address)
                 problems += "Calendar of $host was not read: ${e.message ?: e}"
                 // The message of the exception may name the address, and a log is passed on.
                 log("Calendar of $host was not read: ${e::class.simpleName}", null)
             }
         }
+        refreshCalendarEvents(reload = false)
         val bridge = outlook
         // [impl->dsn~outlook-busy~1]
         if (bridge != null) {
