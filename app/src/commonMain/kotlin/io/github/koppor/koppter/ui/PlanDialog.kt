@@ -190,7 +190,7 @@ fun PlanDialog(
                 addresses?.let {
                     field(
                         "Calendars with busy times", it, { text -> addresses = text },
-                        "Addresses of iCalendar files, one per line, as Outlook and Google Calendar publish them for a calendar. " +
+                        "Addresses of iCalendar files, one per line, as Outlook and Google Calendar publish them for a calendar; a line starting with # is a comment. " +
                             "Nothing is planned into the times of their events. Kept on this device only, as such an address is a secret.",
                         "plan-calendars",
                     )

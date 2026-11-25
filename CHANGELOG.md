@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/) with the scheme `YYYY-0M-0D`.
 
+## [Unreleased]
+
+### Added
+
+- In *Calendars with busy times* of the plan dialog, a line starting with `#` is a comment, such as `# calendar of Alina` above an address.
+
 ## [2026-11-24] - 2026-11-24
 
 ### Added
