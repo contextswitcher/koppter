@@ -10,6 +10,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Added
 
 - In *Calendars with busy times* of the plan dialog, a `#` at the start of a line or after a blank starts a comment, such as `# calendar of Alina` above or after an address.
+- The tag `exp:` states the last day of a task: an open task is removed from the todo.txt file the day after, and until then it is planned and shown as due on that day, unless it has a due date of its own.
 
 ### Changed
 

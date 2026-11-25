@@ -82,9 +82,13 @@ data class Task(
     fun withoutOneNoteWebLinks(): Task =
         if (tag(ONENOTE) == null || tokens.none(ONENOTE_WEB_LINK::matches)) this else copy(body = tokens.filterNot(ONENOTE_WEB_LINK::matches).joinToString(" "))
 
-    /** The day to have the task done by; a task without that tag is due on its deadline. */
+    /** The day to have the task done by; a task without that tag is due on its deadline, and without that on its last day. */
     // [impl->dsn~deadline~1]
-    val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline
+    // [impl->dsn~expiry~1]
+    val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline ?: expires
+
+    /** The last day on which the task is of use: an open task is removed from the file after it. */
+    val expires: LocalDate? get() = tag(EXPIRES)?.let(::parseDate)
 
     /** The day that others set for the task, which the application does not move. */
     val deadline: LocalDate? get() = tag(DEADLINE)?.let(::parseDeadline)?.first
@@ -248,6 +252,12 @@ data class Task(
             val day = parseDate(written.substringBefore('T'))!!.plus(due!!.daysUntil(next), DateTimeUnit.DAY)
             moved.withTag(DEADLINE, day.toString() + written.substringAfter('T', "").let { if (it.isEmpty()) "" else "T$it" })
                 .withTag(DUE, if (tag(DUE) == null) null else moved.tag(DUE))
+        }.let { moved ->
+            // [impl->dsn~expiry~1]
+            // The last day keeps its distance to the due date, as the deadline does.
+            val expires = expires ?: return@let moved
+            moved.withTag(EXPIRES, expires.plus(due!!.daysUntil(next), DateTimeUnit.DAY).toString())
+                .withTag(DUE, if (tag(DUE) == null && tag(DEADLINE) == null) null else moved.tag(DUE))
         }.copy(creationDate = null, completionDate = null)
     }
 
@@ -259,6 +269,7 @@ data class Task(
     companion object {
         const val DUE = "due"
         const val DEADLINE = "deadline"
+        const val EXPIRES = "exp"
         const val THRESHOLD = "t"
         const val RECURRENCE = "rec"
         const val PRIORITY = "pri"

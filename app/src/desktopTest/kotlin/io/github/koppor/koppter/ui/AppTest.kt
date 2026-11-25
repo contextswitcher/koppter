@@ -3499,6 +3499,17 @@ class AppTest {
         assertEquals(1, storage.text.lines().count { "Check mail" in it })
     }
 
+    // [utest->dsn~expiry~1]
+    @Test
+    fun anOpenTaskIsRemovedAfterItsLastDay() = runComposeUiTest {
+        storage.text = "Put out the bins exp:2026-11-11\nWater the plants exp:2026-11-12\nx 2026-11-10 Buy milk exp:2026-11-10\n"
+        start()
+        mainClock.advanceTimeBy(2_500)
+        assertEquals("Water the plants exp:2026-11-12\nx 2026-11-10 Buy milk exp:2026-11-10\n", storage.text)
+        assertEquals("Remove expired task: Put out the bins", storage.changes.last())
+        onNodeWithText("Put out the bins").assertDoesNotExist()
+    }
+
     // [utest->dsn~archive~1]
     @Test
     fun tasksCompletedBeforeTheLastMonthAreMovedToDoneTxt() = runComposeUiTest {
