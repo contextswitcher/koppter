@@ -1329,6 +1329,9 @@ class AppTest {
         // In the inbox, the item shows where it comes from, and the contexts below it are choices.
         controller.view = View.INBOX
         onAllNodesWithTag("inbox-hashtag-outlook", useUnmergedTree = true).assertCountEquals(2)
+        onAllNodesWithTag("label-outlook", useUnmergedTree = true).assertCountEquals(2)[0].performClick()
+        assertEquals(3, opened.size)
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
         // The task "Post signs" of the file has no context either.
         onAllNodesWithText("Give it:", useUnmergedTree = true).assertCountEquals(3)
         controller.view = View.LIST
