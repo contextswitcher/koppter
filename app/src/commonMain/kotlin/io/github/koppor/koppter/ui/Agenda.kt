@@ -66,6 +66,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -99,6 +105,7 @@ private const val NO_PLAN = "Nothing is planned yet. Plan gives the open tasks t
  * and for today the tasks that are due but have no block today.
  */
 // [impl->dsn~agenda~1]
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun Agenda(
     blocks: List<TextBlock>?,
@@ -146,13 +153,20 @@ fun Agenda(
                     val actions = @Composable {
                         // [impl->dsn~time-spent~1]
                         if (entry != null && offset == 0 && block !in counted) {
-                            TextButton(
-                                onClick = {
-                                    counted += block
-                                    onWorked(entry, block.span.length)
-                                },
-                                modifier = Modifier.testTag("agenda-worked"),
-                            ) { Text("+${Task.durationText(block.span.length.minutes)}${if (narrow) "\n" else " "}spent", textAlign = TextAlign.Center) }
+                            val length = Task.durationText(block.span.length.minutes)
+                            TooltipBox(
+                                positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+                                tooltip = { PlainTooltip { Text("Add $length to the time spent on this task") } },
+                                state = rememberTooltipState(),
+                            ) {
+                                TextButton(
+                                    onClick = {
+                                        counted += block
+                                        onWorked(entry, block.span.length)
+                                    },
+                                    modifier = Modifier.testTag("agenda-worked"),
+                                ) { Text("+$length${if (narrow) "\n" else " "}spent", textAlign = TextAlign.Center) }
+                            }
                         }
                         if (entry != null && offset == 0) ClockButton(entry, running, onClock)
                     }

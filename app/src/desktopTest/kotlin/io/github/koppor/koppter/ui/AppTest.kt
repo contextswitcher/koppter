@@ -39,6 +39,7 @@ import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performMouseInput
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.onChild
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
@@ -1810,6 +1811,16 @@ class AppTest {
             swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
         }
         onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon 10:00-12:00 13:00-17:00, Tue-Fri 08:00-12:00 13:00-17:00, Mon 08:00-10:00 yellow")
+        // The mouse over a block shows when it begins and ends.
+        onNodeWithTag("time-map-grid").performMouseInput { moveTo(Offset(width / 14f, height * 34.5f / 96)) }
+        onNodeWithTag("time-map-block").onChild().assertTextEquals("Mon 08:00-10:00")
+        onNodeWithTag("time-map-grid").performMouseInput { moveTo(Offset(width * 3 / 14f, height * 34.5f / 96)) }
+        onNodeWithTag("time-map-block").onChild().assertTextEquals("Tue 08:00-12:00")
+        // An empty cell has no block.
+        onNodeWithTag("time-map-grid").performMouseInput { moveTo(Offset(width * 3 / 14f, height * 2.5f / 96)) }
+        onNodeWithTag("time-map-block").assertDoesNotExist()
+        // The test input takes touches again only once the mouse has left.
+        onNodeWithTag("time-map-grid").performMouseInput { exit() }
         onNodeWithTag("time-map-revert").performScrollTo().performClick()
         onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
         onNodeWithTag("time-map-paint-black").performClick()
@@ -1866,6 +1877,19 @@ class AppTest {
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
         onNodeWithTag("time-map-delete").performScrollTo().performClick()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").assertDoesNotExist()
+        onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
+    }
+
+    // [utest->dsn~time-map-editor~1]
+    @Test
+    fun aSavedTimeMapStaysAfterCloseWithoutPlanning() = runComposeUiTest {
+        start()
+        onNodeWithTag("open-plan").performClick()
+        addTimeMap("General", "Mon-Fri 08:00-17:00")
+        onNodeWithTag("plan-close").performScrollTo().performClick()
+        onNodeWithTag("discard-dialog").assertDoesNotExist()
+        assertTrue("Mon-Fri 08:00-17:00" in storage.companions.getValue("koppter.yml"))
+        onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-17:00")
     }
 
@@ -3852,7 +3876,7 @@ class AppTest {
         onNodeWithText("Times for the tasks of ben").assertExists()
         onNodeWithTag("time-map-name").assertDoesNotExist()
         onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
-        onNodeWithTag("time-map-save").performClick()
+        onNodeWithTag("time-map-save").performScrollTo().performClick()
         waitUntil { ben.companions["calendar.txt"] != null }
         assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
         assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))

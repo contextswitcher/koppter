@@ -700,6 +700,13 @@ class TodoController(
         writeConfig(ConfigFile.withBoardColumns(config.orEmpty(), columns), "Edit board columns")
     }
 
+    /** Saves the time maps, lines of the form `name = definition`, without planning. */
+    // [impl->dsn~time-map-editor~1]
+    fun saveTimeMaps(lines: String) {
+        val text = ConfigFile.withEntries(config.orEmpty(), ConfigFile.TIME_MAPS, ConfigFile.parseLines(lines))
+        if (text != config.orEmpty()) writeConfig(text, "Edit time maps")
+    }
+
     private fun writeConfig(text: String, message: String) {
         guarded {
             (storage as? CompanionFiles)?.writeCompanion(ConfigFile.NAME, text) ?: return@guarded

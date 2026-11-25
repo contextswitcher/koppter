@@ -46,7 +46,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontFamily
@@ -56,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import io.github.koppor.koppter.plan.Paint
 import io.github.koppor.koppter.plan.TimeMaps
 import kotlin.math.abs
+import kotlin.math.roundToInt
 import kotlinx.datetime.LocalDate
 
 private val DAY_NAMES = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
@@ -106,6 +111,8 @@ fun TimeMapEditor(
     val initial = remember { TimeMaps(entries).cells(key ?: "") }
     val cells = remember { mutableStateListOf(*initial.toTypedArray()) }
     var brush by remember { mutableStateOf<Paint?>(Paint.GREEN) }
+    // The position of the mouse over the grid and the index of the cell under it.
+    var hover by remember { mutableStateOf<Pair<Offset, Int>?>(null) }
     val parent = maps.parentOf(newKey)
     // The grid keeps the handler of its first composition.
     val currentParent by rememberUpdatedState(parent)
@@ -200,54 +207,94 @@ fun TimeMapEditor(
                             Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(CELL_HEIGHT * 4), style = MaterialTheme.typography.labelSmall)
                         }
                     }
-                    Canvas(
-                        Modifier.weight(1f).height(CELL_HEIGHT * TimeMaps.CELLS_PER_DAY).testTag("time-map-grid").pointerInput(Unit) {
-                            // The brush covers half an hour, two cells: finer times are typed.
-                            fun cellOf(position: Offset) = Pair(
-                                (position.x / size.width * 7).toInt().coerceIn(0, 6),
-                                (position.y / size.height * HALF_HOURS).toInt().coerceIn(0, HALF_HOURS - 1),
-                            )
+                    Box(Modifier.weight(1f)) {
+                        Canvas(
+                            Modifier.fillMaxWidth().height(CELL_HEIGHT * TimeMaps.CELLS_PER_DAY).testTag("time-map-grid").pointerInput(Unit) {
+                                awaitPointerEventScope {
+                                    while (true) {
+                                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                                        val pointer = event.changes.first()
+                                        hover = pointer.position.takeIf { event.type != PointerEventType.Exit && pointer.type == PointerType.Mouse }?.let {
+                                            val day = (it.x / size.width * 7).toInt().coerceIn(0, 6)
+                                            it to day * TimeMaps.CELLS_PER_DAY + (it.y / size.height * TimeMaps.CELLS_PER_DAY).toInt().coerceIn(0, TimeMaps.CELLS_PER_DAY - 1)
+                                        }
+                                    }
+                                }
+                            }.pointerInput(Unit) {
+                                // The brush covers half an hour, two cells: finer times are typed.
+                                fun cellOf(position: Offset) = Pair(
+                                    (position.x / size.width * 7).toInt().coerceIn(0, 6),
+                                    (position.y / size.height * HALF_HOURS).toInt().coerceIn(0, HALF_HOURS - 1),
+                                )
 
-                            // A fast drag reports positions several cells apart: the cells between them are painted as well.
-                            fun paint(from: Pair<Int, Int>, to: Pair<Int, Int>, color: Paint?) {
-                                val steps = maxOf(abs(to.first - from.first), abs(to.second - from.second), 1)
-                                for (step in 0..steps) {
-                                    val day = from.first + (to.first - from.first) * step / steps
-                                    val half = from.second + (to.second - from.second) * step / steps
-                                    for (cell in 2 * half..2 * half + 1) paint(day * TimeMaps.CELLS_PER_DAY + cell, color)
+                                // A fast drag reports positions several cells apart: the cells between them are painted as well.
+                                fun paint(from: Pair<Int, Int>, to: Pair<Int, Int>, color: Paint?) {
+                                    val steps = maxOf(abs(to.first - from.first), abs(to.second - from.second), 1)
+                                    for (step in 0..steps) {
+                                        val day = from.first + (to.first - from.first) * step / steps
+                                        val half = from.second + (to.second - from.second) * step / steps
+                                        for (cell in 2 * half..2 * half + 1) paint(day * TimeMaps.CELLS_PER_DAY + cell, color)
+                                    }
                                 }
-                            }
-                            awaitEachGesture {
-                                val down = awaitFirstDown()
-                                var last = cellOf(down.position)
-                                val start = last.first * TimeMaps.CELLS_PER_DAY + 2 * last.second
-                                // Pressing where the color already is takes it away, so a stroke is undone with the same brush.
-                                val stroke = brush.takeUnless { cells[start] == it && cells[start + 1] == it }
-                                paint(last, last, stroke)
-                                down.consume()
-                                // The drag paints and does not scroll what lies around the grid.
-                                while (true) {
-                                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
-                                    if (!change.pressed) break
-                                    val next = cellOf(change.position)
-                                    paint(last, next, stroke)
-                                    last = next
-                                    change.consume()
+                                awaitEachGesture {
+                                    val down = awaitFirstDown()
+                                    var last = cellOf(down.position)
+                                    val start = last.first * TimeMaps.CELLS_PER_DAY + 2 * last.second
+                                    // Pressing where the color already is takes it away, so a stroke is undone with the same brush.
+                                    val stroke = brush.takeUnless { cells[start] == it && cells[start + 1] == it }
+                                    paint(last, last, stroke)
+                                    down.consume()
+                                    // The drag paints and does not scroll what lies around the grid.
+                                    while (true) {
+                                        val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: break
+                                        if (!change.pressed) break
+                                        val next = cellOf(change.position)
+                                        paint(last, next, stroke)
+                                        last = next
+                                        change.consume()
+                                    }
                                 }
+                            },
+                        ) {
+                            val width = size.width / 7
+                            val height = size.height / TimeMaps.CELLS_PER_DAY
+                            cells.forEachIndexed { index, paint ->
+                                val day = index / TimeMaps.CELLS_PER_DAY
+                                val cell = index % TimeMaps.CELLS_PER_DAY
+                                drawRect(paint?.let { paints.getValue(it) } ?: empty, Offset(day * width, cell * height), Size(width, height))
                             }
-                        },
-                    ) {
-                        val width = size.width / 7
-                        val height = size.height / TimeMaps.CELLS_PER_DAY
-                        cells.forEachIndexed { index, paint ->
-                            val day = index / TimeMaps.CELLS_PER_DAY
-                            val cell = index % TimeMaps.CELLS_PER_DAY
-                            drawRect(paint?.let { paints.getValue(it) } ?: empty, Offset(day * width, cell * height), Size(width, height))
+                            // Fainter lines at the half hours show the steps of the brush.
+                            for (hour in 0 until 24) drawLine(line.copy(alpha = 0.4f), Offset(0f, (hour * 4 + 2) * height), Offset(size.width, (hour * 4 + 2) * height))
+                            for (hour in 0..24) drawLine(line, Offset(0f, hour * 4 * height), Offset(size.width, hour * 4 * height))
+                            for (day in 0..7) drawLine(line, Offset(day * width, 0f), Offset(day * width, size.height))
                         }
-                        // Fainter lines at the half hours show the steps of the brush.
-                        for (hour in 0 until 24) drawLine(line.copy(alpha = 0.4f), Offset(0f, (hour * 4 + 2) * height), Offset(size.width, (hour * 4 + 2) * height))
-                        for (hour in 0..24) drawLine(line, Offset(0f, hour * 4 * height), Offset(size.width, hour * 4 * height))
-                        for (day in 0..7) drawLine(line, Offset(day * width, 0f), Offset(day * width, size.height))
+                        hover?.let { (position, index) ->
+                            val paint = cells[index] ?: return@let
+                            val first = index - index % TimeMaps.CELLS_PER_DAY
+                            var start = index
+                            while (start > first && cells[start - 1] == paint) start--
+                            var end = index
+                            while (end < first + TimeMaps.CELLS_PER_DAY - 1 && cells[end + 1] == paint) end++
+                            fun time(cell: Int) = (cell % TimeMaps.CELLS_PER_DAY * TimeMaps.CELL).let { "${(it / 60).toString().padStart(2, '0')}:${(it % 60).toString().padStart(2, '0')}" }
+                            Surface(
+                                shape = MaterialTheme.shapes.small,
+                                color = MaterialTheme.colorScheme.inverseSurface,
+                                modifier = Modifier.testTag("time-map-block").layout { measurable, constraints ->
+                                    val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
+                                    layout(placeable.width, placeable.height) {
+                                        // Above the pointer and towards the middle of the grid: the label leaves the cell under the pointer visible and stays inside the dialog.
+                                        val x = if (position.x > constraints.maxWidth / 2) position.x - placeable.width - 8.dp.toPx() else position.x + 16.dp.toPx()
+                                        placeable.place(x.roundToInt(), (position.y - placeable.height - 4.dp.toPx()).roundToInt())
+                                    }
+                                },
+                            ) {
+                                Text(
+                                    "${DAY_NAMES[index / TimeMaps.CELLS_PER_DAY]} ${time(start)}-${if (end % TimeMaps.CELLS_PER_DAY == TimeMaps.CELLS_PER_DAY - 1) "24:00" else time(end + 1)}",
+                                    Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    style = MaterialTheme.typography.labelSmall,
+                                )
+                            }
+                        }
                     }
                 }
                 OutlinedTextField(
@@ -257,9 +304,13 @@ fun TimeMapEditor(
                         TimeMaps(others + (newKey to typed)).cells(newKey).forEachIndexed { index, paint -> cells[index] = paint }
                     },
                     label = { Text("Definition") },
-                    supportingText = { Text(warning ?: "Mon-Fri 08:00-12:00 13:00-17:00, Mon-Fri 07:00-08:00 yellow") },
+                    // Room for two lines, as a warning may take that.
+                    supportingText = { Text(warning ?: "Mon-Fri 08:00-12:00 13:00-17:00, Mon-Fri 07:00-08:00 yellow", minLines = 2) },
                     isError = warning != null,
                     textStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                    // A fixed height: painting changes the definition with each cell, and a field that grows and shrinks moves the grid under the pointer.
+                    minLines = 5,
+                    maxLines = 5,
                     modifier = Modifier.fillMaxWidth().testTag("time-map-definition"),
                 )
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

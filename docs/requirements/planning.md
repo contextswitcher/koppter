@@ -396,12 +396,13 @@ The plan dialog lists the time maps, each with its name, dates and definition; a
 The editor edits the name, the dates and the definition, which can be typed or painted, and deletes the map.
 `TimeMapEditor` shows the cells of `TimeMaps.cells`, a quarter of an hour each, one column per day from Monday on, and paints the half hours that a press or a drag touches with the chosen color, or clears them with the eraser; quarters of an hour are typed.
 A press on a half hour that has the chosen color already clears what the stroke touches, so that the same color undoes a stroke without a change to the eraser.
+While the mouse rests on a painted cell, a label beside the pointer names the day and the begin and end of the block of that color around it, such as `Sat 09:00-11:00`; a phone has no hover and shows no label.
 The button with the calendar in the field of the dates opens a calendar whose weeks start on Monday; *OK* puts the chosen date into the field at the cursor, or in place of the selected text, and leaves the cursor behind it, so that `..` or a space for a range or a list is typed next; *Cancel* leaves the field as it was.
 `TimeMaps.definition` writes the cells: one rule per color and per group of days with the same times, the days as ranges such as `Mon-Fri`, and without days if all seven have these times.
 A typed definition is shown on the cells, and painting writes the definition.
 A map without any painted cell has no definition, as a definition without rules holds all the time, and cannot be saved, except on dates, where it is `none`; a map restricted to another one keeps the name of that map in front.
 A map needs a name without spaces, and a name with dates that no other map has; what `TimeMaps` does not understand is shown, but does not prevent saving, as the map that a definition names may follow.
-Saving replaces the line of the map and leaves the other lines as they were typed; the time maps are saved with the next planning.
+Saving or deleting a map writes the time maps to `koppter.yml` at once, without planning; the line of the map is replaced and the other lines stay as they were typed.
 
 Covers:
 

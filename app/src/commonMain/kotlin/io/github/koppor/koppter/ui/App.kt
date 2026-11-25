@@ -679,7 +679,7 @@ private fun MainScreen(
         )
     }
     planning?.let {
-        PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onDismiss = { planning = null }, today = controller.today())
+        PlanDialog(settings = it, calendars = controller.calendars, onPlan = controller::planWithCalendars, onSaveTimeMaps = controller::saveTimeMaps, onDismiss = { planning = null }, today = controller.today())
     }
     // [impl->dsn~member-plan~1]
     timesOf?.let { member ->
