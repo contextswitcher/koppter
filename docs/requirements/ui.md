@@ -877,11 +877,11 @@ Covers:
 Needs: impl, utest
 
 ### Search for labels in the filter panel
-`dsn~filter-label-search~1`
+`dsn~filter-label-search~2`
 
-At its top, below the heading and the field for the text of the filter where the panel has one, `FilterPanel` has a field that narrows the projects, contexts and hashtags that the panel offers to those whose name contains the typed text, whatever the case of its letters.
+The projects, the contexts and the hashtags of `FilterPanel` each have a field at the end of their title line that narrows the values of that criterion to those whose name contains the typed text, whatever the case of its letters.
+A leading `+`, `@` or `#` is ignored.
 A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
-A text that starts with `+`, `@` or `#` finds projects, contexts or hashtags only.
 The field does not change the filter and is not kept.
 While it has a text, a button at its end empties it.
 

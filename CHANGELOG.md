@@ -33,6 +33,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- In the filter panel, the projects, the contexts and the hashtags each have a field *Search…* at the end of their title that narrows the labels of that kind; it replaces the field *Search labels* at the top of the panel.
 - The settings dialog takes the width of the window.
 - A selected chip, such as the current view or a choice in the settings, has the accent color, so that it stands out from the others.
 - In a wide window, the button for a new task stands at the top right, first among the buttons beside the views, instead of floating above the list.
