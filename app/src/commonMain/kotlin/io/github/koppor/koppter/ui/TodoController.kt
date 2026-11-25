@@ -901,7 +901,8 @@ class TodoController(
         val sideline = settings.sideline.lines().map(String::trim).filter(String::isNotEmpty)
         val fetch = fetch
         if (calendars != null && fetch != null) updateSettings(this.settings.copy(calendars = calendars.trim()))
-        if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter(String::isNotEmpty)) {
+        // A line starting with # is a comment, such as the name of the calendar above its address.
+        if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }) {
             try {
                 busyTimes(fetch(address), today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline)
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }

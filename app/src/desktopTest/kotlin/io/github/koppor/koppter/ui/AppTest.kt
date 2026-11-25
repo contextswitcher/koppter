@@ -2656,7 +2656,8 @@ class AppTest {
         assertEquals(2, logged.size)
 
         // The address of a calendar is a secret: the log names its host and the kind of failure only.
-        runBlocking { controller.planWithCalendars(controller.planSettings!!, "https://example.org/secret") }
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, "# calendar of Alina\nhttps://example.org/secret") }
+        assertEquals(false, logged.any { "Alina" in it.first })
         assertEquals(true, ("Calendar of example.org was not read: IllegalStateException" to null) in logged)
         assertEquals(false, logged.any { "secret" in it.first })
     }

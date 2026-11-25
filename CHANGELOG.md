@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- In *Calendars with busy times* of the plan dialog, a line starting with `#` is a comment, such as `# calendar of Alina` above an address.
+
 ### Fixed
 
 - The inbox shows the label *Outlook* at an item of Outlook, which opens the item in Outlook as it does in the list.
