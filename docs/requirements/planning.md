@@ -751,7 +751,8 @@ Needs: impl, utest
 ### Width of the calendar of today
 `dsn~today-resize~1`
 
-Between the agenda and the calendar of `Today`, a handle is dragged sideways to change the width of the calendar, between 260 dp and the width that leaves the agenda 600 dp.
+Between the agenda and the calendar of `Today`, a handle is dragged sideways to change the width of the calendar, between 260 dp and the width that leaves the agenda 400 dp.
+A line and a grip mark the handle, with a gap to the agenda and to the calendar on either side.
 The width is kept in the settings of the device as `todayCalendarWidth` when the drag ends.
 
 Covers:
