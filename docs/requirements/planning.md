@@ -553,7 +553,7 @@ Events of whole days, canceled events, events marked as free and the blocks that
 Repeating events are followed for the frequencies daily, weekly, monthly and yearly with interval, end, count, days of the week, days of the month and excluded dates.
 A time zone that the platform does not know by name counts as that of the device.
 An occurrence of a repeating event that was moved counts at its old and at its new time, as the entries that move occurrences are not matched to their series.
-The addresses of the calendars are a setting of the device, as they are secrets; the plan dialog edits them, one per line, and a line starting with `#` is a comment.
+The addresses of the calendars are a setting of the device, as they are secrets; the plan dialog edits them, one per line, and a `#` at the start of a line or after a blank starts a comment.
 `fetchCalendar` reads an address over HTTP or HTTPS; `TodoController.planWithCalendars` reads all calendars for a year from today, reports those it could not read by their host and plans with the others.
 
 Covers:

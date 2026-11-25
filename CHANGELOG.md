@@ -9,7 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
-- In *Calendars with busy times* of the plan dialog, a line starting with `#` is a comment, such as `# calendar of Alina` above an address.
+- In *Calendars with busy times* of the plan dialog, a `#` at the start of a line or after a blank starts a comment, such as `# calendar of Alina` above or after an address.
 
 ### Fixed
 
