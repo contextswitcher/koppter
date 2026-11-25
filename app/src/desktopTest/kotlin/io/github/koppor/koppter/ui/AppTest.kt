@@ -914,6 +914,24 @@ class AppTest {
         assertEquals(true, restarted)
     }
 
+    // [utest->dsn~whats-new~1]
+    @Test
+    fun theButtonOfAnUpdateShowsWhatIsNewBeforeItRestarts() = runComposeUiTest {
+        var restarted = false
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 25) })
+        setContent { App(controller, "todo.txt", update = { restarted = true }, updateNews = listOf("Added" to "A *new* feature.")) }
+        onNodeWithTag("restart-to-update").assertTextEquals("Restart to update (1)").performClick()
+        onNodeWithTag("whats-new-title").assertTextEquals("What's new: 1 change")
+        onNodeWithText("• A new feature.").assertExists()
+        onNodeWithTag("whats-new-later").performClick()
+        onNodeWithTag("whats-new-dialog").assertDoesNotExist()
+        assertEquals(false, restarted)
+
+        onNodeWithTag("restart-to-update").performClick()
+        onNodeWithTag("whats-new-restart").performClick()
+        assertEquals(true, restarted)
+    }
+
     // [utest->dsn~android-update~1]
     @Test
     fun theButtonOfAnUpdateSaysWhatItDoes() = runComposeUiTest {

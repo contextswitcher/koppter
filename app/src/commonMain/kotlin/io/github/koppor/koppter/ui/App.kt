@@ -159,6 +159,8 @@ fun App(
     update: (() -> Unit)? = null,
     /** The words of the button of [update]. */
     updateLabel: String = "Restart to update",
+    /** The `(heading, bullet)` pairs of the changelog that [update] brings; the button shows them before it restarts. */
+    updateNews: List<Pair<String, String>> = emptyList(),
     /** Gives the parts of the window that the platform draws, such as the title bar on Windows, the dark or the light variant. */
     windowVariant: (dark: Boolean) -> Unit = {},
     backHandler: @Composable (onBack: () -> Unit) -> Unit = {},
@@ -243,7 +245,7 @@ fun App(
             LocalProjectEditor provides projectEditor,
             LocalSetDue provides controller::setDue,
         ) {
-            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, updateLabel, backHandler, leave, homeScreen, onHomeScreen, apps)
+            MainScreen(controller, defaultTodoFile, chooseFile, chooseFolder, chooseFileNote, git, shareLog, version, pickImage, takePhoto, update, updateLabel, updateNews, backHandler, leave, homeScreen, onHomeScreen, apps)
         }
     }
 }
@@ -298,6 +300,7 @@ private fun MainScreen(
     takePhoto: (suspend () -> List<ByteArray>)?,
     update: (() -> Unit)?,
     updateLabel: String,
+    updateNews: List<Pair<String, String>>,
     backHandler: @Composable (onBack: () -> Unit) -> Unit,
     leave: () -> Unit,
     homeScreen: Boolean?,
@@ -305,6 +308,7 @@ private fun MainScreen(
     apps: (suspend () -> List<DeviceApp>)?,
 ) {
     var showApps by remember { mutableStateOf(false) }
+    var showNews by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<Editing?>(null) }
     // [impl->dsn~main-screen~1]
     // The floating buttons would cover the row at the bottom edge; they give way while the user scrolls down.
@@ -499,7 +503,11 @@ private fun MainScreen(
                 // [impl->dsn~restart-to-update~1]
                 // Words, as no icon tells that the application ends and comes back.
                 // [impl->dsn~android-update~1]
-                update?.let { TextButton(onClick = it, modifier = Modifier.testTag("restart-to-update")) { Text(updateLabel) } }
+                // [impl->dsn~whats-new~1]
+                update?.let { TextButton(onClick = { if (updateNews.isEmpty()) it() else showNews = true }, modifier = Modifier.testTag("restart-to-update")) {
+                    // The count says before the click whether the update brings anything to read.
+                    Text(if (updateNews.isEmpty()) updateLabel else "$updateLabel (${updateNews.size})")
+                } }
                 controller.syncStatus?.let { SyncIndicator(it, controller.lastSynchronized, onSync = controller::sync) }
                 if (controller.canSchedule) {
                     // [impl->dsn~plan-dialog~1]
@@ -671,6 +679,7 @@ private fun MainScreen(
             onDraft = { draft = it },
         )
     }
+    if (showNews && update != null) WhatsNewDialog(updateNews, onRestart = update, onDismiss = { showNews = false })
     if (showApps && apps != null) {
         AppsDialog(
             apps, controller.settings.appStarts,
