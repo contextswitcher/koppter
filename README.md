@@ -47,7 +47,9 @@ A long address is cut after 50 characters; the whole one appears when the pointe
 ![Task list with the filter panel on the left](docs/screenshots/list.png)
 
 The filter panel offers priorities, projects, contexts and hashtags as the labels that the tasks carry.
-The field *Search labels* below *Clear all filters* narrows the projects, contexts and hashtags that are offered to those that contain the typed text; `@` at its start shows contexts only, `+` projects and `#` hashtags.
+The field *Search…* at the end of the title of the projects, the contexts and the hashtags narrows the labels of that kind to those that contain the typed text.
+Where the text finds labels of another kind as well, the line below the field names them, and its button *Search there too* searches them there as well.
+The handle at the right edge of the panel changes its width.
 A right click on a project, a context or a hashtag there, or a long press on a touch screen, offers *Hide these tasks*: the tasks with that label are left out, such as those of an import that carry `#import`, until the label, which then stands after *not*, is clicked.
 *Rename…* in the same menu gives the label another name in all tasks, the completed ones and the scheduled tasks included; a project or a context below it follows, and so do the [links](#links-of-projects-and-contexts) and the [contexts of projects](#contexts-of-projects); the limits and board columns of `koppter.yml` are changed by hand.
 The filter and the view are kept on the device: after a restart, the application shows what it showed before.
@@ -760,7 +762,7 @@ A family uses koppter together, such as on a tablet in the hallway: the view *Fa
 | Ctrl+Shift+O, Ctrl+Shift+Y, Ctrl+Shift+C | List, agenda, week, as in SkedPal outline, today list and calendar |
 | Ctrl+Shift+L | Plan dialog |
 
-After a search with Ctrl+E, *Clear all filters* shows the open tasks again.
+After a search with Ctrl+E, *Clear all* in the filter panel shows the open tasks again.
 On macOS, the command key takes the place of Ctrl.
 There is no key yet that acts on a task of the list, such as completing or deleting it: the list has no marked task.
 

@@ -821,13 +821,16 @@ Covers:
 Needs: impl, utest
 
 ### Filter panel
-`dsn~filter-panel~1`
+`dsn~filter-panel~2`
 
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+The button *Clear all* in the heading resets the filter, *Top* and *Next*.
 The text of the filter is a field (`SearchField`) of the main screen above the list where the panel stands beside it; on a narrower screen, it is the first field of the panel in the drawer, and a search button to the left of the button for a new task opens the drawer and gives the field the focus.
 While the field has a text, a button at its end empties it.
 Priorities, projects, contexts and hashtags are shown as the labels that the task list uses for them.
-The selected values stand beside the title of the criterion and the other values below it, both sorted; a click on a label moves it to the other group.
+The selected values, framed in the accent color, stand below the title of the criterion and the other values below them, both sorted; a click on a label moves it to the other group.
+While none is selected or excluded, the word *any* follows the title.
+Without a keyboard, the area of a label that reacts to a tap reaches 10 dp above and below it, instead of 5 dp.
 From a width of 840 dp on, the main screen places the panel beside the list; below that, the panel is the content of a navigation drawer and has a button that closes it.
 
 Covers:
@@ -866,7 +869,7 @@ Needs: impl, utest
 
 `Filter` holds excluded projects, contexts and hashtags: `Filter.matches` leaves out a task that has one of them, a project or a context with those below it, whatever is selected.
 The menu of a label of the filter panel, which a click with the secondary button or a long press opens, has the entry *Hide these tasks*; it excludes the value and ends its selection.
-An excluded value stands beside the title of its criterion after the word *not*, and a click on it ends the exclusion; *Clear all filters* ends all of them.
+An excluded value stands beside the title of its criterion after the word *not*, and a click on it ends the exclusion; *Clear all* ends all of them.
 The exclusion is part of the filter, so that the list, the board, the overview and the inbox follow it.
 
 Covers:
@@ -883,7 +886,32 @@ The projects, the contexts and the hashtags of `FilterPanel` each have a field a
 A leading `+`, `@` or `#` is ignored.
 A project or a context above a found one stays, so that the tree keeps its shape; the selected and the excluded values stay as well.
 The field does not change the filter and is not kept.
-While it has a text, a button at its end empties it.
+While it has a text, a button at its end empties it, and a line below it says how many values it finds, for example *3 of 6 match*.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
+### Labels of another kind that a search finds
+`dsn~filter-label-search-elsewhere~1`
+
+While the text of the search field of projects, contexts or hashtags also finds labels of the other two kinds, and their fields do not hold the same text, the line below the field also names them with their numbers, for example *also: contexts (2), hashtags (1)*.
+Its button *Search there too* puts the text into the fields of these kinds.
+The other kinds are not narrowed while the text is typed, so that the panel does not change below the field that is typed into.
+
+Covers:
+
+* `req~filter-panel~1`
+
+Needs: impl, utest
+
+### Width of the filter panel
+`dsn~filter-resize~1`
+
+Where the filter panel stands beside the list, a handle between them is dragged sideways to change the width of the panel, between 260 dp and half the width of the window.
+The width is kept in the settings of the device as `filterWidth` when the drag ends.
 
 Covers:
 

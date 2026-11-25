@@ -367,6 +367,10 @@ class ScreenshotTest {
             if (width < 840) onNodeWithTag("open-search").performClick()
             onNodeWithTag("filter-text").performTextInput("photos")
         }
+        screen("filter-search") {
+            if (width < 840) onNodeWithTag("open-search").performClick()
+            onNodeWithTag("filter-contexts-search").performScrollTo().performTextInput("o")
+        }
         screen("today-groups", settings = Settings(listGroup = "PROJECT")) { onNodeWithTag("today-switch").performClick() }
         screen("edit") {
             // First a click that changes nothing: a dialog opened by a touch as the first input is missing in the image.

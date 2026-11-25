@@ -44,6 +44,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.swipeLeft
+import androidx.compose.ui.test.swipeRight
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.longClick
@@ -1121,6 +1122,7 @@ class AppTest {
     }
 
     // [utest->dsn~filter-label-search~2]
+    // [utest->dsn~filter-label-search-elsewhere~1]
     @Test
     fun theSearchForLabelsNarrowsWhatTheFilterPanelOffers() = runComposeUiTest {
         val labelled = MemoryStorage("Read the survey +papers>survey @research>reading #someday\nBuy paint +House @errands #money\n")
@@ -1154,12 +1156,26 @@ class AppTest {
         onNodeWithTag("filter-hashtag-someday").assertExists()
         onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
 
+        // A text that finds labels of another kind says so below its field, and Show searches there as well.
+        onNodeWithTag("filter-contexts-search-clear").performClick()
+        onNodeWithTag("filter-hashtags-search-clear").performClick()
+        onNodeWithTag("filter-projects-search").performScrollTo().performTextReplacement("e")
+        onNodeWithTag("filter-projects-search-elsewhere").assertTextEquals("also: contexts (3), hashtags (2)")
+        onNodeWithTag("filter-projects-search-count").assertTextEquals("3 of 3 match")
+        onNodeWithTag("filter-context-errands").assertExists()
+        onNodeWithTag("filter-projects-search-elsewhere-show").performClick()
+        onNodeWithTag("filter-contexts-search").assertTextEquals("e")
+        onNodeWithTag("filter-hashtags-search").assertTextEquals("e")
+        onNodeWithTag("filter-projects-search-elsewhere").assertDoesNotExist()
+        onNodeWithTag("filter-contexts-search-clear").performClick()
+        onNodeWithTag("filter-hashtags-search-clear").performClick()
+
         onNodeWithTag("filter-projects-search-clear").performClick()
         onNodeWithTag("filter-projects-search").assertTextEquals("Search…", "")
         onNodeWithTag("filter-project-House").assertExists()
     }
 
-    // [utest->dsn~filter-panel~1]
+    // [utest->dsn~filter-panel~2]
     @Test
     fun theTextOfTheFilterOfANarrowWindowLiesInTheDrawerThatTheSearchButtonOpens() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
@@ -1189,7 +1205,7 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
-    // [utest->dsn~filter-panel~1]
+    // [utest->dsn~filter-panel~2]
     @Test
     fun theFilterPanelRestrictsTheList() = runComposeUiTest {
         start()
@@ -2143,6 +2159,19 @@ class AppTest {
         onNodeWithTag("today-planned").assertTextEquals("30m planned")
     }
 
+    // [utest->dsn~filter-resize~1]
+    @Test
+    fun theFilterPanelIsResizedByItsHandle() = runDesktopComposeUiTest(width = 1600, height = 860) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        fun width() = onNodeWithTag("filter-panel").fetchSemanticsNode().size.width
+
+        val before = width()
+        onNodeWithTag("filter-resize").performTouchInput { swipeRight(centerX, centerX + 100f) }
+        assertTrue(width() > before)
+        assertTrue(controller.settings.filterWidth > 280)
+    }
+
     // [utest->dsn~today-resize~1]
     @Test
     fun theCalendarOfTodayIsResizedByItsHandle() = runDesktopComposeUiTest(width = 1600, height = 860) {
@@ -2963,7 +2992,7 @@ class AppTest {
     }
 
     // [utest->dsn~back~1]
-    // [utest->dsn~filter-panel~1]
+    // [utest->dsn~filter-panel~2]
     @Test
     fun backClosesTheFilterPanelThenReturnsToTheListAndWarnsBeforeItLeaves() = runDesktopComposeUiTest(width = 412, height = 760) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })

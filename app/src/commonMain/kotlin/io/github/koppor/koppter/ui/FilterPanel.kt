@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.size
@@ -29,7 +30,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -57,7 +58,7 @@ import io.github.koppor.koppter.todotxt.isWithin
  * The text of the filter is a field of the main screen, above the list, or of this panel where it lies in a drawer.
  * Priorities, projects, contexts and hashtags offer the values that occur in the file, as the labels that the tasks carry.
  */
-// [impl->dsn~filter-panel~1]
+// [impl->dsn~filter-panel~2]
 @Composable
 fun FilterPanel(
     filter: Filter,
@@ -82,7 +83,19 @@ fun FilterPanel(
 ) {
     Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp).testTag("filter-panel")) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Text("Filter", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).testTag("filter-heading"))
+            Text("Filter", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).testTag("filter-heading"))
+            // In the heading, not below the criteria: there it lay out of view in a window of common height, and the switches Open and Done stand last.
+            TextButton(
+                onClick = {
+                    onChange(Filter())
+                    onTopOnly(false)
+                    onNextOnly(false)
+                },
+                enabled = !filter.isDefault || topOnly || nextOnly,
+                modifier = Modifier.testTag("filter-clear"),
+            ) {
+                Text("Clear all")
+            }
             if (onClose != null) {
                 IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
             }
@@ -92,6 +105,22 @@ fun FilterPanel(
         var projectSearch by remember { mutableStateOf("") }
         var contextSearch by remember { mutableStateOf("") }
         var hashtagSearch by remember { mutableStateOf("") }
+        // A text typed for one kind of label may name a label of another kind; the line below the field says so
+        // instead of narrowing the other kinds at once, which would move the panel under the typing.
+        val kinds = listOf(
+            Triple("projects", projects, projectSearch) to { it: String -> projectSearch = it },
+            Triple("contexts", contexts, contextSearch) to { it: String -> contextSearch = it },
+            Triple("hashtags", hashtags, hashtagSearch) to { it: String -> hashtagSearch = it },
+        )
+        fun elsewhere(own: String): Elsewhere? {
+            val word = kinds.first { it.first.first == own }.first.third
+            val hits = kinds.filter { (kind, _) -> kind.first != own && kind.third != word }
+                .map { (kind, set) -> Triple(kind.first, found(kind.second, word).size, set) }
+                .filter { it.second > 0 }
+            if (hits.isEmpty()) return null
+            return Elsewhere(hits.joinToString(", ", prefix = "also: ") { (name, count) -> "$name ($count)" }) { hits.forEach { it.third(word) } }
+        }
+        val touch = !LocalKeyboard.current
 
         Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
             onChange(filter.copy(hideFuture = !it))
@@ -101,13 +130,14 @@ fun FilterPanel(
         // [impl->dsn~next-actions~1]
         Option("Only the next action of each project", nextOnly, "next-actions", onNextOnly)
 
-        LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }) { value, suffix, modifier ->
+        LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }, touch = touch) { value, suffix, modifier ->
             PriorityLabel(value, modifier, suffix)
         }
         // [impl->dsn~project-hierarchy~1]
         LabelFilter(
             "Projects", narrowed(projects, projectSearch), filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
-            search = projectSearch, onSearch = { projectSearch = it }, searchTag = "filter-projects-search",
+            search = projectSearch, onSearch = { projectSearch = it }, searchTag = "filter-projects-search", elsewhere = elsewhere("projects"), touch = touch,
+            matches = found(projects, projectSearch).size, total = projects.size,
             order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
             excluded = filter.excludedProjects, onInclude = { onChange(filter.copy(excludedProjects = filter.excludedProjects - it)) },
         ) { value, suffix, modifier ->
@@ -120,7 +150,8 @@ fun FilterPanel(
         // [impl->dsn~context-hierarchy~1]
         LabelFilter(
             "Contexts", narrowed(contexts, contextSearch), filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
-            search = contextSearch, onSearch = { contextSearch = it }, searchTag = "filter-contexts-search",
+            search = contextSearch, onSearch = { contextSearch = it }, searchTag = "filter-contexts-search", elsewhere = elsewhere("contexts"), touch = touch,
+            matches = found(contexts, contextSearch).size, total = contexts.size,
             order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
             excluded = filter.excludedContexts, onInclude = { onChange(filter.copy(excludedContexts = filter.excludedContexts - it)) },
         ) { value, suffix, modifier ->
@@ -133,7 +164,8 @@ fun FilterPanel(
         // [impl->dsn~hashtags-in-ui~1]
         LabelFilter(
             "Hashtags", narrowed(hashtags, hashtagSearch), filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
-            search = hashtagSearch, onSearch = { hashtagSearch = it }, searchTag = "filter-hashtags-search",
+            search = hashtagSearch, onSearch = { hashtagSearch = it }, searchTag = "filter-hashtags-search", elsewhere = elsewhere("hashtags"), touch = touch,
+            matches = found(hashtags, hashtagSearch).size, total = hashtags.size,
             excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
         ) { value, suffix, modifier ->
             val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
@@ -159,18 +191,6 @@ fun FilterPanel(
             )
             FilterChip(colors = selectedChipColors(), selected = open, onClick = { show(!open, done) }, label = { Text("Open") }, modifier = Modifier.testTag("filter-open"))
             FilterChip(colors = selectedChipColors(), selected = done, onClick = { show(open, !done) }, label = { Text("Done") }, modifier = Modifier.testTag("filter-done"))
-        }
-
-        OutlinedButton(
-            onClick = {
-                onChange(Filter())
-                onTopOnly(false)
-                onNextOnly(false)
-            },
-            enabled = !filter.isDefault || topOnly || nextOnly,
-            modifier = Modifier.padding(top = 12.dp).testTag("filter-clear"),
-        ) {
-            Text("Clear all filters")
         }
     }
 }
@@ -217,11 +237,19 @@ internal fun SearchField(value: String, onChange: (String) -> Unit, placeholder:
 
 /** The [values] whose name contains the [search] text, each with the values above it, so that a tree keeps its shape. */
 private fun narrowed(values: List<String>, search: String): List<String> {
-    val word = search.trim().trimStart('+', '@', '#')
-    if (word.isEmpty()) return values
-    val found = values.filter { it.contains(word, ignoreCase = true) }
+    if (search.isBlank()) return values
+    val found = found(values, search)
     return values.filter { value -> found.any { it.isWithin(value) } }
 }
+
+/** The [values] whose name contains the [search] text; a leading sign is ignored. */
+private fun found(values: List<String>, search: String): List<String> {
+    val word = search.trim().trimStart('+', '@', '#')
+    return if (word.isEmpty()) emptyList() else values.filter { it.contains(word, ignoreCase = true) }
+}
+
+/** The line below the field of one kind of label that names the other kinds in which its text finds labels. */
+private class Elsewhere(val text: String, val show: () -> Unit)
 
 /**
  * One criterion with several values, shown as the labels the task list uses for them.
@@ -238,7 +266,7 @@ private fun <T : Comparable<T>> LabelFilter(
     tag: (T) -> String,
     onChange: (Set<T>) -> Unit,
     order: Comparator<T> = naturalOrder(),
-    /** The level of a value in a hierarchy; with levels, the values form a tree, one value per line. */
+    /** The level of a value in a hierarchy; a value with values below it forms a tree, one value per line. */
     depth: (T) -> Int = { 0 },
     excluded: Set<T> = emptySet(),
     onInclude: (T) -> Unit = {},
@@ -246,24 +274,45 @@ private fun <T : Comparable<T>> LabelFilter(
     search: String? = null,
     onSearch: (String) -> Unit = {},
     searchTag: String = "",
+    elsewhere: Elsewhere? = null,
+    /** The number of values that [search] finds, of [total]. */
+    matches: Int = 0,
+    total: Int = 0,
+    /** Without a keyboard, the area of a label that reacts to a tap is higher, for a finger. */
+    touch: Boolean = false,
     label: @Composable (value: T, suffix: String, modifier: Modifier) -> Unit,
 ) {
     if (values.isEmpty() && search.isNullOrEmpty() && selected.isEmpty() && excluded.isEmpty()) return
     // The area that reacts to a click is larger than the label, which is too small for a finger.
+    val reach = if (touch) 10.dp else 5.dp
+    // A selected label has a frame in the accent color: the cross after its name alone hardly sets it apart.
+    val frame = MaterialTheme.colorScheme.primary
     fun modifier(value: T, isSelected: Boolean) = Modifier
         .clip(CircleShape)
         .toggleable(value = isSelected, role = Role.Checkbox, onValueChange = { onChange(if (it) selected + value else selected - value) })
         .testTag(tag(value))
-        .padding(vertical = 5.dp)
+        .padding(vertical = reach)
+        .let { if (isSelected) it.border(2.dp, frame, CircleShape) else it }
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(title, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(vertical = 5.dp))
         if (selected.isEmpty() && excluded.isEmpty()) {
-            Text("all", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("any", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         // At the end of the title line, as the field that adds a label stands at the end of the labels of a task in the editor.
         if (search != null) {
             Spacer(Modifier.weight(1f))
             SearchField(search, onSearch, "Search…", searchTag, Modifier.width(150.dp))
+        }
+    }
+    // [impl->dsn~filter-label-search-elsewhere~1]
+    // The search cuts the list, which says so.
+    if (!search.isNullOrBlank()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+            Text("$matches of $total match", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("$searchTag-count"))
+            if (elsewhere != null) {
+                Text(elsewhere.text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("$searchTag-elsewhere"))
+                TextButton(onClick = elsewhere.show, modifier = Modifier.testTag("$searchTag-elsewhere-show")) { Text("Search there too") }
+            }
         }
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -278,19 +327,28 @@ private fun <T : Comparable<T>> LabelFilter(
                     Modifier.clip(CircleShape)
                         .clickable(onClickLabel = "Show these tasks again", role = Role.Button) { onInclude(value) }
                         .testTag("${tag(value)}-excluded")
-                        .padding(vertical = 5.dp),
+                        .padding(vertical = reach),
                 )
             }
         }
     }
     val others = values.sortedWith(order).filter { it !in selected && it !in excluded }
-    if (values.any { depth(it) > 0 }) {
-        Column {
-            for (value in others) label(value, "", modifier(value, false).padding(start = 16.dp * depth(value)))
-        }
-    } else {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (value in others) label(value, "", modifier(value, false))
+    // A value with values below it starts a tree of one value per line; the values without any share lines.
+    val trees = mutableListOf<MutableList<T>>()
+    for (value in others) if (depth(value) == 0 || trees.isEmpty()) trees += mutableListOf(value) else trees.last() += value
+    var index = 0
+    while (index < trees.size) {
+        if (trees[index].size > 1) {
+            Column {
+                for (value in trees[index]) label(value, "", modifier(value, false).padding(start = 16.dp * depth(value)))
+            }
+            index++
+        } else {
+            val leaves = trees.drop(index).takeWhile { it.size == 1 }.flatten()
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (value in leaves) label(value, "", modifier(value, false).padding(start = 16.dp * depth(value)))
+            }
+            index += leaves.size
         }
     }
 }

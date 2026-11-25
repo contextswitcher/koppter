@@ -67,6 +67,15 @@ import androidx.compose.material3.TooltipBox
 import androidx.compose.material3.TooltipDefaults
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.background
+import kotlin.math.roundToInt
+import androidx.compose.ui.input.pointer.pointerHoverIcon
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.getValue
@@ -118,6 +127,9 @@ import kotlinx.datetime.LocalDateTime
 
 /** Width from which the filter panel stands beside the list instead of sliding over it. */
 private val WIDE = 840.dp
+
+/** The filter panel keeps the width of its search fields beside the titles of the criteria. */
+private val MIN_FILTER_WIDTH = 260.dp
 
 /** The room below the end of a view, so that the buttons that float at the bottom cover nothing that is scrolled to its end; none where nothing floats. */
 internal val FLOATING_BUTTONS_ROOM = 88.dp
@@ -398,7 +410,7 @@ private fun MainScreen(
         }
     }
 
-    // [impl->dsn~filter-panel~1]
+    // [impl->dsn~filter-panel~2]
     val searchField: @Composable (Modifier) -> Unit = { modifier ->
         SearchField(
             controller.filter.text,
@@ -482,6 +494,7 @@ private fun MainScreen(
 
     BoxWithConstraints(Modifier.fillMaxSize().focusRequester(rootFocus).onFocusChanged { focused = it.hasFocus }.focusable().onPreviewKeyEvent(::shortcut).testTag("main-screen")) {
         val wideNow = maxWidth >= WIDE
+        val windowWidth = maxWidth
         SideEffect { wide = wideNow }
         ModalNavigationDrawer(
             drawerState = drawer,
@@ -545,8 +558,25 @@ private fun MainScreen(
                         // The family view shows the day of everybody, which no filter narrows, and its columns take the width.
                         val filtered = controller.view != View.FAMILY
                         if (wideNow && filtered) {
-                            filterPanel(Modifier.width(280.dp).fillMaxHeight(), null)
-                            VerticalDivider()
+                            // [impl->dsn~filter-resize~1]
+                            // The list keeps at least half of the window, also when the window has narrowed since the width was chosen.
+                            val maxPanel = maxOf(MIN_FILTER_WIDTH, windowWidth / 2)
+                            val density = androidx.compose.ui.platform.LocalDensity.current
+                            var panelWidth by remember(controller.settings.filterWidth) { mutableStateOf(controller.settings.filterWidth.dp) }
+                            filterPanel(Modifier.width(panelWidth.coerceIn(MIN_FILTER_WIDTH, maxPanel)).fillMaxHeight(), null)
+                            Box(
+                                Modifier.fillMaxHeight().width(14.dp).testTag("filter-resize")
+                                    .pointerHoverIcon(androidx.compose.ui.input.pointer.PointerIcon.Hand)
+                                    .draggable(
+                                        rememberDraggableState { delta -> panelWidth = (panelWidth.coerceIn(MIN_FILTER_WIDTH, maxPanel) + with(density) { delta.toDp() }).coerceIn(MIN_FILTER_WIDTH, maxPanel) },
+                                        Orientation.Horizontal,
+                                        onDragStopped = { controller.updateSettings(controller.settings.copy(filterWidth = panelWidth.value.roundToInt())) },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                VerticalDivider()
+                                Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                            }
                         }
                         Column(Modifier.weight(1f)) {
                             // The line of the current time and the clock of the running task move on once a minute.

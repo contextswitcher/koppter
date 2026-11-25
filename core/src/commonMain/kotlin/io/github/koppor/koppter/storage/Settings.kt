@@ -54,6 +54,8 @@ data class Settings(
     val editWidth: Int = 760,
     /** The width of the calendar of `Today` in dp. */
     val todayCalendarWidth: Int = 400,
+    /** The width of the filter panel in dp where it stands beside the list. */
+    val filterWidth: Int = 280,
     /** The name in which git commits are made on this device; blank for that of the git configuration, or [defaultCommitterName]. */
     val committerName: String = "",
     /** The email address in which git commits are made on this device; blank for that of the git configuration, or [defaultCommitterEmail]. */
@@ -95,6 +97,7 @@ data class Settings(
         OVERVIEW_GROUP to overviewGroup,
         EDIT_WIDTH to editWidth.toString(),
         TODAY_CALENDAR_WIDTH to todayCalendarWidth.toString(),
+        FILTER_WIDTH to filterWidth.toString(),
         COMMITTER_NAME to committerName,
         COMMITTER_EMAIL to committerEmail,
         OUTLOOK_CALENDAR to outlookCalendar,
@@ -123,6 +126,7 @@ data class Settings(
         private const val OVERVIEW_GROUP = "overviewGroup"
         private const val EDIT_WIDTH = "editWidth"
         private const val TODAY_CALENDAR_WIDTH = "todayCalendarWidth"
+        private const val FILTER_WIDTH = "filterWidth"
         private const val COMMITTER_NAME = "committerName"
         private const val COMMITTER_EMAIL = "committerEmail"
         private const val OUTLOOK_CALENDAR = "outlookCalendar"
@@ -151,6 +155,7 @@ data class Settings(
             overviewGroup = properties[OVERVIEW_GROUP] ?: Settings().overviewGroup,
             editWidth = properties[EDIT_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().editWidth,
             todayCalendarWidth = properties[TODAY_CALENDAR_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().todayCalendarWidth,
+            filterWidth = properties[FILTER_WIDTH]?.toIntOrNull()?.takeIf { it > 0 } ?: Settings().filterWidth,
             committerName = properties[COMMITTER_NAME].orEmpty(),
             committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
             outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),

@@ -358,7 +358,7 @@ Needs: impl, utest
 `dsn~top-tasks~1`
 
 With the option *Only the first n tasks* of the filter panel on, `TodoController.visible` is cut to the first `topCount` entries of the filtered list in list order.
-*Clear all filters* turns the option off.
+*Clear all* in the filter panel turns the option off.
 
 Covers:
 
@@ -615,7 +615,7 @@ Needs: impl, utest
 `>` separates the levels of a context: `research>reading` lies below `research`.
 `Filter` and the context term of `Query` match a context and the contexts below it (`isWithin`); removing a context term from a task removes the contexts below it as well.
 `TaskLabels` shows the last level of a context and the path in a tooltip; a click on the label sets the filter to this context.
-`FilterPanel` offers the contexts of the file and the contexts above them as a tree, one context per line and indented by its level, as soon as one context has levels.
+`FilterPanel` offers the contexts of the file and the contexts above them as a tree: a context with contexts below it starts a tree of one context per line, indented by its level, and the contexts without any share lines.
 
 Covers:
 
@@ -631,7 +631,7 @@ Needs: impl, utest
 `Filter` and the project term of `Query` match a project and the projects below it (`isWithin`); removing a project term from a task removes the projects below it as well.
 A barrier or a limit of the plan for a project holds for the projects below it.
 `TaskLabels` shows the last level of a project and the path in a tooltip; a click on the label sets the filter to this project.
-`FilterPanel` offers the projects of the file and the projects above them as a tree, one project per line and indented by its level, as soon as one project has levels.
+`FilterPanel` offers the projects of the file and the projects above them as a tree: a project with projects below it starts a tree of one project per line, indented by its level, and the projects without any share lines.
 A group of the list or the board stands for one project with its whole path, without those below it.
 
 Covers:
@@ -954,7 +954,7 @@ Needs: impl, utest
 
 `actionable` gives the open tasks that can be worked on now: those without the context `@waiting` or one below it, without the hashtag `#someday`, whose start date has come, and that wait for no other open task through `id:` and `p:`.
 With the option *Only the next action of each project* of the filter panel on, `TodoController.visible` is cut by `nextActions` to these tasks, and of each project to the first one in list order among the filtered tasks; a task without project stays.
-*Clear all filters* turns the option off.
+*Clear all* in the filter panel turns the option off.
 `projectsWithoutNextAction` gives the projects that have an open task whose start date has come, but none that can be worked on, in the projects below them neither.
 `overviewStates` adds them to the tiles by project from all tasks of the file, whatever the filter shows, and `Overview` names them on the tile.
 

@@ -34,6 +34,12 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Changed
 
 - In the filter panel, the projects, the contexts and the hashtags each have a field *Search…* at the end of their title that narrows the labels of that kind; it replaces the field *Search labels* at the top of the panel.
+- Where the text of such a field also finds labels of another kind, the line below it names them, and its button *Search there too* searches them there as well; the line also says how many labels the search finds.
+- The button *Clear all* of the filter panel stands in its heading, so that it is in view without scrolling.
+- In the filter panel, a selected label is framed in the accent color, the word *any* follows the title of a criterion without a selection, and the heading *Filter* is bold.
+- Projects and contexts without any below them share lines in the filter panel instead of taking one line each.
+- On a touch screen, the labels of the filter panel react to a tap in a higher area.
+- A handle between the filter panel and the list changes the width of the panel; the width is kept.
 - The settings dialog takes the width of the window.
 - A selected chip, such as the current view or a choice in the settings, has the accent color, so that it stands out from the others.
 - In a wide window, the button for a new task stands at the top right, first among the buttons beside the views, instead of floating above the list.
