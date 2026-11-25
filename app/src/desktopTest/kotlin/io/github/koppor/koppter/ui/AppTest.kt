@@ -1722,10 +1722,10 @@ class AppTest {
         assertEquals("Added (inbox): An article", controller.share("An article"))
         assertEquals("An article", storage.text.trim().lines().last())
         assertEquals("Added (reading): A paper", controller.share("A paper", "reading"))
-        assertEquals("A paper +research @reading due:2026-11-26 dur:1h", storage.text.trim().lines().last())
+        assertEquals("A paper @research>reading due:2026-11-26 dur:1h", storage.text.trim().lines().last())
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-tab-tasks").performClick()
-        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} +research @reading due:2w dur:1h")
+        onNodeWithTag("settings-share-actions").performScrollTo().assertTextContains("inbox = {}\nreading = {} @research>reading due:2w dur:1h")
         // With the field cleared, there is no action, and the shared text is the task.
         onNodeWithTag("settings-share-actions").performTextReplacement("")
         onNodeWithTag("settings-save").performClick()
