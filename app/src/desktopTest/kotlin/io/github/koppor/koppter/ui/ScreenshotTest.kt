@@ -181,7 +181,7 @@ class ScreenshotTest {
         ),
     )
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update") {
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList()) {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
         val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
@@ -194,7 +194,7 @@ class ScreenshotTest {
                 val icon = ImageBitmap(64, 64).also { Canvas(it).drawCircle(Offset(32f, 32f), 30f, Paint().apply { color = Color.hsv((name.hashCode() and 0xffff) % 360f, 0.5f, 0.8f) }) }
                 DeviceApp(name, name, icon) {}
             }
-        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }, update = update, updateLabel = updateLabel) }
+        setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }, update = update, updateLabel = updateLabel, updateNews = updateNews) }
     }
 
     @Test
@@ -341,8 +341,8 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
-            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty())
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews)
             open()
             save("review/$size-$name.png")
         }
@@ -450,6 +450,11 @@ class ScreenshotTest {
         screen("home", homeScreen = true) {}
         // [utest->dsn~android-update~1]
         screen("update", updateLabel = "Update") {}
+        // [utest->dsn~whats-new~1]
+        screen(
+            "whats-new", updateLabel = "Restart to update",
+            updateNews = List(12) { "Added" to "A feature number ${it + 1} of the release, described in one sentence that is long enough to wrap on a phone." } + ("Fixed" to "A fix."),
+        ) { onNodeWithTag("restart-to-update").performClick() }
         screen("apps", homeScreen = true, settings = Settings(appStarts = "Hue=31\nevcc=12\nChrome=5\nSettings=2\nCamera=2\nClock=1")) { onNodeWithTag("open-apps").performClick() }
         // The last ones: the clock that runs and the time away stay in the file.
         storage.keepsWrites = true

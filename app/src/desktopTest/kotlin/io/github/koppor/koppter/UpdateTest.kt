@@ -31,4 +31,12 @@ class UpdateTest {
         // Without git or a repository, nothing is offered.
         assertEquals(0, commitsBehind(Files.createTempDirectory("koppter-no-repository").toFile(), running))
     }
+
+    // [utest->dsn~whats-new~1]
+    @Test
+    fun theNewsAreTheBulletsOfTheChangelogThatTheRunningVersionLacks() {
+        val running = "## [Unreleased]\n\n### Added\n\n- Old feature.\n"
+        val upstream = "## [Unreleased]\n\n### Added\n\n- New feature.\n\n### Fixed\n\n- A fix.\n\n## [2026-11-24] - 2026-11-24\n\n### Added\n\n- Old feature.\n"
+        assertEquals(listOf("Added" to "New feature.", "Fixed" to "A fix."), changelogNews(running, upstream))
+    }
 }

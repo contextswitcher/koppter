@@ -773,7 +773,7 @@ A text that another application shares to koppter, such as the link of an articl
 
 ```text
 inbox = {}
-reading = {} +research @reading due:2w dur:1h
+reading = {} @research>reading due:2w dur:1h
 ```
 
 * `{}` stands for the shared text; without it, the shared text stands in front.

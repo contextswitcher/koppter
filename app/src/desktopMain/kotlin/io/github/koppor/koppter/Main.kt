@@ -102,6 +102,20 @@ internal fun commitsBehind(checkout: File, running: String): Int {
 }
 
 /**
+ * The bullets of the changelog [newer] that the changelog [older] lacks, each with the `###` heading it stands under, such as `Added`.
+ * Compared by their text, as a release moves the bullets of *Unreleased* under a date without changing them.
+ */
+// [impl->dsn~whats-new~1]
+internal fun changelogNews(older: String, newer: String): List<Pair<String, String>> {
+    val known = older.lines().toSet()
+    var heading = ""
+    return newer.lines().mapNotNull { line ->
+        if (line.startsWith("### ")) heading = line.removePrefix("### ")
+        (heading to line.removePrefix("- ")).takeIf { line.startsWith("- ") && line !in known }
+    }
+}
+
+/**
  * Gives the drawing surface of [window] its size again after the scale of its display changed, which on Windows it keeps from the old scale.
  * Restoring and maximizing, or resizing, is what the user would do by hand.
  */
@@ -231,12 +245,18 @@ fun main(args: Array<String>) {
             LaunchedEffect(Unit) { refitAfterDisplayChange(window) }
             // [impl->dsn~restart-to-update~1]
             var updateWaits by remember { mutableStateOf(false) }
+            var updateNews by remember { mutableStateOf(emptyList<Pair<String, String>>()) }
             LaunchedEffect(Unit) {
                 // Set by `scripts/run-loop` to the commit it built, with the checkout as the working directory.
                 val running = System.getenv("KOPPTER_RUN_LOOP")?.ifBlank { null } ?: return@LaunchedEffect
                 withContext(Dispatchers.IO) {
-                    while (!updateWaits) {
-                        updateWaits = commitsBehind(File("."), running) > 0
+                    // Goes on after an update was found, so that the news include what was pushed since.
+                    while (true) {
+                        if (commitsBehind(File("."), running) > 0) {
+                            // [impl->dsn~whats-new~1]
+                            updateNews = changelogNews(git(File("."), "show", "$running:CHANGELOG.md").orEmpty(), git(File("."), "show", "@{u}:CHANGELOG.md").orEmpty())
+                            updateWaits = true
+                        }
                         delay(30.minutes)
                     }
                 }
@@ -252,6 +272,7 @@ fun main(args: Array<String>) {
                 version = remember { ClassLoader.getSystemResource("koppter-version.txt")?.readText()?.ifBlank { null } },
                 // Every change is in the file already, as on closing the window.
                 update = if (updateWaits) ({ exitProcess(RESTART_EXIT_CODE) }) else null,
+                updateNews = updateNews,
                 windowVariant = { titleBarVariant(window, it) },
             )
             // [impl->dsn~link-single-instance~1]

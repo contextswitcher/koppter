@@ -373,6 +373,17 @@ Covers:
 
 Needs: dsn
 
+### What's new before a restart
+`req~whats-new~1`
+
+Before the restart to an update, the user sees which changes the update brings, and can keep the running version.
+
+Covers:
+
+* `feat~platforms~1`
+
+Needs: dsn
+
 ### Window after a change of the displays
 `req~display-change~1`
 
@@ -1239,6 +1250,22 @@ Without the variable, the application neither fetches nor shows the button, as n
 Covers:
 
 * `req~restart-to-update~1`
+
+Needs: impl, utest
+
+### What's new before a restart
+`dsn~whats-new~1`
+
+With every fetch that finds an update, the desktop application compares `CHANGELOG.md` of the commit it runs with the one of the upstream branch (`changelogNews`).
+The news are the bullets of the upstream changelog that the running one lacks, compared by their text, as a release moves them under a date unchanged; each keeps the heading it stands under, such as *Added*.
+The button then carries their number, such as *Restart to update (3)*, and opens the dialog *What's new*, with their number in its title, such as *What's new: 3 changes*, and the bullets under their headings with the Markdown marks dropped; the list scrolls while the title and the buttons stay in view.
+*Restart* restarts; *Later*, Esc and a click beside the dialog close it and keep the running version and the button.
+Without news, as after an update of the build only, the button restarts at once, as before.
+The Android application passes no news, so its button stays as it is.
+
+Covers:
+
+* `req~whats-new~1`
 
 Needs: impl, utest
 
