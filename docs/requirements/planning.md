@@ -663,6 +663,18 @@ Covers:
 
 Needs: impl, utest
 
+### Plan again on completion
+`dsn~replan-on-completion~1`
+
+Completing a task that has a block today plans again with the saved configuration and calendars, as *Save and plan* does, so that the freed time goes to the tasks that are due and have no block today.
+Completing any other task does not plan again, as planning may move every block from now on.
+
+Covers:
+
+* `req~plan~1`
+
+Needs: impl, utest
+
 ### Agenda and week
 `dsn~agenda~1`
 
