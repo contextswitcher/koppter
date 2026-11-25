@@ -1120,44 +1120,43 @@ class AppTest {
         assertEquals(empty, onNodeWithTag("filter-text").fetchSemanticsNode().size.height)
     }
 
-    // [utest->dsn~filter-label-search~1]
+    // [utest->dsn~filter-label-search~2]
     @Test
     fun theSearchForLabelsNarrowsWhatTheFilterPanelOffers() = runComposeUiTest {
         val labelled = MemoryStorage("Read the survey +papers>survey @research>reading #someday\nBuy paint +House @errands #money\n")
         val controller = TodoController(Settings(), { labelled }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
 
-        onNodeWithTag("filter-labels-clear").assertDoesNotExist()
-        // A found project keeps the project above it; the case of the letters does not count.
-        onNodeWithTag("filter-labels").performScrollTo().performTextInput("SURV")
+        onNodeWithTag("filter-projects-search-clear").assertDoesNotExist()
+        // A found project keeps the project above it; the case of the letters does not count; other kinds stay.
+        onNodeWithTag("filter-projects-search").performScrollTo().performTextInput("SURV")
         onNodeWithTag("filter-project-papers").assertExists()
         onNodeWithTag("filter-project-papers>survey").assertExists()
         onNodeWithTag("filter-project-House").assertDoesNotExist()
-        onNodeWithTag("filter-context-errands").assertDoesNotExist()
-        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+        onNodeWithTag("filter-context-errands").assertExists()
+        onNodeWithTag("filter-hashtag-money").assertExists()
         // The tasks stay as they are.
         onAllNodesWithTag("task").assertCountEquals(2)
 
-        // The sign of a kind of label restricts the search to that kind.
-        onNodeWithTag("filter-labels").performTextReplacement("@e")
+        // The sign of the kind is ignored.
+        onNodeWithTag("filter-contexts-search").performScrollTo().performTextInput("@e")
         onNodeWithTag("filter-context-errands").assertExists()
         onNodeWithTag("filter-context-research").assertExists()
         onNodeWithTag("filter-context-research>reading").assertExists()
-        onNodeWithTag("filter-project-House").assertDoesNotExist()
-        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
 
         // A selected label stays whatever is searched.
         onNodeWithTag("filter-context-errands").performClick()
-        onNodeWithTag("filter-labels").performTextReplacement("#some")
+        onNodeWithTag("filter-contexts-search").performTextReplacement("read")
         onNodeWithTag("filter-context-errands").assertIsOn()
-        onNodeWithTag("filter-context-research").assertDoesNotExist()
-        onNodeWithTag("filter-hashtag-someday").assertExists()
+        onNodeWithTag("filter-context-research>reading").assertExists()
 
-        onNodeWithTag("filter-labels-clear").performClick()
-        onNodeWithTag("filter-labels").assertTextEquals("Search labels", "")
+        onNodeWithTag("filter-hashtags-search").performScrollTo().performTextInput("some")
+        onNodeWithTag("filter-hashtag-someday").assertExists()
+        onNodeWithTag("filter-hashtag-money").assertDoesNotExist()
+
+        onNodeWithTag("filter-projects-search-clear").performClick()
+        onNodeWithTag("filter-projects-search").assertTextEquals("Search…", "")
         onNodeWithTag("filter-project-House").assertExists()
-        onNodeWithTag("filter-context-research").assertExists()
-        onNodeWithTag("filter-hashtag-money").assertExists()
     }
 
     // [utest->dsn~filter-panel~1]
