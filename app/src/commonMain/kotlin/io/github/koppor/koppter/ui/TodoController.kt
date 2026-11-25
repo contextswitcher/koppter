@@ -1183,6 +1183,10 @@ class TodoController(
         write(withChanged(file, changed).add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
     }
 
+    /** Whether the open task has a block today: completing it frees time for the tasks without one. */
+    fun plannedToday(entry: Entry): Boolean =
+        !entry.task.completed && planBlocks.orEmpty().any { it.date == today() && it.text == planNames[entry] }
+
     fun toggle(entry: Entry) {
         // [impl->dsn~latex-todos~1]
         // The document is not changed: the completed line hides the TODO until its text changes.

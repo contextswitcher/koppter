@@ -9,6 +9,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- Completing a task that has a block today plans again, so that the freed time goes to the tasks that are due without a block today.
 - *Restart to update* on the desktop shows the number of changes that the update brings and, when clicked, first shows *What's new*: the entries of this changelog that the update brings, with *Restart* and *Later*.
 - In the editor of a time map, the mouse over a painted block shows its day and its begin and end time, such as *Sat 09:00-11:00*.
 - The button *+1h spent* of a block in Today explains in a tooltip that it adds the length of the block to the time spent on the task.

@@ -596,6 +596,13 @@ private fun MainScreen(
                             }
                             val running = controller.running
                             val clock: (Entry) -> Unit = { if (it == running) controller.stop(it) else controller.start(it) }
+                            // [impl->dsn~replan-on-completion~1]
+                            val toggle: (Entry) -> Unit = { entry ->
+                                val replan = controller.plannedToday(entry)
+                                controller.toggle(entry)
+                                val settings = controller.planSettings
+                                if (replan && settings != null) scope.launch { controller.planWithCalendars(settings, controller.calendars) }
+                            }
                             // [impl->dsn~outlook-appointments~1]
                             val appointmentScope = rememberCoroutineScope()
                             val sidelineWords = controller.sidelineWords
@@ -622,12 +629,12 @@ private fun MainScreen(
                             if (controller.view == View.OVERVIEW) {
                                 // An opened tile belongs to the attribute that was chosen: another one starts with the tiles.
                                 androidx.compose.runtime.key(controller.overviewKey) {
-                                    Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), controller::toggle, open, emptyText)
+                                    Overview(overviewStates(controller.visible, controller.today(), controller.overviewKey, controller.file.entries), controller.today(), toggle, open, emptyText)
                                 }
                             } else if (controller.view == View.AGENDA) {
-                                Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), controller::toggle, open, controller::worked, running = running, onClock = clock)
+                                Agenda(controller.shownBlocks, controller.dueUnplanned, controller::entryOf, controller.today(), toggle, open, controller::worked, running = running, onClock = clock)
                             } else if (controller.view == View.TODAY) {
-                                Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, controller::toggle, open, controller::worked, running, clock,
+                                Today(controller.planBlocks, controller.dueUnplanned, controller::entryOf, controller::planSuffix, controller.today(), minute, toggle, open, controller::worked, running, clock,
                                     onAway = away,
                                     calendarWidth = controller.settings.todayCalendarWidth,
                                     onCalendarWidth = { controller.updateSettings(controller.settings.copy(todayCalendarWidth = it)) },
@@ -640,16 +647,16 @@ private fun MainScreen(
                             } else if (controller.view == View.FAMILY) {
                                 FamilyCalendar(
                                     controller.file.entries, controller.members, controller::blocksOf, controller.today(), minute,
-                                    controller.rankingPeriod, { controller.rankingPeriod = it }, controller::toggle, open,
+                                    controller.rankingPeriod, { controller.rankingPeriod = it }, toggle, open,
                                     onAdd = { editing = Editing(null, context = it) },
                                     onTimes = { timesOf = it },
                                     problems = controller.absenceProblems,
                                 )
                             } else if (controller.view == View.INBOX) {
-                                Inbox(controller.inbox, controller.contexts, controller::assignContext, controller::toggle, open)
+                                Inbox(controller.inbox, controller.contexts, controller::assignContext, toggle, open)
                             } else if (controller.board) {
                                 Board(
-                                    controller.groups, controller.today(), controller::toggle, onOpen = { editing = Editing(it) },
+                                    controller.groups, controller.today(), toggle, onOpen = { editing = Editing(it) },
                                     moved = controller::moved,
                                     onMove = controller::move,
                                     emptyText = emptyText,
@@ -658,7 +665,7 @@ private fun MainScreen(
                             } else {
                                 TaskList(
                                     controller.listGroups, controller.today(),
-                                    controller::toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
+                                    toggle, { editing = Editing(it) }, controller::step, controller::drop, emptyText,
                                     priorities = controller.listGroupKey == GroupKey.PRIORITY,
                                 )
                             }

@@ -2023,6 +2023,22 @@ class AppTest {
         onNodeWithTag("plan-context-maps").assertTextContains("@home = Evenings")
     }
 
+    // [utest->dsn~replan-on-completion~1]
+    @Test
+    fun completingATaskWithABlockTodayGivesItsTimeToATaskThatIsDueWithoutOne() = runComposeUiTest {
+        storage.text = "(A) Thank Mom @phone dur:1h due:2026-11-12\n(B) Post signs dur:1h due:2026-11-12\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 })
+        setContent { App(controller, "todo.txt") }
+        controller.plan(PlanSettings("General = Mon-Fri 09:00-10:00", "", ""))
+        onNodeWithTag("today-switch").performClick()
+        onNodeWithTag("agenda-due").assertExists()
+
+        onAllNodesWithTag("task-done")[0].performClick()
+        waitUntil { !storage.companions.getValue("calendar.txt").contains("Thank Mom") }
+        assertEquals("2026-11-12 w46 Thu  09:00-10:00 Post signs\n", storage.companions.getValue("calendar.txt"))
+        onNodeWithTag("agenda-due").assertDoesNotExist()
+    }
+
     // [utest->dsn~agenda~1]
     @Test
     fun theAgendaShowsTheBlocksOfTheNextDaysAndWhatIsDueWithoutABlock() = runComposeUiTest {
