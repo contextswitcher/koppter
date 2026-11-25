@@ -12,6 +12,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - In *Calendars with busy times* of the plan dialog, a `#` at the start of a line or after a blank starts a comment, such as `# calendar of Alina` above or after an address.
 - The tag `exp:` states the last day of a task: an open task is removed from the todo.txt file the day after, and until then it is planned and shown as due on that day, unless it has a due date of its own.
 
+### Fixed
+
+- The inbox shows the label *Outlook* at an item of Outlook, which opens the item in Outlook as it does in the list.
+
 ## [2026-11-24] - 2026-11-24
 
 ### Added
@@ -412,6 +416,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The release of a day on GitHub carries the signed Android application as an APK file.
 - Project infrastructure: Gradle build with a Kotlin Multiplatform `core` module, requirements tracing, decision records and continuous integration.
 
+[Unreleased]: https://github.com/contextswitcher/koppter/compare/v2026-11-24...HEAD
 [2026-11-24]: https://github.com/contextswitcher/koppter/compare/v2026-11-23...v2026-11-24
 [2026-11-23]: https://github.com/contextswitcher/koppter/compare/v2026-11-22...v2026-11-23
 [2026-11-22]: https://github.com/contextswitcher/koppter/compare/v2026-11-21...v2026-11-22

@@ -687,6 +687,8 @@ fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String
                         Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, modifier = Modifier.testTag("task-done"))
                         Text(entry.task.description, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 4.dp))
                         entry.task.hashtags.forEach { HashtagLabel(it, Modifier.testTag("inbox-hashtag-$it")) }
+                        // [impl->dsn~outlook-tag~1]
+                        entry.task.tag(Task.OUTLOOK)?.let { OutlookLabel(it) }
                     }
                     // The contexts below are choices, not contexts of the task: a click gives the task that context.
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center) {

@@ -817,7 +817,7 @@ Needs: impl, utest
 `dsn~outlook-tag~1`
 
 The tag `ol:` holds the EntryID of an item of Outlook as its bytes in Base64 for URLs, without padding (`Outlook.tag`, `Outlook.entryId`).
-`TaskLabels` shows the tag as the label *Outlook*, which opens the link `anchor://outlook/message/<EntryID>?v=1` (`Outlook.anchor`); `App` hands such a link to `TodoController.openOutlook`, which runs `ankd outlook-open` with it.
+`TaskLabels`, and `Inbox` next to the hashtags, show the tag as the label *Outlook* (`OutlookLabel`), which opens the link `anchor://outlook/message/<EntryID>?v=1` (`Outlook.anchor`); `App` hands such a link to `TodoController.openOutlook`, which runs `ankd outlook-open` with it.
 The link names no store: AnchorHub looks for the EntryID in all of them.
 
 Covers:
