@@ -70,7 +70,7 @@ object ConfigFile {
      * The share actions of a configuration that does not have the key: the shared text alone, which the entry of the application
      * in the share sheet applies as the first action, and an example of an action that adds something, for the user to choose.
      */
-    val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("inbox", "{}"), ShareAction("reading", "{} +research @reading due:2w dur:1h"))
+    val DEFAULT_SHARE_ACTIONS = listOf(ShareAction("inbox", "{}"), ShareAction("reading", "{} @research>reading due:2w dur:1h"))
 
     /** What a new task starts with in a configuration that does not have the key: a middle priority and the end of the next week. */
     val DEFAULT_NEW_TASK = listOf("priority" to "C", "due" to "next weekend")

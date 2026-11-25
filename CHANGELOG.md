@@ -13,6 +13,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - The button *+1h spent* of a block in Today explains in a tooltip that it adds the length of the block to the time spent on the task.
 - A link to a page of OneNote, as *Copy Link to Page* copies it, is kept as the tag `onenote:` and shown as a label with the name of the page, which opens the page; the address for the browser that OneNote copies with it is dropped.
 
+### Changed
+
+- The default share action *reading* adds `@research>reading` instead of `+research @reading`: research is the area, as context, and reading the context below it.
+
 ### Fixed
 
 - Painting in the editor of a time map no longer makes the dialog jump: the field of the definition and the line below it keep their height.
