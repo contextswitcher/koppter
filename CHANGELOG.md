@@ -15,6 +15,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - In Today, the handle between the agenda and the calendar shows a line and has more room on both sides, and the calendar can be dragged wider: the agenda keeps 400 dp instead of 600 dp.
 
+### Fixed
+
+- The inbox shows the label *Outlook* at an item of Outlook, which opens the item in Outlook as it does in the list.
+
 ## [2026-11-24] - 2026-11-24
 
 ### Added

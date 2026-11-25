@@ -211,6 +211,24 @@ fun Label(text: String, container: Color, content: Color, modifier: Modifier = M
     }
 }
 
+/** The label of the tag `ol:`, which opens the item in Outlook; nothing for a value that is no EntryID. */
+// [impl->dsn~outlook-tag~1]
+@Composable
+fun OutlookLabel(value: String) {
+    // The value is an EntryID of almost a hundred characters, which says nothing to the user.
+    val entryId = Outlook.entryId(value) ?: return
+    val uriHandler = LocalUriHandler.current
+    Label(
+        "Outlook",
+        linkColors().first,
+        linkColors().second,
+        Modifier.clip(RoundedCornerShape(percent = 50))
+            .clickable(onClickLabel = "Open the item in Outlook", role = Role.Button) { uriHandler.openUri(Outlook.anchor(entryId)) }
+            .pointerHoverIcon(PointerIcon.Hand)
+            .testTag("label-outlook"),
+    )
+}
+
 /**
  * The labels of a task in the order projects, contexts, hashtags, tags, priority.
  * All colors come from the theme, so that the labels follow light and dark mode.
@@ -300,19 +318,7 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                     .testTag("label-cs"),
                 key = "$key:",
             )
-            // [impl->dsn~outlook-tag~1]
-            // The value is an EntryID of almost a hundred characters, which says nothing to the user.
-            key == Task.OUTLOOK -> Outlook.entryId(value)?.let { entryId ->
-                Label(
-                    "Outlook",
-                    linkColors().first,
-                    linkColors().second,
-                    Modifier.clip(RoundedCornerShape(percent = 50))
-                        .clickable(onClickLabel = "Open the item in Outlook", role = Role.Button) { uriHandler.openUri(Outlook.anchor(entryId)) }
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .testTag("label-outlook"),
-                )
-            }
+            key == Task.OUTLOOK -> OutlookLabel(value)
             // [impl->dsn~onenote-tag~1]
             // The name of a page can be longer than the card is wide.
             key == Task.ONENOTE -> WithTooltip(Task.oneNotePage(value) ?: value) {
