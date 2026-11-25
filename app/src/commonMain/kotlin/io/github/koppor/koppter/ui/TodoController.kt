@@ -55,6 +55,7 @@ import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.archive
+import io.github.koppor.koppter.todotxt.expire
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
@@ -1047,8 +1048,31 @@ class TodoController(
             return
         }
         if (version != loadedVersion) load() else loadConfig()
+        // Before the scheduled tasks, so that a task that expired yesterday does not count as present for its next occurrence.
+        removeExpired()
         addScheduledTasks()
         archiveCompleted()
+    }
+
+    /** The day of the last look for expired tasks. */
+    private var expiryChecked: LocalDate? = null
+
+    /**
+     * Removes the open tasks whose last day, the tag `exp:`, has passed.
+     * It waits for a running synchronization, as the scheduled tasks do, so that a task completed on another device is not removed.
+     */
+    // [impl->dsn~expiry~1]
+    private fun removeExpired() {
+        val today = today()
+        if (expiryChecked == today || syncStatus?.state == SyncState.RUNNING) return
+        guarded {
+            val expired = expire(file, today)
+            if (expired != null) {
+                val names = expired.removed.joinToString(", ") { it.description }
+                write(expired.file, if (expired.removed.size == 1) "Remove expired task: $names" else "Remove expired tasks: $names")
+            }
+            expiryChecked = today
+        }
     }
 
     /** The day of the last look for tasks to archive: the history is read for it, which is too slow for every reload. */
