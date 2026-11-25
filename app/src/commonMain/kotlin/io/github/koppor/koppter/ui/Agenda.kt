@@ -60,6 +60,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -587,15 +588,16 @@ fun Today(
             // The cards of the agenda need about 500 dp to keep their labels on one line beside the text.
             val wide = maxWidth >= 760.dp
             val height = maxHeight
-            // The agenda keeps 600 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen.
-            val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 600.dp)
+            // The agenda keeps 400 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen;
+            // with 600 dp, the calendar of a laptop window could not grow beyond its default.
+            val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 400.dp)
             Row(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) { Agenda(blocks?.filter(matches), dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf) }
                 if (wide) {
                     val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
                     // [impl->dsn~today-resize~1]
                     Box(
-                        Modifier.fillMaxHeight().width(14.dp).testTag("today-resize")
+                        Modifier.fillMaxHeight().padding(horizontal = 8.dp).width(24.dp).testTag("today-resize")
                             .pointerHoverIcon(PointerIcon.Hand)
                             .draggable(
                                 rememberDraggableState { delta -> shownWidth = (shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) - with(density) { delta.toDp() }).coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) },
@@ -604,6 +606,7 @@ fun Today(
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
+                        VerticalDivider()
                         Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
                     }
                     val spans = ofDay.map { it.span } + appointmentSpans

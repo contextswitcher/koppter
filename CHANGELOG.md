@@ -15,6 +15,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 ### Changed
 
 - A TODO of a LaTeX document, and a task that refers to one, can no longer be ticked off: its checkbox is disabled, as the TODO is done only when it is removed from the document.
+- In Today, the handle between the agenda and the calendar shows a line and has more room on both sides, and the calendar can be dragged wider: the agenda keeps 400 dp instead of 600 dp.
 
 ### Fixed
 
