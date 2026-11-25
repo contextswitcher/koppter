@@ -24,6 +24,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -1372,10 +1373,12 @@ class AppTest {
         onNodeWithText("Cite the study", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
 
-        // Completing a TODO writes a completed line, which hides it; the document stays as it is.
+        // A TODO is done when it is removed from the document: its checkbox is disabled, and toggling it changes nothing.
+        onAllNodes(hasTestTag("task-done") and hasAnyAncestor(hasTestTag("task") and hasAnyDescendant(hasText("Cite the study"))), useUnmergedTree = true)
+            .onFirst().assertIsNotEnabled()
         runOnIdle { controller.toggle(controller.visible.first { it.task.description.startsWith("Cite the study") }) }
-        assertTrue(storage.text.trim().lines().last().matches(Regex("x (\\S+ )?Cite the study \\+GarageSale #latex tex:\\w+")), storage.text)
-        assertTrue(controller.visible.none { it.task.description.startsWith("Cite the study") })
+        assertEquals(before, storage.text)
+        assertEquals(1, controller.visible.count { it.task.description.startsWith("Cite the study") })
         assertEquals(1, controller.visible.count { it.task.description.startsWith("Add the outline") })
 
         // [utest->dsn~latex-rematch~1]

@@ -51,6 +51,9 @@ class ScreenshotTest {
     private val storage = object : SyncingStorage, CompanionFiles {
         /** Whether writes are kept, for the screens that show what an action wrote; the other screens start from the same file. */
         var keepsWrites = false
+
+        /** Lines that one screen adds to the file, so that the other screens and the images of the README stay as they are. */
+        var extra = ""
         private val companions = mutableMapOf(
             "koppter.yml" to """
                 board-columns:
@@ -123,7 +126,7 @@ class ScreenshotTest {
             x Thank Mom for the meatballs +Family @phone
         """.trimIndent() + "\n"
 
-        override fun read() = text
+        override fun read() = text + extra
         override fun write(text: String, change: String) {
             if (keepsWrites) this.text = text
         }
@@ -341,12 +344,18 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), extra: String = "", open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+            storage.extra = extra
             start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews)
             open()
             save("review/$size-$name.png")
         }
         screen("list") {}
+        // [utest->dsn~latex-todos~1]
+        screen("latex-todo", extra = "Cite the survey on remote work +Paper #latex tex:1x2y3z\n") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("task-list").performScrollToNode(hasText("Cite the survey", substring = true))
+        }
         screen("overdue-tooltip") {
             onNodeWithTag("list-switch").performClick()
             onNodeWithTag("group-PRIORITY").performScrollTo().performClick()

@@ -292,7 +292,7 @@ private fun MemberHeader(member: String, onAdd: (() -> Unit)?, modifier: Modifie
 private fun FamilyTask(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () -> Unit) {
     val task = entry.task
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("family-task"), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("family-toggle"))
+        Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, enabled = task.completable, modifier = Modifier.testTag("family-toggle"))
         Column(Modifier.weight(1f)) {
             Text(
                 task.description,

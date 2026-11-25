@@ -113,7 +113,7 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onToggle: (Entry) ->
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, modifier = Modifier.testTag("task-done"))
+                    Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, enabled = entry.task.completable, modifier = Modifier.testTag("task-done"))
                     LinkedText(entry.task.description, Modifier.weight(1f))
                     if (urgency != null) {
                         Column(Modifier.width(150.dp), horizontalAlignment = Alignment.CenterHorizontally) {

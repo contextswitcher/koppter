@@ -1215,11 +1215,7 @@ class TodoController(
 
     fun toggle(entry: Entry) {
         // [impl->dsn~latex-todos~1]
-        // The document is not changed: the completed line hides the TODO until its text changes.
-        if (Outlook.isItem(entry) && entry.task.tag(Task.LATEX) != null) {
-            write(file.add(entry.task.complete(today(), settings.writeDates)), "Complete task: ${entry.task.description}")
-            return
-        }
+        if (!entry.task.completable) return
         // [impl->dsn~outlook-complete~1]
         if (Outlook.isItem(entry)) {
             entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId ->
