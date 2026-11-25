@@ -1012,7 +1012,7 @@ The workflows build the release variant, signed with a key that is a secret of t
 | --- | --- |
 | [CHANGELOG.md](CHANGELOG.md) | User-visible changes, [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) format, [CalVer](https://calver.org/) releases |
 | [docs/organizing.md](docs/organizing.md) | A way to organize many tasks with contexts, projects, dates and the plan |
-| [docs/related-work.md](docs/related-work.md) | Comparison with other applications for tasks in plain text files |
+| [docs/related-work.md](docs/related-work.md) | The idea koppter started from, its roadmap, and the comparison with other applications for tasks and for planning |
 | [docs/requirements](docs/requirements/README.md) | Features, requirements and design, traced to code |
 | [docs/decisions](docs/decisions/README.md) | Architectural decisions as [MADR](https://adr.github.io/madr/) |
 | [CLAUDE.md](CLAUDE.md) | Conventions for development sessions with Claude Code |
