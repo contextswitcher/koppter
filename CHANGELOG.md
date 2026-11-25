@@ -7,6 +7,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ## [Unreleased]
 
+### Added
+
+- In *Calendars with busy times* of the plan dialog, a line starting with `#` is a comment, such as `# calendar of Alina` above an address.
+
 ### Changed
 
 - In Today, the handle between the agenda and the calendar shows a line and has more room on both sides, and the calendar can be dragged wider: the agenda keeps 400 dp instead of 600 dp.
