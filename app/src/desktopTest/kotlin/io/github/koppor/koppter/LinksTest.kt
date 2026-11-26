@@ -56,4 +56,31 @@ class LinksTest {
             schemeEntries("C:\\Users\\Demo User\\AppData\\Local\\koppter\\koppter.exe"),
         )
     }
+
+    // [utest->dsn~link-scheme-linux~1]
+    @Test
+    fun theDesktopEntryOpensTheSchemeWithTheProgramAndTheLink() {
+        assertEquals(
+            """
+            [Desktop Entry]
+            Type=Application
+            Name=koppter
+            Exec=/opt/koppter/bin/koppter %u
+            MimeType=x-scheme-handler/koppter;
+            NoDisplay=true
+            Terminal=false
+
+            """.trimIndent(),
+            linuxLinkEntry("/opt/koppter/bin/koppter"),
+        )
+    }
+
+    // [utest->dsn~link-scheme-linux~1]
+    @Test
+    fun aProgramPathWithSpecialSignsIsQuotedForTheDesktopEntry() {
+        val dollar = '$'
+        val exec = linuxLinkEntry("""/home/a "b"/${dollar}x/50%/c\d/bin/koppter""").lines().single { it.startsWith("Exec=") }
+        // A backslash in the path is escaped twice: once for Exec, once for the string value of the entry.
+        assertEquals("""Exec="/home/a \"b\"/\${dollar}x/50%%/c\\\\d/bin/koppter" %u""", exec)
+    }
 }

@@ -235,6 +235,11 @@ fun main(args: Array<String>) {
     val links = Channel<String>(Channel.UNLIMITED)
     link?.let(links::trySend)
     port.listen { links.trySend(it) }
+    // [impl->dsn~link-scheme-macos~1]
+    // macOS starts no second program for a link: it hands the link to the running one, or to the one it starts.
+    if (java.awt.Desktop.isDesktopSupported() && java.awt.Desktop.getDesktop().isSupported(java.awt.Desktop.Action.APP_OPEN_URI)) {
+        java.awt.Desktop.getDesktop().setOpenURIHandler { event -> links.trySend(event.uri.toString()) }
+    }
     thread(isDaemon = true) { registerLinkScheme() }
     // [impl->dsn~application-icon~1]
     val icon = BitmapPainter(object {}.javaClass.getResourceAsStream("/koppter.png")!!.readBytes().decodeToImageBitmap())

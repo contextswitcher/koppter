@@ -1200,6 +1200,32 @@ Covers:
 
 Needs: impl, utest
 
+### Scheme of the links on Linux
+`dsn~link-scheme-linux~1`
+
+On Linux, the installed program (the launcher `…/bin/koppter` of the package) writes at each start the desktop entry `koppter-links.desktop` to the applications of the user (`$XDG_DATA_HOME/applications`, else `~/.local/share/applications`) when its content differs: `MimeType=x-scheme-handler/koppter;`, the program in `Exec` (quoted only when it holds a blank or a sign other than `/._+-`, as the fallback of `xdg-open` does not read quotes) with `%u` as the link, and `NoDisplay=true`, so that the menu shows no second entry.
+Then `xdg-mime default koppter-links.desktop x-scheme-handler/koppter` makes it the handler of the scheme, and `update-desktop-database` updates the cache of the folder; a missing program is logged and skipped.
+The link then arrives as the argument of a start, as on Windows.
+A start from the build registers nothing.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl, utest
+
+### Scheme of the links on macOS
+`dsn~link-scheme-macos~1`
+
+On macOS, the package declares the scheme `koppter` with `CFBundleURLTypes` in the `Info.plist` of the application, so that the system registers it when the application is installed.
+macOS hands a link to the running application, or starts it and then hands the link, as an event instead of an argument; the application takes it with the `OpenURIHandler` of `java.awt.Desktop` and opens it as a link from the port of `dsn~link-single-instance~1`.
+
+Covers:
+
+* `req~app-links~1`
+
+Needs: impl
+
 ### Filter shared with ContextSwitcher
 `dsn~contextswitcher-sync~1`
 

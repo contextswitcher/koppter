@@ -116,6 +116,22 @@ compose.desktop {
                 packageVersion = desktopVersion ?: "1.0.0"
                 iconFile = project.file("packaging/koppter.icns")
                 bundleID = "io.github.koppor.koppter"
+                // [impl->dsn~link-scheme-macos~1]
+                infoPlist {
+                    extraKeysRawXml = """
+                        <key>CFBundleURLTypes</key>
+                        <array>
+                            <dict>
+                                <key>CFBundleURLName</key>
+                                <string>io.github.koppor.koppter</string>
+                                <key>CFBundleURLSchemes</key>
+                                <array>
+                                    <string>koppter</string>
+                                </array>
+                            </dict>
+                        </array>
+                    """.trimIndent()
+                }
             }
         }
     }

@@ -845,9 +845,10 @@ koppter://filter?project=Fair&context=phone
 * A link can name the rest of the filter as well: `not-hashtag=import` leaves tasks out, `priority=A` selects a priority, `text=mom` searches, `show=all` or `show=done` includes completed tasks, and `future=1` those before their start date.
   A project or a context includes those below it.
 * If the application is open, its window shows the tasks and comes to the front; no second window opens.
-* On Windows, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
+* On Windows and Linux, the installed application registers the links for the current user when it starts, so it has to be started once before the first link works.
+  On Linux, this is the hidden desktop entry `koppter-links.desktop` in `~/.local/share/applications`, made the handler of the scheme with `xdg-mime`.
+* On macOS, the package declares the links, so they work once the application is installed.
 * On Android, the installed application opens the links.
-* The packages for Linux and macOS do not register the links yet.
 
 ## Links back from OneNote
 
