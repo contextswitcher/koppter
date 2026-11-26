@@ -19,7 +19,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -113,7 +112,7 @@ fun Overview(states: List<OverviewState>, today: LocalDate, onToggle: (Entry) ->
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, enabled = entry.task.completable, modifier = Modifier.testTag("task-done"))
+                    DoneBox(entry.task, { onToggle(entry) })
                     LinkedText(entry.task.description, Modifier.weight(1f))
                     if (urgency != null) {
                         Column(Modifier.width(150.dp), horizontalAlignment = Alignment.CenterHorizontally) {

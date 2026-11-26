@@ -249,6 +249,7 @@ fun SettingsDialog(
     var committerName by remember { mutableStateOf(settings.committerName) }
     var committerEmail by remember { mutableStateOf(settings.committerEmail) }
     var outlookCalendar by remember { mutableStateOf(settings.outlookCalendar) }
+    var outlookBusyCalendars by remember { mutableStateOf(settings.outlookBusyCalendars) }
     var latexEditor by remember { mutableStateOf(settings.latexEditor) }
     var outlookWeeks by remember { mutableStateOf(settings.outlookWeeks.toString()) }
     val outlookWeeksValue = outlookWeeks.trim().toIntOrNull()?.takeIf { it >= 0 }
@@ -271,7 +272,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, calendarsOfMembers.toMap(), writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookWeeks, latexEditor, home)
+    val state = listOf(todoFile, sharedLists, calendarsOfMembers.toMap(), writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookBusyCalendars, outlookWeeks, latexEditor, home)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -562,6 +563,11 @@ fun SettingsDialog(
                                     singleLine = true,
                                     modifier = Modifier.fillMaxWidth().testTag("settings-outlook-weeks"),
                                 )
+                                // [impl->dsn~outlook-busy~1]
+                                CommitterField(
+                                    "Further accounts with busy times", outlookBusyCalendars, { outlookBusyCalendars = it }, "None", "settings-outlook-busy-calendars",
+                                    "Names of accounts in Outlook, separated by blanks. Their main calendars count as busy when planning and are shown in Today and Week; the plan is not written to them.",
+                                )
                                 OutlookClearButton(outlookBlocks, outlookCalendar)
                                 }
                             if (syncsContextSwitcher) {
@@ -614,7 +620,7 @@ fun SettingsDialog(
                         settings.copy(
                             todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), planMember = if (planMember == null) settings.planMember else planOf, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
-                            outlookCalendar = outlookCalendar.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
+                            outlookCalendar = outlookCalendar.trim(), outlookBusyCalendars = outlookBusyCalendars.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
                             contextSwitcherSync = contextSwitcherSync,
                         ),
                         columns?.trim(),

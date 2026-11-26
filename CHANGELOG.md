@@ -9,17 +9,19 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- The settings of Outlook have the field *Further accounts with busy times*: the main calendars of these accounts count as busy when planning and are shown in Today and Week, and the plan is not written to them.
 - In *Calendars with busy times* of the plan dialog, a `#` at the start of a line or after a blank starts a comment, such as `# calendar of Alina` above or after an address.
 - The tag `exp:` states the last day of a task: an open task is removed from the todo.txt file the day after, and until then it is planned and shown as due on that day, unless it has a due date of its own.
 
 ### Changed
 
 - The notification of a block on Android offers *Start*, *Postpone* and *Not today* in place of *Done*, which was easy to tap by mistake: *Postpone* plans again from the end of the block, *Not today* sets the threshold date of the task to tomorrow and plans again.
-- A TODO of a LaTeX document, and a task that refers to one, can no longer be ticked off: its checkbox is disabled, as the TODO is done only when it is removed from the document.
+- A TODO of a LaTeX document, and a task that refers to one, can no longer be ticked off: the icon of a document stands in the place of its checkbox, and a tap on it says that the TODO is done when it is removed from the document.
 - In Today, the handle between the agenda and the calendar shows a line and has more room on both sides, and the calendar can be dragged wider: the agenda keeps 400 dp instead of 600 dp.
 
 ### Fixed
 
+- The switches *Open* and *Done* of the filter panel stay in view below the criteria, which scroll, instead of lying below the end of a window of common height.
 - The inbox shows the label *Outlook* at an item of Outlook, which opens the item in Outlook as it does in the list.
 
 ## [2026-11-24] - 2026-11-24

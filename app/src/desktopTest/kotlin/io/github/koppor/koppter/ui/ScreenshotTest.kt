@@ -24,6 +24,10 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.rightClick
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
+import io.github.koppor.koppter.outlook.OutlookBlock
+import io.github.koppor.koppter.outlook.OutlookBridge
+import io.github.koppor.koppter.outlook.OutlookBusy
+import io.github.koppor.koppter.outlook.OutlookItem
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
 import io.github.koppor.koppter.storage.ColorTheme
@@ -35,6 +39,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import java.io.File
 import javax.imageio.ImageIO
 import kotlin.test.Test
@@ -184,10 +189,22 @@ class ScreenshotTest {
         ),
     )
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList()) {
+    /** Outlook without items and appointments, so that the settings show its fields. */
+    private val outlook = object : OutlookBridge {
+        override fun items() = emptyList<OutlookItem>()
+        override fun open(entryId: String) = Unit
+        override fun complete(entryId: String) = Unit
+        override fun syncBlocks(calendar: String?, window: ClosedRange<LocalDateTime>, blocks: List<OutlookBlock>) = ""
+        override fun countBlocks(calendar: String?) = 0
+        override fun clearBlocks(calendar: String?) = 0
+        override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = emptyList<OutlookBusy>()
+        override fun sideline(entryId: String, on: Boolean) = Unit
+    }
+
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList(), withOutlook: Boolean = false) {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
-        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
+        val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null, outlook = outlook.takeIf { withOutlook })
         // As many as a device has, so that the list is cut, and a name that is too long for its place.
         val apps = (
             "Books Calculator Calendar Camera Chrome Clock Contacts Drive evcc Files Gallery Gmail Health Hue Keep Maps Messages Music News Notes Phone Photos Podcasts Radio " +
@@ -344,9 +361,9 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), extra: String = "", open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), extra: String = "", withOutlook: Boolean = false, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
             storage.extra = extra
-            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews)
+            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews, withOutlook = withOutlook)
             open()
             save("review/$size-$name.png")
         }
@@ -355,6 +372,18 @@ class ScreenshotTest {
         screen("latex-todo", extra = "Cite the survey on remote work +Paper #latex tex:1x2y3z\n") {
             onNodeWithTag("list-switch").performClick()
             onNodeWithTag("task-list").performScrollToNode(hasText("Cite the survey", substring = true))
+        }
+        screen("latex-hint", extra = "Cite the survey on remote work +Paper #latex tex:1x2y3z\n") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("task-list").performScrollToNode(hasText("Cite the survey", substring = true))
+            onNodeWithTag("task-done-latex", useUnmergedTree = true).performClick()
+            mainClock.advanceTimeBy(1_000)
+        }
+        // [utest->dsn~outlook-busy~1]
+        screen("settings-outlook", withOutlook = true, settings = Settings(outlookBusyCalendars = "me@uni.example")) {
+            onNodeWithTag("open-settings").performClick()
+            onNodeWithTag("settings-tab-integrations").performClick()
+            onNodeWithTag("settings-outlook-busy-calendars").performScrollTo()
         }
         screen("overdue-tooltip") {
             onNodeWithTag("list-switch").performClick()
