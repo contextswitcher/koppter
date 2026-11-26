@@ -960,7 +960,7 @@ private fun CommitterField(
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
-private fun GitSection(git: GitSetupActions, clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: Pair<Forge, String>?) {
+private fun GitSection(git: GitSetupActions, @Suppress("DEPRECATION") clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: Pair<Forge, String>?) {
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
     var copied by remember { mutableStateOf(false) }

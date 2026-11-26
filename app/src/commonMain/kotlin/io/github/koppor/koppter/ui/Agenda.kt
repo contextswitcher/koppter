@@ -344,7 +344,7 @@ fun Week(
             // On a phone, the title takes a second line, not the buttons beside it.
             Text("Week ${CalendarTxt.week(monday)} · $monday to ${days.last()}", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false).testTag("week-title"))
             if (monday != thisWeek) TextButton(onClick = { monday = thisWeek }, modifier = Modifier.testTag("week-today")) { Text("This week", softWrap = false) }
-            if (!appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments!!)
+            if (!appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments)
         }
         if (blocks == null) Text(NO_PLAN, Modifier.padding(8.dp))
         BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -698,7 +698,7 @@ fun Today(
                         }
                     }
                     Box(Modifier.weight(1f))
-                    if ((wide || showsDay) && !appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments!!)
+                    if ((wide || showsDay) && !appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments)
                     // On a phone, the sum belongs to the tasks; beside the day, *Calendars* takes its room.
                     if (wide || !showsDay) {
                         Text(
