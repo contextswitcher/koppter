@@ -9,6 +9,8 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- On a phone, *Today* shows the day as a calendar by the switch *Tasks* | *Calendar*.
+- The menu *Calendars* of *Week* and *Today* has the switch *Planned tasks*, so that the calendars show the appointments alone.
 - Links `koppter://…` open the application on Linux and macOS as well: on Linux, the installed application registers them for the user at its start; on macOS, the package declares them.
 - The settings of Outlook have the field *Further accounts with busy times*: the main calendars of these accounts count as busy when planning and are shown in Today and Week, and the plan is not written to them.
 - *Copy the appointments for the devices without Outlook* in the Outlook settings of the desktop writes the times and subjects of the busy appointments of Outlook next to todo.txt when planning; a device without Outlook, such as a phone, shows them read-only in *Week* and *Today* and plans around them.
@@ -19,6 +21,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The tasks in *Today* stand in the order of their blocks without the times, which the calendar beside them shows.
 - *Cancel* and *Save* of the edit dialog stand in its heading and stay in view while the fields scroll; *Delete* stands at the end of the fields.
 - The calendar of a date field in the edit dialog names the field and, for the start date and the deadline, the due date; without a date it opens on the month of the due date.
 - The notification of a block on Android offers *Start*, *Postpone* and *Not today* in place of *Done*, which was easy to tap by mistake: *Postpone* plans the task again after the end of the block with the new tag `after:`, which holds a time of its threshold date before which the task is not planned, *Not today* sets the threshold date of the task to tomorrow and plans again.

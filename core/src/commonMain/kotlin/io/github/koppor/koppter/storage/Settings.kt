@@ -167,6 +167,9 @@ data class Settings(
         /** What [hiddenCalendars] names the calendar of Outlook by; it is no address. */
         const val OUTLOOK_SOURCE = "outlook"
 
+        /** What [hiddenCalendars] names the blocks of the plan by, which the calendar views show next to the calendars. */
+        const val PLAN_SOURCE = "plan"
+
         /** Unknown keys are ignored and missing keys take their default, so that settings files of other versions load. */
         fun fromProperties(properties: Map<String, String>): Settings = Settings(
             todoFile = properties[TODO_FILE].orEmpty(),

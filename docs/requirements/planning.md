@@ -818,7 +818,46 @@ Needs: impl, utest
 
 `Today` shows the agenda of today on the left and the blocks of today as a calendar on the right, as a column of `Week`, with a line at the current minute, which moves on once a minute.
 Above them, it shows the sum of the planned time of the blocks of today whose task is open.
-The calendar is 400 dp wide by default; below a width of 760 dp, it is left out.
+The calendar is 400 dp wide by default; below a width of 760 dp, a switch *Tasks* | *Calendar* above them shows one of the two.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### The day on a phone
+`dsn~today-phone-day~1`
+
+Below a width of 760 dp, `Today` shows the agenda of today or the calendar of today under the name of the day, chosen by the switch *Tasks* | *Calendar*; *Tasks* is selected when the view opens.
+The tasks come first because they are what the user ticks off during the day; the calendar is what the user looks at to see the meetings, which a phone showed nowhere but in `Week` before.
+The choice is not kept in the settings: the view opens with the tasks again.
+*Calendars* stands in the row of the switch while the day is shown.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### The tasks of today without their times
+`dsn~today-without-times~1`
+
+The agenda of `Today` shows the tasks in the order of their blocks, without the times of the blocks: each new plan moves the times, the calendar beside it shows them, and the times took a column of the room of the cards.
+The view `Agenda` keeps the times.
+
+Covers:
+
+* `req~agenda~1`
+
+Needs: impl, utest
+
+### Planned tasks in the calendars
+`dsn~calendar-plan-switch~1`
+
+The menu *Calendars* of `Week` and `Today` starts with the switch *Planned tasks*: when it is off, the calendars show the appointments and events alone, so that the meetings of the day are read at a glance.
+The choice is kept in the settings, in `hiddenCalendars` under the key `plan`, as the choices of the calendars are.
+The agenda of `Today` and the planning are not affected.
 
 Covers:
 

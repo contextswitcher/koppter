@@ -2322,6 +2322,55 @@ class AppTest {
         onNodeWithTag("edit-dialog").assertExists()
     }
 
+    // [utest->dsn~today-without-times~1]
+    @Test
+    fun theTasksOfTodayStandInTheOrderOfTheirBlocksWithoutTheirTimes() = runDesktopComposeUiTest(width = 1100, height = 860) {
+        storage.companions["calendar.txt"] = """
+            2026-11-12 w46 Thu  09:00-09:30 Schedule pickup +GarageSale @phone
+            2026-11-12 w46 Thu  10:00-11:00 Thank Mom @phone
+        """.trimIndent() + "\n"
+        val controller = TodoController(Settings(view = "TODAY"), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 })
+        setContent { App(controller, "todo.txt") }
+
+        onAllNodesWithText("09:00-09:30").assertCountEquals(0)
+        val tops = onAllNodesWithTag("agenda-block").fetchSemanticsNodes().map { it.boundsInRoot.top }
+        assertEquals(tops.sorted(), tops)
+        onAllNodesWithTag("agenda-block")[0].assert(hasAnyDescendant(hasText("Schedule pickup", substring = true)))
+    }
+
+    // [utest->dsn~today-phone-day~1]
+    @Test
+    fun onAPhoneTodayShowsTheDayAsACalendarByItsSwitch() = runDesktopComposeUiTest(width = 412, height = 760) {
+        storage.companions["calendar.txt"] = "2026-11-12 w46 Thu  10:00-11:00 Thank Mom @phone\n"
+        val controller = TodoController(Settings(view = "TODAY"), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 })
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("today-day").assertDoesNotExist()
+        onNodeWithTag("today-calendar").performClick()
+        onNodeWithTag("today-day").assertExists()
+        onNodeWithTag("agenda").assertDoesNotExist()
+        onNodeWithText("10:00 Thank Mom").assertExists()
+        onNodeWithTag("today-tasks").performClick()
+        onNodeWithTag("agenda").assertExists()
+    }
+
+    // [utest->dsn~calendar-plan-switch~1]
+    @Test
+    fun theCalendarsShowTheAppointmentsAloneWhenThePlannedTasksAreSwitchedOff() = runComposeUiTest {
+        storage.companions[OutlookCalendar.MIRROR] = "2026-11-12 w46 Thu  10:00-11:00 Faculty board\n"
+        storage.companions["calendar.txt"] = "2026-11-12 w46 Thu  12:00-13:00 Thank Mom @phone\n"
+        val controller = TodoController(Settings(view = "WEEK"), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        onAllNodesWithTag("week-block").assertCountEquals(1)
+
+        onNodeWithTag("week-calendars").performClick()
+        onNodeWithTag("week-calendar-plan").performClick()
+        waitUntil { onAllNodesWithTag("week-block").fetchSemanticsNodes().isEmpty() }
+        onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).assertCountEquals(1)
+        assertEquals(false, controller.showsCalendar(Settings.PLAN_SOURCE))
+    }
+
     // [utest->dsn~today-groups~1]
     @Test
     fun todayIsDividedAsTheList() = runDesktopComposeUiTest(width = 1100, height = 860) {

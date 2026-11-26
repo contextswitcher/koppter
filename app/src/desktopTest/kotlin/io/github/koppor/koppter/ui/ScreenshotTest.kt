@@ -430,6 +430,22 @@ class ScreenshotTest {
         screen("today-mirror") {
             onNodeWithTag("today-switch").performClick()
             waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() || size == "phone" }
+        }
+        screen("today-mirror-day") {
+            onNodeWithTag("today-switch").performClick()
+            if (size == "phone") onNodeWithTag("today-calendar").performClick()
+            waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        }
+        screen("today-calendars-menu") {
+            onNodeWithTag("today-switch").performClick()
+            if (size == "phone") onNodeWithTag("today-calendar").performClick()
+            waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            onNodeWithTag("week-calendars").performClick()
+        }
+        screen("today-appointments-only", settings = Settings(hiddenCalendars = Settings.PLAN_SOURCE)) {
+            onNodeWithTag("today-switch").performClick()
+            if (size == "phone") onNodeWithTag("today-calendar").performClick()
+            waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
             storage.companions -= OutlookCalendar.MIRROR
         }
         screen("today-hidden-matches") {

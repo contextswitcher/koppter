@@ -68,6 +68,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -123,6 +127,8 @@ fun Agenda(
     running: Entry? = null,
     onClock: (Entry) -> Unit = {},
     groupsOf: (List<Entry>) -> List<Group>? = { null },
+    /** Whether a block names its times; `Today` leaves them to its calendar and keeps only their order. */
+    times: Boolean = true,
 ) {
     // A block is counted once, also when the button is hit twice.
     val counted = remember { mutableStateListOf<TextBlock>() }
@@ -177,13 +183,13 @@ fun Agenda(
                     if (narrow) {
                         // On a phone, the time and the buttons stand in two lines beside the card, so that a block takes one row and more of the day is in view.
                         Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(CalendarTxt.timesText(block.span).replace("-", "\n"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge)
+                            if (times) Text(CalendarTxt.timesText(block.span).replace("-", "\n"), fontFamily = FontFamily.Monospace, style = MaterialTheme.typography.labelLarge)
                             Box(Modifier.weight(1f)) { card() }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) { actions() }
                         }
                     } else {
                         Row(Modifier.testTag("agenda-block"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            time()
+                            if (times) time()
                             Box(Modifier.weight(1f)) { card() }
                             actions()
                         }
@@ -237,6 +243,7 @@ internal val MIN_HOUR_HEIGHT = 20.dp
  * @param calendars the calendars that the view shows or hides
  * @param onShowCalendar shows the calendar or hides it, by its key
  * @param eventSidelined whether an event with the title counts as free for planning
+ * @param showsPlan whether the calendar views show the blocks of the plan as well, or the appointments and events only
  */
 // [impl->dsn~outlook-appointments~1]
 // [impl->dsn~calendar-events~1]
@@ -250,6 +257,7 @@ class CalendarAppointments(
     val calendars: List<ViewCalendar> = emptyList(),
     val onShowCalendar: (String, Boolean) -> Unit = { _, _ -> },
     val eventSidelined: (String) -> Boolean = { false },
+    val showsPlan: Boolean = true,
 ) {
     fun onDay(day: LocalDate): List<Pair<OutlookBusy, Span>> = OutlookCalendar.onDay(all, day)
 
@@ -275,6 +283,14 @@ private fun CalendarsButton(appointments: CalendarAppointments) {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            )
+            // [impl->dsn~calendar-plan-switch~1]
+            DropdownMenuItem(
+                text = { Text("Planned tasks") },
+                leadingIcon = { Checkbox(appointments.showsPlan, onCheckedChange = null) },
+                trailingIcon = { Box(Modifier.size(12.dp).background(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.shapes.extraSmall)) },
+                onClick = { appointments.onShowCalendar(Settings.PLAN_SOURCE, !appointments.showsPlan) },
+                modifier = Modifier.testTag("week-calendar-plan"),
             )
             for (calendar in appointments.calendars) {
                 DropdownMenuItem(
@@ -460,6 +476,8 @@ internal fun DayColumn(
     /** Whether a block matches the filter; one that does not is kept in gray, so that the day still shows its time as taken. */
     matches: (TextBlock) -> Boolean = { true },
 ) {
+    // [impl->dsn~calendar-plan-switch~1]
+    val blocks = if (appointments?.showsPlan == false) emptyList() else blocks
     val ofDay = day?.let { appointments?.onDay(it) }.orEmpty()
     val events = day?.let { appointments?.eventsOn(it) }.orEmpty()
     // [impl->dsn~calendar-lanes~1]
@@ -627,7 +645,7 @@ private fun AppointmentBox(appointment: OutlookBusy, span: Span, actions: Calend
 
 /**
  * Today on one screen: the tasks of the agenda of today on the left and the day as a calendar on the right,
- * with a line at the current time. A narrow screen shows the tasks only.
+ * with a line at the current time. A narrow screen shows one of the two, chosen by a switch.
  */
 // [impl->dsn~today~1]
 @Composable
@@ -657,56 +675,90 @@ fun Today(
     var shownWidth by remember(calendarWidth) { mutableStateOf(calendarWidth.dp) }
     val ofDay = blocks.orEmpty().filter { it.date == today }
     val planned = ofDay.filter { entryOf(it) != null && matches(it) }.sumOf { it.span.length }
+    // [impl->dsn~today-phone-day~1]
+    // On a phone, the tasks and the calendar take turns; the tasks come first, as they are what is ticked off.
+    var showsDay by rememberSaveable { mutableStateOf(false) }
     Column(Modifier.padding(8.dp).testTag("today")) {
-        // The agenda below names the day; the sum of the planned time is what the day adds to it.
-        Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            // [impl->dsn~time-log~1]
-            // While a clock runs, its bar has the button.
-            if (running == null) onAway?.let { TextButton(onClick = it, modifier = Modifier.testTag("go-away")) { Text("Away") } }
-            Box(Modifier.weight(1f))
-            Text(
-                "${Task.durationText(planned.minutes).ifEmpty { "0m" }} planned",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testTag("today-planned"),
-            )
-        }
         BoxWithConstraints(Modifier.fillMaxSize()) {
             // The cards of the agenda need about 500 dp to keep their labels on one line beside the text.
             val wide = maxWidth >= 760.dp
-            val height = maxHeight
             // The agenda keeps 400 dp for its cards with times and buttons, also when the window has narrowed since the width was chosen;
             // with 600 dp, the calendar of a laptop window could not grow beyond its default.
             val maxCalendar = maxOf(MIN_CALENDAR_WIDTH, maxWidth - 400.dp)
-            Row(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) { Agenda(blocks?.filter(matches), dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf) }
-                if (wide) {
-                    val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
-                    // [impl->dsn~today-resize~1]
-                    Box(
-                        Modifier.fillMaxHeight().padding(horizontal = 8.dp).width(24.dp).testTag("today-resize")
-                            .pointerHoverIcon(PointerIcon.Hand)
-                            .draggable(
-                                rememberDraggableState { delta -> shownWidth = (shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) - with(density) { delta.toDp() }).coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) },
-                                Orientation.Horizontal,
-                                onDragStopped = { onCalendarWidth(shownWidth.value.roundToInt()) },
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        VerticalDivider()
-                        Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
-                    }
-                    val spans = ofDay.map { it.span } + appointmentSpans
-                    val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8, nowMinute / 60)
-                    val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
-                    val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp - LocalFloatingButtonsRoom.current) / (lastHour - firstHour))
-                    Row(Modifier.width(shown).padding(top = 8.dp).verticalScroll(rememberScrollState()).padding(bottom = LocalFloatingButtonsRoom.current).testTag("today-day")) {
-                        Column(Modifier.width(44.dp)) {
-                            for (hour in firstHour until lastHour) {
-                                Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
-                            }
+            Column(Modifier.fillMaxSize()) {
+                // The agenda below names the day; the sum of the planned time is what the day adds to it.
+                Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // [impl->dsn~time-log~1]
+                    // While a clock runs, its bar has the button.
+                    if (running == null) onAway?.let { TextButton(onClick = it, modifier = Modifier.testTag("go-away")) { Text("Away") } }
+                    if (!wide) {
+                        SingleChoiceSegmentedButtonRow(Modifier.testTag("today-mode")) {
+                            SegmentedButton(!showsDay, onClick = { showsDay = false }, shape = SegmentedButtonDefaults.itemShape(0, 2), modifier = Modifier.testTag("today-tasks"), icon = {}) { Text("Tasks") }
+                            SegmentedButton(showsDay, onClick = { showsDay = true }, shape = SegmentedButtonDefaults.itemShape(1, 2), modifier = Modifier.testTag("today-calendar"), icon = {}) { Text("Calendar") }
                         }
-                        DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute, appointments = appointments, day = today, matches = matches)
+                    }
+                    Box(Modifier.weight(1f))
+                    if ((wide || showsDay) && !appointments?.calendars.isNullOrEmpty()) CalendarsButton(appointments!!)
+                    // On a phone, the sum belongs to the tasks; beside the day, *Calendars* takes its room.
+                    if (wide || !showsDay) {
+                        Text(
+                            "${Task.durationText(planned.minutes).ifEmpty { "0m" }} planned",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            softWrap = false,
+                            modifier = Modifier.testTag("today-planned"),
+                        )
+                    }
+                }
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val height = maxHeight
+                    val day = @Composable { modifier: Modifier ->
+                        // The hours stay those of the blocks also while they are hidden, so that the switch does not change the scale.
+                        val spans = ofDay.map { it.span } + appointmentSpans
+                        val firstHour = minOf(8, spans.minOfOrNull { it.start / 60 } ?: 8, nowMinute / 60)
+                        val lastHour = maxOf(18, spans.maxOfOrNull { (it.end + 59) / 60 } ?: 18, nowMinute / 60 + 1)
+                        val hourHeight = maxOf(MIN_HOUR_HEIGHT, (height - 8.dp - LocalFloatingButtonsRoom.current) / (lastHour - firstHour))
+                        Row(modifier.padding(top = 8.dp).verticalScroll(rememberScrollState()).padding(bottom = LocalFloatingButtonsRoom.current).testTag("today-day")) {
+                            Column(Modifier.width(44.dp)) {
+                                for (hour in firstHour until lastHour) {
+                                    Text("${hour.toString().padStart(2, '0')}:00", Modifier.height(hourHeight), style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            DayColumn(ofDay, firstHour, lastHour, hourHeight, entryOf, suffixOf, onOpen, highlight = true, nowMinute = nowMinute, appointments = appointments, day = today, matches = matches)
+                        }
+                    }
+                    // [impl->dsn~today-without-times~1]
+                    val agenda = @Composable { Agenda(blocks?.filter(matches), dueUnplanned, entryOf, today, onToggle, onOpen, onWorked, days = 1, running = running, onClock = onClock, groupsOf = groupsOf, times = false) }
+                    if (!wide) {
+                        if (showsDay) {
+                            Column {
+                                // The agenda names the day in its heading; the calendar alone would not.
+                                Text(listOf("Today", CalendarTxt.dayText(today)).joinToString(" · "), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 8.dp, start = 4.dp))
+                                day(Modifier.fillMaxWidth())
+                            }
+                        } else {
+                            agenda()
+                        }
+                    } else {
+                        Row(Modifier.fillMaxSize()) {
+                            Box(Modifier.weight(1f)) { agenda() }
+                            val shown = shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar)
+                            // [impl->dsn~today-resize~1]
+                            Box(
+                                Modifier.fillMaxHeight().padding(horizontal = 8.dp).width(24.dp).testTag("today-resize")
+                                    .pointerHoverIcon(PointerIcon.Hand)
+                                    .draggable(
+                                        rememberDraggableState { delta -> shownWidth = (shownWidth.coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) - with(density) { delta.toDp() }).coerceIn(MIN_CALENDAR_WIDTH, maxCalendar) },
+                                        Orientation.Horizontal,
+                                        onDragStopped = { onCalendarWidth(shownWidth.value.roundToInt()) },
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                VerticalDivider()
+                                Box(Modifier.size(4.dp, 48.dp).background(MaterialTheme.colorScheme.outlineVariant, CircleShape))
+                            }
+                            day(Modifier.width(shown))
+                        }
                     }
                 }
             }

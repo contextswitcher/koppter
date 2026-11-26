@@ -643,6 +643,7 @@ private fun MainScreen(
                                 calendars = viewCalendars,
                                 onShowCalendar = { key, shown -> appointmentScope.launch { controller.setCalendarShown(key, shown) } },
                                 eventSidelined = { sidelined(it, sidelineWords) },
+                                showsPlan = controller.showsCalendar(Settings.PLAN_SOURCE),
                             )
                             val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))
                             // [impl->dsn~time-log~1]
