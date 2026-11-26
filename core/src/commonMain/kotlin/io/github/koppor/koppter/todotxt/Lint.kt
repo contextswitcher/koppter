@@ -50,6 +50,7 @@ private val VALUES: Map<String, Pair<String, (String) -> Any?>> = mapOf(
     Task.SPENT to ("a duration such as 30m or 1h30m" to Task::parseDuration),
     Task.AT to ("a time as HH:MM" to Task::parseTime),
     Task.BY to ("a time as HH:MM" to Task::parseTime),
+    Task.AFTER to ("a time as HH:MM" to Task::parseTime),
 )
 
 private val KEYS = VALUES.keys + setOf(Task.NOTE, Task.ID, Task.PARENT, Task.CONTEXT_SWITCHER, Task.OUTLOOK, Task.ONENOTE, Task.LATEX)

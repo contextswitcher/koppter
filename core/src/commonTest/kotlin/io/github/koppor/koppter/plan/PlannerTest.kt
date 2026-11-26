@@ -36,7 +36,7 @@ class PlannerTest {
         assertEquals(listOf("Running", "Later", "Tomorrow"), CalendarTxt.ahead(blocks, today, minutes("10:00")).map { it.text })
     }
 
-    // [utest->dsn~android-block-notification~2]
+    // [utest->dsn~android-block-notification~3]
     @Test
     fun theCurrentBlockRunsNowAndTheNextOneStartsLater() {
         val blocks = CalendarTxt.blocks(
@@ -200,6 +200,22 @@ class PlannerTest {
             plan.lines(),
         )
         assertEquals(emptyList(), plan.unplaced)
+    }
+
+    // [utest->dsn~not-before-time~1]
+    @Test
+    fun aTaskWithATimeAfterIsPlannedFromThatTimeOnItsThresholdDateOnly() {
+        val plan = plan(
+            """
+            (A) Call the landlord t:2026-11-12 after:10:00
+            (A) Write the report dur:1h t:2026-11-11 after:10:00
+            """,
+            now = "08:00",
+        )
+        // The time of a threshold date that has passed has no effect.
+        assertEquals(setOf("2026-11-12 8:00 60 Write the report", "2026-11-12 10:00 30 Call the landlord"), plan.lines().toSet())
+        // The next occurrence does not keep the time of a day that has passed.
+        assertEquals("Water the plants rec:1d t:2026-11-13", Task.parse("Water the plants rec:1d t:2026-11-12 after:10:00").nextOccurrence(today)!!.toLine())
     }
 
     // [utest->dsn~deadline-first~1]

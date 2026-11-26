@@ -145,12 +145,12 @@ object CalendarTxt {
         blocks.filter { it.date > today || it.date == today && it.span.end > minute }.sortedWith(compareBy({ it.date }, { it.span.start }))
 
     /** The block that runs at [minute] of today; the earlier one if two overlap. */
-    // [impl->dsn~android-block-notification~2]
+    // [impl->dsn~android-block-notification~3]
     fun current(blocks: List<TextBlock>, today: LocalDate, minute: Int): TextBlock? =
         ahead(blocks, today, minute).firstOrNull { it.date == today && it.span.start <= minute }
 
     /** The first block that starts after [minute] of today. */
-    // [impl->dsn~android-block-notification~2]
+    // [impl->dsn~android-block-notification~3]
     fun next(blocks: List<TextBlock>, today: LocalDate, minute: Int): TextBlock? =
         ahead(blocks, today, minute).firstOrNull { it.date > today || it.span.start > minute }
 

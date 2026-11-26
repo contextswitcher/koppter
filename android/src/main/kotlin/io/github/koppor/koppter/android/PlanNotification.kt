@@ -33,7 +33,7 @@ private const val NOTIFICATION = 1
  * Sets the alarm for the start of the next block of the plan, in place of the one set before.
  * One alarm is enough, as [PlanReceiver] sets the following one.
  */
-// [impl->dsn~android-block-notification~2]
+// [impl->dsn~android-block-notification~3]
 internal fun Context.scheduleBlockAlarm(controller: TodoController) {
     val alarms = getSystemService(AlarmManager::class.java)
     val alarm = PendingIntent.getBroadcast(this, 0, Intent(this, PlanReceiver::class.java).setAction(ACTION_START), PendingIntent.FLAG_IMMUTABLE)
@@ -85,7 +85,7 @@ private fun Context.notifyBlock(controller: TodoController) {
  * Receives the alarm of a block and shows the block, and carries out the action that the user chooses in the notification.
  * It also runs after the device started and after the application was updated, as the system drops the alarm then.
  */
-// [impl->dsn~android-block-notification~2]
+// [impl->dsn~android-block-notification~3]
 class PlanReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val pending = goAsync()
@@ -100,7 +100,7 @@ class PlanReceiver : BroadcastReceiver() {
                 } else {
                     when (intent.action) {
                         ACTION_CLOCK -> entry?.let(controller::start)
-                        ACTION_POSTPONE -> runBlocking { controller.postpone(intent.getIntExtra(EXTRA_END, controller.minuteOfDay())) }
+                        ACTION_POSTPONE -> entry?.let { runBlocking { controller.postpone(it, intent.getIntExtra(EXTRA_END, controller.minuteOfDay())) } }
                         ACTION_NOT_TODAY -> entry?.let { runBlocking { controller.notToday(it) } }
                     }
                     // After a failure, the notification stays for another try.

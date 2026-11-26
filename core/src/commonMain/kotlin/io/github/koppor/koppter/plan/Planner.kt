@@ -286,7 +286,9 @@ private class Planning(
 
     /** The first moment at which the task may be worked on; `null` while a task it waits for is not planned completely. */
     private fun start(entry: Entry): Pair<LocalDate, Int>? {
-        var start = maxOf(today, entry.task.threshold ?: today) to 0
+        val threshold = entry.task.threshold
+        // [impl->dsn~not-before-time~1]
+        var start = if (threshold != null && threshold >= today) threshold to (entry.task.after ?: 0) else today to 0
         for (other in dependencies.of[entry].orEmpty()) {
             if (left.getValue(other) > 0 || other in unplaced) return null
             val end = blocks[other].orEmpty().map { it.date to it.span.end }.maxWithOrNull(MOMENTS) ?: continue

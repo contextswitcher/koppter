@@ -145,7 +145,7 @@ class MainActivity : ComponentActivity() {
         controller = todoController(gitSetup)
         homeScreen = packageManager.getComponentEnabledSetting(homeAlias) == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
         publishShareTargets(controller.shareActions)
-        // [impl->dsn~android-block-notification~2]
+        // [impl->dsn~android-block-notification~3]
         // Asked where there is a plan to notify of; the system stops asking after the second refusal.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && savedInstanceState == null && !controller.planBlocks.isNullOrEmpty()) {
             // The answer changes nothing here, so no result is taken.
