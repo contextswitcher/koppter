@@ -566,7 +566,7 @@ Events of whole days, canceled events, events marked as free and the blocks that
 Repeating events are followed for the frequencies daily, weekly, monthly and yearly with interval, end, count, days of the week, days of the month and excluded dates.
 A time zone that the platform does not know by name counts as that of the device.
 An occurrence of a repeating event that was moved counts at its old and at its new time, as the entries that move occurrences are not matched to their series.
-The addresses of the calendars are a setting of the device, as they are secrets; the plan dialog edits them, one per line, and a line starting with `#` is a comment.
+The addresses of the calendars are a setting of the device, as they are secrets; the plan dialog edits them, one per line, and a `#` at the start of a line or after a blank starts a comment.
 `fetchCalendar` reads an address over HTTP or HTTPS; `TodoController.planWithCalendars` reads all calendars for a year from today, reports those it could not read by their host and plans with the others.
 
 Covers:
@@ -612,7 +612,7 @@ Needs: impl, utest
 A calendar that cannot be read is logged by its host and left out of the view; the plan reports it.
 `EventBox` draws an event in `tertiaryContainer` with a bar in `tertiary` on its left, apart from the appointments of Outlook and the blocks; one whose title holds a word of `dsn~sideline~1` is pale with a border and its text struck through.
 A click on an event does nothing, as the application only reads these calendars.
-The button *Calendars* of `Week` opens a menu, headed *Shown in Week and Today*, with a check box and the color of the entries for Outlook, where it is read, and for each calendar with busy times, named by the comment line above its address, else by `X-WR-CALNAME` of its file (`calendarName`), else by its host.
+The button *Calendars* of `Week` opens a menu, headed *Shown in Week and Today*, with a check box and the color of the entries for Outlook, where it is read, and for each calendar with busy times, named by the comment after its address or on the line above it (`calendarAddresses`), else by `X-WR-CALNAME` of its file (`calendarName`), else by its host.
 The menu stays open while the user switches; `Today` shows the same calendars.
 The setting `hiddenCalendars` of the device lists the hidden ones, one per line, by address or as `outlook`; an address is a secret and stays on the device as `calendars` does.
 Planning reads all calendars, hidden or not.
@@ -796,7 +796,8 @@ Needs: impl, utest
 ### Width of the calendar of today
 `dsn~today-resize~1`
 
-Between the agenda and the calendar of `Today`, a handle is dragged sideways to change the width of the calendar, between 260 dp and the width that leaves the agenda 600 dp.
+Between the agenda and the calendar of `Today`, a handle is dragged sideways to change the width of the calendar, between 260 dp and the width that leaves the agenda 400 dp.
+A line and a grip mark the handle, with a gap to the agenda and to the calendar on either side.
 The width is kept in the settings of the device as `todayCalendarWidth` when the drag ends.
 
 Covers:

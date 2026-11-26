@@ -225,6 +225,20 @@ Covers:
 
 Needs: dsn
 
+### Expiring tasks
+`req~expiry~1`
+
+A task can state the last day on which it is of use, such as putting out the bins before the collection.
+If it is still open after that day, the application removes it from the todo.txt file instead of keeping it as overdue or planning it for a later day.
+A task without such a day is never removed.
+Until the day has passed, the task is planned and shown as due on it, unless it states a due date of its own.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Editor of the scheduled tasks
 `req~scheduled-tasks-editor~1`
 
@@ -803,7 +817,7 @@ Needs: impl, utest
 `dsn~outlook-tag~1`
 
 The tag `ol:` holds the EntryID of an item of Outlook as its bytes in Base64 for URLs, without padding (`Outlook.tag`, `Outlook.entryId`).
-`TaskLabels` shows the tag as the label *Outlook*, which opens the link `anchor://outlook/message/<EntryID>?v=1` (`Outlook.anchor`); `App` hands such a link to `TodoController.openOutlook`, which runs `ankd outlook-open` with it.
+`TaskLabels`, and `Inbox` next to the hashtags, show the tag as the label *Outlook* (`OutlookLabel`), which opens the link `anchor://outlook/message/<EntryID>?v=1` (`Outlook.anchor`); `App` hands such a link to `TodoController.openOutlook`, which runs `ankd outlook-open` with it.
 The link names no store: AnchorHub looks for the EntryID in all of them.
 
 Covers:
@@ -896,6 +910,24 @@ A completed task stays if its day of completion is not known, if it has the tag 
 Covers:
 
 * `req~archive~1`
+
+Needs: impl, utest
+
+### Expiry
+`dsn~expiry~1`
+
+The tag `exp:` holds the last day of the task as `YYYY-MM-DD`; `Task.expires` reads it.
+`expire` returns the file without the open tasks whose last day lies before today, and the removed tasks; a completed task stays, as does a task with the tag `ol:` or `tex:`, whose item of Outlook or TODO of LaTeX would show up again without its line.
+`TodoController` looks for such tasks once per day, before it adds the scheduled tasks, and not while a synchronization runs, so that a task completed on another device is not removed; it writes the file with the change *Remove expired task:* followed by the descriptions.
+The line is deleted, not marked: the todo.txt format knows only `x` for a completed task, and the history of a git repository keeps the line.
+`Task.due` returns the last day for a task without the tags `due:` and `deadline:`, so that the planner plans the task before the day and the list order, the groups and the filters need no change.
+`Task.nextOccurrence` moves the last day as far as the due date; a last day that stood in for the due date stays the only date.
+`lint` reads the tag as it reads `due:`.
+
+Covers:
+
+* `req~expiry~1`
+* `adr~expiry-tag~1`
 
 Needs: impl, utest
 

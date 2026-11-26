@@ -1341,6 +1341,15 @@ class AppTest {
         assertEquals("outlook", settings.hiddenCalendars)
     }
 
+    // [utest->dsn~calendar-events~1]
+    @Test
+    fun aCalendarIsNamedByTheCommentAfterItsAddressOrOnTheLineAbove() {
+        assertEquals(
+            listOf("https://a.example.org/a.ics" to "Alina", "https://b.example.org/b.ics#x" to "Club", "https://c.example.org/c.ics" to null),
+            calendarAddresses("# Alina\nhttps://a.example.org/a.ics\nhttps://b.example.org/b.ics#x # Club\n\n# \nhttps://c.example.org/c.ics"),
+        )
+    }
+
     // [utest->dsn~outlook-items~1]
     // [utest->dsn~outlook-tag~1]
     // [utest->dsn~outlook-complete~1]
@@ -1375,6 +1384,9 @@ class AppTest {
         // In the inbox, the item shows where it comes from, and the contexts below it are choices.
         controller.view = View.INBOX
         onAllNodesWithTag("inbox-hashtag-outlook", useUnmergedTree = true).assertCountEquals(2)
+        onAllNodesWithTag("label-outlook", useUnmergedTree = true).assertCountEquals(2)[0].performClick()
+        assertEquals(3, opened.size)
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
         // The task "Post signs" of the file has no context either.
         onAllNodesWithText("Give it:", useUnmergedTree = true).assertCountEquals(3)
         controller.view = View.LIST
@@ -2699,8 +2711,8 @@ class AppTest {
         assertEquals(2, logged.size)
 
         // The address of a calendar is a secret: the log names its host and the kind of failure only.
-        runBlocking { controller.planWithCalendars(controller.planSettings!!, "# calendar of Alina\nhttps://example.org/secret") }
-        assertEquals(false, logged.any { "Alina" in it.first })
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, "# calendar of Alina\nhttps://example.org/secret # calendar of Bob") }
+        assertEquals(false, logged.any { "Alina" in it.first || "Bob" in it.first })
         assertEquals(true, ("Calendar of example.org was not read: IllegalStateException" to null) in logged)
         assertEquals(false, logged.any { "secret" in it.first })
     }
@@ -3540,6 +3552,17 @@ class AppTest {
         onAllNodesWithTag("task-done")[0].performClick()
         mainClock.advanceTimeBy(2_500)
         assertEquals(1, storage.text.lines().count { "Check mail" in it })
+    }
+
+    // [utest->dsn~expiry~1]
+    @Test
+    fun anOpenTaskIsRemovedAfterItsLastDay() = runComposeUiTest {
+        storage.text = "Put out the bins exp:2026-11-11\nWater the plants exp:2026-11-12\nx 2026-11-10 Buy milk exp:2026-11-10\n"
+        start()
+        mainClock.advanceTimeBy(2_500)
+        assertEquals("Water the plants exp:2026-11-12\nx 2026-11-10 Buy milk exp:2026-11-10\n", storage.text)
+        assertEquals("Remove expired task: Put out the bins", storage.changes.last())
+        onNodeWithText("Put out the bins").assertDoesNotExist()
     }
 
     // [utest->dsn~archive~1]

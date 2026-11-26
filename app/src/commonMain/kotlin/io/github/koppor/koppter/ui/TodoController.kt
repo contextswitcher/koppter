@@ -56,6 +56,7 @@ import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.archive
+import io.github.koppor.koppter.todotxt.expire
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
 import io.github.koppor.koppter.todotxt.Query
 import io.github.koppor.koppter.todotxt.ShareAction
@@ -114,6 +115,30 @@ data class ViewCalendar(val key: String, val name: String, val shown: Boolean)
  * [name] is what [TodoController.entryNamed] finds the task by; a line without it has no open task.
  */
 data class AgendaLine(val day: LocalDate? = null, val text: String = "", val times: String? = null, val name: String? = null)
+
+/**
+ * The addresses in the text of the calendars with busy times, each with the comment that names its calendar: the one after it on its line,
+ * else that of a line above it that holds only a comment; `null` without one.
+ * A # at the start of a line or after a blank starts a comment; a # inside an address is its fragment.
+ */
+// [impl->dsn~busy-times~1]
+// [impl->dsn~calendar-events~1]
+internal fun calendarAddresses(text: String): List<Pair<String, String?>> {
+    var above: String? = null
+    return text.lines().mapNotNull { line ->
+        val comment = CALENDAR_COMMENT.find(line)
+        val address = (if (comment == null) line else line.substring(0, comment.range.first)).trim()
+        val name = comment?.groupValues?.get(2)?.trim()?.takeIf(String::isNotEmpty)
+        if (address.isEmpty()) {
+            above = name
+            null
+        } else {
+            (address to (name ?: above)).also { above = null }
+        }
+    }
+}
+
+private val CALENDAR_COMMENT = Regex("(^|\\s)#(.*)")
 
 /** The link that opens the dialog for a new task, in the forms that programs make of it. */
 private val NEW_TASK_LINK = Regex("koppter:(//)?new/?")
@@ -518,16 +543,9 @@ class TodoController(
     /** The names that the iCalendar files give their calendars, by address. */
     private var calendarNames by mutableStateOf<Map<String, String>>(emptyMap())
 
-    /** The addresses of the calendars with busy times, each with the comment of the line above it, which names the calendar; `null` without one. */
+    /** The addresses of the calendars with busy times, each with the comment that names it, see [calendarAddresses]. */
     private val calendarLines: List<Pair<String, String?>>
-        get() {
-            if (fetch == null) return emptyList()
-            val lines = settings.calendars.lines().map(String::trim)
-            return lines.mapIndexedNotNull { index, line ->
-                if (line.isEmpty() || line.startsWith('#')) null
-                else line to lines.getOrNull(index - 1)?.takeIf { it.startsWith('#') }?.removePrefix("#")?.trim()?.takeIf(String::isNotEmpty)
-            }
-        }
+        get() = if (fetch == null) emptyList() else calendarAddresses(settings.calendars)
 
     private val calendarAddresses: List<String> get() = calendarLines.map { it.first }
 
@@ -986,8 +1004,7 @@ class TodoController(
         val sideline = settings.sideline.lines().map(String::trim).filter(String::isNotEmpty)
         val fetch = fetch
         if (calendars != null && fetch != null) updateSettings(this.settings.copy(calendars = calendars.trim()))
-        // A line starting with # is a comment, such as the name of the calendar above its address.
-        if (fetch != null) for (address in calendars.orEmpty().lines().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }) {
+        if (fetch != null) for ((address, _) in calendarAddresses(calendars.orEmpty())) {
             try {
                 val text = fetch(address)
                 // The calendar views show what was planned with.
@@ -1136,8 +1153,31 @@ class TodoController(
             return
         }
         if (version != loadedVersion) load() else loadConfig()
+        // Before the scheduled tasks, so that a task that expired yesterday does not count as present for its next occurrence.
+        removeExpired()
         addScheduledTasks()
         archiveCompleted()
+    }
+
+    /** The day of the last look for expired tasks. */
+    private var expiryChecked: LocalDate? = null
+
+    /**
+     * Removes the open tasks whose last day, the tag `exp:`, has passed.
+     * It waits for a running synchronization, as the scheduled tasks do, so that a task completed on another device is not removed.
+     */
+    // [impl->dsn~expiry~1]
+    private fun removeExpired() {
+        val today = today()
+        if (expiryChecked == today || syncStatus?.state == SyncState.RUNNING) return
+        guarded {
+            val expired = expire(file, today)
+            if (expired != null) {
+                val names = expired.removed.joinToString(", ") { it.description }
+                write(expired.file, if (expired.removed.size == 1) "Remove expired task: $names" else "Remove expired tasks: $names")
+            }
+            expiryChecked = today
+        }
     }
 
     /** The day of the last look for tasks to archive: the history is read for it, which is too slow for every reload. */
