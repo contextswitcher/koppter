@@ -501,7 +501,7 @@ class TodoController(
      * How many tasks the text of the filter finds in the file, done and before their start date included, and how many of them the view shows;
      * `null` without a text and in the family view, which has no search.
      */
-    // [impl->dsn~filter-hidden-matches~1]
+    // [impl->dsn~filter-hidden-matches~2]
     val textMatches: Pair<Int, Int>?
         get() {
             if (filter.text.isBlank() || view == View.FAMILY) return null
@@ -526,6 +526,16 @@ class TodoController(
         topOnly = false
         nextOnly = false
         view = View.LIST
+    }
+
+    /**
+     * Sets the text of the filter. Clearing it also ends what [showAll] widened, so that the list shows the open tasks again:
+     * completed tasks are rarely searched for.
+     */
+    // [impl->dsn~filter-hidden-matches~2]
+    fun search(text: String) {
+        val searched = filter.copy(text = text)
+        filter = if (text.isBlank() && searched == Filter(completion = Completion.ALL, hideFuture = false)) Filter() else searched
     }
 
     /** Gives a task of the inbox its context. */

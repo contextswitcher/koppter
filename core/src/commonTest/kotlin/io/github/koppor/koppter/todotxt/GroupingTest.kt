@@ -57,14 +57,14 @@ class GroupingTest {
     }
 
     // [utest->dsn~board-groups~1]
-    // [utest->dsn~due-groups~1]
+    // [utest->dsn~due-groups~2]
     @Test
     fun groupsByDueDateRelativeToToday() {
         assertEquals(
             mapOf(
                 "Overdue" to listOf("Return book"),
                 "Today" to listOf("Pay bill"),
-                "Next weekend" to listOf("Thank Mom"),
+                "Next week" to listOf("Thank Mom"),
                 "No due date" to listOf("Schedule pickup", "Post signs"),
             ),
             groups(GroupKey.DUE),
@@ -73,9 +73,13 @@ class GroupingTest {
         val days = listOf("11-13", "11-14", "11-15", "11-16", "11-22", "11-23", "11-26", "11-27", "12-12", "12-13", "2027-03-01")
         val dated = TodoFile.parse(days.joinToString("\n") { "Water the plants due:${if (it.length == 5) "2026-$it" else it}" }).entries
         assertEquals(
-            listOf("Tomorrow" to 1, "This weekend" to 2, "Next weekend" to 2, "In two weeks" to 2, "In a month" to 2, "Later" to 2),
+            listOf("Tomorrow" to 1, "This weekend" to 2, "Next week" to 2, "In two weeks" to 2, "In a month" to 2, "Later" to 2),
             groupEntries(dated, GroupKey.DUE, today).map { it.title to it.entries.size },
         )
+        // A completed task is not overdue: it stands in a group of its own, last, and no move leads into it.
+        val past = groupEntries(TodoFile.parse("x Return book due:2026-11-01\nPay fine due:2026-11-01").entries, GroupKey.DUE, today)
+        assertEquals(listOf("Overdue" to listOf("Pay fine"), "Done" to listOf("Return book")), past.map { group -> group.title to group.entries.map { it.task.description } })
+        assertEquals(null, moveToGroup(past[0].entries[0].task, GroupKey.DUE, past[0], past[1], today))
         // On a Monday, three days from now come before the weekend.
         assertEquals(
             listOf("In three days", "This weekend"),
@@ -115,7 +119,7 @@ class GroupingTest {
     fun movingBetweenDueDateColumnsSetsOrRemovesTheDueDate() {
         assertEquals("Call Mom due:2026-11-12", move("Call Mom", GroupKey.DUE, "No due date", "Today"))
         // A column sets the day it is named after, and the last one the day after the month.
-        assertEquals("Call Mom due:2026-11-22", move("Call Mom due:2026-11-12", GroupKey.DUE, "Today", "Next weekend"))
+        assertEquals("Call Mom due:2026-11-22", move("Call Mom due:2026-11-12", GroupKey.DUE, "Today", "Next week"))
         val groups = groupEntries(TodoFile.parse("Call Mom due:2026-11-12\nRenew the passport due:2027-03-01").entries, GroupKey.DUE, today)
         assertEquals(listOf("Today", "Later"), groups.map { it.title })
         assertEquals("Call Mom due:2026-12-13", moveToGroup(groups[0].entries[0].task, GroupKey.DUE, groups[0], groups[1], today)?.toLine())

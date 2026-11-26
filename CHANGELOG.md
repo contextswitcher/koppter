@@ -24,6 +24,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Fixed
 
+- Grouped by due date, completed tasks no longer stand under *Overdue* but in a group *Done* at the end.
+- Grouped by due date, the group up to the Sunday after next is titled *Next week* instead of *Next weekend*.
+- Clearing the search text after *Show all* returns the list to the open tasks instead of keeping the completed ones.
 - In the edit dialog, *Less* stands after the expanded names of projects, contexts and hashtags instead of between them.
 
 ## [2026-11-25] - 2026-11-25

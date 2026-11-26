@@ -78,6 +78,7 @@ import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.sync.TaskDates
 import io.github.koppor.koppter.storage.TodoStorage
 import io.github.koppor.koppter.todotxt.Filter
+import io.github.koppor.koppter.todotxt.Completion
 import io.github.koppor.koppter.todotxt.GroupKey
 import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.outlook.OutlookItem
@@ -3387,7 +3388,7 @@ class AppTest {
         onNodeWithText("Post signs").assertIsDisplayed()
     }
 
-    // [utest->dsn~filter-hidden-matches~1]
+    // [utest->dsn~filter-hidden-matches~2]
     @Test
     fun aViewThatHidesMatchesSaysSoAndShowsThemInTheList() = runDesktopComposeUiTest(width = 1280, height = 720) {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
@@ -3400,8 +3401,12 @@ class AppTest {
         onNodeWithTag("filter-show-all").assertTextEquals("Show in List").performClick()
         assertEquals(View.LIST, controller.view)
         assertEquals("garage", controller.filter.text)
+        assertEquals(Completion.ALL, controller.filter.completion)
         onNodeWithTag("filter-hidden").assertDoesNotExist()
         onNodeWithText("Post signs").assertIsDisplayed()
+        // Clearing the text ends the search for completed tasks as well.
+        onNodeWithTag("filter-text").performTextClearance()
+        assertEquals(Filter(), controller.filter)
     }
 
     // [utest->dsn~back~1]

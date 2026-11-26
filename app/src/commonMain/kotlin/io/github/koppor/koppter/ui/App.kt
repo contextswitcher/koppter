@@ -445,11 +445,11 @@ private fun MainScreen(
     val searchField: @Composable (Modifier) -> Unit = { modifier ->
         SearchField(
             controller.filter.text,
-{ controller.filter = controller.filter.copy(text = it) },
+controller::search,
             "Search text", "filter-text", modifier.focusRequester(filterFocus),
         )
     }
-    // [impl->dsn~filter-hidden-matches~1]
+    // [impl->dsn~filter-hidden-matches~2]
     // Only while the view hides some of the matches: a count that the list already shows explains nothing.
     val hiddenMatches = controller.textMatches?.takeIf { (all, shown) -> shown < all }
     val hiddenLine: @Composable (Modifier, () -> Unit) -> Unit = { modifier, afterShow ->

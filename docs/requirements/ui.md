@@ -907,11 +907,12 @@ Covers:
 Needs: impl, utest
 
 ### Matches of the filter text that the view hides
-`dsn~filter-hidden-matches~1`
+`dsn~filter-hidden-matches~2`
 
 While the text of the filter finds more tasks in the file, completed ones and those before their start date included, than the view shows, a line below the field reads, for example, *2 matches in the file, 0 shown here*.
 Its button *Show in List*, or *Show all* in the list, switches to the list and shows every task with the text: it keeps the text and resets the other criteria of the filter, *Top* and *Next*; in the drawer, it also closes the drawer.
 While the view shows all matches, the line is absent, so that it stands only where it explains why a match is missing.
+Clearing the text of the filter that *Show all* left ends it: the filter returns to the open tasks, since completed ones are rarely searched for.
 The views of the plan count the tasks of their days: today, the seven days of the agenda, and the current week.
 
 Covers:

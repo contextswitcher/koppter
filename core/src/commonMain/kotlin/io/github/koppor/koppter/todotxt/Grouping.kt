@@ -53,19 +53,24 @@ fun groupEntries(entries: List<Entry>, key: GroupKey, today: LocalDate): List<Gr
         GroupKey.PROJECT -> byValues("No project", "+") { it.projects }
         GroupKey.CONTEXT -> byValues("No context", "@") { it.contexts }
         GroupKey.HASHTAG -> byValues("No hashtag", "#") { it.hashtags }
-        // [impl->dsn~due-groups~1]
+        // [impl->dsn~due-groups~2]
         GroupKey.DUE -> buildList {
             fun between(after: LocalDate?, until: LocalDate?) =
                 entries.filter { it.task.due.let { due -> due != null && (after == null || due > after) && (until == null || due <= until) } }
             var last = today.minus(DatePeriod(days = 1))
-            add(Group("Overdue", between(null, last), OVERDUE))
+            // A completed task is not overdue; it keeps a group of its own instead of vanishing.
+            val past = between(null, last).partition { !it.task.completed }
+            add(Group("Overdue", past.first, OVERDUE))
             // A group has the tasks that are due after the day of the group before it, up to its own day.
             for ((name, day) in dueChoices(today)) {
-                add(Group(name.replaceFirstChar(Char::uppercase), between(last, day), day.toString()))
+                // The group spans the days up to that Sunday, which are next week, not a weekend.
+                val title = if (name == "next weekend") "next week" else name
+                add(Group(title.replaceFirstChar(Char::uppercase), between(last, day), day.toString()))
                 last = day
             }
             add(Group("Later", between(last, null), LATER))
             add(Group("No due date", entries.filter { it.task.due == null }))
+            add(Group("Done", past.second, DONE))
         }
     }.filter { it.entries.isNotEmpty() }
 }
@@ -100,6 +105,7 @@ fun groupByColumns(entries: List<Entry>, columns: List<BoardColumn>, today: Loca
 
 private const val OVERDUE = "overdue"
 private const val LATER = "later"
+private const val DONE = "done"
 
 /**
  * The days that are offered for a due date, each with what it is called, in the order of the days; each day once.
@@ -144,7 +150,7 @@ fun deadlineChoices(today: LocalDate): List<Pair<String, LocalDate>> {
  * For due date ranges, a column sets its day, such as the Sunday for *this weekend*, *later* the day after the last of them,
  * and the column without due date removes the date.
  *
- * @return `null` if the move makes no sense: within a column, or into the column of overdue tasks
+ * @return `null` if the move makes no sense: within a column, or into the column of overdue or of done tasks
  */
 // [impl->dsn~board-move~1]
 fun moveToGroup(task: Task, key: GroupKey, from: Group, to: Group, today: LocalDate): Task? {
@@ -156,7 +162,7 @@ fun moveToGroup(task: Task, key: GroupKey, from: Group, to: Group, today: LocalD
         GroupKey.HASHTAG -> task.edit(hashtags = (task.hashtags - listOfNotNull(from.value).toSet() + listOfNotNull(to.value)).distinct())
         GroupKey.DUE -> when (to.value) {
             null -> task.withTag(Task.DUE, null)
-            OVERDUE -> null
+            OVERDUE, DONE -> null
             LATER -> task.withTag(Task.DUE, dueChoices(today).last().second.plus(DatePeriod(days = 1)).toString())
             else -> task.withTag(Task.DUE, to.value)
         }

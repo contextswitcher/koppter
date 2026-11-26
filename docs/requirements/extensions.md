@@ -436,7 +436,7 @@ Needs: impl
 
 `groupEntries` distributes entries over groups by priority, project, context, hashtag or due date.
 A task with several projects or contexts appears in each of their groups.
-The due date groups are described in `dsn~due-groups~1`.
+The due date groups are described in `dsn~due-groups~2`.
 Tasks without a value form the last group; empty groups are left out.
 
 Covers:
@@ -447,12 +447,14 @@ Covers:
 Needs: impl, utest
 
 ### Groups by due date
-`dsn~due-groups~1`
+`dsn~due-groups~2`
 
-The groups by due date are *Overdue*, then one group for each day of `dueChoices`, then *Later* and *No due date*.
+The groups by due date are *Overdue*, then one group for each day of `dueChoices`, then *Later*, *No due date* and *Done*.
+*Overdue* has the open tasks due before today; *Done* has the completed ones, which are not overdue.
+A group is titled by the name of its day, except that of *next weekend*: it spans the days of the next week up to its Sunday and is titled *Next week*.
 The days of `dueChoices` are those that the menu of the due date and the edit dialog offer: today, tomorrow, this weekend, in three days, next weekend, in two weeks and in a month.
 The group of a day has the tasks that are due after the day of the group before it, up to its own day; *Later* has those after the last day.
-Moving a task to the group of a day sets that day as its due date, and moving it to *Later* the day after the last one.
+Moving a task to the group of a day sets that day as its due date, and moving it to *Later* the day after the last one; no move leads into *Overdue* or *Done*.
 
 Covers:
 
@@ -547,7 +549,7 @@ Needs: impl, utest
 `moveToGroup` returns the task as it is after a move from one group to another.
 For priorities, the task gets the priority of the target group, or none.
 For projects, contexts and hashtags, the value of the source group is replaced by that of the target group; the other projects, contexts and hashtags of the task stay.
-For due dates, a group sets its day (`dsn~due-groups~1`), and the group without due date removes the date.
+For due dates, a group sets its day (`dsn~due-groups~2`), and the group without due date removes the date.
 A move within a group or into the group of overdue tasks changes nothing.
 
 Covers:
