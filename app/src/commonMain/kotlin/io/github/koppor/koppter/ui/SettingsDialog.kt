@@ -252,6 +252,7 @@ fun SettingsDialog(
     var outlookBusyCalendars by remember { mutableStateOf(settings.outlookBusyCalendars) }
     var latexEditor by remember { mutableStateOf(settings.latexEditor) }
     var outlookWeeks by remember { mutableStateOf(settings.outlookWeeks.toString()) }
+    var outlookMirror by remember { mutableStateOf(settings.outlookMirror) }
     val outlookWeeksValue = outlookWeeks.trim().toIntOrNull()?.takeIf { it >= 0 }
     var cloning by remember { mutableStateOf(false) }
     var fileMessage by remember { mutableStateOf("") }
@@ -272,7 +273,7 @@ fun SettingsDialog(
         fileMessage = "$shown: ${failureText(e)}" + if (ownKey) "\nIs the public SSH key of this device, shown below, registered with the server?" else ""
     }
 
-    val state = listOf(todoFile, sharedLists, calendarsOfMembers.toMap(), writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookBusyCalendars, outlookWeeks, latexEditor, home)
+    val state = listOf(todoFile, sharedLists, calendarsOfMembers.toMap(), writeDates, contextSwitcherSync, topCount, columns, actions, priorities, links, contexts, newTaskDefaults, committerName, committerEmail, outlookCalendar, outlookBusyCalendars, outlookWeeks, outlookMirror, latexEditor, home)
     val initial = remember { state }
 
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
@@ -568,6 +569,22 @@ fun SettingsDialog(
                                     "Further accounts with busy times", outlookBusyCalendars, { outlookBusyCalendars = it }, "None", "settings-outlook-busy-calendars",
                                     "Names of accounts in Outlook, separated by blanks. Their main calendars count as busy when planning and are shown in Today and Week; the plan is not written to them.",
                                 )
+                                // [impl->dsn~outlook-mirror~1]
+                                Row(
+                                    Modifier.fillMaxWidth().toggleable(value = outlookMirror, onValueChange = { outlookMirror = it }, role = Role.Checkbox)
+                                        .testTag("settings-outlook-mirror"),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Checkbox(checked = outlookMirror, onCheckedChange = null, modifier = Modifier.padding(6.dp))
+                                    Column {
+                                        Text("Copy the appointments for the devices without Outlook")
+                                        Text(
+                                            "Each plan writes the times and subjects of the busy appointments of the next year into ${OutlookCalendar.MIRROR} next to todo.txt; a phone shows them and plans around them.",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
                                 OutlookClearButton(outlookBlocks, outlookCalendar)
                                 }
                             if (syncsContextSwitcher) {
@@ -620,7 +637,7 @@ fun SettingsDialog(
                         settings.copy(
                             todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), planMember = if (planMember == null) settings.planMember else planOf, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
                             committerName = committerName.trim(), committerEmail = committerEmail.trim(),
-                            outlookCalendar = outlookCalendar.trim(), outlookBusyCalendars = outlookBusyCalendars.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, latexEditor = latexEditor.trim(),
+                            outlookCalendar = outlookCalendar.trim(), outlookBusyCalendars = outlookBusyCalendars.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, outlookMirror = outlookMirror, latexEditor = latexEditor.trim(),
                             contextSwitcherSync = contextSwitcherSync,
                         ),
                         columns?.trim(),

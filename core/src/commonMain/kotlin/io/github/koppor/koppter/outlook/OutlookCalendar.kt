@@ -1,6 +1,7 @@
 package io.github.koppor.koppter.outlook
 
 import io.github.koppor.koppter.plan.Block
+import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.plan.Span
 import io.github.koppor.koppter.plan.sidelined
@@ -37,6 +38,9 @@ data class OutlookBusy(
 object OutlookCalendar {
     /** What the subject and the text of a block of koppter carry, so that the user sees whose block it is. */
     const val MARK = "[koppter]"
+
+    /** The file next to todo.txt into which a device with Outlook copies its appointments, so that a device without Outlook shows them and plans around them. */
+    const val MIRROR = "calendar-outlook.txt"
 
     /** The window into which the blocks are written: from [now] to the end of the day before today plus [weeks] weeks. */
     fun window(now: LocalDateTime, weeks: Int): ClosedRange<LocalDateTime> =
@@ -89,6 +93,29 @@ object OutlookCalendar {
             val end = if (appointment.end.date == day) minuteOf(appointment.end) else 24 * 60
             (appointment to Span(start, end)).takeIf { end > start }
         }.sortedBy { it.second.start }
+
+    /**
+     * The appointments that [busyTimes] counts, from [from] to before [to], in the format of calendar.txt: a line per day that has one, cut at midnight.
+     * Only the times and the subjects are kept; the colors and the sideline stay with Outlook.
+     */
+    // [impl->dsn~outlook-mirror~1]
+    fun mirror(appointments: List<OutlookBusy>, sideline: List<String>, from: LocalDate, to: LocalDate): String {
+        val counted = appointments.filter { it.status != BusyStatus.FREE && !isSidelined(it, sideline) }
+        val lines = generateSequence(from) { it.plus(DatePeriod(days = 1)) }.takeWhile { it < to }.mapNotNull { day ->
+            // A ". " before a time would start another block when the file is read.
+            onDay(counted, day).takeIf { it.isNotEmpty() }?.joinToString(". ") { (appointment, span) ->
+                // A block needs a text to be read back.
+                "${CalendarTxt.timesText(span)} ${appointment.subject.replace(Regex("\\s+"), " ").trim().replace(Regex("\\. (?=\\d{2}:\\d{2}-)"), ", ").ifEmpty { CalendarTxt.BUSY }}"
+            }?.let { CalendarTxt.dayLine(day, it) }
+        }.toList()
+        return if (lines.isEmpty()) "" else lines.joinToString("\n", postfix = "\n")
+    }
+
+    /** The appointments of a file that [mirror] wrote, as busy and without color, so that the calendar views and planning take them as those of Outlook. */
+    // [impl->dsn~outlook-mirror~1]
+    fun mirrored(text: String): List<OutlookBusy> = CalendarTxt.blocks(text).map { block ->
+        OutlookBusy(at(block.date, block.span.start), at(block.date, block.span.end), allDay = false, status = BusyStatus.BUSY, subject = block.text)
+    }
 
     /** The color of an appointment as red, green and blue from 0 to 255; `null` without one or for a text that is no `#RRGGBB`. */
     fun rgb(color: String?): Triple<Int, Int, Int>? =

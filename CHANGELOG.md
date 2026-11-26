@@ -11,6 +11,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - Links `koppter://…` open the application on Linux and macOS as well: on Linux, the installed application registers them for the user at its start; on macOS, the package declares them.
 - The settings of Outlook have the field *Further accounts with busy times*: the main calendars of these accounts count as busy when planning and are shown in Today and Week, and the plan is not written to them.
+- *Copy the appointments for the devices without Outlook* in the Outlook settings of the desktop writes the times and subjects of the busy appointments of Outlook next to todo.txt when planning; a device without Outlook, such as a phone, shows them read-only in *Week* and *Today* and plans around them.
 - In *Calendars with busy times* of the plan dialog, a `#` at the start of a line or after a blank starts a comment, such as `# calendar of Alina` above or after an address.
 - On Windows with AnchorHub, a page of OneNote that a task refers to with `onenote:` shows a link back to the task, which opens the task in koppter: the links follow at each synchronization, and those of completed tasks are struck through.
 - The tag `exp:` states the last day of a task: an open task is removed from the todo.txt file the day after, and until then it is planned and shown as due on that day, unless it has a due date of its own.

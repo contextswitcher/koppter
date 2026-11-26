@@ -18,6 +18,7 @@ import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import androidx.compose.ui.test.ComposeUiTest
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHasNoClickAction
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertTextContains
@@ -84,6 +85,8 @@ import io.github.koppor.koppter.outlook.BusyStatus
 import io.github.koppor.koppter.outlook.OutlookBlock
 import io.github.koppor.koppter.outlook.OutlookBridge
 import io.github.koppor.koppter.outlook.OutlookBusy
+import io.github.koppor.koppter.outlook.OutlookCalendar
+import io.github.koppor.koppter.plan.CalendarTxt
 import kotlinx.datetime.LocalDateTime
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.dueChoices
@@ -1500,6 +1503,37 @@ class AppTest {
         val (_, blocks) = outlook.synced!!
         assertTrue(blocks.isNotEmpty())
         assertTrue(blocks.all { it.start >= lecture.end }, blocks.toString())
+    }
+
+    // [utest->dsn~outlook-mirror~1]
+    @Test
+    fun theDesktopCopiesTheAppointmentsOfOutlookAndThePhonePlansAroundThem() {
+        val meeting = OutlookBusy(LocalDateTime(2026, 11, 12, 0, 0), LocalDateTime(2026, 11, 26, 0, 0), false, BusyStatus.BUSY, "Conference")
+        val desktop = TodoController(Settings(outlookWeeks = 0), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 }, outlook = FakeOutlook(appointments = listOf(meeting)))
+        runBlocking { desktop.planWithCalendars(desktop.planSettings!!, null) }
+        // Off by default, as the subjects go into the repository.
+        assertNull(storage.companions[OutlookCalendar.MIRROR])
+        desktop.updateSettings(desktop.settings.copy(outlookMirror = true))
+        runBlocking { desktop.planWithCalendars(desktop.planSettings!!, null) }
+        assertEquals("2026-11-12 w46 Thu  00:00-24:00 Conference", storage.companions[OutlookCalendar.MIRROR]!!.lines().first())
+
+        val phone = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 })
+        runBlocking { phone.planWithCalendars(phone.planSettings!!, null) }
+        val blocks = CalendarTxt.blocks(storage.companions[CalendarTxt.NAME]!!)
+        assertTrue(blocks.isNotEmpty())
+        assertTrue(blocks.all { it.date >= LocalDate(2026, 11, 26) }, blocks.toString())
+    }
+
+    // [utest->dsn~outlook-mirror~1]
+    @Test
+    fun withoutOutlookTheWeekShowsTheMirroredAppointmentsReadOnly() = runComposeUiTest {
+        storage.companions[OutlookCalendar.MIRROR] = "2026-11-12 w46 Thu  10:00-11:00 Faculty board\n"
+        val controller = TodoController(Settings(view = "WEEK"), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        onNodeWithText("10:00 Faculty board", useUnmergedTree = true).assertExists()
+        // Nothing opens it on this device.
+        onNodeWithTag("calendar-appointment", useUnmergedTree = true).assertHasNoClickAction()
     }
 
     // [utest->dsn~outlook-clear~1]

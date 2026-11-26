@@ -28,6 +28,7 @@ import androidx.compose.ui.test.v2.runDesktopComposeUiTest
 import io.github.koppor.koppter.outlook.OutlookBlock
 import io.github.koppor.koppter.outlook.OutlookBridge
 import io.github.koppor.koppter.outlook.OutlookBusy
+import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.outlook.OutlookItem
 import io.github.koppor.koppter.storage.Appearance
 import io.github.koppor.koppter.storage.CompanionFiles
@@ -60,7 +61,7 @@ class ScreenshotTest {
 
         /** Lines that one screen adds to the file, so that the other screens and the images of the README stay as they are. */
         var extra = ""
-        private val companions = mutableMapOf(
+        val companions = mutableMapOf(
             "koppter.yml" to """
                 board-columns:
                   Now: due:<=today -@waiting
@@ -396,7 +397,7 @@ class ScreenshotTest {
         screen("settings-outlook", withOutlook = true, settings = Settings(outlookBusyCalendars = "me@uni.example")) {
             onNodeWithTag("open-settings").performClick()
             onNodeWithTag("settings-tab-integrations").performClick()
-            onNodeWithTag("settings-outlook-busy-calendars").performScrollTo()
+            onNodeWithTag("settings-outlook-mirror").performScrollTo()
         }
         screen("overdue-tooltip") {
             onNodeWithTag("list-switch").performClick()
@@ -419,6 +420,18 @@ class ScreenshotTest {
             onNodeWithTag("week-calendars").performClick()
         }
         screen("today") { onNodeWithTag("today-switch").performClick() }
+        // A phone without Outlook, with the appointments that the desktop copied; only these screens have them.
+        val mirror = "2026-11-12 w46 Thu  09:00-10:30 Faculty board. 13:00-14:00 Interview with a candidate\n2026-11-13 w46 Fri  10:00-11:00 Review of the project\n"
+        screen("week-mirror") {
+            storage.companions[OutlookCalendar.MIRROR] = mirror
+            onNodeWithTag("week-switch").performClick()
+            waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+        }
+        screen("today-mirror") {
+            onNodeWithTag("today-switch").performClick()
+            waitUntil { onAllNodesWithTag("calendar-appointment", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() || size == "phone" }
+            storage.companions -= OutlookCalendar.MIRROR
+        }
         screen("today-hidden-matches") {
             onNodeWithTag("today-switch").performClick()
             if (width < 840) onNodeWithTag("open-search").performClick()

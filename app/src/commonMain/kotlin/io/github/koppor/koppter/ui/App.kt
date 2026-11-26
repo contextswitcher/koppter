@@ -631,6 +631,7 @@ private fun MainScreen(
                             val appointmentScope = rememberCoroutineScope()
                             val sidelineWords = controller.sidelineWords
                             // [impl->dsn~calendar-events~1]
+                            // [impl->dsn~outlook-mirror~1]
                             val viewCalendars = controller.viewCalendars
                             val appointments = if (viewCalendars.isEmpty()) null else CalendarAppointments(
                                 controller.appointments.takeIf { controller.showsCalendar(Settings.OUTLOOK_SOURCE) }.orEmpty(),

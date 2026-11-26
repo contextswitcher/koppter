@@ -114,7 +114,7 @@ object CalendarTxt {
         return if (all.isEmpty()) "" else all.joinToString("\n", postfix = "\n")
     }
 
-    private fun dayLine(day: LocalDate, events: String) = "$day w${week(day).toString().padStart(2, '0')} ${WEEKDAYS[day.dayOfWeek.isoDayNumber - 1]}  $events".trimEnd()
+    internal fun dayLine(day: LocalDate, events: String) = "$day w${week(day).toString().padStart(2, '0')} ${WEEKDAYS[day.dayOfWeek.isoDayNumber - 1]}  $events".trimEnd()
 
     /** The blocks of the file in the order of time, those of past days included. */
     fun blocks(calendar: String): List<TextBlock> = calendar.lines().flatMap { line ->

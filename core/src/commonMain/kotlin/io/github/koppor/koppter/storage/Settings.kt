@@ -66,6 +66,8 @@ data class Settings(
     val outlookBusyCalendars: String = "",
     /** For how many weeks from today the plan is written to the calendar of Outlook; 0 writes nothing. */
     val outlookWeeks: Int = 3,
+    /** Whether planning copies the appointments of Outlook into [io.github.koppor.koppter.outlook.OutlookCalendar.MIRROR], for the devices without Outlook. */
+    val outlookMirror: Boolean = false,
     /** The program that opens a TODO of a LaTeX document, as a template of [io.github.koppor.koppter.latex.Latex.command]; blank for the program of the system. */
     val latexEditor: String = "",
     /** Whether the projects and contexts of the filter are sent to ContextSwitcher, on the desktop; see [io.github.koppor.koppter.todotxt.SyncSelection]. */
@@ -121,6 +123,7 @@ data class Settings(
         OUTLOOK_CALENDAR to outlookCalendar,
         OUTLOOK_BUSY_CALENDARS to outlookBusyCalendars,
         OUTLOOK_WEEKS to outlookWeeks.toString(),
+        OUTLOOK_MIRROR to outlookMirror.toString(),
         LATEX_EDITOR to latexEditor,
         CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
         RANKING_PERIOD to rankingPeriod,
@@ -152,6 +155,7 @@ data class Settings(
         private const val OUTLOOK_CALENDAR = "outlookCalendar"
         private const val OUTLOOK_BUSY_CALENDARS = "outlookBusyCalendars"
         private const val OUTLOOK_WEEKS = "outlookWeeks"
+        private const val OUTLOOK_MIRROR = "outlookMirror"
         private const val LATEX_EDITOR = "latexEditor"
         private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
         private const val RANKING_PERIOD = "rankingPeriod"
@@ -186,6 +190,7 @@ data class Settings(
             outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
             outlookBusyCalendars = properties[OUTLOOK_BUSY_CALENDARS].orEmpty(),
             outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
+            outlookMirror = properties[OUTLOOK_MIRROR].toBoolean(),
             latexEditor = properties[LATEX_EDITOR].orEmpty(),
             contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),
             rankingPeriod = properties[RANKING_PERIOD] ?: Settings().rankingPeriod,

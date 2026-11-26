@@ -271,6 +271,20 @@ Covers:
 
 Needs: dsn
 
+### Appointments of Outlook on the devices without Outlook
+`req~outlook-mirror~1`
+
+A device without Outlook, such as a phone, shows the appointments of the calendar of Outlook in the calendar views and plans around them, as far as a device with Outlook copied them.
+The copy is made when the device with Outlook plans, if its user chose so in the settings, as it puts the subjects of the appointments into a file next to the todo.txt file, which the synchronization passes on.
+The copy holds the times and the subjects of the appointments that planning counts as busy, for a year from that plan; on the device without Outlook they are shown read-only, without the colors of their categories.
+
+Covers:
+
+* `feat~planning~1`
+* `feat~outlook~1`
+
+Needs: dsn
+
 ### Views of the plan
 `req~agenda~1`
 
@@ -647,6 +661,21 @@ A group are the entries that overlap, directly or through others; an entry takes
 Covers:
 
 * `req~calendar-events~1`
+
+Needs: impl, utest
+
+### Mirror of Outlook
+`dsn~outlook-mirror~1`
+
+With the setting `outlookMirror`, which the settings dialog offers where Outlook is reached and which is off by default, `TodoController.planWithCalendars` writes the appointments of all accounts that it read for a year as `calendar-outlook.txt` (`OutlookCalendar.mirror`) next to the todo.txt file: in the format of calendar.txt, a line per day that has one, the subject without line breaks and `Busy` for one without subject.
+A device without `OutlookBridge` reads that file (`OutlookCalendar.mirrored`) for the busy times of planning and for `CalendarAppointments`, and *Calendars* of `Week` lists it as *Outlook*; an appointment without EntryID does not react to a click, as Outlook cannot open it.
+`GitStorage` merges the file as it merges the plan: the version of the plan made last is taken.
+A failure to read the file leaves the views without these appointments and is logged; the file is as current as the last plan of the device with Outlook.
+
+Covers:
+
+* `req~outlook-mirror~1`
+* `adr~outlook-on-other-devices~1`
 
 Needs: impl, utest
 

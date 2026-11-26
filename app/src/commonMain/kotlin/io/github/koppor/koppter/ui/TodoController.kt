@@ -408,6 +408,9 @@ class TodoController(
     private var config by mutableStateOf<String?>(null)
 
     /** The blocks of `calendar.txt`; `null` without that file. */
+    /** Whether this device, without Outlook, has the appointments that a device with Outlook copied, see [OutlookCalendar.MIRROR]. */
+    private var hasMirror by mutableStateOf(false)
+
     /** Since when the user is away, as `timelog.txt` says; `null` if they are not. */
     // [impl->dsn~time-log~1]
     var awaySince by mutableStateOf<LocalDateTime?>(null)
@@ -630,7 +633,7 @@ class TodoController(
     val viewCalendars: List<ViewCalendar>
         get() {
             val hidden = settings.hiddenCalendars.lines().toSet()
-            return listOfNotNull(Settings.OUTLOOK_SOURCE.takeIf { readsOutlook }).map { ViewCalendar(it, "Outlook", it !in hidden) } +
+            return listOfNotNull(Settings.OUTLOOK_SOURCE.takeIf { readsOutlook || hasMirror }).map { ViewCalendar(it, "Outlook", it !in hidden) } +
                 calendarLines.map { (address, comment) -> ViewCalendar(address, comment ?: calendarNames[address] ?: hostOf(address), address !in hidden) }
         }
 
@@ -676,17 +679,25 @@ class TodoController(
     /** Reads the appointments of the days that a calendar view shows again; what fails is logged and leaves them as they were. */
     // [impl->dsn~outlook-appointments~1]
     suspend fun refreshAppointments() {
-        val source = outlook ?: return
         val (from, to) = shownDays ?: return
+        val source = outlook
         try {
-            // [impl->dsn~outlook-busy~1]
-            val read = withContext(Dispatchers.Default) { settings.outlookBusyAccounts.flatMap { source.busy(it, from, to) } }
+            val read = withContext(Dispatchers.Default) {
+                // [impl->dsn~outlook-busy~1]
+                if (source != null) settings.outlookBusyAccounts.flatMap { source.busy(it, from, to) }
+                // [impl->dsn~outlook-mirror~1]
+                else mirroredAppointments().filter { it.end.date >= from && it.start.date < to }
+            }
             // Another view may have asked for other days meanwhile.
             if (shownDays == from to to) appointments = read
         } catch (e: Exception) {
             log("The calendar of Outlook was not read: ${e.message}", e)
         }
     }
+
+    /** The appointments that a device with Outlook copied into [OutlookCalendar.MIRROR]. */
+    private fun mirroredAppointments(): List<OutlookBusy> =
+        (storage as? CompanionFiles)?.readCompanion(OutlookCalendar.MIRROR)?.let(OutlookCalendar::mirrored).orEmpty()
 
     /**
      * Puts the appointment, for a recurring one its series, on the sideline in Outlook, or takes it off: its time then counts as free for the next plan, or as taken.
@@ -853,6 +864,12 @@ class TodoController(
             (storage as? CompanionFiles)?.readCompanion(CalendarTxt.NAME)?.let(CalendarTxt::blocks)
         } catch (_: Exception) {
             planBlocks
+        }
+        // [impl->dsn~outlook-mirror~1]
+        if (outlook == null) hasMirror = try {
+            (storage as? CompanionFiles)?.readCompanion(OutlookCalendar.MIRROR) != null
+        } catch (_: Exception) {
+            hasMirror
         }
         // [impl->dsn~family-day~1]
         val lists = storage as? SharedLists
@@ -1112,17 +1129,29 @@ class TodoController(
         val bridge = outlook
         // [impl->dsn~outlook-busy~1]
         if (bridge != null) {
+            val until = today().plus(DatePeriod(years = 1))
+            val read = mutableListOf<OutlookBusy>()
             for (account in this.settings.outlookBusyAccounts) {
                 // An account that is not read leaves the others: the plan is made with what is known, and the problem tells which one is missing.
                 val name = account ?: "the default account"
                 try {
-                    val appointments = withContext(Dispatchers.Default) { bridge.busy(account, today(), today().plus(DatePeriod(years = 1))) }
+                    val appointments = withContext(Dispatchers.Default) { bridge.busy(account, today(), until) }
                     OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
+                    read += appointments
                 } catch (e: Exception) {
                     problems += "The calendar of Outlook of $name was not read: ${e.message ?: e}"
                     log("The calendar of Outlook of $name was not read", e)
                 }
             }
+            // [impl->dsn~outlook-mirror~1]
+            val files = storage as? CompanionFiles
+            if (this.settings.outlookMirror && files != null) {
+                val mirror = OutlookCalendar.mirror(read, sideline, today(), until)
+                if (mirror != files.readCompanion(OutlookCalendar.MIRROR)) files.writeCompanion(OutlookCalendar.MIRROR, mirror)
+            }
+        } else {
+            // [impl->dsn~outlook-mirror~1]
+            OutlookCalendar.busyTimes(mirroredAppointments().filter { it.start.date >= today() }, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
         }
         val result = plan(settings, busy, problems) ?: return null
         // [impl->dsn~busy-plan~1]

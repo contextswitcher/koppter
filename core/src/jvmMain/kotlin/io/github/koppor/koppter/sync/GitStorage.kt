@@ -1,5 +1,6 @@
 package io.github.koppor.koppter.sync
 
+import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.TimeLog
 import io.github.koppor.koppter.plan.Ics
@@ -196,10 +197,11 @@ class GitStorage(
             val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
             merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")
         }
-        // A plan is one whole: lines of two plans do not make a plan, so the plan made last is taken.
+        // A plan is one whole: lines of two plans do not make a plan, so the plan made last is taken, and so is the mirror of Outlook written with it.
+        // [impl->dsn~outlook-mirror~1]
         for (plan in (listOf(sibling(CalendarTxt.NAME)) + named(CalendarTxt.NAME)).distinct()) {
             val newerPlan = if (lastChange(theirs, plan) > lastChange(ours, plan)) theirs else ours
-            for (file in listOf(plan, plan.removeSuffix(CalendarTxt.NAME) + Ics.NAME)) {
+            for (file in listOf(plan, plan.removeSuffix(CalendarTxt.NAME) + Ics.NAME, plan.removeSuffix(CalendarTxt.NAME) + OutlookCalendar.MIRROR)) {
                 if (bothChanged(file) != null) textAt(newerPlan, file)?.let { merged[file] = it }
             }
         }

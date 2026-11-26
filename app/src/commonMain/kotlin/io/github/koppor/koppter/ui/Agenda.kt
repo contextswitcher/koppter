@@ -581,7 +581,9 @@ private fun AppointmentBox(appointment: OutlookBusy, span: Span, actions: Calend
             contentColor = content,
             shape = MaterialTheme.shapes.extraSmall,
             border = if (sidelined) BorderStroke(1.dp, own ?: colors.outline) else null,
-            modifier = Modifier.padding(horizontal = 2.dp).fillMaxSize().clickable { menu = true }
+            // [impl->dsn~outlook-mirror~1]
+            // One of a mirror or of an iCalendar file has no EntryID: Outlook cannot open or sideline it.
+            modifier = Modifier.padding(horizontal = 2.dp).fillMaxSize().then(if (appointment.entryId.isEmpty()) Modifier else Modifier.clickable { menu = true })
                 .testTag(if (sidelined) "calendar-appointment-sideline" else "calendar-appointment"),
         ) {
             Text(

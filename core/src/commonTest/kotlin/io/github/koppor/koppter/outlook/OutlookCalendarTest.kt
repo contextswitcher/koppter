@@ -37,6 +37,29 @@ class OutlookCalendarTest {
         assertEquals(emptyList(), OutlookCalendar.blocks(plan, OutlookCalendar.window(now, 0)))
     }
 
+    // [utest->dsn~outlook-mirror~1]
+    @Test
+    fun theMirrorKeepsTheBusyAppointmentsWithTheirSubjectsAndIsReadBackAsSuch() {
+        val appointments = listOf(
+            OutlookBusy(LocalDateTime(2026, 11, 18, 9, 0), LocalDateTime(2026, 11, 18, 10, 0), false, BusyStatus.BUSY, "Standup. 10:00-11:00 trick", color = "#FF0000"),
+            OutlookBusy(LocalDateTime(2026, 11, 18, 23, 0), LocalDateTime(2026, 11, 19, 1, 0), false, BusyStatus.TENTATIVE, ""),
+            OutlookBusy(LocalDateTime(2026, 11, 18, 12, 0), LocalDateTime(2026, 11, 18, 13, 0), false, BusyStatus.FREE, "Lunch"),
+            OutlookBusy(LocalDateTime(2026, 11, 18, 14, 0), LocalDateTime(2026, 11, 18, 15, 0), false, BusyStatus.BUSY, "Jour fixe of the team"),
+            OutlookBusy(LocalDateTime(2026, 11, 20, 0, 0), LocalDateTime(2026, 11, 21, 0, 0), true, BusyStatus.OOF, "Holiday"),
+            OutlookBusy(LocalDateTime(2026, 11, 25, 9, 0), LocalDateTime(2026, 11, 25, 10, 0), false, BusyStatus.BUSY, "After the window"),
+        )
+        val text = OutlookCalendar.mirror(appointments, listOf("jour fixe"), today, LocalDate(2026, 11, 25))
+        assertEquals("2026-11-18 w47 Wed  09:00-10:00 Standup, 10:00-11:00 trick. 23:00-24:00 Busy\n2026-11-19 w47 Thu  00:00-01:00 Busy\n", text)
+        val read = OutlookCalendar.mirrored(text)
+        assertEquals(listOf("Standup, 10:00-11:00 trick", "Busy", "Busy"), read.map { it.subject })
+        assertEquals(LocalDateTime(2026, 11, 19, 0, 0), read[1].end)
+        assertEquals(
+            OutlookCalendar.busyTimes(appointments.filter { it.start.date < LocalDate(2026, 11, 25) }, listOf("jour fixe")),
+            OutlookCalendar.busyTimes(read),
+        )
+        assertEquals("", OutlookCalendar.mirror(emptyList(), emptyList(), today, LocalDate(2026, 11, 25)))
+    }
+
     // [utest->dsn~outlook-sideline~1]
     // [utest->dsn~outlook-appointments~1]
     @Test
