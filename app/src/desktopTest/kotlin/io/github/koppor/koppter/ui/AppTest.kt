@@ -998,6 +998,7 @@ class AppTest {
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
         setContent { App(controller, "todo.txt") }
 
+        onNode(hasTestTag("label-checklist") and hasAnyDescendant(hasText("1/2")), useUnmergedTree = true).assertExists()
         openTask("Pack the bag")
         onNodeWithText("Checklist (1/2)").assertExists()
         onNodeWithTag("edit-checklist-0").performClick()
@@ -1005,6 +1006,12 @@ class AppTest {
         onNodeWithTag("edit-checklist-1").performClick()
         onNodeWithTag("edit-save").performClick()
         assertEquals("- [x] towel\n- [ ] goggles\n", storage.companions["notes/abc.md"])
+
+        // [utest->dsn~checklist-label~1]
+        openTask("Pack the bag")
+        onNodeWithTag("edit-checklist-1").performClick()
+        onNodeWithTag("edit-save").performClick()
+        onNode(hasTestTag("label-checklist") and hasAnyDescendant(hasText("2/2")), useUnmergedTree = true).assertExists()
     }
 
     // [utest->dsn~note-images~1]

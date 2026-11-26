@@ -389,6 +389,13 @@ class ScreenshotTest {
             onNodeWithTag("new-from-template").performClick()
             onNodeWithTag("template-0").performClick()
         }
+        // [utest->dsn~checklist-label~1]
+        // Before the start, which reads the checklists with the file.
+        storage.companions["notes/swm.md"] = "- [x] towel\n- [ ] goggles\n- [ ] shampoo\n"
+        screen("list-checklist", extra = "Pack the swimming bag +Sport @home note:swm.md\n") {
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("task-list").performScrollToNode(hasText("Pack the swimming bag", substring = true))
+        }
         // [utest->dsn~note-checklist~1]
         screen("edit-checklist", extra = "Pack the swimming bag +Sport @home note:swm.md\n") {
             storage.companions["notes/swm.md"] = "- [x] towel\n- [ ] goggles\n- [ ] shampoo\n\nThe locker needs a coin.\n"

@@ -81,6 +81,9 @@ import io.github.koppor.koppter.todotxt.linkTo
 import kotlinx.datetime.LocalDate
 
 /** Tells the state of the plan of a task and a text about it; `null` for a task that shows none. */
+/** The checked and all items of the checklist in the note of a task; `null` if there is none. */
+val LocalChecklistOf = staticCompositionLocalOf<(Task) -> Pair<Int, Int>?> { { null } }
+
 val LocalPlanOf = staticCompositionLocalOf<(Task) -> Pair<PlanState, String>?> { { null } }
 
 /** What a click on the context label of a task does with the context. */
@@ -239,6 +242,7 @@ fun OutlookLabel(value: String) {
 fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val uriHandler = LocalUriHandler.current
+    val checklist = LocalChecklistOf.current(task)
     // [impl->dsn~plan-state~1]
     LocalPlanOf.current(task)?.let { (state, text) ->
         TooltipBox(
@@ -258,6 +262,9 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
             )
         }
     }
+    // [impl->dsn~checklist-label~1]
+    // First and in the color of the text, so that the progress is not read as one more tag and no tag pushes it into a second line.
+    checklist?.let { (checked, all) -> Label("$checked/$all", colors.surfaceVariant, colors.onSurface, Modifier.testTag("label-checklist"), key = "checklist:") }
     // [impl->dsn~project-hierarchy~1]
     val showProject = LocalShowProject.current
     task.projects.forEach { project ->
@@ -319,6 +326,9 @@ fun TaskLabels(task: Task, today: LocalDate, onDue: () -> Unit) {
                 key = "$key:",
             )
             key == Task.OUTLOOK -> OutlookLabel(value)
+            // [impl->dsn~checklist-label~1]
+            // Shown first, instead of the name of the file, which says nothing to the user.
+            key == Task.NOTE && checklist != null -> {}
             // [impl->dsn~onenote-tag~1]
             // The name of a page can be longer than the card is wide.
             key == Task.ONENOTE -> WithTooltip(Task.oneNotePage(value) ?: value) {

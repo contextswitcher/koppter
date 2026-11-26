@@ -66,7 +66,7 @@ Needs: dsn
 ### Checklist in a note
 `req~note-checklist~1`
 
-The user ticks off the items of a checklist in the note of a task without editing its text.
+The user ticks off the items of a checklist in the note of a task without editing its text, and sees in the list how many are ticked off.
 
 Covers:
 
@@ -960,6 +960,19 @@ Needs: impl, utest
 
 The items of a Markdown task list in the note, `- [ ] text` and `- [x] text` at any depth and with `*` or `+` as well, are shown in the edit dialog directly below the description, with check boxes in rows of at least 48 dp and the count of checked items, as ticking them off is what such a task is opened for.
 A click on an item changes only its mark in the field of the note, which is saved with *Save* as any other change of the note.
+
+Covers:
+
+* `req~note-checklist~1`
+
+Needs: impl, utest
+
+### Progress of a checklist on the card
+`dsn~checklist-label~1`
+
+A task whose note has a checklist shows the label `checklist:` with the checked and all items, such as `1/3`, in place of the label `note:` with the name of the file.
+It stands first among the labels and has the color of the text, so that it is not read as one more tag.
+`TodoController` reads the checklists of the notes of the tasks with the file and updates one when it writes its note, so that a card reads no file when it is drawn.
 
 Covers:
 

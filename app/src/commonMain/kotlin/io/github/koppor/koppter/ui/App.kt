@@ -262,6 +262,7 @@ fun App(
             LocalShowProject provides { controller.filter = controller.filter.copy(projects = setOf(it)) },
             LocalFineColor provides fineColor(controller.settings.theme, dark),
             LocalPlanOf provides controller::planOf,
+            LocalChecklistOf provides controller::checklistOf,
             LocalKeyboard provides keyboard,
             LocalPriorityNames provides controller.priorityNames,
             LocalLabelLinks provides controller.labelLinks,

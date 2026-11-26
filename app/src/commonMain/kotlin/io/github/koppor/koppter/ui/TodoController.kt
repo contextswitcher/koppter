@@ -64,6 +64,7 @@ import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
 import io.github.koppor.koppter.todotxt.TEMPLATES_FILE
 import io.github.koppor.koppter.todotxt.Template
 import io.github.koppor.koppter.todotxt.parseTemplates
+import io.github.koppor.koppter.todotxt.checklist
 import io.github.koppor.koppter.todotxt.archive
 import io.github.koppor.koppter.todotxt.expire
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -538,6 +539,10 @@ class TodoController(
     private var storage = storageFor(settings)
     private var loadedVersion: Any? = null
 
+    /** The checked and all items of the checklist of each note that has one, by the name of the note. */
+    // [impl->dsn~checklist-label~1]
+    private var checklists by mutableStateOf(emptyMap<String, Pair<Int, Int>>())
+
     init {
         open()
     }
@@ -847,6 +852,24 @@ class TodoController(
             loadedVersion = storage.version()
         }
         loadConfig()
+        loadChecklists()
+    }
+
+    /** The checked and all items of the checklist in the note of the task; `null` if its note has none. */
+    // [impl->dsn~checklist-label~1]
+    fun checklistOf(task: Task): Pair<Int, Int>? = task.tag(Task.NOTE)?.let(checklists::get)
+
+    // Read with the file, so that drawing a card reads no file; an open task with a note is rare enough to read all its notes.
+    private fun loadChecklists() {
+        val files = storage as? CompanionFiles ?: return
+        checklists = file.entries.mapNotNull { it.task.tag(Task.NOTE) }.distinct().mapNotNull { name ->
+            val items = try {
+                checklist(files.readCompanion("$NOTES_DIRECTORY/$name").orEmpty())
+            } catch (_: Exception) {
+                emptyList()
+            }
+            if (items.isEmpty()) null else name to (items.count { it.checked } to items.size)
+        }.toMap()
     }
 
     /** Reads the configuration file; a synchronization may change it while the todo.txt file stays the same. */
@@ -1427,6 +1450,9 @@ class TodoController(
         // Before the note, so that the note never shows an image that is not there.
         noteImages(note).forEach { image -> images[image]?.let { files.writeCompanionBytes("$NOTES_DIRECTORY/$image", it) } }
         files.writeCompanion("$NOTES_DIRECTORY/$name", note)
+        // [impl->dsn~checklist-label~1]
+        val items = checklist(note)
+        checklists = if (items.isEmpty()) checklists - name else checklists + (name to (items.count { it.checked } to items.size))
         return true
     }
 
