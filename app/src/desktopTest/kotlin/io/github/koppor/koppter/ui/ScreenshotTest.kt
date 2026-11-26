@@ -199,7 +199,7 @@ class ScreenshotTest {
         "20261113T090000" to "20261113T110000" to "Software engineering",
         "20261110T130000" to "20261110T140000" to "Lab",
     ).joinToString("", "BEGIN:VCALENDAR\nX-WR-CALNAME:Lectures\n", "END:VCALENDAR\n") { (times, title) ->
-        "BEGIN:VEVENT\nDTSTART:${times.first}\nDTEND:${times.second}\nSUMMARY:$title\nEND:VEVENT\n"
+        "BEGIN:VEVENT\nUID:${title.replace(' ', '-')}@calendar.example.org\nDTSTART:${times.first}\nDTEND:${times.second}\nSUMMARY:$title\nEND:VEVENT\n"
     }
 
     /** Outlook without items and appointments, so that the settings show its fields. */
@@ -440,6 +440,12 @@ class ScreenshotTest {
         screen("week-calendars-menu", settings = lectures) {
             onNodeWithTag("week-switch").performClick()
             onNodeWithTag("week-calendars").performClick()
+        }
+        // [utest->dsn~event-sideline~1]
+        screen("week-event-menu", settings = lectures) {
+            onNodeWithTag("week-switch").performClick()
+            waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
+            onNodeWithText("13:00 Lab", substring = true).performClick()
         }
         screen("today") { onNodeWithTag("today-switch").performClick() }
         // A phone without Outlook, with the appointments that the desktop copied; only these screens have them.

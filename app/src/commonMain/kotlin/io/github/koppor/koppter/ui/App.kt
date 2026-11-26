@@ -125,7 +125,6 @@ import io.github.koppor.koppter.todotxt.overviewStates
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.minutes
 import io.github.koppor.koppter.storage.Settings
-import io.github.koppor.koppter.plan.sidelined
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
 
@@ -654,7 +653,10 @@ private fun MainScreen(
                                 events = controller.calendarEvents,
                                 calendars = viewCalendars,
                                 onShowCalendar = { key, shown -> appointmentScope.launch { controller.setCalendarShown(key, shown) } },
-                                eventSidelined = { sidelined(it, sidelineWords) },
+                                sidelineWords = sidelineWords,
+                                sidelinedEvents = controller.sidelinedEvents,
+                                onEventSideline = controller::setEventSideline,
+                                onTitleSideline = controller::setTitleSideline,
                                 showsPlan = controller.showsCalendar(Settings.PLAN_SOURCE),
                             )
                             val now = kotlinx.datetime.LocalDateTime(controller.today(), kotlinx.datetime.LocalTime(minute / 60, minute % 60))

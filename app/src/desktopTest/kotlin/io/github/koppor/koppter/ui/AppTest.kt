@@ -87,6 +87,7 @@ import io.github.koppor.koppter.outlook.OutlookBridge
 import io.github.koppor.koppter.outlook.OutlookBusy
 import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.SidelinedEvents
 import kotlinx.datetime.LocalDateTime
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.parseTemplates
@@ -1471,6 +1472,43 @@ class AppTest {
         // Showing it again does not read the calendar again.
         assertEquals(2, reads)
         assertEquals("outlook", settings.hiddenCalendars)
+    }
+
+    // [utest->dsn~event-sideline~1]
+    // [utest->dsn~title-sideline~1]
+    @Test
+    fun anEventOfACalendarGoesOnTheSidelineByItselfOrByItsTitle() = runComposeUiTest {
+        val ics = "BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:lecture-1\nDTSTART:20261112T100000\nDTEND:20261112T113000\nSUMMARY:Programming\nRRULE:FREQ=DAILY;COUNT=2\nEND:VEVENT\n" +
+            "BEGIN:VEVENT\nUID:seminar-2\nDTSTART:20261112T140000\nDTEND:20261112T150000\nSUMMARY:Seminar\nEND:VEVENT\nEND:VCALENDAR\n"
+        val controller = TodoController(
+            Settings(view = "WEEK", calendars = "https://calendar.example.org/secret.ics"), { storage }, today = { LocalDate(2026, 11, 12) }, fetch = { ics },
+        )
+        setContent { App(controller, "todo.txt") }
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
+
+        // A secondary click opens the menu, as a click does.
+        onAllNodesWithTag("calendar-event", useUnmergedTree = true)[0].performMouseInput { rightClick() }
+        onNodeWithText("Sideline this event: its time counts as free, all its occurrences").assertExists()
+        onNodeWithTag("event-sideline").performClick()
+        waitUntil { onAllNodesWithTag("calendar-event-sideline", useUnmergedTree = true).fetchSemanticsNodes().size == 2 }
+        assertEquals(setOf("lecture-1"), SidelinedEvents.ids(storage.companions.getValue(SidelinedEvents.NAME)))
+
+        onAllNodesWithTag("calendar-event-sideline", useUnmergedTree = true)[0].performClick()
+        onNodeWithTag("event-sideline").assertTextContains("Take this event off the sideline", substring = true).performClick()
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
+        assertEquals(emptySet(), SidelinedEvents.ids(storage.companions.getValue(SidelinedEvents.NAME)))
+
+        onNodeWithText("Seminar", substring = true).performClick()
+        onNodeWithTag("title-sideline").assertTextEquals("Sideline everything titled \"Seminar\"").performClick()
+        waitUntil { onAllNodesWithTag("calendar-event-sideline", useUnmergedTree = true).fetchSemanticsNodes().size == 1 }
+        assertEquals(listOf("Seminar"), controller.sidelineWords)
+
+        // A word sidelines it already: the menu offers to remove the word, not to sideline the event by itself.
+        onNodeWithTag("calendar-event-sideline", useUnmergedTree = true).performClick()
+        onNodeWithTag("event-sideline").assertDoesNotExist()
+        onNodeWithTag("title-sideline").assertTextEquals("Remove from the sideline words: \"Seminar\"").performClick()
+        waitUntil { onAllNodesWithTag("calendar-event", useUnmergedTree = true).fetchSemanticsNodes().size == 3 }
+        assertEquals(emptyList(), controller.sidelineWords)
     }
 
     // [utest->dsn~calendar-events~1]

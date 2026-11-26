@@ -34,6 +34,9 @@ import io.github.koppor.koppter.plan.Span
 import io.github.koppor.koppter.plan.TextBlock
 import io.github.koppor.koppter.plan.busyTimes
 import io.github.koppor.koppter.plan.events
+import io.github.koppor.koppter.plan.icsEvents
+import io.github.koppor.koppter.plan.SidelinedEvents
+import io.github.koppor.koppter.plan.sidelined
 import io.github.koppor.koppter.plan.calendarName
 import io.github.koppor.koppter.plan.plan
 import io.github.koppor.koppter.storage.ConfigFile
@@ -114,8 +117,11 @@ private const val ABSENCE_DAYS = 28
 
 enum class View(val title: String) { TODAY("Today"), LIST("List"), AGENDA("Agenda"), WEEK("Week"), BOARD("Board"), INBOX("Inbox"), OVERVIEW("Overview"), FAMILY("Family") }
 
-/** An event of a calendar with busy times, which [calendar] names by its address, as a calendar view shows it. */
-data class CalendarEvent(val calendar: String, val block: TextBlock)
+/**
+ * An event of a calendar with busy times, which [calendar] names by its address, as a calendar view shows it.
+ * [uid] names the event, for a repeating one all its occurrences, which [recurring] tells.
+ */
+data class CalendarEvent(val calendar: String, val block: TextBlock, val uid: String = "", val recurring: Boolean = false)
 
 /** A calendar that the calendar views show or hide: [key] is its address or [Settings.OUTLOOK_SOURCE], [name] what the user knows it by. */
 data class ViewCalendar(val key: String, val name: String, val shown: Boolean)
@@ -413,6 +419,11 @@ class TodoController(
     /** The configuration file next to the todo.txt file; `null` if the storage keeps no files next to the todo.txt file. */
     private var config by mutableStateOf<String?>(null)
 
+    /** The UIDs of the events of the calendars with busy times that the user put on the sideline one by one. */
+    // [impl->dsn~event-sideline~1]
+    var sidelinedEvents by mutableStateOf<Set<String>>(emptySet())
+        private set
+
     /** The blocks of `calendar.txt`; `null` without that file. */
     /** Whether this device, without Outlook, has the appointments that a device with Outlook copied, see [OutlookCalendar.MIRROR]. */
     private var hasMirror by mutableStateOf(false)
@@ -607,6 +618,35 @@ class TodoController(
     /** The words by which an event of a calendar is on the sideline, as the configuration lists them. */
     val sidelineWords: List<String> get() = ConfigFile.entries(config.orEmpty(), ConfigFile.SIDELINE).map { it.first.trim() }.filter(String::isNotEmpty)
 
+    /** Puts the event, for a repeating one all its occurrences, on the sideline or takes it off: its time then counts as free for the next plan, or as taken. */
+    // [impl->dsn~event-sideline~1]
+    fun setEventSideline(event: CalendarEvent, on: Boolean) {
+        if (event.uid.isEmpty()) return
+        guarded {
+            val files = storage as? CompanionFiles ?: return@guarded
+            val text = files.readCompanion(SidelinedEvents.NAME).orEmpty()
+            val changed = SidelinedEvents.with(text, event.uid, event.block.text, on)
+            if (changed == text) return@guarded
+            files.writeCompanion(SidelinedEvents.NAME, changed)
+            // The storage records the files next to the todo.txt file with a change of that file.
+            storage.write(file.serialize(), if (on) "Sideline an event of a calendar" else "Take an event of a calendar off the sideline")
+            loadedVersion = storage.version()
+        }
+        loadConfig()
+    }
+
+    /**
+     * Adds the title of an event or an appointment to the words of the sideline, so that every one with it in its title is on the sideline;
+     * or, to take it off, removes the words that its title contains.
+     */
+    // [impl->dsn~title-sideline~1]
+    fun setTitleSideline(title: String, on: Boolean) {
+        val words = sidelineWords
+        val changed = if (on) words + title.trim() else words.filterNot { sidelined(title, listOf(it)) }
+        if (title.isBlank() || changed == words) return
+        writeConfig(ConfigFile.withEntries(config.orEmpty(), ConfigFile.SIDELINE, changed.distinct().map { it to "" }), if (on) "Sideline events by title" else "Take words off the sideline")
+    }
+
     /** Reads the appointments of Outlook on the days from [from] to before [to], which a calendar view shows from now on. */
     // [impl->dsn~outlook-appointments~1]
     suspend fun showAppointments(from: LocalDate, to: LocalDate) {
@@ -677,7 +717,7 @@ class TodoController(
             }
             calendarName(text)?.let { if (calendarNames[address] != it) calendarNames = calendarNames + (address to it) }
             result += withContext(Dispatchers.Default) {
-                events(text, from, to.minus(DatePeriod(days = 1)), TimeZone.currentSystemDefault()).map { CalendarEvent(address, it) }
+                icsEvents(text, from, to.minus(DatePeriod(days = 1)), TimeZone.currentSystemDefault()).map { CalendarEvent(address, it.block, it.uid, it.recurring) }
             }
         }
         // Another view may have asked for other days meanwhile.
@@ -887,6 +927,12 @@ class TodoController(
             (storage as? CompanionFiles)?.readCompanion(TimeLog.NAME)?.let(TimeLog::awaySince)
         } catch (_: Exception) {
             awaySince
+        }
+        // [impl->dsn~event-sideline~1]
+        sidelinedEvents = try {
+            (storage as? CompanionFiles)?.readCompanion(SidelinedEvents.NAME)?.let(SidelinedEvents::ids).orEmpty()
+        } catch (_: Exception) {
+            sidelinedEvents
         }
         planBlocks = try {
             (storage as? CompanionFiles)?.readCompanion(CalendarTxt.NAME)?.let(CalendarTxt::blocks)
@@ -1143,7 +1189,7 @@ class TodoController(
                 val text = fetch(address)
                 // The calendar views show what was planned with.
                 calendarTexts[address] = text
-                busyTimes(text, today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline)
+                busyTimes(text, today(), today().plus(DatePeriod(years = 1)), TimeZone.currentSystemDefault(), sideline, sidelinedEvents)
                     .forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
             } catch (e: Exception) {
                 // The address is a secret: only its host is shown.

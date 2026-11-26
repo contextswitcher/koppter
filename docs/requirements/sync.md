@@ -133,7 +133,7 @@ Needs: impl, utest
 ### Merge of the files next to todo.txt
 `dsn~merge-of-companions~1`
 
-Of the files that both sides of a merge changed, the todo.txt file, `ice_recur.txt`, `timelog.txt` and `done.txt` are the result of `mergeLines`, as they consist of lines that stand for themselves.
+Of the files that both sides of a merge changed, the todo.txt file, `ice_recur.txt`, `timelog.txt`, `done.txt` and `calendar-sideline.txt` are the result of `mergeLines`, as they consist of lines that stand for themselves.
 `calendar.txt` and `calendar.ics` are taken whole from the side whose `calendar.txt` was committed last, as the lines of two plans do not make a plan; with the same time, the side of the device is taken.
 Notes and `koppter.yml` are left to the merge of git.
 

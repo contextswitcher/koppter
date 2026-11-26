@@ -17,27 +17,44 @@ import kotlin.time.Duration
  * The times that the events of an iCalendar file take, by day, in the given time zone.
  *
  * Counted are events with a start time that are neither canceled nor marked as free.
- * Events that last whole days are left out, as are the blocks that [Ics] wrote itself and the [sidelined] ones.
+ * Events that last whole days are left out, as are the blocks that [Ics] wrote itself and the [sidelined] ones,
+ * by a word of their title or by their UID in [sidelinedIds].
  * Repeating events are followed for the frequencies daily, weekly, monthly and yearly with interval, end, count,
  * days of the week, days of the month and excluded dates.
  */
 // ponytail: a moved occurrence of a repeating event counts at its old and its new time, and a time zone that the platform
 // does not know by its name, such as those Outlook writes, is taken as the given zone. A library for iCalendar if that shows.
 // [impl->dsn~busy-times~1]
-fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): Map<LocalDate, List<Span>> =
-    events(ics, from, to, zone, sideline).groupBy({ it.date }) { it.span }.mapValues { it.value.joined() }
+fun busyTimes(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList(), sidelinedIds: Set<String> = emptySet()): Map<LocalDate, List<Span>> =
+    events(ics, from, to, zone, sideline, sidelinedIds).groupBy({ it.date }) { it.span }.mapValues { it.value.joined() }
 
 /** The events that [busyTimes] counts, each part of a day with the title of its event. */
 // [impl->dsn~absence-titles~1]
-fun events(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList()): List<TextBlock> {
-    val result = mutableListOf<TextBlock>()
+fun events(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String> = emptyList(), sidelinedIds: Set<String> = emptySet()): List<TextBlock> =
+    icsEvents(ics, from, to, zone)
+        // A repeating event is one entry with one title and one UID, so all its occurrences are sidelined together.
+        // [impl->dsn~sideline~1]
+        // [impl->dsn~event-sideline~1]
+        .filterNot { sidelined(it.block.text, sideline) || (it.uid.isNotEmpty() && it.uid in sidelinedIds) }
+        .map { it.block }
+
+/**
+ * A part of a day that an event of an iCalendar file takes: [uid] names the event, for a repeating one all its occurrences,
+ * and [recurring] tells whether it repeats.
+ */
+data class IcsEvent(val uid: String, val recurring: Boolean, val block: TextBlock)
+
+/** The events that take time from [from] to [to], as [busyTimes] counts them but with those on the sideline. */
+// [impl->dsn~event-sideline~1]
+fun icsEvents(ics: String, from: LocalDate, to: LocalDate, zone: TimeZone): List<IcsEvent> {
+    val result = mutableListOf<IcsEvent>()
     val lines = unfolded(ics)
     var event: MutableMap<String, Pair<String, String>>? = null
     for (line in lines) {
         when {
             line == "BEGIN:VEVENT" -> event = mutableMapOf()
             line == "END:VEVENT" -> {
-                event?.let { addEvent(it, from, to, zone, sideline, result) }
+                event?.let { addEvent(it, from, to, zone, result) }
                 event = null
             }
             event != null -> {
@@ -91,12 +108,10 @@ private fun dateTime(parameters: String, value: String, zone: TimeZone): LocalDa
 // [impl->dsn~sideline~1]
 fun sidelined(title: String, sideline: List<String>): Boolean = sideline.any { it.isNotBlank() && title.contains(it.trim(), ignoreCase = true) }
 
-private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, sideline: List<String>, result: MutableList<TextBlock>) {
+private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, to: LocalDate, zone: TimeZone, result: MutableList<IcsEvent>) {
     fun value(name: String) = event[name]?.second?.trim()
     if (value("STATUS") == "CANCELLED" || value("TRANSP") == "TRANSPARENT" || value("X-MICROSOFT-CDO-BUSYSTATUS") == "FREE") return
     if (value("UID").orEmpty().endsWith("@koppter")) return
-    // A repeating event is one entry, so all its occurrences are sidelined together.
-    if (sidelined(value("SUMMARY").orEmpty(), sideline)) return
     val start = event["DTSTART"]?.let { dateTime(it.first, it.second, zone) } ?: return
     val minutes = event["DTEND"]?.let { dateTime(it.first, it.second, zone) }?.let { end ->
         start.date.daysUntil(end.date) * MINUTES_PER_DAY + end.time.toSecondOfDay() / 60 - start.time.toSecondOfDay() / 60
@@ -104,6 +119,8 @@ private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, 
     if (minutes <= 0) return
     // A title is one line without the escapes of iCalendar.
     val title = value("SUMMARY").orEmpty().replace(Regex("\\\\[nN]"), " ").replace(Regex("\\\\(.)"), "$1").trim()
+    val uid = value("UID").orEmpty()
+    val rule = value("RRULE")?.split(';')?.associate { it.substringBefore('=').uppercase() to it.substringAfter('=').uppercase() }
 
     fun add(date: LocalDate) {
         // An event that runs over midnight takes time of the following days.
@@ -112,14 +129,13 @@ private fun addEvent(event: Map<String, Pair<String, String>>, from: LocalDate, 
         var left = minutes
         while (left > 0 && day <= to) {
             val length = minOf(left, MINUTES_PER_DAY - first)
-            if (day >= from) result += TextBlock(day, Span(first, first + length), title)
+            if (day >= from) result += IcsEvent(uid, rule != null, TextBlock(day, Span(first, first + length), title))
             left -= length
             first = 0
             day = day.plus(DatePeriod(days = 1))
         }
     }
 
-    val rule = value("RRULE")?.split(';')?.associate { it.substringBefore('=').uppercase() to it.substringAfter('=').uppercase() }
     if (rule == null) {
         add(start.date)
         return

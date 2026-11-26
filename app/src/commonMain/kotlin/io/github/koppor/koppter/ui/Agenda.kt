@@ -10,6 +10,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
 import io.github.koppor.koppter.plan.Span
 import io.github.koppor.koppter.plan.lanes
+import io.github.koppor.koppter.plan.sidelined
 import androidx.compose.material3.Checkbox
 import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.outlook.OutlookBusy
@@ -43,7 +44,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.roundToInt
@@ -242,7 +246,10 @@ internal val MIN_HOUR_HEIGHT = 20.dp
  * @param events the events of the calendars with busy times that are shown
  * @param calendars the calendars that the view shows or hides
  * @param onShowCalendar shows the calendar or hides it, by its key
- * @param eventSidelined whether an event with the title counts as free for planning
+ * @param sidelineWords the words of the sideline, by which every event and appointment with one in its title counts as free for planning
+ * @param sidelinedEvents the UIDs of the events that the user put on the sideline one by one
+ * @param onEventSideline puts the event, for a repeating one all its occurrences, on the sideline or takes it off
+ * @param onTitleSideline adds the title to the words of the sideline, or removes the words that it contains
  * @param showsPlan whether the calendar views show the blocks of the plan as well, or the appointments and events only
  */
 // [impl->dsn~outlook-appointments~1]
@@ -256,7 +263,10 @@ class CalendarAppointments(
     val events: List<CalendarEvent> = emptyList(),
     val calendars: List<ViewCalendar> = emptyList(),
     val onShowCalendar: (String, Boolean) -> Unit = { _, _ -> },
-    val eventSidelined: (String) -> Boolean = { false },
+    val sidelineWords: List<String> = emptyList(),
+    val sidelinedEvents: Set<String> = emptySet(),
+    val onEventSideline: (CalendarEvent, Boolean) -> Unit = { _, _ -> },
+    val onTitleSideline: (String, Boolean) -> Unit = { _, _ -> },
     val showsPlan: Boolean = true,
 ) {
     fun onDay(day: LocalDate): List<Pair<OutlookBusy, Span>> = OutlookCalendar.onDay(all, day)
@@ -503,7 +513,7 @@ internal fun DayColumn(
             }
             // [impl->dsn~calendar-events~1]
             events.forEachIndexed { index, event ->
-                EventBox(event, appointments.eventSidelined(event.block.text), place(ofDay.size + index, event.block.span))
+                EventBox(event, appointments, place(ofDay.size + index, event.block.span))
             }
         }
         blocks.forEachIndexed { index, block ->
@@ -547,31 +557,94 @@ internal fun DayColumn(
     }
 }
 
-/** An event of a calendar with busy times in a calendar view; one on the sideline is pale. The application only reads these calendars, so a click does nothing. */
+/**
+ * An event of a calendar with busy times in a calendar view; one on the sideline is pale.
+ * A click, also a secondary one, offers to put the event or every event with its title on the sideline, or to take it off.
+ */
 // [impl->dsn~calendar-events~1]
+// [impl->dsn~event-sideline~1]
+// [impl->dsn~title-sideline~1]
 @Composable
-private fun EventBox(event: CalendarEvent, sidelined: Boolean, modifier: Modifier) {
+private fun EventBox(event: CalendarEvent, actions: CalendarAppointments, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
-    Surface(
-        color = if (sidelined) colors.tertiaryContainer.copy(alpha = 0.3f) else colors.tertiaryContainer,
-        contentColor = if (sidelined) colors.onSurface else colors.onTertiaryContainer,
-        shape = MaterialTheme.shapes.extraSmall,
-        border = if (sidelined) BorderStroke(1.dp, colors.outline) else null,
-        modifier = modifier.padding(horizontal = 2.dp).padding(bottom = 1.dp).testTag(if (sidelined) "calendar-event-sideline" else "calendar-event"),
-    ) {
-        // A bar on the left, as Outlook marks the entries of a calendar, tells an event from a block of the plan.
-        Row {
-            Box(Modifier.width(3.dp).fillMaxHeight().background(colors.tertiary))
-            Text(
-                "${CalendarTxt.timesText(event.block.span).substringBefore('-')} ${event.block.text.ifEmpty { "(no title)" }}",
-                style = MaterialTheme.typography.labelSmall,
-                textDecoration = if (sidelined) TextDecoration.LineThrough else null,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-            )
+    var menu by remember { mutableStateOf(false) }
+    val byId = event.uid.isNotEmpty() && event.uid in actions.sidelinedEvents
+    val byWord = sidelined(event.block.text, actions.sidelineWords)
+    val sidelined = byId || byWord
+    Box(modifier) {
+        Surface(
+            color = if (sidelined) colors.tertiaryContainer.copy(alpha = 0.3f) else colors.tertiaryContainer,
+            contentColor = if (sidelined) colors.onSurface else colors.onTertiaryContainer,
+            shape = MaterialTheme.shapes.extraSmall,
+            border = if (sidelined) BorderStroke(1.dp, colors.outline) else null,
+            modifier = Modifier.padding(horizontal = 2.dp).padding(bottom = 1.dp).fillMaxSize().opensMenu { menu = true }
+                .testTag(if (sidelined) "calendar-event-sideline" else "calendar-event"),
+        ) {
+            // A bar on the left, as Outlook marks the entries of a calendar, tells an event from a block of the plan.
+            Row {
+                Box(Modifier.width(3.dp).fillMaxHeight().background(colors.tertiary))
+                Text(
+                    "${CalendarTxt.timesText(event.block.span).substringBefore('-')} ${event.block.text.ifEmpty { "(no title)" }}",
+                    style = MaterialTheme.typography.labelSmall,
+                    textDecoration = if (sidelined) TextDecoration.LineThrough else null,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                )
+            }
+        }
+        DropdownMenu(menu, onDismissRequest = { menu = false }, modifier = Modifier.testTag("event-menu")) {
+            // A word sidelines the event already: putting it on the sideline by its UID as well would change nothing that shows.
+            if (event.uid.isNotEmpty() && (byId || !byWord)) {
+                DropdownMenuItem(
+                    text = { Text((if (byId) "Take this event off the sideline" else "Sideline this event: its time counts as free") + if (event.recurring) ", all its occurrences" else "") },
+                    onClick = {
+                        menu = false
+                        actions.onEventSideline(event, !byId)
+                    },
+                    modifier = Modifier.testTag("event-sideline"),
+                )
+            }
+            TitleSidelineItem(event.block.text, actions) { menu = false }
         }
     }
 }
+
+/** Opens a menu on a click and on a secondary click, which a user of a mouse expects for a menu. */
+private fun Modifier.opensMenu(open: () -> Unit): Modifier =
+    clickable(onClick = open).pointerInput(Unit) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent()
+                if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) open()
+            }
+        }
+    }
+
+/**
+ * The item of a menu that puts every event and appointment with the title on the sideline by a word, or takes the words off that put it there.
+ * An entry without title has none, as an empty word would match everything.
+ */
+// [impl->dsn~title-sideline~1]
+@Composable
+private fun TitleSidelineItem(title: String, actions: CalendarAppointments, close: () -> Unit) {
+    if (title.isBlank()) return
+    val words = actions.sidelineWords.filter { sidelined(title, listOf(it)) }
+    DropdownMenuItem(
+        text = {
+            Text(
+                if (words.isEmpty()) "Sideline everything titled \"${shortTitle(title)}\"" else "Remove from the sideline words: ${words.joinToString(", ") { "\"${shortTitle(it)}\"" }}",
+            )
+        },
+        onClick = {
+            close()
+            actions.onTitleSideline(title, words.isEmpty())
+        },
+        modifier = Modifier.testTag("title-sideline"),
+    )
+}
+
+/** A title as a menu names it: a long one is cut, so that the menu stays narrower than a phone. */
+private fun shortTitle(title: String): String = if (title.length <= 40) title else title.take(39).trimEnd() + "…"
 
 /**
  * An appointment of Outlook in a calendar view, in the color of its category in Outlook, so that it is recognized; one on the sideline is pale.
@@ -601,7 +674,7 @@ private fun AppointmentBox(appointment: OutlookBusy, span: Span, actions: Calend
             border = if (sidelined) BorderStroke(1.dp, own ?: colors.outline) else null,
             // [impl->dsn~outlook-mirror~1]
             // One of a mirror or of an iCalendar file has no EntryID: Outlook cannot open or sideline it.
-            modifier = Modifier.padding(horizontal = 2.dp).fillMaxSize().then(if (appointment.entryId.isEmpty()) Modifier else Modifier.clickable { menu = true })
+            modifier = Modifier.padding(horizontal = 2.dp).fillMaxSize().then(if (appointment.entryId.isEmpty()) Modifier else Modifier.opensMenu { menu = true })
                 .testTag(if (sidelined) "calendar-appointment-sideline" else "calendar-appointment"),
         ) {
             Text(
@@ -635,10 +708,9 @@ private fun AppointmentBox(appointment: OutlookBusy, span: Span, actions: Calend
                     },
                     modifier = Modifier.testTag("appointment-sideline"),
                 )
-            } else {
-                // A word of the plan dialog sidelines it; the category of Outlook cannot take it off.
-                DropdownMenuItem(text = { Text("On the sideline by a word of its title") }, onClick = { menu = false }, enabled = false)
             }
+            // [impl->dsn~title-sideline~1]
+            TitleSidelineItem(appointment.subject, actions) { menu = false }
         }
     }
 }

@@ -104,6 +104,31 @@ class BusyTimesTest {
         assertEquals(listOf(Span(660, 720)), busyTimes(ics, from, to, berlin, listOf("Muggi")).getValue(from))
     }
 
+    // [utest->dsn~event-sideline~1]
+    @Test
+    fun anEventOnTheSidelineByItsUidIsLeftOutWithAllItsOccurrencesButStaysAnEvent() {
+        val ics = "BEGIN:VCALENDAR\r\n" +
+            "BEGIN:VEVENT\r\nUID:series-1\r\nDTSTART:20261112T090000\r\nDTEND:20261112T100000\r\nSUMMARY:Office hours\r\nRRULE:FREQ=DAILY;COUNT=2\r\nEND:VEVENT\r\n" +
+            "BEGIN:VEVENT\r\nUID:single-2\r\nDTSTART:20261112T110000\r\nDTEND:20261112T120000\r\nSUMMARY:Review\r\nEND:VEVENT\r\n" +
+            "END:VCALENDAR\r\n"
+        assertEquals(mapOf(from to listOf(Span(660, 720))), busyTimes(ics, from, to, berlin, sidelinedIds = setOf("series-1")))
+        assertEquals(
+            listOf(IcsEvent("series-1", true, TextBlock(from, Span(540, 600), "Office hours")), IcsEvent("single-2", false, TextBlock(from, Span(660, 720), "Review"))),
+            icsEvents(ics, from, from, berlin),
+        )
+    }
+
+    // [utest->dsn~event-sideline~1]
+    @Test
+    fun theFileOfTheSidelinedEventsKeepsTheLinesOfOtherEvents() {
+        val first = SidelinedEvents.with("", "a-1", "Office hours", on = true)
+        val second = SidelinedEvents.with(first.replace("a-1 #", "a-1   #"), "b-2", "Review", on = true)
+        assertEquals(setOf("a-1", "b-2"), SidelinedEvents.ids(second))
+        assertEquals(true, second.contains("a-1   # Office hours"))
+        assertEquals(setOf("b-2"), SidelinedEvents.ids(SidelinedEvents.with(second, "a-1", "Office hours", on = false)))
+        assertEquals("", SidelinedEvents.with(SidelinedEvents.with("", "a-1", "", on = true).lines().drop(1).joinToString("\n"), "a-1", "", on = false))
+    }
+
     // [utest->dsn~calendar-events~1]
     @Test
     fun theNameOfTheCalendarIsThatOfTheFileAndNotThatOfAnEvent() {

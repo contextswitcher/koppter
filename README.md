@@ -177,9 +177,10 @@ A task cannot be worked on if it has the context `@waiting`, the hashtag `#somed
 | `done.txt` | The [tasks completed more than a month ago](#archive-of-completed-tasks) |
 | `calendar.txt` | The [plan](#planning): when the open tasks are worked on, one line per day |
 | `calendar.ics` | The plan as tentative events, for import into a calendar program |
+| `calendar-sideline.txt` | The [events of the calendars](#calendars) that were put on the sideline one by one, by their UID |
 
 If these files lie in a git repository, the application commits every change and synchronizes with the remote repository.
-Changes of two devices are merged without a conflict to resolve: `todo.txt`, `ice_recur.txt` and `done.txt` line by line, where a line that both devices changed differently is kept in both versions, and of two plans the one made last is taken.
+Changes of two devices are merged without a conflict to resolve: `todo.txt`, `ice_recur.txt`, `done.txt` and `calendar-sideline.txt` line by line, where a line that both devices changed differently is kept in both versions, and of two plans the one made last is taken.
 A note or `koppter.yml` that two devices changed at the same place stops the synchronization, which then names the file.
 This holds for the synchronization of the application; a `git pull` on the command line merges as git does.
 A repository that is not cloned yet is given by its address, such as `git@github.com:user/todo.git`, in the field for the file in the settings: the application clones it into its own directory and uses the `todo.txt` file of the clone.
@@ -669,13 +670,22 @@ Such an address lets everyone who has it read the calendar.
 It is therefore kept in the settings of the device and not in `koppter.yml`; each device needs it entered once.
 The application only reads the calendars and writes nothing to them.
 
+*Week* and *Today* show the events of these calendars with a bar on their left.
+A click on an event, or a click with the right mouse button, opens a menu:
+
+* *Sideline this event: its time counts as free* puts the event, for a repeating event all its occurrences, on the sideline: it stays in the calendar, drawn pale and struck through, but the next plan puts tasks into its time.
+  The event is kept by its UID in `calendar-sideline.txt` next to the `todo.txt` file ([decision 0059](docs/decisions/0059-file-for-the-events-on-the-sideline.md)); *Take this event off the sideline* removes it.
+* *Sideline everything titled "…"* adds the title of the event to *Sideline* in the plan dialog, so that every event and appointment whose title contains it is on the sideline.
+  For an entry that a word puts on the sideline, the item removes that word instead.
+
 ### Calendar of Outlook
 
 On Windows with the classic Outlook and [AnchorHub](#tasks-of-outlook), planning also works with the main calendar of an Outlook account ([decision 0041](docs/decisions/0041-plan-in-the-main-calendar-of-outlook.md)):
 
 * Its appointments are busy times, as those of the calendars above; whole-day appointments and those marked as free do not count.
 * *Week* and *Today* show its appointments next to the blocks of the plan, in the colors of their categories in Outlook; whole-day appointments are not shown.
-  A click on an appointment opens it in Outlook or puts it on the sideline: it stays in the calendar, but tasks are planned into its time, as with a word of *Sideline* in the plan dialog.
+  A click on an appointment, or a click with the right mouse button, opens it in Outlook or puts it on the sideline: it stays in the calendar, but tasks are planned into its time, as with a word of *Sideline* in the plan dialog.
+  The menu also has *Sideline everything titled "…"*, as for the events of the calendars above.
   The sideline is the category `Sideline` of the appointment in Outlook, for a recurring appointment of its whole series, so it can also be set in Outlook itself.
 * The plan of the next three weeks goes into it as appointments that are private and tentative, without reminder, whose subject ends with `[koppter]`.
   Colleagues see the time as tentatively taken, not the task.

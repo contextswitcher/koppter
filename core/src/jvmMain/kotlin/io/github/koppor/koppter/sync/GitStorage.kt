@@ -2,6 +2,7 @@ package io.github.koppor.koppter.sync
 
 import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.plan.CalendarTxt
+import io.github.koppor.koppter.plan.SidelinedEvents
 import io.github.koppor.koppter.plan.TimeLog
 import io.github.koppor.koppter.plan.Ics
 import io.github.koppor.koppter.storage.CompanionFiles
@@ -193,7 +194,9 @@ class GitStorage(
         val inDirectories = (filesOf(ours) + filesOf(theirs)).distinct()
         fun named(vararg names: String) = inDirectories.filter { it.substringAfterLast('/') in names }
         // [impl->dsn~archive~1]
-        for (file in (listOf(path, sibling(ICE_RECUR_FILE), sibling(TimeLog.NAME), sibling(DONE_FILE)) + named(TODO_FILE, ICE_RECUR_FILE, TimeLog.NAME, DONE_FILE)).distinct()) {
+        // [impl->dsn~event-sideline~1]
+        val byLine = listOf(ICE_RECUR_FILE, TimeLog.NAME, DONE_FILE, SidelinedEvents.NAME)
+        for (file in (listOf(path) + byLine.map(::sibling) + named(TODO_FILE, *byLine.toTypedArray())).distinct()) {
             val (inBase, inOurs, inTheirs) = bothChanged(file) ?: continue
             val lines = mergeLines(inBase.toLines(), inOurs.toLines(), inTheirs.toLines())
             merged[file] = lines.joinToString("\n", postfix = if (lines.isEmpty()) "" else "\n")

@@ -229,6 +229,31 @@ Covers:
 
 Needs: dsn
 
+### Sideline a single event of a calendar
+`req~event-sideline~1`
+
+A click on an event of a calendar with busy times puts it on the sideline or takes it off, so that it stays in the calendar and tasks are planned into its time.
+For a repeating event, this holds for all its occurrences.
+The choice is kept with the todo.txt file, so that every device that synchronizes it plans the same way.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
+### Sideline by the title of an entry
+`req~title-sideline~1`
+
+The menu of an event of a calendar and of an appointment of Outlook adds its title to the words of `req~sideline~1`, so that every entry with that title is on the sideline.
+For an entry that a word puts on the sideline, the menu removes the words that its title contains instead.
+
+Covers:
+
+* `feat~planning~1`
+
+Needs: dsn
+
 ### Plan in the calendar of Outlook
 `req~outlook-calendar~1`
 
@@ -639,7 +664,7 @@ Needs: impl, utest
 `planWithCalendars` puts the files it reads into the same memory, so that the view shows what was planned with.
 A calendar that cannot be read is logged by its host and left out of the view; the plan reports it.
 `EventBox` draws an event in `tertiaryContainer` with a bar in `tertiary` on its left, apart from the appointments of Outlook and the blocks; one whose title holds a word of `dsn~sideline~1` is pale with a border and its text struck through.
-A click on an event does nothing, as the application only reads these calendars.
+A click on an event opens the menu of `dsn~event-sideline~1`; the application does not change these calendars.
 The button *Calendars* of `Week` opens a menu, headed *Shown in Week and Today*, with a check box and the color of the entries for Outlook, where it is read, and for each calendar with busy times, named by the comment after its address or on the line above it (`calendarAddresses`), else by `X-WR-CALNAME` of its file (`calendarName`), else by its host.
 The menu stays open while the user switches; `Today` shows the same calendars.
 The setting `hiddenCalendars` of the device lists the hidden ones, one per line, by address or as `outlook`; an address is a secret and stays on the device as `calendars` does.
@@ -690,6 +715,39 @@ Covers:
 
 * `req~outlook-appointments~1`
 * `req~sideline~1`
+
+Needs: impl, utest
+
+### Sideline of a single event
+`dsn~event-sideline~1`
+
+`icsEvents` passes the UID of each event and whether it has a rule; `CalendarEvent` carries both into the view.
+A click or a secondary click on an `EventBox` opens a menu; *Sideline this event: its time counts as free* (with *, all its occurrences* for a repeating event) or *Take this event off the sideline* calls `TodoController.setEventSideline`.
+That writes the UID with the title as a comment into `calendar-sideline.txt` next to the todo.txt file (`SidelinedEvents`), or removes its line, and commits the file with the todo.txt file ([decision 0059](../decisions/0059-file-for-the-events-on-the-sideline.md)).
+`busyTimes` leaves out an event whose UID the file lists, with all occurrences of its rule, as it does for a word of `dsn~sideline~1`; `GitStorage` merges the file line by line.
+An event without UID offers no switch, and neither does one that a word puts on the sideline, as the switch would change nothing that shows.
+The action takes effect at once and closes the menu; Esc or a click beside the menu changes nothing, and a failure to write shows in the bar of errors.
+Like the category of Outlook, the switch changes the next plan, not the current one.
+On a phone, a tap opens the menu.
+
+Covers:
+
+* `req~event-sideline~1`
+* `adr~sideline-file~1`
+
+Needs: impl, utest
+
+### Sideline by title from the menu
+`dsn~title-sideline~1`
+
+The menus of `EventBox` and `AppointmentBox` end with *Sideline everything titled "…"*, which `TodoController.setTitleSideline` adds as a word to the key `sideline` of `koppter.yml`, the list that the plan dialog edits.
+For an entry that words of the sideline match, the item reads *Remove from the sideline words: "…"* and removes those words.
+A title longer than 40 characters is cut in the menu with an ellipsis, so that the menu fits a phone; the whole title becomes the word.
+An entry without title has no such item, as an empty word would match every entry.
+
+Covers:
+
+* `req~title-sideline~1`
 
 Needs: impl, utest
 

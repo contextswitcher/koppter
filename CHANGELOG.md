@@ -9,6 +9,9 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Added
 
+- A click on an event of a calendar with busy times in *Week* and *Today* opens a menu that puts the event, for a repeating one all its occurrences, on the sideline or takes it off; the choice is kept in `calendar-sideline.txt` next to todo.txt.
+- The menus of the events of the calendars and of the appointments of Outlook have *Sideline everything titled "…"*, which adds the title to the words of *Sideline* in the plan dialog, and for an entry that a word sidelines, an item that removes that word.
+- The menu of an appointment of Outlook opens on a click with the right mouse button as well.
 - On the desktop, the dialog *From a template* without `templates.txt` has *Create templates.txt and edit it*, which writes the file with an example and opens it in the editor of the system; with git, a change of the templates is committed at the next synchronization.
 - A task whose note has a checklist shows its progress, such as `checklist: 1/3`, on its card in place of the name of the note.
 - Templates of tasks: the button *++* beside *+* adds all tasks of a template from `templates.txt` next to todo.txt, with one due date and time; a task of a template can have a note.
