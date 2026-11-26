@@ -235,7 +235,7 @@ Needs: dsn
 The plan of the next weeks, three unless configured otherwise, is written into the main calendar of an account of the classic desktop Outlook, the default account unless configured otherwise.
 The appointments are private and tentative, and their subjects end with `[koppter]`.
 A new plan replaces the appointments that koppter wrote before; appointments that koppter did not write are never changed or deleted.
-Planning takes the appointments of that calendar as busy times.
+Planning takes the appointments of that calendar as busy times, and those of the main calendars of further accounts that the user names, such as a second employer; the plan is written to none of these.
 The user removes all appointments that koppter wrote with one action, after confirming their number.
 
 Covers:
@@ -624,7 +624,11 @@ Needs: impl, utest
 ### Busy times of Outlook
 `dsn~outlook-busy~1`
 
-Before planning, `TodoController.planWithCalendars` reads the appointments of the same calendar for a year through `ankd outlook-busy`, which leaves out the blocks of koppter.
+Before planning, `TodoController.planWithCalendars` reads the appointments of the same calendar for a year through `ankd outlook-busy`, which leaves out the blocks of koppter, and those of the accounts of the setting `outlookBusyCalendars`, one call with `--calendar` each.
+`Settings.outlookBusyAccounts` lists the account of the plan first and then the further ones, separated by blanks, commas or semicolons, each once regardless of case.
+An account that is not read is named in the problems of the plan, and the others are still used.
+The appointments of Today and Week (`TodoController.refreshAppointments`) come from the same accounts.
+The settings dialog has the field *Further accounts with busy times* below the fields for the plan in Outlook, before the button that removes the blocks.
 `OutlookCalendar.busyTimes` takes those that are not free and not whole-day appointments, split at midnight, as busy times in addition to those of the iCalendar files.
 
 Covers:

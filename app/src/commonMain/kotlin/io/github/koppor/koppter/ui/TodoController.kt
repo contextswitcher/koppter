@@ -577,7 +577,8 @@ class TodoController(
         val source = outlook ?: return
         val (from, to) = shownDays ?: return
         try {
-            val read = withContext(Dispatchers.Default) { source.busy(outlookCalendar, from, to) }
+            // [impl->dsn~outlook-busy~1]
+            val read = withContext(Dispatchers.Default) { settings.outlookBusyAccounts.flatMap { source.busy(it, from, to) } }
             // Another view may have asked for other days meanwhile.
             if (shownDays == from to to) appointments = read
         } catch (e: Exception) {
@@ -1009,12 +1010,16 @@ class TodoController(
         val bridge = outlook
         // [impl->dsn~outlook-busy~1]
         if (bridge != null) {
-            try {
-                val appointments = withContext(Dispatchers.Default) { bridge.busy(outlookCalendar, today(), today().plus(DatePeriod(years = 1))) }
-                OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
-            } catch (e: Exception) {
-                problems += "The calendar of Outlook was not read: ${e.message ?: e}"
-                log("The calendar of Outlook was not read", e)
+            for (account in this.settings.outlookBusyAccounts) {
+                // An account that is not read leaves the others: the plan is made with what is known, and the problem tells which one is missing.
+                val name = account ?: "the default account"
+                try {
+                    val appointments = withContext(Dispatchers.Default) { bridge.busy(account, today(), today().plus(DatePeriod(years = 1))) }
+                    OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
+                } catch (e: Exception) {
+                    problems += "The calendar of Outlook of $name was not read: ${e.message ?: e}"
+                    log("The calendar of Outlook of $name was not read", e)
+                }
             }
         }
         val result = plan(settings, busy, problems, from) ?: return null

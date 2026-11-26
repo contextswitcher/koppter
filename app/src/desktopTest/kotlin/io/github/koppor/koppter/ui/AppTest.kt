@@ -119,7 +119,13 @@ private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
 }
 
 /** Outlook as AnchorHub would show it, with what was asked of it. */
-private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appointments: List<OutlookBusy> = emptyList(), var blocks: Int = 0) : OutlookBridge {
+private class FakeOutlook(
+    val items: List<OutlookItem> = emptyList(),
+    val appointments: List<OutlookBusy> = emptyList(),
+    var blocks: Int = 0,
+    /** The appointments of further accounts by their name; [appointments] are those of any other account. */
+    val accounts: Map<String, List<OutlookBusy>> = emptyMap(),
+) : OutlookBridge {
     val opened = mutableListOf<String>()
     val completed = mutableListOf<String>()
     var synced: Pair<ClosedRange<LocalDateTime>, List<OutlookBlock>>? = null
@@ -140,7 +146,11 @@ private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appoin
         cleared++
         return blocks.also { blocks = 0 }
     }
-    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments.also { shown += from to to }
+    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = (accounts[calendar] ?: appointments).also {
+        shown += from to to
+        read += calendar
+    }
+    val read = mutableListOf<String?>()
     val shown = mutableListOf<Pair<LocalDate, LocalDate>>()
     val sidelined = mutableListOf<Pair<String, Boolean>>()
     override fun sideline(entryId: String, on: Boolean) {
@@ -234,7 +244,7 @@ class AppTest {
         assertTrue(bounds("Return the books").bottom <= bounds("Next (1)").top)
         assertTrue(bounds("Next (1)").bottom <= bounds("Write the report").top)
         onNodeWithText("Done (1)").assertDoesNotExist()
-        onNodeWithTag("filter-done").performScrollTo().performClick()
+        onNodeWithTag("filter-done").performClick()
         assertTrue(bounds("Write the report").bottom <= bounds("Done (1)").top)
         assertTrue(bounds("Done (1)").bottom <= bounds("Sharpen the pencils").top)
         // The due date decides on which side of the line a task stands, not its priority.
@@ -1240,7 +1250,7 @@ class AppTest {
         onNodeWithTag("filter-clear").performClick()
         onAllNodesWithTag("task").assertCountEquals(3)
         // Open and done are two switches; switching off the only selected one selects the other.
-        onNodeWithTag("filter-done").performScrollTo().performClick()
+        onNodeWithTag("filter-done").performClick()
         onAllNodesWithTag("task").assertCountEquals(4)
         onNodeWithTag("filter-open").performClick()
         onAllNodesWithTag("task").assertCountEquals(1)
@@ -1373,9 +1383,13 @@ class AppTest {
         onNodeWithText("Cite the study", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
 
-        // A TODO is done when it is removed from the document: its checkbox is disabled, and toggling it changes nothing.
+        // A TODO is done when it is removed from the document: the mark of a document stands for its checkbox,
+        // a tap on it says so, and toggling it changes nothing.
+        val latexMark = hasTestTag("task-done-latex") and hasAnyAncestor(hasTestTag("task") and hasAnyDescendant(hasText("Cite the study")))
         onAllNodes(hasTestTag("task-done") and hasAnyAncestor(hasTestTag("task") and hasAnyDescendant(hasText("Cite the study"))), useUnmergedTree = true)
-            .onFirst().assertIsNotEnabled()
+            .assertCountEquals(0)
+        onAllNodes(latexMark, useUnmergedTree = true).onFirst().performClick()
+        waitUntil { onAllNodesWithText(LATEX_DONE_HINT).fetchSemanticsNodes().isNotEmpty() }
         runOnIdle { controller.toggle(controller.visible.first { it.task.description.startsWith("Cite the study") }) }
         assertEquals(before, storage.text)
         assertEquals(1, controller.visible.count { it.task.description.startsWith("Cite the study") })
@@ -1416,6 +1430,21 @@ class AppTest {
         controller.updateSettings(controller.settings.copy(outlookWeeks = 0))
         runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
         assertNull(outlook.synced)
+    }
+
+    // [utest->dsn~outlook-busy~1]
+    @Test
+    fun theCalendarsOfFurtherAccountsCountAsBusyButTakeNoBlocks() {
+        val lecture = OutlookBusy(LocalDateTime(2026, 11, 12, 0, 0), LocalDateTime(2026, 11, 26, 0, 0), false, BusyStatus.BUSY)
+        val outlook = FakeOutlook(accounts = mapOf("me@uni.example" to listOf(lecture)))
+        val settings = Settings(outlookWeeks = 4, outlookBusyCalendars = "me@uni.example, ME@uni.example")
+        val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 }, outlook = outlook)
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
+        // The default account and the further one, each once.
+        assertEquals(listOf(null, "me@uni.example"), outlook.read)
+        val (_, blocks) = outlook.synced!!
+        assertTrue(blocks.isNotEmpty())
+        assertTrue(blocks.all { it.start >= lecture.end }, blocks.toString())
     }
 
     // [utest->dsn~outlook-clear~1]

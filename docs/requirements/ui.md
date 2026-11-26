@@ -835,6 +835,7 @@ Needs: impl, utest
 `dsn~filter-panel~2`
 
 `FilterPanel` shows the criteria of `Filter` under the heading *Filter*: the start date as a checkbox at the top, and the completion state as the two switches *Open* and *Done* at the bottom, of which at least one is on.
+The two switches stay in view below the part of the panel that scrolls, so that a window of common height shows them.
 The button *Clear all* in the heading resets the filter, *Top* and *Next*.
 The text of the filter is a field (`SearchField`) of the main screen above the list where the panel stands beside it; on a narrower screen, it is the first field of the panel in the drawer, and a search button to the left of the button for a new task opens the drawer and gives the field the focus.
 While the field has a text, a button at its end empties it.
