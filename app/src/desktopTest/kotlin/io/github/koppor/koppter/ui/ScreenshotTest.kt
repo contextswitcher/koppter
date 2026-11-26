@@ -260,7 +260,7 @@ class ScreenshotTest {
     fun rendersPlan() = runDesktopComposeUiTest(width = 1100, height = 1060) {
         start()
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         save("plan.png")
         onNodeWithTag("plan-map-General").performScrollTo().performClick()
         // Early mornings and late afternoons only if needed, Friday afternoon as the last resort.

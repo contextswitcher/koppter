@@ -1152,14 +1152,20 @@ class AppTest {
         onNodeWithTag("settings-project-contexts").assertTextContains("+Fair = @errands")
     }
 
-    // [utest->dsn~edit-header~1]
+    // [utest->dsn~dialog-header~1]
     @Test
-    fun theButtonsOfTheDialogStandInItsHeading() = runComposeUiTest {
+    fun theButtonsOfTheDialogsStandInTheirHeadings() = runComposeUiTest {
         start()
         openTask("Post signs")
         // Above the first field, so that no scrolling of the fields takes them out of view.
         assertTrue(onNodeWithTag("edit-save").getBoundsInRoot().bottom <= onNodeWithTag("edit-description").getBoundsInRoot().top)
         assertTrue(onNodeWithTag("edit-cancel").getBoundsInRoot().bottom <= onNodeWithTag("edit-description").getBoundsInRoot().top)
+        onNodeWithTag("edit-cancel").performClick()
+        onNodeWithTag("open-settings").performClick()
+        assertTrue(onNodeWithTag("settings-save").getBoundsInRoot().bottom <= onNodeWithTag("settings-tab-file").getBoundsInRoot().top)
+        onNodeWithTag("settings-cancel").performClick()
+        onNodeWithTag("open-plan").performClick()
+        assertTrue(onNodeWithTag("plan-update").getBoundsInRoot().bottom <= onNodeWithTag("plan-time-maps").getBoundsInRoot().top)
     }
 
     // [utest->dsn~date-picker-context~1]
@@ -2015,7 +2021,7 @@ class AppTest {
 
         // What is saved is there when the dialog is opened again.
         onNodeWithTag("plan-barriers").performScrollTo().performTextReplacement("default = month")
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         onNodeWithTag("plan-close").performClick()
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-barriers").assertTextContains("default = month")
@@ -2031,6 +2037,9 @@ class AppTest {
         addTimeMap("Evenings", "Mon-Thu 19:00-21:00")
         onNodeWithTag("plan-map-General").performClick()
         onNodeWithTag("time-map-paint-yellow").performClick()
+        // The grid scrolls below the heading of the dialog: the drag starts once it rests.
+        onNodeWithTag("time-map-grid").performScrollTo()
+        waitForIdle()
         // Down on Monday from eight o'clock to a quarter to ten: the quarters of an hour that the drag touches.
         onNodeWithTag("time-map-grid").performTouchInput {
             swipe(Offset(width / 14f, height * 32.5f / 96), Offset(width / 14f, height * 39.5f / 96))
@@ -2048,13 +2057,13 @@ class AppTest {
         onNodeWithTag("time-map-grid").performMouseInput { exit() }
         onNodeWithTag("time-map-revert").performScrollTo().performClick()
         onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00")
-        onNodeWithTag("time-map-paint-black").performClick()
+        onNodeWithTag("time-map-paint-black").performScrollTo().performClick()
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
         // A second click with the same color takes it away again; the brush covers half an hour.
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 81.5f / 96)) }
         assertEquals("Mon-Fri 08:00-12:00 13:00-17:00", onNodeWithTag("time-map-definition").fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
-        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("time-map-save").performClick()
         onNodeWithTag("time-map-editor").assertDoesNotExist()
         // The other map stays as it was typed.
         onNodeWithTag("plan-map-General").assertTextContains("Mon-Fri 08:00-12:00 13:00-17:00, Sun 20:00-20:30 black")
@@ -2063,11 +2072,11 @@ class AppTest {
         // A typed definition shows on the grid.
         onNodeWithTag("plan-map-Evenings").performClick()
         onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("Sun 20:00-20:15 black")
-        onNodeWithTag("time-map-paint-erase").performClick()
+        onNodeWithTag("time-map-paint-erase").performScrollTo().performClick()
         onNodeWithTag("time-map-grid").performTouchInput { click(Offset(width * 13f / 14, height * 80.5f / 96)) }
-        onNodeWithTag("time-map-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("time-map-save").assertIsNotEnabled()
         onNodeWithTag("time-map-definition").performScrollTo().assertTextContains("A map needs times.")
-        onNodeWithTag("time-map-cancel").performScrollTo().performClick()
+        onNodeWithTag("time-map-cancel").performClick()
     }
 
     // [utest->dsn~time-map-editor~1]
@@ -2080,15 +2089,15 @@ class AppTest {
         onNodeWithTag("plan-add-map").performClick()
         onNodeWithTag("time-map-name").performTextInput("General")
         onNodeWithTag("time-map-definition").performScrollTo().performTextInput("Mon 08:00-09:00")
-        onNodeWithTag("time-map-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("time-map-save").assertIsNotEnabled()
         // On dates, no times are none.
         onNodeWithTag("time-map-definition").performScrollTo().performTextClearance()
         onNodeWithTag("time-map-dates").performTextInput("2026-12-25")
-        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("time-map-save").performClick()
         onNodeWithTag("plan-map-General 2026-12-25").assertTextContains("none")
         onNodeWithTag("plan-map-General 2026-12-25").performClick()
         onNodeWithTag("time-map-dates").performTextReplacement("2026-12-24..2026-12-26")
-        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("time-map-save").performClick()
         onNodeWithTag("plan-map-General 2026-12-25").assertDoesNotExist()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
         // A chosen date goes in at the cursor, at the end after a replacement.
@@ -2098,7 +2107,7 @@ class AppTest {
         onNodeWithTag("time-map-date-ok").performClick()
         val picked = onNodeWithTag("time-map-dates").fetchSemanticsNode().config[SemanticsProperties.EditableText].text
         assertTrue(Regex("2026-12-24 \\d{4}-\\d{2}-15").matches(picked), picked)
-        onNodeWithTag("time-map-cancel").performScrollTo().performClick()
+        onNodeWithTag("time-map-cancel").performClick()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").performClick()
         onNodeWithTag("time-map-delete").performScrollTo().performClick()
         onNodeWithTag("plan-map-General 2026-12-24..2026-12-26").assertDoesNotExist()
@@ -2111,7 +2120,7 @@ class AppTest {
         start()
         onNodeWithTag("open-plan").performClick()
         addTimeMap("General", "Mon-Fri 08:00-17:00")
-        onNodeWithTag("plan-close").performScrollTo().performClick()
+        onNodeWithTag("plan-close").performClick()
         onNodeWithTag("discard-dialog").assertDoesNotExist()
         assertTrue("Mon-Fri 08:00-17:00" in storage.companions.getValue("koppter.yml"))
         onNodeWithTag("open-plan").performClick()
@@ -2122,7 +2131,7 @@ class AppTest {
         onNodeWithTag("plan-add-map").performScrollTo().performClick()
         onNodeWithTag("time-map-name").performTextInput(name)
         onNodeWithTag("time-map-definition").performScrollTo().performTextInput(definition)
-        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("time-map-save").performClick()
     }
 
     // [utest->dsn~holidays~1]
@@ -2149,7 +2158,7 @@ class AppTest {
         setContent { App(controller, "todo.txt") }
         onNodeWithTag("open-plan").performClick()
         addTimeMap("General", "Mon-Fri 08:00-12:00 13:00-17:00")
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         onNodeWithTag("plan-summary").performScrollTo().assertTextEquals("Planned 2 tasks until 2026-11-12.")
         assertEquals(
             "2026-11-12 w46 Thu  09:15-10:15 Prepare the lecture @home (due 2026-11-11). 10:15-11:15 Prepare the lecture @home (due 2026-11-13)\n",
@@ -2184,7 +2193,7 @@ class AppTest {
         onNodeWithTag("plan-context-maps").performTextInput("@home = Evenings")
         onNodeWithTag("plan-barriers").performScrollTo().performTextInput("default = year\n@home = week")
         onNodeWithTag("plan-limits").performScrollTo().performTextInput("+GarageSale = block 45m, max 1h/day")
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
 
         onNodeWithTag("plan-summary").performScrollTo().assertTextEquals("Planned 2 tasks until 2026-11-13.")
         onNodeWithTag("plan-problem").assertTextEquals("Evenings: \"Noday\" is neither days nor times")
@@ -2630,7 +2639,7 @@ class AppTest {
         onNodeWithTag("plan-barriers").performScrollTo().performTextInput("default = year")
         esc("plan-barriers")
         onNodeWithTag("discard-keep").performClick()
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         waitForIdle()
         esc("plan-barriers")
         onNodeWithTag("plan-dialog").assertDoesNotExist()
@@ -2670,7 +2679,7 @@ class AppTest {
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
         ctrl(Key.L, shift = true)
         onNodeWithTag("plan-dialog").assertExists()
-        onNodeWithTag("plan-close").performScrollTo().performClick()
+        onNodeWithTag("plan-close").performClick()
 
         // The filter text keeps the other filters.
         onNodeWithTag("filter-context-phone").performClick()
@@ -2715,7 +2724,7 @@ class AppTest {
         assertEquals("Call the dentist at:10:00", storage.text.lines()[1])
 
         onNodeWithTag("open-plan").performClick()
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         waitForIdle()
         onNodeWithTag("plan-summary").performScrollTo().assertTextEquals("Planned 3 tasks until 2026-12-04.")
         val calendar = storage.companions.getValue("calendar.txt").trim().lines()
@@ -2741,7 +2750,7 @@ class AppTest {
 
         onNodeWithTag("open-plan").performClick()
         onNodeWithTag("plan-calendars").performScrollTo().performTextInput("https://calendar.example.org/secret/calendar.ics\nhttps://gone.example.org/secret.ics")
-        onNodeWithTag("plan-update").performScrollTo().performClick()
+        onNodeWithTag("plan-update").performClick()
         // Planning runs in a coroutine, as reading the calendars takes time.
         waitForIdle()
 
@@ -3856,7 +3865,7 @@ class AppTest {
         onNodeWithTag("schedule-suggestion").assertExists()
         assertEquals(null, storage.companions["ice_recur.txt"])
         // Saving writes the entry to the file, and from then on it is a schedule like any other.
-        onNodeWithTag("schedule-save").performScrollTo().performClick()
+        onNodeWithTag("schedule-save").performClick()
         assertEquals("weekly ; day Friday - Weekly review @review dur:1h\n", storage.companions["ice_recur.txt"])
         assertEquals("Weekly review @review dur:1h", storage.text.trim().lines().last())
 
@@ -3897,7 +3906,7 @@ class AppTest {
         onNodeWithTag("schedule-text").performTextReplacement("weekly ; day Thursday - Put out the bin\ndaily - Check the mail\nsometimes - Dream\nweekly ; day Monday - Plan the week")
         onNodeWithTag("schedule-line-3").assertTextEquals("Line 3 is not understood")
         onNodeWithTag("schedule-line-4").assertTextEquals("Line 4: next on Mon 2026-11-16")
-        onNodeWithTag("schedule-save").performScrollTo().performClick()
+        onNodeWithTag("schedule-save").performClick()
 
         assertEquals("weekly ; day Thursday - Put out the bin\ndaily - Check the mail\nsometimes - Dream\nweekly ; day Monday - Plan the week\n", storage.companions["ice_recur.txt"])
         assertEquals("Edit scheduled tasks", storage.changes.last())
@@ -4274,7 +4283,7 @@ class AppTest {
         onNodeWithText("Times for the tasks of ben").assertExists()
         onNodeWithTag("time-map-name").assertDoesNotExist()
         onNodeWithTag("time-map-definition").performScrollTo().performTextReplacement("16:00-17:00")
-        onNodeWithTag("time-map-save").performScrollTo().performClick()
+        onNodeWithTag("time-map-save").performClick()
         waitUntil { ben.companions["calendar.txt"] != null }
         assertEquals("2026-11-12 w46 Thu  16:00-16:30 Planned: Mow the lawn\n", ben.companions["calendar.txt"])
         assertEquals(listOf("Tasks" to "16:00-17:00"), controller.timeMapsOf("ben"))

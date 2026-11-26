@@ -83,7 +83,9 @@ fun AppsDialog(read: suspend () -> List<DeviceApp>, starts: String, onStarted: (
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 720.dp).testTag("apps-dialog")) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 // The word of the button that opens the dialog.
-                Text("Apps of this device", style = MaterialTheme.typography.titleLarge)
+                DialogHeading("Apps of this device") {
+                    TextButton(onClick = onDismiss, modifier = Modifier.testTag("apps-cancel")) { Text("Close") }
+                }
                 failure?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.testTag("apps-failure")) }
                 when {
                     apps == null -> Text("Reading the applications", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -108,10 +110,6 @@ fun AppsDialog(read: suspend () -> List<DeviceApp>, starts: String, onStarted: (
                 }
                 if (scroll.canScrollForward) {
                     Text("More apps below", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testTag("apps-more"))
-                }
-                Row(Modifier.fillMaxWidth()) {
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss, modifier = Modifier.testTag("apps-cancel")) { Text("Cancel") }
                 }
             }
         }

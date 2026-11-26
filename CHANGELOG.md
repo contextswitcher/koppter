@@ -12,6 +12,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 - Templates of tasks: the button *++* beside *+* adds all tasks of a template from `templates.txt` next to todo.txt, with one due date and time; a task of a template can have a note.
 - The edit dialog shows the items `- [ ]` of a note as a checklist below the description, where an item is ticked off with a click.
 
+### Changed
+
+- The buttons that close the settings, the plan dialog, the editor of a time map, the editor of the schedule and the list of the applications, where it is now called *Close*, stand in their headings, as in the edit dialog, and stay in view while the content scrolls.
+
 ## [2026-11-25] - 2026-11-25
 
 ### Added
