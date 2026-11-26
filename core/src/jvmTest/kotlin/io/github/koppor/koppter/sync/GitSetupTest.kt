@@ -102,6 +102,7 @@ class GitSetupTest {
     // [utest->dsn~clone-by-address~1]
     @Test
     fun aRepositoryGivenByItsAddressIsClonedAgainWhenItsCloneIsGone() {
+        org.junit.Assume.assumeFalse("Windows keeps the pack files of the deleted clone open, so the clone is not gone", System.getProperty("os.name").startsWith("Windows"))
         val url = origin("by-address")
         setup.clone(url)
         assertEquals(url, setup.addressOf(setup.repositoryDirectory.resolve("todo.txt").toString()))
