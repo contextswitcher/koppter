@@ -703,15 +703,19 @@ Covers:
 
 Needs: impl, utest
 
-### Buttons in the heading of the edit dialog
-`dsn~edit-header~1`
+### Buttons in the heading of a dialog
+`dsn~dialog-header~1`
 
-*Cancel* and *Save* of `EditDialog` stand in its heading, which does not scroll with the fields: they stay in view on a phone and are not covered by its keyboard.
-*Delete* stands at the end of the fields, away from *Save*, as it is used rarely.
+The buttons that close a dialog, such as *Cancel* and *Save*, stand in its heading (`DialogHeading`), which does not scroll with the fields: they stay in view on a phone and are not covered by its keyboard.
+This holds for the edit dialog, the settings, the plan dialog, the editor of a time map, the editor of the schedule, the templates and the applications of the device.
+A line below the heading marks its edge once the fields scroll below it; it is always laid out, so that the fields do not move when it appears.
+Buttons that do not close the dialog, such as *Delete*, *Revert* and *Share log*, stay at the end of the fields, away from *Save*.
+The plan dialog scrolls to the result of the planning, which stands below the settings.
 
 Covers:
 
 * `req~edit-dialog~1`
+* `req~unsaved-changes~1`
 
 Needs: impl, utest
 

@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -73,7 +74,8 @@ fun TemplateDialog(templates: List<Template>, today: LocalDate, onAdd: (Template
                     ) { Text(chosen?.tasks?.size?.let { if (it == 1) "Add 1 task" else "Add $it tasks" } ?: "Add") }
                 }
                 val scroll = rememberScrollState()
-                if (scroll.canScrollBackward) HorizontalDivider()
+                // Marks the edge of the heading where the fields pass below it; always laid out, so that the fields do not jump when it appears.
+                HorizontalDivider(Modifier.alpha(if (scroll.canScrollBackward) 1f else 0f))
                 Column(
                     Modifier.weight(1f, fill = false).verticalScroll(scroll).padding(start = 20.dp, end = 20.dp, bottom = 20.dp, top = 4.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),

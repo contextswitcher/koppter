@@ -279,7 +279,32 @@ fun SettingsDialog(
     GuardedDialog(changed = state != initial, onDismiss = onDismiss) {
         Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.fillMaxWidth().testTag("settings-dialog")) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Settings", style = MaterialTheme.typography.titleLarge)
+                DialogHeading("Settings") {
+                    TextButton(onClick = onDismiss, modifier = Modifier.testTag("settings-cancel")) { Text("Cancel") }
+                    fun save(file: String) = onSave(
+                        settings.copy(
+                            todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), planMember = if (planMember == null) settings.planMember else planOf, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
+                            committerName = committerName.trim(), committerEmail = committerEmail.trim(),
+                            outlookCalendar = outlookCalendar.trim(), outlookBusyCalendars = outlookBusyCalendars.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, outlookMirror = outlookMirror, latexEditor = latexEditor.trim(),
+                            contextSwitcherSync = contextSwitcherSync,
+                        ),
+                        columns?.trim(),
+                        actions?.trim(),
+                        priorities?.trim(),
+                        links?.trim(),
+                        contexts?.trim(),
+                        newTaskDefaults?.trim(),
+                    )
+                    Button(
+                        onClick = {
+                            if (home != (homeScreen == true)) onHomeScreen(home)
+                            save(todoFile.trim())
+                        },
+                        // A new address is no file to save: it is cloned first. The address of the open repository stays.
+                        enabled = topCountValue != null && outlookWeeksValue != null && !cloning && (!address || todoFile.trim() == settings.todoFile),
+                        modifier = Modifier.testTag("settings-save"),
+                    ) { Text("Save") }
+                }
                 // [impl->dsn~settings-dialog~1]
                 PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
                     tabs.forEachIndexed { index, title ->
@@ -626,36 +651,9 @@ fun SettingsDialog(
                         }
                     }
                 }
-                Row(Modifier.fillMaxWidth()) {
-                    // [impl->dsn~share-log~1]
-                    if (shareLog != null) {
-                        TextButton(onClick = shareLog, modifier = Modifier.testTag("settings-share-log")) { Text("Share log") }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    fun save(file: String) = onSave(
-                        settings.copy(
-                            todoFile = file, sharedLists = sharedLists.trim(), memberCalendars = if (memberCalendars == null) settings.memberCalendars else memberCalendarsText(), planMember = if (planMember == null) settings.planMember else planOf, writeDates = writeDates, topCount = topCountValue ?: settings.topCount,
-                            committerName = committerName.trim(), committerEmail = committerEmail.trim(),
-                            outlookCalendar = outlookCalendar.trim(), outlookBusyCalendars = outlookBusyCalendars.trim(), outlookWeeks = outlookWeeksValue ?: settings.outlookWeeks, outlookMirror = outlookMirror, latexEditor = latexEditor.trim(),
-                            contextSwitcherSync = contextSwitcherSync,
-                        ),
-                        columns?.trim(),
-                        actions?.trim(),
-                        priorities?.trim(),
-                        links?.trim(),
-                        contexts?.trim(),
-                        newTaskDefaults?.trim(),
-                    )
-                    Button(
-                        onClick = {
-                            if (home != (homeScreen == true)) onHomeScreen(home)
-                            save(todoFile.trim())
-                        },
-                        // A new address is no file to save: it is cloned first. The address of the open repository stays.
-                        enabled = topCountValue != null && outlookWeeksValue != null && !cloning && (!address || todoFile.trim() == settings.todoFile),
-                        modifier = Modifier.testTag("settings-save"),
-                    ) { Text("Save") }
+                // [impl->dsn~share-log~1]
+                if (shareLog != null) {
+                    TextButton(onClick = shareLog, modifier = Modifier.testTag("settings-share-log")) { Text("Share log") }
                 }
                 // [impl->dsn~build-version~1]
                 if (version != null) {

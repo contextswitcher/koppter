@@ -101,6 +101,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -300,7 +301,7 @@ fun EditDialog(
         ) {
             Box {
                 Column {
-                    // [impl->dsn~edit-header~1]
+                    // [impl->dsn~dialog-header~1]
                     // The buttons stand in the heading, so that they stay in view while the fields scroll and no keyboard of a phone covers them.
                     Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -319,8 +320,8 @@ fun EditDialog(
                         Button(onClick = { onSave(result, if (originalNote == null) null else note.text, images, changed) }, enabled = valid, modifier = Modifier.testTag("edit-save")) { Text("Save") }
                     }
                     val scroll = rememberScrollState()
-                    // Where the fields pass below the heading, a line marks its edge.
-                    if (scroll.canScrollBackward) HorizontalDivider()
+                    // Marks the edge of the heading where the fields pass below it; always laid out, so that the fields do not jump when it appears.
+                    HorizontalDivider(Modifier.alpha(if (scroll.canScrollBackward) 1f else 0f))
                     Column(
                         Modifier.weight(1f, fill = false).verticalScroll(scroll).padding(start = 20.dp, end = 20.dp, bottom = 20.dp, top = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
