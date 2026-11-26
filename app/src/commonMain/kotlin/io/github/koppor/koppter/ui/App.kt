@@ -364,6 +364,13 @@ private fun MainScreen(
             controller.newTaskRequested = false
         }
     }
+    // [impl->dsn~task-link~1]
+    LaunchedEffect(controller.taskRequested) {
+        controller.taskRequested?.let {
+            editing = Editing(it)
+            controller.taskRequested = null
+        }
+    }
     val dialog = editing != null || showSettings || schedule != null || planning != null
     LaunchedEffect(focused, dialog) { if (!focused && !dialog) rootFocus.requestFocus() }
 
@@ -405,8 +412,13 @@ private fun MainScreen(
         while (true) {
             delay(SYNC_INTERVAL)
             controller.sync()
+            // A storage that synchronizes sends the links when its synchronization has ended, below.
+            if (controller.syncStatus == null) controller.syncBacklinks()
         }
     }
+    // [impl->dsn~onenote-backlinks~1]
+    // At the start and after each synchronization that succeeded, which follows every change of the file as well.
+    LaunchedEffect(controller, controller.lastSynchronized) { controller.syncBacklinks() }
     LaunchedEffect(controller.error) {
         controller.error?.let {
             snackbar.showSnackbar(it)

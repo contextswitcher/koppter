@@ -37,6 +37,7 @@
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Recurrence.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/ShareAction.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Task.kt
+//SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/TaskLink.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/TodoFile.kt
 //SOURCES ../core/src/commonMain/kotlin/io/github/koppor/koppter/todotxt/Urgency.kt
 //SOURCES ../core/src/jvmMain/kotlin/io/github/koppor/koppter/storage/LintFiles.kt

@@ -3216,6 +3216,64 @@ class AppTest {
         onNodeWithTag("edit-heading").assertTextEquals("New task")
     }
 
+    // [utest->dsn~task-link~1]
+    @Test
+    fun aLinkToATaskOpensItsDialogOrListsTheTasksOfThePage() = runComposeUiTest {
+        val page = "https://d.docs.live.net/1/Work.one#Plan&section-id={8D0158A8-979F-4ABA-9DC2-77F6F43A00C8}&page-id={666AC41B-1C96-448D-AF38-3DEF10279206}&end"
+        storage.text = "Call the dentist onenote:$page\nBook the hotel onenote:$page\nPost signs +GarageSale\n"
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        runOnUiThread { controller.openLink("koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Book%20the%20hotel") }
+        onNodeWithTag("edit-description").assertTextContains("Book the hotel", substring = true)
+        onNodeWithTag("edit-cancel").performClick()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // The text was edited since the link was made: of the two tasks of the page, neither is meant more than the other.
+        runOnUiThread { controller.openLink("koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Call%20the%20doctor") }
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        assertEquals("666AC41B-1C96-448D-AF38-3DEF10279206", controller.filter.text)
+
+        runOnUiThread { controller.openLink("koppter://task?onenote=https%3A%2F%2Fexample.org%2FNumbers.one&text=Write%20the%20review") }
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+    }
+
+    // [utest->dsn~task-link~1]
+    @Test
+    fun aLinkToAnArchivedOrMissingTaskSaysWhy() {
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        controller.openLink("koppter://task?onenote=https%3A%2F%2Fexample.org%2FNumbers.one&text=Write%20the%20review")
+        assertEquals("The task is completed and archived in done.txt: Write the review", controller.error)
+        controller.openLink("koppter://task?onenote=00000000-0000-0000-0000-000000000000&text=Gone")
+        assertEquals("No task refers to this page of OneNote any more, so its link goes at the next synchronization: Gone", controller.error)
+    }
+
+    // [utest->dsn~onenote-backlinks~1]
+    @Test
+    fun theLinksToTheTasksAreSentWhenTheyChanged() {
+        storage.text = "Call the dentist onenote:https://example.org/Health.one\nPost signs +GarageSale\n"
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val sent = mutableListOf<List<io.github.koppor.koppter.todotxt.Backlink>>()
+        var succeeds = false
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, oneNoteBacklinks = { sent += it; succeeds })
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(listOf("Call the dentist" to false, "Write the review" to true), sent.single().map { it.label to it.done })
+        // Not sent successfully: again at the next synchronization.
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(2, sent.size)
+        succeeds = true
+        runBlocking { controller.syncBacklinks() }
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(3, sent.size)
+        // A deleted task drops out of the complete set.
+        controller.delete(controller.file.entries.first { it.task.description == "Call the dentist" })
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(listOf("Write the review"), sent.last().map { it.label })
+    }
+
     // [utest->dsn~app-link-copy~1]
     @Test
     @Suppress("DEPRECATION")

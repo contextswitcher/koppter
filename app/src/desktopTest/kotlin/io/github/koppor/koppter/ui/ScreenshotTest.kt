@@ -11,6 +11,7 @@ import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.swipe
@@ -184,7 +185,7 @@ class ScreenshotTest {
         ),
     )
 
-    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList()) {
+    private fun DesktopComposeUiTest.start(settings: Settings = Settings(), homeScreen: Boolean? = null, members: Boolean = false, update: (() -> Unit)? = null, updateLabel: String = "Restart to update", updateNews: List<Pair<String, String>> = emptyList(), link: String? = null) {
         val shown = if (members) SharedLists(storage, family) else storage
         // With members, the settings have the field for their calendars, which a platform that reads calendars shows.
         val controller = TodoController(settings, { shown }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 14 * 60 + 10 }, fetch = if (members) ({ "" }) else null)
@@ -198,6 +199,7 @@ class ScreenshotTest {
                 DeviceApp(name, name, icon) {}
             }
         setContent { App(controller, "todo.txt", git = git, homeScreen = homeScreen, apps = { apps }, update = update, updateLabel = updateLabel, updateNews = updateNews) }
+        link?.let { runOnUiThread { controller.openLink(it) } }
     }
 
     @Test
@@ -344,9 +346,9 @@ class ScreenshotTest {
 
     private fun reviewScreens(size: String, width: Int, height: Int) {
         // Each dialog in an application of its own: a dialog taller than the window is not closed reliably by a click in a test.
-        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), extra: String = "", open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
+        fun screen(name: String, homeScreen: Boolean? = null, members: Boolean = false, settings: Settings = Settings(), updateLabel: String? = null, updateNews: List<Pair<String, String>> = emptyList(), extra: String = "", link: String? = null, open: DesktopComposeUiTest.() -> Unit) = runDesktopComposeUiTest(width = width, height = height) {
             storage.extra = extra
-            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews)
+            start(settings, homeScreen = homeScreen, members = members, update = updateLabel?.let { {} }, updateLabel = updateLabel.orEmpty(), updateNews = updateNews, link = link)
             open()
             save("review/$size-$name.png")
         }
@@ -392,6 +394,13 @@ class ScreenshotTest {
             // The description itself: on a phone, the middle of this card is a label that opens a link.
             onNodeWithText("Prepare the slides for the team meeting", useUnmergedTree = true).performClick()
             onNodeWithTag("edit-dialog").assertExists()
+        }
+        // [utest->dsn~task-link~1]
+        screen("task-link", link = "koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Submit%20the%20travel%20expense%20report") {
+            onNodeWithTag("edit-dialog").assertExists()
+        }
+        screen("task-link-missing", link = "koppter://task?onenote=00000000-0000-0000-0000-000000000000&text=Call%20the%20dentist") {
+            waitUntil { onAllNodesWithText("No task refers", substring = true).fetchSemanticsNodes().isNotEmpty() }
         }
         screen("edit-more") {
             onNodeWithTag("list-switch").performClick()

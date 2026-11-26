@@ -25,6 +25,7 @@ import io.github.koppor.koppter.ui.NOTE_IMAGE_SIZE
 import io.github.koppor.koppter.todotxt.Filter
 import io.github.koppor.koppter.todotxt.filterOfLink
 import io.github.koppor.koppter.todotxt.syncOfLink
+import io.github.koppor.koppter.todotxt.taskLinkOf
 import io.github.koppor.koppter.todotxt.toLink
 import io.github.koppor.koppter.todotxt.with
 import io.github.koppor.koppter.ui.TodoController
@@ -158,7 +159,7 @@ fun main(args: Array<String>) {
     // [impl->dsn~link-single-instance~1]
     // Before anything else: a start that only hands its link on ends at once.
     val port = LinkPort(dataDirectory().resolve("link.port"))
-    val link = args.firstOrNull { filterOfLink(it) != null || syncOfLink(it) != null }
+    val link = args.firstOrNull { filterOfLink(it) != null || syncOfLink(it) != null || taskLinkOf(it) != null }
     if (link != null && port.pass(link)) return
     // [impl->dsn~contextswitcher-sync~1]
     // ContextSwitcher sends its selection at every change; with no window open, the next start shows it instead of a window opening now.
@@ -213,6 +214,8 @@ fun main(args: Array<String>) {
         // The message is passed without arguments, so that tinylog does not read braces in it as placeholders.
         log = { message, cause -> if (cause == null) Logger.error(message as Any) else Logger.error(cause, message) },
         outlook = AnchorHubOutlook.installed(),
+        // [impl->dsn~onenote-backlinks~1]
+        oneNoteBacklinks = AnchorHubOneNote.installed()?.let { anchorHub -> anchorHub::sync },
         // [impl->dsn~latex-todos~1]
         readFile = { path -> File(withHome(path)).takeIf { it.isFile }?.readText() },
         // [impl->dsn~latex-open~1]

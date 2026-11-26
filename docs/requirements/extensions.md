@@ -149,6 +149,20 @@ Covers:
 
 Needs: dsn
 
+### Links back from a page of OneNote
+`req~onenote-backlinks~1`
+
+On Windows with OneNote and AnchorHub, a page of OneNote that tasks refer to shows at its top a link to each of these tasks, named by its description.
+A click on the link opens the task in koppter.
+The links follow the tasks: a changed description changes its link, a completed task, also one that is archived, has its link struck through, and a deleted task loses its link.
+The file of the tasks gets no tag for this.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Items of Outlook
 `req~outlook-items~1`
 
@@ -729,6 +743,45 @@ Covers:
 
 * `req~onenote-link~1`
 * `adr~onenote-tag~1`
+
+Needs: impl, utest
+
+### Link to one task
+`dsn~task-link~1`
+
+`taskLink` writes the link `koppter://task?onenote=<key>&text=<description>` for a task and one of its tags `onenote:`, with the values encoded as by `linkTo`; `taskLinkOf` reads it back, also as `koppter:task?` and `koppter://task/?`.
+The key (`oneNoteKey`) is the GUID of `page-id={…}` in the link of OneNote, with the braces as they are or encoded, and the whole link for one without it; keys are compared without regard to case.
+`TaskLink.find` takes the tasks with a tag `onenote:` of that key, and of these the ones whose description is the text of the link; when none has it, as the task was edited since the link was written, all of them.
+`TodoController.openLink` opens the edit dialog of a single task that it finds (`taskRequested`), also a completed one; for several, it shows the list with the key as the text of the filter, completed tasks and those before their threshold date included, as `dsn~app-links~1` does for a filter.
+With none in the file, the message, in the snackbar as other failures, says whether the task is archived in `done.txt`, which the application does not edit, or no task refers to the page.
+
+The flow of `.claude/skills/ux-review/SKILL.md`: the link opens the existing edit dialog, whose Save, Cancel, Esc and back behave as for a click on the task; the dialog has the focus.
+Nothing of it is kept in the settings, except the filter for several tasks, as for every link.
+On a phone, the same link opens the dialog; Android has no AnchorHub, so the links on the page come from a desktop.
+
+Covers:
+
+* `req~onenote-backlinks~1`
+* `adr~task-link-by-page-and-text~1`
+
+Needs: impl, utest
+
+### Links back on the pages of OneNote
+`dsn~onenote-backlinks~1`
+
+`backlinks` makes the complete set of links: for each task of the file and each completed task of `done.txt`, and for each of its tags `onenote:`, the link of OneNote with its scheme, the description as the label, the link of `dsn~task-link~1` and whether the task is completed.
+A task that is in both files, after an archiving that failed halfway, counts once.
+`TodoController.syncBacklinks` sends the set at the start, after each synchronization that succeeded, which follows every change of the file, and, for a file without synchronization, at each periodic synchronization; it does not send the set that was sent last with success, and nothing before the file was read, as an empty set would remove every link.
+It runs off the main thread, one call at a time, and logs what fails.
+On the desktop, `AnchorHubOneNote` writes the set as JSON to `ankd onenote-backlinks-sync` with the source `koppter` and the icon of the application, `koppter.png` in Base64, which the page shows in front of the links: AnchorHub removes the links of this source from the pages that the set no longer names and strikes through those of completed tasks.
+Its answer counts the pages updated, removed and unchanged and names those that failed; the counts and every failure go to the log, and a set with a failed page is sent again at the next synchronization.
+An AnchorHub without the command is found by `dsn~anchorhub-version~1`; this is logged once and the set is not sent again until the next start.
+Any other failure, such as an exit code other than 0, is logged with what AnchorHub printed to its error output, and the set is sent again.
+
+Covers:
+
+* `req~onenote-backlinks~1`
+* `adr~outlook-through-anchorhub~1`
 
 Needs: impl, utest
 

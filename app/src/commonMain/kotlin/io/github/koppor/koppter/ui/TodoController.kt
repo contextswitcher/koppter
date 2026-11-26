@@ -18,6 +18,12 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import io.github.koppor.koppter.todotxt.Backlink
+import io.github.koppor.koppter.todotxt.TaskLink
+import io.github.koppor.koppter.todotxt.backlinks
+import io.github.koppor.koppter.todotxt.taskLinkOf
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Family
 import io.github.koppor.koppter.plan.RankingPeriod
@@ -131,6 +137,11 @@ class TodoController(
     private val openFile: ((template: String, path: String, line: Int) -> Unit)? = null,
     /** Opens a link of ContextSwitcher, which takes the projects and contexts of the filter; `null` where the platform has none, as on Android. */
     private val openContextSwitcher: ((String) -> Unit)? = null,
+    /**
+     * Sends the complete set of links back to the tasks to the pages of OneNote, blocking while OneNote answers, and returns whether the set
+     * needs not be sent again while it stays the same; `null` where the platform has no program for it.
+     */
+    private val oneNoteBacklinks: ((List<Backlink>) -> Boolean)? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -189,6 +200,10 @@ class TodoController(
     /** Set by the link `koppter://new`; the screen opens the dialog for a new task and resets it. */
     var newTaskRequested by mutableStateOf(false)
 
+    /** Set by a link `koppter://task?…` that names one task; the screen opens the dialog of the task and resets it. */
+    // [impl->dsn~task-link~1]
+    var taskRequested by mutableStateOf<Entry?>(null)
+
     /**
      * Shows the tasks that a link to the application names, in the list, or opens a new task for `koppter://new`;
      * a text that is no such link changes nothing.
@@ -200,10 +215,68 @@ class TodoController(
             newTaskRequested = true
             return
         }
+        taskLinkOf(link)?.let {
+            openTask(it)
+            return
+        }
         filter = filterOfLink(link) ?: return
         topOnly = false
         nextOnly = false
         view = View.LIST
+    }
+
+    /**
+     * Opens the dialog of the task that the link names; when several tasks refer to its page and none has its text, the list shows them.
+     * A task that is only in `done.txt` cannot be opened, which the message says.
+     */
+    // [impl->dsn~task-link~1]
+    private fun openTask(link: TaskLink) {
+        val found = link.find(file.entries) { it.task }
+        when {
+            found.size == 1 -> taskRequested = found.single()
+            found.isNotEmpty() -> {
+                filter = Filter(text = link.oneNote, completion = Completion.ALL, hideFuture = false)
+                topOnly = false
+                nextOnly = false
+                view = View.LIST
+            }
+            else -> {
+                val archived = try {
+                    (storage as? CompanionFiles)?.readCompanion(DONE_FILE).orEmpty().lines().filter(String::isNotBlank).map(Task::parse)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                error = if (link.find(archived) { it }.isNotEmpty()) "The task is completed and archived in done.txt: ${link.text}"
+                else "No task refers to this page of OneNote any more, so its link goes at the next synchronization: ${link.text}"
+            }
+        }
+    }
+
+    /** The links that were sent to the pages of OneNote last, which need not be sent again. */
+    private var sentBacklinks: List<Backlink>? = null
+    private val backlinksLock = Mutex()
+
+    /**
+     * Sends the links back to the tasks to the pages of OneNote that the tasks of the file and of `done.txt` refer to, unless they are those sent last.
+     * It runs after a synchronization, so that a task changed on another device changes its link as well; what fails is logged.
+     */
+    // [impl->dsn~onenote-backlinks~1]
+    suspend fun syncBacklinks() {
+        val send = oneNoteBacklinks ?: return
+        // A file that could not be read would remove every link.
+        if (loadedVersion == null) return
+        backlinksLock.withLock {
+            try {
+                withContext(Dispatchers.Default) {
+                    val archived = (storage as? CompanionFiles)?.readCompanion(DONE_FILE).orEmpty().lines().filter(String::isNotBlank).map(Task::parse)
+                    val links = backlinks(file.entries.map { it.task }, archived)
+                    if (links != sentBacklinks && send(links)) sentBacklinks = links
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                log("The links on the pages of OneNote were not updated: ${e.message}", e)
+            }
+        }
     }
 
     /**

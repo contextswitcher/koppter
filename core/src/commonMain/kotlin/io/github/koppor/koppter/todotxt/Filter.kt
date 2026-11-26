@@ -151,6 +151,15 @@ internal fun encoded(name: String): String = name.encodeToByteArray().joinToStri
     if (char in 'A'..'Z' || char in 'a'..'z' || char in '0'..'9' || char in "-._~") char.toString() else "%" + (byte.toInt() and 0xFF).toString(16).uppercase().padStart(2, '0')
 }
 
+/** The keys and decoded values of the query of a link to the application, in their order; a key without a value is left out. */
+internal fun linkValues(query: String): List<Pair<String, String>> = query.split('&').mapNotNull { part ->
+    val key = part.substringBefore('=', "").lowercase()
+    val value = PERCENT_ENCODED.replace(part.substringAfter('=')) { encoded ->
+        encoded.value.split('%').drop(1).map { it.toInt(16).toByte() }.toByteArray().decodeToString()
+    }
+    (key to value).takeIf { value.isNotEmpty() }
+}
+
 private const val LINK_NOT = "not-"
 private const val LINK_PRIORITY = "priority"
 private const val LINK_TEXT = "text"
@@ -183,13 +192,7 @@ fun Filter.toLink(): String = "koppter://filter?" + (
 // [impl->dsn~app-links~1]
 fun filterOfLink(link: String): Filter? {
     val query = LINK.matchEntire(link.trim())?.groupValues?.get(1) ?: return null
-    val values = query.split('&').mapNotNull { part ->
-        val key = part.substringBefore('=', "").lowercase()
-        val value = PERCENT_ENCODED.replace(part.substringAfter('=')) { encoded ->
-            encoded.value.split('%').drop(1).map { it.toInt(16).toByte() }.toByteArray().decodeToString()
-        }
-        (key to value).takeIf { value.isNotEmpty() }
-    }
+    val values = linkValues(query)
     fun named(key: String, sign: String) = values.filter { it.first == key }.map { it.second.removePrefix(sign) }.filter(String::isNotEmpty).toSet()
     return Filter(
         completion = when (values.lastOrNull { it.first == LINK_SHOW }?.second) {
