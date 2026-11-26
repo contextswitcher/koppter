@@ -2045,9 +2045,28 @@ class AppTest {
         onNodeWithTag("agenda-due").assertDoesNotExist()
     }
 
+    // [utest->dsn~android-block-notification~2]
+    @Test
+    fun postponingPlansFromTheEndOfTheBlockAndNotTodayLeavesTheTaskForTomorrow() {
+        storage.text = "(A) Thank Mom dur:1h\n(B) Post signs dur:1h\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 })
+        controller.load()
+        controller.plan(PlanSettings("General = Mon-Fri 09:00-12:00", "", ""))
+
+        runBlocking { controller.postpone(10 * 60) }
+        assertEquals("2026-11-12 w46 Thu  10:00-11:00 Thank Mom. 11:00-12:00 Post signs\n", storage.companions.getValue("calendar.txt"))
+
+        runBlocking { controller.notToday(controller.entryNamed("Thank Mom")!!) }
+        assertEquals("(A) Thank Mom dur:1h t:2026-11-13\n(B) Post signs dur:1h\n", storage.text)
+        assertEquals(
+            "2026-11-12 w46 Thu  09:00-10:00 Post signs\n2026-11-13 w46 Fri  09:00-10:00 Thank Mom\n",
+            storage.companions.getValue("calendar.txt"),
+        )
+    }
+
     // [utest->dsn~agenda~1]
     @Test
-    fun theAgendaShowsTheBlocksOfTheNextDaysAndWhatIsDueWithoutABlock() = runComposeUiTest {
+    fun theAgendaShowsTheBlocksOfTheNextDaysAndWhatIsDueWithoutABlock()= runComposeUiTest {
         storage.text += "Sweep the floor due:2026-11-12\n"
         storage.companions["calendar.txt"] = """
             2026-11-11 w46 Wed  09:00-09:30 Yesterday

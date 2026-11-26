@@ -89,11 +89,12 @@ Covers:
 Needs: dsn
 
 ### Notification of a block
-`req~android-block-notification~1`
+`req~android-block-notification~2`
 
 On Android, the application tells the user with a notification that a block of the plan starts.
-The notification names the task and the times of the block and offers to complete the task.
-A watch that is connected to the phone shows the notification with that action.
+The notification names the task and the times of the block and offers to start the clock of the task, to plan it later today and to leave it for today.
+It does not offer to complete the task, as a tap by mistake would do that.
+A watch that is connected to the phone shows the notification with these actions.
 
 Covers:
 
@@ -324,11 +325,15 @@ Covers:
 Needs: impl, utest
 
 ### Notification of a block on Android
-`dsn~android-block-notification~1`
+`dsn~android-block-notification~2`
 
 `CalendarTxt.next` gives the first block that starts after now, and `scheduleBlockAlarm` sets an alarm for its start: when `MainActivity` stops, when the widget is refreshed, after the device started and after the application was updated.
 The alarm is inexact, so that it needs no permission; the system may deliver it some minutes late.
-`PlanReceiver` receives it and shows the block that `CalendarTxt.current` gives, if its task is open: the description as the title, the times as the text and the action *Done*, which completes the task through a controller of its own.
+`PlanReceiver` receives it and shows the block that `CalendarTxt.current` gives, if its task is open: the description as the title, the times as the text and three actions, carried out through a controller of its own:
+*Start* starts the clock of the task, *Postpone* plans again from the end of the block on, so that nothing is planned before, and *Not today* gives the task tomorrow as its threshold date and plans again.
+There is no *Done*, as a tap on it by mistake would complete the task; Android shows at most three actions.
+*Start*, the most frequent, stands first.
+After an action the notification leaves; after a failure it stays for another try, and the receiver works off the main thread, as planning may read calendars from the network.
 A block of travel time and a block whose task was completed, deleted or edited since get no notification.
 The notification leaves when its block ends, and each alarm sets the next one.
 From Android 13 on, `MainActivity` asks for the permission to notify when the file has a plan.
@@ -336,7 +341,7 @@ Wear OS shows the notifications of the phone with their actions, so the watch ne
 
 Covers:
 
-* `req~android-block-notification~1`
+* `req~android-block-notification~2`
 
 Needs: impl, utest
 

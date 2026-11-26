@@ -887,6 +887,23 @@ class TodoController(
         updateMemberPlans()
     }
 
+    /**
+     * Plans again from the minute [after] on, so that the task of the block that runs now moves behind it.
+     * Nothing is planned before [after], and the todo.txt file is not changed.
+     */
+    // [impl->dsn~android-block-notification~2]
+    // ponytail: the next plan from now on, such as on completion, may put the task back; a tag with a time before which it is not planned, if that shows.
+    suspend fun postpone(after: Int) {
+        planSettings?.let { planWithCalendars(it, calendars, after) }
+    }
+
+    /** Gives the task tomorrow as its threshold date and plans again, so that it leaves the plan of today. */
+    // [impl->dsn~android-block-notification~2]
+    suspend fun notToday(entry: Entry) {
+        replace(entry, entry.task.withTag(Task.THRESHOLD, today().plus(DatePeriod(days = 1)).toString()))
+        planSettings?.let { planWithCalendars(it, calendars) }
+    }
+
     /** The addresses of the calendars with busy times; `null` if the platform cannot read them. */
     val calendars: String? get() = settings.calendars.takeIf { fetch != null }
 
@@ -895,7 +912,7 @@ class TodoController(
      * A calendar that cannot be read is reported and left out.
      */
     // [impl->dsn~busy-times~1]
-    suspend fun planWithCalendars(settings: PlanSettings, calendars: String?): PlanResult? {
+    suspend fun planWithCalendars(settings: PlanSettings, calendars: String?, from: Int = minuteOfDay()): PlanResult? {
         val busy = mutableMapOf<LocalDate, List<Span>>()
         val problems = mutableListOf<String>()
         // [impl->dsn~sideline~1]
@@ -927,7 +944,7 @@ class TodoController(
                 log("The calendar of Outlook was not read", e)
             }
         }
-        val result = plan(settings, busy, problems) ?: return null
+        val result = plan(settings, busy, problems, from) ?: return null
         // [impl->dsn~busy-plan~1]
         if (!planMember.isNullOrBlank()) updateAbsences()
         // [impl->dsn~outlook-blocks~1]
@@ -965,9 +982,10 @@ class TodoController(
      * The todo.txt file is not changed: the plan is derived from it.
      *
      * @param busy the times that are taken, by day
+     * @param from the minute of today from which on the plan starts
      */
     // [impl->dsn~plan-dialog~1]
-    fun plan(settings: PlanSettings, busy: Map<LocalDate, List<Span>> = emptyMap(), problems: List<String> = emptyList()): PlanResult? {
+    fun plan(settings: PlanSettings, busy: Map<LocalDate, List<Span>> = emptyMap(), problems: List<String> = emptyList(), from: Int = minuteOfDay()): PlanResult? {
         var result: PlanResult? = null
         guarded {
             val files = storage as? CompanionFiles ?: return@guarded
@@ -984,7 +1002,7 @@ class TodoController(
             // A block does not start at an odd minute.
             // ponytail: a year ahead, as far as the widest named barrier; longer when a barrier with a date lies behind.
             val upcoming = iceRecurOccurrences(files.readCompanion(ICE_RECUR_FILE).orEmpty(), today().plus(DatePeriod(days = 1))..today().plus(DatePeriod(days = 366)))
-            val plan = plan(file.entries, planConfig, busy, today(), (minuteOfDay() + 14) / 15 * 15, upcoming)
+            val plan = plan(file.entries, planConfig, busy, today(), (from + 14) / 15 * 15, upcoming)
             files.writeCompanion(CalendarTxt.NAME, CalendarTxt.write(files.readCompanion(CalendarTxt.NAME).orEmpty(), plan.blocks, today()))
             // [impl->dsn~ics-export~1]
             files.writeCompanion(Ics.NAME, Ics.write(plan.blocks, today()))
