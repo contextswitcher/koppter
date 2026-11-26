@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -139,7 +138,7 @@ fun TimeMapEditor(
     }
 
     GuardedDialog(changed = listOf(name, dates, text) != listOf(initialName, initialDates, initialText), onDismiss = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 720.dp).testTag("time-map-editor")) {
+        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.fillMaxWidth().testTag("time-map-editor")) {
             val scroll = rememberScrollState()
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 DialogHeading(title ?: if (key == null) "New time map" else "Time map $key") {

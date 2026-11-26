@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
@@ -97,7 +96,7 @@ fun PlanDialog(
     var saved by remember { mutableStateOf(state) }
 
     GuardedDialog(changed = state != saved, onDismiss = onDismiss) {
-        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.widthIn(max = 560.dp).testTag("plan-dialog")) {
+        Surface(shape = MaterialTheme.shapes.large, tonalElevation = 6.dp, modifier = Modifier.fillMaxWidth().testTag("plan-dialog")) {
             val scroll = rememberScrollState()
             // The result stands below the settings, out of view of the button in the heading that starts the planning.
             LaunchedEffect(result) { if (result != null) scroll.animateScrollTo(scroll.maxValue) }

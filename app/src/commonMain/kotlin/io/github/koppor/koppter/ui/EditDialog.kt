@@ -55,7 +55,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
@@ -169,7 +168,7 @@ fun EditDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
     /** The width of the dialog in dp where the window allows it, and what keeps a width that the user chose. */
-    width: Int = 760,
+    width: Int = DIALOG_WIDTH.value.toInt(),
     onWidth: (Int) -> Unit = {},
     /** Lets the user choose images and gives their bytes, none if none was chosen; `null` on a platform without that. */
     pickImage: (suspend () -> List<ByteArray>)? = null,
@@ -286,12 +285,11 @@ fun EditDialog(
     val density = LocalDensity.current
     // [impl->dsn~new-task-draft~1]
     // A draft counts as a change, so that the question is the way to discard it.
-    GuardedDialog(changed = state != initial || draft != null, onDismiss = { if (isNew) onDraft(null); onDismiss() }) {
+    GuardedDialog(changed = state != initial || draft != null, onDismiss = { if (isNew) onDraft(null); onDismiss() }, width = shownWidth) {
         Surface(
             shape = MaterialTheme.shapes.large,
             tonalElevation = 6.dp,
-            // By default wide enough for the priorities and the days of the due date in one row each.
-            modifier = Modifier.widthIn(max = shownWidth).testTag("edit-dialog")
+            modifier = Modifier.fillMaxWidth().testTag("edit-dialog")
                 // [impl->dsn~keyboard-shortcuts~1]
                 .onPreviewKeyEvent {
                     val save = it.type == KeyEventType.KeyDown && it.key == Key.Enter && (it.isCtrlPressed || it.isMetaPressed)
@@ -303,7 +301,7 @@ fun EditDialog(
                 Column {
                     // [impl->dsn~dialog-header~1]
                     // The buttons stand in the heading, so that they stay in view while the fields scroll and no keyboard of a phone covers them.
-                    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             if (draft != null) "New task (draft)" else if (isNew) "New task" else "Edit task",
                             style = MaterialTheme.typography.titleMedium,

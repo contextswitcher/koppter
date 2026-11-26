@@ -19,6 +19,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 ### Changed
 
+- The dialogs with Cancel and Save in their headings have one width and stand at the top of the window, so that their buttons are at the same place in each; the settings are no longer as wide as the window.
 - The buttons that close the settings, the plan dialog, the editor of a time map, the editor of the schedule and the list of the applications, where it is now called *Close*, stand in their headings, as in the edit dialog, and stay in view while the content scrolls.
 
 ### Fixed
