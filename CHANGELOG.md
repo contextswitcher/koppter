@@ -20,7 +20,7 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - *Cancel* and *Save* of the edit dialog stand in its heading and stay in view while the fields scroll; *Delete* stands at the end of the fields.
 - The calendar of a date field in the edit dialog names the field and, for the start date and the deadline, the due date; without a date it opens on the month of the due date.
-- The notification of a block on Android offers *Start*, *Postpone* and *Not today* in place of *Done*, which was easy to tap by mistake: *Postpone* plans again from the end of the block, *Not today* sets the threshold date of the task to tomorrow and plans again.
+- The notification of a block on Android offers *Start*, *Postpone* and *Not today* in place of *Done*, which was easy to tap by mistake: *Postpone* plans the task again after the end of the block with the new tag `after:`, which holds a time of its threshold date before which the task is not planned, *Not today* sets the threshold date of the task to tomorrow and plans again.
 - A TODO of a LaTeX document, and a task that refers to one, can no longer be ticked off: the icon of a document stands in the place of its checkbox, and a tap on it says that the TODO is done when it is removed from the document.
 - In Today, the handle between the agenda and the calendar shows a line and has more room on both sides, and the calendar can be dragged wider: the agenda keeps 400 dp instead of 600 dp.
 - Entries of a day in *Week* and *Today* that take the same time stand side by side.

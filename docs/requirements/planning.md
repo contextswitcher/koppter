@@ -470,6 +470,20 @@ Covers:
 
 Needs: impl, utest
 
+### Time before which a task is not planned
+`dsn~not-before-time~1`
+
+The tag `after:` holds a time of the day as `H:MM` or `HH:MM`; `Task.after` reads it.
+The planner starts a task on its threshold date at that time; on a later day, and for a task without a threshold date, the tag has no effect, so that a postponed task is planned from the start of its time map again the next day.
+The next occurrence of a recurring task drops the tag, as it holds a time of a day that has passed.
+
+Covers:
+
+* `req~android-block-notification~3`
+* `adr~not-before-tag~1`
+
+Needs: impl, utest
+
 ### Time by which a task is due
 `dsn~due-time~1`
 

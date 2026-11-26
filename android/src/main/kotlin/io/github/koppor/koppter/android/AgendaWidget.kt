@@ -97,7 +97,7 @@ class AgendaWidgetService : RemoteViewsService() {
     private fun rows(context: Context): List<AgendaLine> {
         // ponytail: a controller per refresh, as the share target does; it also starts a synchronization of a git repository.
         val controller = context.todoController(GitSetup(filesDir.toPath().resolve("git")))
-        // [impl->dsn~android-block-notification~2]
+        // [impl->dsn~android-block-notification~3]
         // The plan may have come with a synchronization since the application was open.
         publishAgenda(controller)
         return controller.agenda

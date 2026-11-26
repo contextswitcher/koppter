@@ -140,6 +140,10 @@ data class Task(
     // [impl->dsn~fixed-time~1]
     val at: Int? get() = tag(AT)?.let(::parseTime)
 
+    /** The time of the day of the threshold date before which the task is not planned; ignored on other days and without a threshold date. */
+    // [impl->dsn~not-before-time~1]
+    val after: Int? get() = tag(AFTER)?.let(::parseTime)
+
     /** The time that the way to the task takes, and the way back as well. */
     // [impl->dsn~travel-time~1]
     val travel: Duration? get() = tag(TRAVEL)?.let(::parseDuration)
@@ -244,7 +248,8 @@ data class Task(
         val from = if (recurrence.strict) due ?: threshold ?: today else today
         val next = recurrence.next(from)
         // The next occurrence starts anew: nothing was worked on it.
-        val open = (if (completed) reopen() else this).withTag(SPENT, null).withTag(STARTED, null)
+        // [impl->dsn~not-before-time~1]
+        val open = (if (completed) reopen() else this).withTag(SPENT, null).withTag(STARTED, null).withTag(AFTER, null)
         return when {
             due != null && threshold != null ->
                 open.withTag(DUE, next.toString()).withTag(THRESHOLD, next.minus(threshold.daysUntil(due), DateTimeUnit.DAY).toString())
@@ -289,6 +294,7 @@ data class Task(
         const val LATEX = "tex"
         const val DURATION = "dur"
         const val AT = "at"
+        const val AFTER = "after"
         const val BY = "dueby"
         const val TRAVEL = "tt"
         const val MAP = "map"

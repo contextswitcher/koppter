@@ -3,7 +3,7 @@
 
     <!-- For the synchronization through git and for reading the calendars with busy times. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- [impl->dsn~android-block-notification~2] -->
+    <!-- [impl->dsn~android-block-notification~3] -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- [impl->dsn~android-update~1] -->
     <!-- For the update from the latest release on GitHub; the system asks the user before each installation. -->
@@ -92,7 +92,7 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/agenda_widget" />
         </receiver>
-        <!-- [impl->dsn~android-block-notification~2] -->
+        <!-- [impl->dsn~android-block-notification~3] -->
         <receiver
             android:name=".PlanReceiver"
             android:exported="false">
