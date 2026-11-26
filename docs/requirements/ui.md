@@ -719,6 +719,21 @@ Covers:
 
 Needs: impl, utest
 
+### Width and place of a dialog
+`dsn~dialog-frame~1`
+
+The dialogs with a heading are 760 dp wide where the window allows that, and stand at the top of the window, 16 dp below its edge.
+So their buttons are at the same place in each dialog, and a dialog that grows while it is open grows downwards and does not move its heading.
+The edit dialog has the width that the user dragged it to (`dsn~edit-resize~1`).
+A click beside the dialog closes it as before.
+
+Covers:
+
+* `req~edit-dialog~1`
+* `req~unsaved-changes~1`
+
+Needs: impl, utest
+
 ### Calendar of a date that depends on the due date
 `dsn~date-picker-context~1`
 
@@ -821,7 +836,7 @@ Needs: impl, utest
 `dsn~edit-resize~1`
 
 The edit dialog is 760 dp wide where the window allows that, which is enough for the priorities and the days of the due date in one row each.
-On a device with a keyboard, its right edge has a handle that is dragged: the dialog stays in the middle of the window, so its width changes by twice the way of the pointer, between 420 and 2400 dp.
+On a device with a keyboard, its right edge has a handle that is dragged: the dialog stays in the middle of the width of the window, so its width changes by twice the way of the pointer, between 420 and 2400 dp.
 The dialog is a layer of the window of the application and not a window of its own, so it has no frame of the operating system to drag.
 The width is kept in the settings of the device as `editWidth` when the drag ends.
 

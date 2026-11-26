@@ -94,6 +94,7 @@ import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
+import androidx.compose.ui.unit.dp
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
@@ -1210,6 +1211,26 @@ class AppTest {
         onNodeWithTag("settings-cancel").performClick()
         onNodeWithTag("open-plan").performClick()
         assertTrue(onNodeWithTag("plan-update").getBoundsInRoot().bottom <= onNodeWithTag("plan-time-maps").getBoundsInRoot().top)
+    }
+
+    // [utest->dsn~dialog-frame~1]
+    @Test
+    fun theDialogsShareTheirWidthAndStandAtTheTop() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        val edit = onNodeWithTag("edit-dialog").getBoundsInRoot()
+        val editSave = onNodeWithTag("edit-save").getBoundsInRoot()
+        onNodeWithTag("edit-cancel").performClick()
+        onNodeWithTag("open-settings").performClick()
+        val settings = onNodeWithTag("settings-dialog").getBoundsInRoot()
+        // The edit dialog lays out its heading itself.
+        assertEquals(listOf(editSave.top, editSave.right), onNodeWithTag("settings-save").getBoundsInRoot().run { listOf(top, right) })
+        onNodeWithTag("settings-cancel").performClick()
+        onNodeWithTag("open-plan").performClick()
+        val plan = onNodeWithTag("plan-dialog").getBoundsInRoot()
+        assertEquals(listOf(edit.left, edit.top, edit.right), listOf(settings.left, settings.top, settings.right))
+        assertEquals(listOf(edit.left, edit.top, edit.right), listOf(plan.left, plan.top, plan.right))
+        assertEquals(16.dp, edit.top)
     }
 
     // [utest->dsn~date-picker-context~1]
