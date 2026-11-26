@@ -73,6 +73,17 @@ class GitStorageTest {
         }
     }
 
+    // [utest->dsn~templates-file~1]
+    @Test
+    fun templatesEditedInAnotherProgramAreCommittedAtTheNextSynchronization() {
+        val desktop = device("desktop")
+        desktop.write("Call Mom\n", "Add task: Call Mom")
+        root.resolve("desktop/templates.txt").toFile().writeText("# Trip\nBook the train\n")
+        desktop.synchronizeNow()
+        assertEquals("Update todo.txt", messages("desktop").first())
+        assertEquals("# Trip\nBook the train\n", device("phone").also { it.synchronizeNow() }.let { root.resolve("phone/templates.txt").toFile().readText() })
+    }
+
     // [utest->dsn~git-sync~1]
     @Test
     fun aSecondDeviceReceivesTheChanges() {

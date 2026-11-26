@@ -47,11 +47,27 @@ private val TEMPLATE_EXAMPLE = """
     Buy a ticket +swim
 """.trimIndent()
 
+/** What a new `templates.txt` starts with: the rules, which stand before the first template and are therefore ignored, and the example. */
+internal val NEW_TEMPLATES = """
+    Lines before the first template are ignored.
+    A line "# name" starts a template, each line below it is a task in the notation of todo.txt,
+    and the indented lines below a task are its note, such as a checklist.
+    The due date and time are chosen when the tasks are added.
+
+""".trimIndent() + "\n" + TEMPLATE_EXAMPLE + "\n"
+
 /** Chooses a template of `templates.txt` and the due date and time of its tasks. */
 // [impl->dsn~templates~1]
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TemplateDialog(templates: List<Template>, today: LocalDate, onAdd: (Template, LocalDate?, String?) -> Unit, onDismiss: () -> Unit) {
+fun TemplateDialog(
+    templates: List<Template>,
+    today: LocalDate,
+    onAdd: (Template, LocalDate?, String?) -> Unit,
+    onDismiss: () -> Unit,
+    /** Creates `templates.txt` with an example and opens it in another program; `null` where the platform cannot. */
+    onCreate: (() -> Unit)? = null,
+) {
     // A single template needs no choice.
     var chosen by remember { mutableStateOf(templates.singleOrNull()) }
     var due by remember { mutableStateOf("") }
@@ -84,6 +100,11 @@ fun TemplateDialog(templates: List<Template>, today: LocalDate, onAdd: (Template
                         Text("There are no templates yet. They are kept in templates.txt next to todo.txt, for example:", modifier = Modifier.testTag("template-empty"))
                         Text(TEMPLATE_EXAMPLE, fontFamily = FontFamily.Monospace)
                         Text("A line with # starts a template, each line below it is a task, and the indented lines below a task are its note.")
+                        // [impl->dsn~templates-file~1]
+                        // It opens another program, so the dialog closes: the templates are read again when it is opened next.
+                        onCreate?.let { create ->
+                            Button(onClick = { create(); onDismiss() }, modifier = Modifier.testTag("template-create")) { Text("Create templates.txt and edit it") }
+                        }
                     }
                     Column(Modifier.selectableGroup()) {
                         for ((i, template) in templates.withIndex()) {

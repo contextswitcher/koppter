@@ -11,6 +11,7 @@ import io.github.koppor.koppter.storage.SyncStatus
 import io.github.koppor.koppter.storage.SyncingStorage
 import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
+import io.github.koppor.koppter.todotxt.TEMPLATES_FILE
 import kotlinx.datetime.LocalDate
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.MergeCommand
@@ -226,9 +227,11 @@ class GitStorage(
     private fun lastChange(commit: ObjectId, file: String): Int =
         git.log().add(commit).addPath(file).setMaxCount(1).call().firstOrNull()?.commitTime ?: 0
 
-    /** Commits the todo.txt file and the companion files written since the last commit, and nothing else. */
+    /** Commits the todo.txt file, the templates and the companion files written since the last commit, and nothing else. */
     private fun commit(message: String) {
-        val paths = listOf(path) + companions
+        // [impl->dsn~templates-file~1]
+        // The templates are edited in another program, so that no write of the application names them.
+        val paths = listOf(path, sibling(TEMPLATES_FILE)) + companions
         git.add().apply { paths.forEach(::addFilepattern) }.call()
         // Without the update, adding does not stage a deleted file.
         git.add().setUpdate(true).apply { paths.forEach(::addFilepattern) }.call()

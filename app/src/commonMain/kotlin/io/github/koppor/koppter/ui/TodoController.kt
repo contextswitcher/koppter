@@ -170,6 +170,8 @@ class TodoController(
     private val readFile: ((String) -> String?)? = null,
     /** Opens a file of the device at a line, with the program of the template of [Latex.command], or as the system opens it for a blank one; `null` where the platform cannot. */
     private val openFile: ((template: String, path: String, line: Int) -> Unit)? = null,
+    /** The path on the device of a file next to the main todo.txt file of the settings; `null` where the platform has none, as on Android. */
+    private val companionPath: ((Settings, String) -> String?)? = null,
     /** Opens a link of ContextSwitcher, which takes the projects and contexts of the filter; `null` where the platform has none, as on Android. */
     private val openContextSwitcher: ((String) -> Unit)? = null,
     /**
@@ -1471,6 +1473,21 @@ class TodoController(
     } catch (e: Exception) {
         failed(e)
         null
+    }
+
+    /** Whether the dialog of the templates can create `templates.txt` and open it in the program of the system. */
+    val createsTemplates: Boolean get() = openFile != null && companionPath != null && storage is CompanionFiles
+
+    /** Writes `templates.txt` with [example] unless it exists, and opens it in the program that the system has for it. */
+    // [impl->dsn~templates-file~1]
+    fun createTemplates(example: String) {
+        val files = storage as? CompanionFiles ?: return
+        val path = companionPath?.invoke(settings, TEMPLATES_FILE) ?: return
+        val open = openFile ?: return
+        guarded {
+            if (files.readCompanion(TEMPLATES_FILE) == null) files.writeCompanion(TEMPLATES_FILE, example)
+            open("", path, 1)
+        }
     }
 
     /** Adds the tasks of the template in one change, each due on [due] at [by] where given, and each with its note in a file of its own. */

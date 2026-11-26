@@ -796,7 +796,7 @@ private fun MainScreen(
         TemplateDialog(it, controller.today(), onAdd = { template, due, by ->
             controller.addTemplate(template, due, by)
             templates = null
-        }, onDismiss = { templates = null })
+        }, onDismiss = { templates = null }, onCreate = if (controller.createsTemplates) ({ controller.createTemplates(NEW_TEMPLATES) }) else null)
     }
     schedule?.let {
         ScheduleDialog(

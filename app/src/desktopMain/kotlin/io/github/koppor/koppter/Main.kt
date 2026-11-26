@@ -186,6 +186,11 @@ fun main(args: Array<String>) {
     }
     val settingsFile = SettingsFile(configDirectory().resolve("settings.properties"))
     val gitSetup = GitSetup(dataDirectory(), ownKey = false)
+    fun mainFileOf(settings: io.github.koppor.koppter.storage.Settings): Path = when {
+        settings.todoFile.isBlank() -> defaultTodoFile
+        isGitAddress(settings.todoFile) -> gitSetup.repositoryFile
+        else -> Path(settings.todoFile)
+    }
     val controller = TodoController(
         // [impl->dsn~clone-by-address~1]
         // Settings of an earlier version name the clone instead of the address of its repository.
@@ -200,11 +205,7 @@ fun main(args: Array<String>) {
             }
             // [impl->dsn~shared-lists~1]
             // [impl->dsn~member-lists~1]
-            val mainFile = when {
-                settings.todoFile.isBlank() -> defaultTodoFile
-                isGitAddress(settings.todoFile) -> gitSetup.repositoryFile
-                else -> Path(settings.todoFile)
-            }
+            val mainFile = mainFileOf(settings)
             SharedLists.of(main, gitSetup.listsWithMembers(settings.sharedLists, mainFile)) { gitSetup.sharedListStorage(it, settings.committerName, settings.committerEmail) }
         },
         saveSettings = settingsFile::save,
@@ -224,6 +225,8 @@ fun main(args: Array<String>) {
             if (template.isBlank()) thread(isDaemon = true) { java.awt.Desktop.getDesktop().open(file) }
             else ProcessBuilder(Latex.command(template, file.path, line)).start()
         },
+        // [impl->dsn~templates-file~1]
+        companionPath = { settings, name -> mainFileOf(settings).resolveSibling(name).toString() },
         // [impl->dsn~contextswitcher-sync~1]
         openContextSwitcher = { url ->
             thread(isDaemon = true) {

@@ -89,6 +89,7 @@ import io.github.koppor.koppter.outlook.OutlookCalendar
 import io.github.koppor.koppter.plan.CalendarTxt
 import kotlinx.datetime.LocalDateTime
 import io.github.koppor.koppter.todotxt.Task
+import io.github.koppor.koppter.todotxt.parseTemplates
 import io.github.koppor.koppter.todotxt.dueChoices
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
@@ -988,6 +989,42 @@ class AppTest {
         assertFalse("Book the train" in storage.text)
         assertEquals("- [ ] towel\n", storage.companions["notes/$note"])
         assertEquals("Add template: Swimming", storage.changes.last())
+    }
+
+    // [utest->dsn~templates-file~1]
+    @Test
+    fun theDialogOfTheTemplatesCreatesTemplatesTxtAndOpensItWhereThePlatformCan() = runComposeUiTest {
+        storage.text = ""
+        val opened = mutableListOf<String>()
+        val controller = TodoController(
+            Settings(), { storage }, today = { LocalDate(2026, 11, 12) },
+            openFile = { template, path, _ -> opened += "$template|$path" },
+            companionPath = { _, name -> "/home/ada/$name" },
+        )
+        setContent { App(controller, "todo.txt") }
+
+        onNodeWithTag("new-from-template").performClick()
+        onNodeWithTag("template-create").performClick()
+        onNodeWithTag("template-dialog").assertDoesNotExist()
+        assertEquals(listOf("|/home/ada/templates.txt"), opened)
+        assertEquals(listOf("Swimming"), parseTemplates(storage.companions.getValue("templates.txt")).map { it.name })
+
+        // A file that exists is opened as it is.
+        storage.companions["templates.txt"] = "# Mine\n"
+        controller.createTemplates("# Other\n")
+        assertEquals("# Mine\n", storage.companions["templates.txt"])
+        assertEquals(2, opened.size)
+    }
+
+    // [utest->dsn~templates-file~1]
+    @Test
+    fun withoutAProgramForFilesTheDialogOfTheTemplatesCreatesNothing() = runComposeUiTest {
+        storage.text = ""
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("new-from-template").performClick()
+        onNodeWithTag("template-empty").assertExists()
+        onNodeWithTag("template-create").assertDoesNotExist()
     }
 
     // [utest->dsn~note-checklist~1]

@@ -955,6 +955,21 @@ Covers:
 
 Needs: impl, utest
 
+### The file of the templates
+`dsn~templates-file~1`
+
+On the desktop, the dialog without `templates.txt` has the button *Create templates.txt and edit it*: it writes the file with the rules, which stand before the first template and are therefore ignored, and the example, and opens it in the program that the system has for it.
+An existing file is opened as it is.
+The dialog closes, as the user goes on in the other program; the templates are read again when it is opened next.
+Android has no such program for a file of the folder, and the button is not shown there.
+`GitStorage` commits `templates.txt` with every commit, also when no write of the application names it, so that a change made in another program is committed at the next synchronization.
+
+Covers:
+
+* `req~templates~1`
+
+Needs: impl, utest
+
 ### Checklist in a note
 `dsn~note-checklist~1`
 
