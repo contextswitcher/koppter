@@ -703,6 +703,31 @@ Covers:
 
 Needs: impl, utest
 
+### Buttons in the heading of the edit dialog
+`dsn~edit-header~1`
+
+*Cancel* and *Save* of `EditDialog` stand in its heading, which does not scroll with the fields: they stay in view on a phone and are not covered by its keyboard.
+*Delete* stands at the end of the fields, away from *Save*, as it is used rarely.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
+### Calendar of a date that depends on the due date
+`dsn~date-picker-context~1`
+
+The calendar of a field of `EditDialog` names the field in its title.
+For the start date and the deadline, the title also names the due date, as the calendar marks only today and the chosen day, and without a date of the field the calendar opens on the month of the due date.
+The buttons that write a value, such as *1 week before due*, stand between the calendar and the buttons *No date* and *OK*.
+
+Covers:
+
+* `req~edit-dialog~1`
+
+Needs: impl, utest
+
 ### Help at the fields of the edit dialog
 `dsn~edit-help~1`
 
