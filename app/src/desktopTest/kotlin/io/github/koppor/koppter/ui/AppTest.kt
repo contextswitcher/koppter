@@ -179,7 +179,7 @@ class AppTest {
     private fun ComposeUiTest.addTask(description: String) {
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").performTextInput(description)
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
     }
 
     private fun ComposeUiTest.start(settings: Settings = Settings()) {
@@ -293,7 +293,7 @@ class AppTest {
         onNodeWithText("in 2 weeks").assertExists()
         onNodeWithText("Q2 2027").performClick()
         onNodeWithTag("edit-deadline").assertTextContains("2027-06-30")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("File the tax return @home deadline:2027-06-30", storage.text.lines()[4])
     }
 
@@ -306,7 +306,7 @@ class AppTest {
         // Without a due date, a distance has nothing to count from.
         onNodeWithTag("edit-threshold").performTextReplacement("7d")
         onNodeWithText("Needs a due date").assertExists()
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-due").performTextReplacement("2026-11-30")
         onNodeWithText("Starts 2026-11-23").assertExists()
         // The distance follows the due date.
@@ -319,7 +319,7 @@ class AppTest {
         onNodeWithTag("edit-threshold").performMouseInput { rightClick() }
         onNodeWithText("3 days before due").performClick()
         onNodeWithTag("edit-threshold").assertTextContains("3d")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         // The file gets the date.
         assertEquals("File the tax return @home due:2026-12-10 t:2026-12-07", storage.text.lines()[4])
     }
@@ -339,17 +339,17 @@ class AppTest {
         openTask("File the tax return")
         onNodeWithTag("edit-deadline").assertTextContains("2026-11-30")
         onNodeWithTag("edit-deadline").performTextReplacement("soon")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         // The deadline may state a time.
         onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04T12:00")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("File the tax return @home deadline:2026-12-04T12:00 due:2026-11-13", storage.text.lines()[4])
         onNodeWithText("2026-12-04T12:00", substring = true, useUnmergedTree = true).assertExists()
 
         // A deadline with an offset from UTC is shown as it counts on this device: that is another text than the one written.
         openTask("File the tax return")
         onNodeWithTag("edit-deadline").performTextReplacement("2026-12-04T12:00Z")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("File the tax return @home deadline:2026-12-04T12:00Z due:2026-11-13", storage.text.lines()[4])
         onNodeWithText(Task.localDeadline("2026-12-04T12:00Z")!!, substring = true, useUnmergedTree = true).assertExists()
         onNodeWithText("2026-12-04T12:00Z", substring = true, useUnmergedTree = true).assertDoesNotExist()
@@ -368,7 +368,7 @@ class AppTest {
         onNodeWithTag("edit-due-2026-11-22").performClick()
         onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale")
         onNodeWithTag("edit-due-2026-11-26").performClick()
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale due:2026-11-26", storage.text.lines()[1])
     }
 
@@ -603,7 +603,7 @@ class AppTest {
         onNodeWithTag("edit-project-suggest-Family").performClick()
         onNodeWithTag("edit-line").assertTextEquals("(B) Thank Mom for the meatballs +Family @phone due:2026-11-20")
 
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("(B) Thank Mom for the meatballs +Family @phone due:2026-11-20", storage.text.lines()[2])
         onNodeWithTag("edit-dialog").assertDoesNotExist()
     }
@@ -614,7 +614,7 @@ class AppTest {
         storage.text = "Call  +Family Mom   @phone\n"
         start()
         openTask("Call Mom")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Call  +Family Mom   @phone\n", storage.text)
     }
 
@@ -626,7 +626,7 @@ class AppTest {
         onNodeWithTag("edit-due").performTextInput("tomorrow")
         onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-due").performTextReplacement("2026-11-30")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale due:2026-11-30", storage.text.lines()[1])
     }
 
@@ -636,7 +636,7 @@ class AppTest {
         start()
         openTask("Post signs")
         onNodeWithTag("edit-duration").performTextInput("long")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-duration").performTextReplacement("1h30m")
         onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale dur:1h30m", storage.text.lines()[1])
@@ -657,7 +657,7 @@ class AppTest {
         onNodeWithTag("edit-line").assertTextEquals("(B) Post the signs at the corner +GarageSale @errands due:2026-11-20 dur:1h custom:kept")
         // What is no date keeps the task from being saved, as in the field.
         onNodeWithTag("edit-line").performTextReplacement("Post signs due:soon")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-line").performTextReplacement("(B) Post the signs +GarageSale custom:kept")
         onNodeWithTag("edit-save").performClick()
         assertEquals("(B) Post the signs +GarageSale custom:kept", storage.text.lines()[1])
@@ -669,9 +669,9 @@ class AppTest {
         start()
         openTask("Post signs")
         onNodeWithTag("edit-travel").performScrollTo().performTextInput("far")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-travel").performScrollTo().performTextReplacement("30m")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale tt:30m", storage.text.lines()[1])
     }
 
@@ -681,9 +681,9 @@ class AppTest {
         start()
         openTask("Post signs")
         onNodeWithTag("edit-spent").performScrollTo().performTextInput("long")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-spent").performScrollTo().performTextReplacement("1h30m")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale spent:1h30m", storage.text.lines()[1])
     }
 
@@ -743,9 +743,9 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-due").performTextInput("2026-11-16")
         onNodeWithTag("edit-by").performTextInput("2 pm")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-by").performScrollTo().performTextReplacement("14:00")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Post signs +GarageSale due:2026-11-16 dueby:14:00", storage.text.lines()[1])
     }
 
@@ -767,7 +767,7 @@ class AppTest {
         onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-description").performTextInput("Water plants")
         onNodeWithTag("edit-context-add").performTextInput("home ")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Water plants @home", storage.text.trim().lines().last())
     }
 
@@ -910,7 +910,7 @@ class AppTest {
         val narrow = width()
         assertTrue(narrow < wide - 100, "$narrow < $wide - 100")
         assertEquals(true, controller.settings.editWidth < 760)
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
 
         openTask("Post signs")
         onNodeWithTag("edit-heading").assertTextEquals("Edit task")
@@ -991,7 +991,7 @@ class AppTest {
         onNodeWithTag("edit-image-message").assertDoesNotExist()
         onNodeWithTag("edit-image-abc-3.jpg").assertExists()
         picked = { listOf(png) }
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg"), storage.images.keys)
         assertEquals(png.toList(), storage.images.getValue("notes/abc-1.jpg").toList())
         assertEquals("Bring tape\n\n![](abc-1.jpg)\n\n![](abc-2.jpg)\n\n![](abc-3.jpg)\n", storage.companions["notes/abc.md"])
@@ -1002,14 +1002,14 @@ class AppTest {
         onNodeWithTag("edit-note").performTextReplacement("![](abc-1.jpg) ![](gone.jpg)")
         onNodeWithTag("edit-image-abc-2.jpg").assertDoesNotExist()
         onNodeWithTag("edit-image-missing-gone.jpg").assertTextEquals("gone.jpg is not shown")
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
 
         // An image whose line was removed from the note again is not written; a task without a note gets one for its image.
         openTask("Schedule pickup")
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
         onNodeWithTag("edit-note").performTextReplacement("Ask for a box")
         onNodeWithTag("edit-add-image").performScrollTo().performClick()
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         val note = Regex("Schedule pickup note:(\\w+)\\.md").find(storage.text)!!.groupValues[1]
         assertEquals("Ask for a box\n\n![]($note-2.jpg)\n", storage.companions["notes/$note.md"])
         assertEquals(setOf("notes/abc-1.jpg", "notes/abc-2.jpg", "notes/abc-3.jpg", "notes/$note-2.jpg"), storage.images.keys)
@@ -1034,7 +1034,7 @@ class AppTest {
         onNodeWithTag("edit-line").performScrollTo().assertTextEquals("(C) due:2026-11-22")
         onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-description").performTextInput("Buy milk")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("(C) Buy milk due:2026-11-22", storage.text.trim().lines().last())
 
         // A priority is given by its name.
@@ -1080,7 +1080,7 @@ class AppTest {
         onNodeWithTag("edit-project-Fair").performClick()
         onNodeWithTag("edit-project-suggest-Fair").performClick()
         onNodeWithTag("edit-description").performTextInput("Rent a van")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(true, storage.text.contains("Rent a van +Fair @errands"))
 
         onNodeWithTag("open-settings").performClick()
@@ -1103,6 +1103,27 @@ class AppTest {
         onNodeWithTag("settings-project-contexts").performTextInput(" = @err")
         onNodeWithTag("settings-project-contexts-suggest-errands").performScrollTo().performClick()
         onNodeWithTag("settings-project-contexts").assertTextContains("+Fair = @errands")
+    }
+
+    // [utest->dsn~edit-header~1]
+    @Test
+    fun theButtonsOfTheDialogStandInItsHeading() = runComposeUiTest {
+        start()
+        openTask("Post signs")
+        // Above the first field, so that no scrolling of the fields takes them out of view.
+        assertTrue(onNodeWithTag("edit-save").getBoundsInRoot().bottom <= onNodeWithTag("edit-description").getBoundsInRoot().top)
+        assertTrue(onNodeWithTag("edit-cancel").getBoundsInRoot().bottom <= onNodeWithTag("edit-description").getBoundsInRoot().top)
+    }
+
+    // [utest->dsn~date-picker-context~1]
+    @Test
+    fun theCalendarOfTheStartDateNamesTheDueDateAndOffersDistances() = runComposeUiTest {
+        start()
+        openTask("Thank Mom")
+        onNodeWithContentDescription("Choose Start date").performScrollTo().performClick()
+        onNodeWithTag("date-picker-title").assertTextEquals("Start date \u00b7 due 2026-11-20")
+        onNodeWithTag("date-shortcut-1w").performClick()
+        onNodeWithTag("edit-threshold").assertTextContains("1w")
     }
 
     // [utest->dsn~edit-help~1]
@@ -1136,7 +1157,7 @@ class AppTest {
         // A date of the fields stays.
         onNodeWithTag("edit-due-2026-11-12").performScrollTo().performClick()
         onNodeWithTag("edit-line").performScrollTo().assertTextEquals("Water plants due:2026-11-12")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Water plants due:2026-11-12", storage.text.trim().lines().last())
 
         // The words of a task that exists stay until its description is typed in, which starts at its end.
@@ -1606,15 +1627,15 @@ class AppTest {
         openTask("Review the comments")
         onNodeWithTag("edit-cs").assertTextContains("jabref/fix-npe")
         onNodeWithTag("edit-cs").performTextReplacement("contextswitcher://task/jabref/review")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Review the comments cs:jabref/review", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Review the comments", storage.text.trim().lines().last())
         openTask("Review the comments")
         onNodeWithTag("edit-cs").performTextReplacement("jabref/fix-npe")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
 
         controller.add(Task.parse("Call cs:missing"))
         onAllNodesWithTag("label-cs", useUnmergedTree = true)[1].performClick()
@@ -1847,7 +1868,7 @@ class AppTest {
         onNodeWithTag("edit-priority-D").assertTextEquals("5")
         onNodeWithTag("edit-priority-F").assertDoesNotExist()
         onNodeWithTag("edit-priority-E").performClick()
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("(E) Buy milk @shop", storage.text.trim().lines().last())
     }
 
@@ -1901,7 +1922,7 @@ class AppTest {
         // A click on a task opens it.
         onNodeWithText("Sweep the floor").performClick()
         onNodeWithTag("edit-dialog").assertExists()
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         // A task is completed where it is shown.
         onAllNodesWithTag("task-done")[1].performClick()
         assertEquals(true, storage.text.lines().any { it.startsWith("x ") && "Water the plants" in it })
@@ -2450,13 +2471,13 @@ class AppTest {
 
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").performTextInput("Order chalk")
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         onNodeWithTag("edit-dialog").assertDoesNotExist()
 
         // The task that is edited in between starts with its own text and leaves the draft alone.
         openTask("Post signs")
         onNodeWithTag("edit-description").assertTextContains("Post signs")
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
 
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-heading").assertTextEquals("New task (draft)")
@@ -2468,7 +2489,7 @@ class AppTest {
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-heading").assertTextEquals("New task")
         // Nothing entered is no draft: the dialog closes without the question.
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         onNodeWithTag("new-task").performClick()
         esc()
         onNodeWithTag("edit-dialog").assertDoesNotExist()
@@ -2476,9 +2497,9 @@ class AppTest {
         // A saved draft is gone as well.
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").performTextInput("Order chalk")
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         onNodeWithTag("new-task").performClick()
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(true, "Order chalk" in storage.text)
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-heading").assertTextEquals("New task")
@@ -2541,7 +2562,7 @@ class AppTest {
         // The key of SkedPal for a new task.
         ctrl(Key.A, shift = true)
         onNodeWithTag("edit-dialog").assertExists()
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         // The key of browsers and editors for their search; the field offers to empty it once it has a text.
         ctrl(Key.F)
         onNodeWithTag("filter-text-clear").assertDoesNotExist()
@@ -2592,9 +2613,9 @@ class AppTest {
 
         openTask("Call the dentist")
         onNodeWithTag("edit-at").performScrollTo().performTextInput("noon")
-        onNodeWithTag("edit-save").performScrollTo().assertIsNotEnabled()
+        onNodeWithTag("edit-save").assertIsNotEnabled()
         onNodeWithTag("edit-at").performScrollTo().performTextReplacement("10:00")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Call the dentist at:10:00", storage.text.lines()[1])
 
         onNodeWithTag("open-plan").performClick()
@@ -3137,7 +3158,7 @@ class AppTest {
 
         onNodeWithTag("new-task").performClick()
         onNodeWithTag("edit-description").assertIsFocused()
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         // An existing task is read first: the keyboard of the screen would hide half of it.
         openTask("Post signs")
         onNodeWithTag("edit-description").assertIsNotFocused()
@@ -3652,7 +3673,7 @@ class AppTest {
         onNodeWithTag("edit-note").performTextInput("\nAsk there")
         val links = "- [OneNote Desktop](onenote:https://example.org/Notes.one#Signs&end)\n- [OneNote Web](https://example.org/view?page=7)\nAsk there"
         onNodeWithTag("edit-note").assertTextEquals("Note (Markdown)", links)
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(links, storage.companions.entries.single { it.key.startsWith("notes/") }.value)
     }
 
@@ -3664,7 +3685,7 @@ class AppTest {
         start()
         openTask("Post signs")
         onNodeWithTag("edit-note").performScrollTo().performTextInput("Ask the neighbors first")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
 
         val line = storage.text.lines()[1]
         val name = Regex("^Post signs \\+GarageSale note:([0-9a-z]{3}\\.md)$").matchEntire(line)!!.groupValues[1]
@@ -3673,7 +3694,7 @@ class AppTest {
         openTask("Post signs")
         onNodeWithTag("edit-note").assertTextEquals("Note (Markdown)", "Ask the neighbors first")
         onNodeWithTag("edit-note").performScrollTo().performTextReplacement("Ask the neighbors first, then the school")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(line, storage.text.lines()[1])
         assertEquals("Ask the neighbors first, then the school", storage.companions["notes/$name"])
         assertEquals("Edit note: Post signs", storage.changes.last())
@@ -3681,7 +3702,7 @@ class AppTest {
         // A note of the add-on keeps its file with the extension it has.
         openTask("Water the plants")
         onNodeWithTag("edit-note").performScrollTo().performTextReplacement("Not the cactus, twice the fern")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals(true, "Water the plants note:abc.txt" in storage.text)
         assertEquals("Not the cactus, twice the fern", storage.companions["notes/abc.txt"])
     }
@@ -3912,7 +3933,7 @@ class AppTest {
         onNodeWithTag("edit-hashtag-add").performTextInput("$$$ ")
         onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale #urgent #$$$")
         // The dialog is higher than the window of the test.
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
 
         assertEquals("Post signs +GarageSale #urgent #$$$", storage.text.lines()[1])
         // On the card and in the filter panel.
@@ -3933,7 +3954,7 @@ class AppTest {
         onNodeWithTag("edit-waits-add").performScrollTo().performTextInput("pickup")
         onNodeWithTag("edit-waits-suggest-0").performClick()
         onNodeWithTag("edit-line").assertTextEquals("Post signs +GarageSale id:1")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
 
         assertEquals(listOf("(B) Schedule pickup +GarageSale @phone p:1", "Post signs +GarageSale id:1"), storage.text.lines().take(2))
         openTask("Post signs")
@@ -3989,7 +4010,7 @@ class AppTest {
         // A new task of a member goes to the list of the member.
         onNodeWithTag("family-add-ben").performClick()
         onNodeWithTag("edit-description").performTextInput("Do the homework")
-        onNodeWithTag("edit-save").performScrollTo().performClick()
+        onNodeWithTag("edit-save").performClick()
         assertEquals("Do the homework", ben.text.lines()[1])
         onNodeWithText("Do the homework").assertExists()
     }

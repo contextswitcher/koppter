@@ -242,7 +242,7 @@ class ScreenshotTest {
         onNodeWithTag("filter-clear").performClick()
         onNodeWithText("Prepare the slides for the team meeting").performClick()
         save("edit.png")
-        onNodeWithTag("edit-cancel").performScrollTo().performClick()
+        onNodeWithTag("edit-cancel").performClick()
         onNodeWithTag("open-settings").performClick()
         save("settings.png")
     }
