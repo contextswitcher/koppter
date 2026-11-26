@@ -87,6 +87,13 @@ data class Task(
     // [impl->dsn~expiry~1]
     val due: LocalDate? get() = tag(DUE)?.let(::parseDate) ?: deadline ?: expires
 
+    /**
+     * Whether the user can tick the task off: not an open TODO of LaTeX, as the application does not change the document
+     * and the TODO is done only when it is removed there. A completed one can be reopened.
+     */
+    // [impl->dsn~latex-todos~1]
+    val completable: Boolean get() = completed || tag(LATEX) == null
+
     /** The last day on which the task is of use: an open task is removed from the file after it. */
     val expires: LocalDate? get() = tag(EXPIRES)?.let(::parseDate)
 

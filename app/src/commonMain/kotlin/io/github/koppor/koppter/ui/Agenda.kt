@@ -62,7 +62,6 @@ import io.github.koppor.koppter.storage.Settings
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.Icon
@@ -773,7 +772,7 @@ fun Inbox(entries: List<Entry>, contexts: List<String>, onAssign: (Entry, String
                     // The hashtags tell where a task comes from, such as #outlook; the task has no context and no project to show here.
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.Center, itemVerticalAlignment = Alignment.CenterVertically) {
                         // A task that is done needs no context.
-                        Checkbox(checked = entry.task.completed, onCheckedChange = { onToggle(entry) }, modifier = Modifier.testTag("task-done"))
+                        DoneBox(entry.task, { onToggle(entry) })
                         Text(entry.task.description, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 4.dp))
                         entry.task.hashtags.forEach { HashtagLabel(it, Modifier.testTag("inbox-hashtag-$it")) }
                         // [impl->dsn~outlook-tag~1]

@@ -18,6 +18,12 @@ import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import io.github.koppor.koppter.todotxt.Backlink
+import io.github.koppor.koppter.todotxt.TaskLink
+import io.github.koppor.koppter.todotxt.backlinks
+import io.github.koppor.koppter.todotxt.taskLinkOf
 import io.github.koppor.koppter.plan.CalendarTxt
 import io.github.koppor.koppter.plan.Family
 import io.github.koppor.koppter.plan.RankingPeriod
@@ -162,6 +168,11 @@ class TodoController(
     private val openFile: ((template: String, path: String, line: Int) -> Unit)? = null,
     /** Opens a link of ContextSwitcher, which takes the projects and contexts of the filter; `null` where the platform has none, as on Android. */
     private val openContextSwitcher: ((String) -> Unit)? = null,
+    /**
+     * Sends the complete set of links back to the tasks to the pages of OneNote, blocking while OneNote answers, and returns whether the set
+     * needs not be sent again while it stays the same; `null` where the platform has no program for it.
+     */
+    private val oneNoteBacklinks: ((List<Backlink>) -> Boolean)? = null,
 ) {
     var settings by mutableStateOf(settings)
         private set
@@ -220,6 +231,10 @@ class TodoController(
     /** Set by the link `koppter://new`; the screen opens the dialog for a new task and resets it. */
     var newTaskRequested by mutableStateOf(false)
 
+    /** Set by a link `koppter://task?…` that names one task; the screen opens the dialog of the task and resets it. */
+    // [impl->dsn~task-link~1]
+    var taskRequested by mutableStateOf<Entry?>(null)
+
     /**
      * Shows the tasks that a link to the application names, in the list, or opens a new task for `koppter://new`;
      * a text that is no such link changes nothing.
@@ -231,10 +246,68 @@ class TodoController(
             newTaskRequested = true
             return
         }
+        taskLinkOf(link)?.let {
+            openTask(it)
+            return
+        }
         filter = filterOfLink(link) ?: return
         topOnly = false
         nextOnly = false
         view = View.LIST
+    }
+
+    /**
+     * Opens the dialog of the task that the link names; when several tasks refer to its page and none has its text, the list shows them.
+     * A task that is only in `done.txt` cannot be opened, which the message says.
+     */
+    // [impl->dsn~task-link~1]
+    private fun openTask(link: TaskLink) {
+        val found = link.find(file.entries) { it.task }
+        when {
+            found.size == 1 -> taskRequested = found.single()
+            found.isNotEmpty() -> {
+                filter = Filter(text = link.oneNote, completion = Completion.ALL, hideFuture = false)
+                topOnly = false
+                nextOnly = false
+                view = View.LIST
+            }
+            else -> {
+                val archived = try {
+                    (storage as? CompanionFiles)?.readCompanion(DONE_FILE).orEmpty().lines().filter(String::isNotBlank).map(Task::parse)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                error = if (link.find(archived) { it }.isNotEmpty()) "The task is completed and archived in done.txt: ${link.text}"
+                else "No task refers to this page of OneNote any more, so its link goes at the next synchronization: ${link.text}"
+            }
+        }
+    }
+
+    /** The links that were sent to the pages of OneNote last, which need not be sent again. */
+    private var sentBacklinks: List<Backlink>? = null
+    private val backlinksLock = Mutex()
+
+    /**
+     * Sends the links back to the tasks to the pages of OneNote that the tasks of the file and of `done.txt` refer to, unless they are those sent last.
+     * It runs after a synchronization, so that a task changed on another device changes its link as well; what fails is logged.
+     */
+    // [impl->dsn~onenote-backlinks~1]
+    suspend fun syncBacklinks() {
+        val send = oneNoteBacklinks ?: return
+        // A file that could not be read would remove every link.
+        if (loadedVersion == null) return
+        backlinksLock.withLock {
+            try {
+                withContext(Dispatchers.Default) {
+                    val archived = (storage as? CompanionFiles)?.readCompanion(DONE_FILE).orEmpty().lines().filter(String::isNotBlank).map(Task::parse)
+                    val links = backlinks(file.entries.map { it.task }, archived)
+                    if (links != sentBacklinks && send(links)) sentBacklinks = links
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                log("The links on the pages of OneNote were not updated: ${e.message}", e)
+            }
+        }
     }
 
     /**
@@ -606,7 +679,8 @@ class TodoController(
         val source = outlook ?: return
         val (from, to) = shownDays ?: return
         try {
-            val read = withContext(Dispatchers.Default) { source.busy(outlookCalendar, from, to) }
+            // [impl->dsn~outlook-busy~1]
+            val read = withContext(Dispatchers.Default) { settings.outlookBusyAccounts.flatMap { source.busy(it, from, to) } }
             // Another view may have asked for other days meanwhile.
             if (shownDays == from to to) appointments = read
         } catch (e: Exception) {
@@ -989,6 +1063,23 @@ class TodoController(
         updateMemberPlans()
     }
 
+    /**
+     * Plans again from the minute [after] on, so that the task of the block that runs now moves behind it.
+     * Nothing is planned before [after], and the todo.txt file is not changed.
+     */
+    // [impl->dsn~android-block-notification~2]
+    // ponytail: the next plan from now on, such as on completion, may put the task back; a tag with a time before which it is not planned, if that shows.
+    suspend fun postpone(after: Int) {
+        planSettings?.let { planWithCalendars(it, calendars, after) }
+    }
+
+    /** Gives the task tomorrow as its threshold date and plans again, so that it leaves the plan of today. */
+    // [impl->dsn~android-block-notification~2]
+    suspend fun notToday(entry: Entry) {
+        replace(entry, entry.task.withTag(Task.THRESHOLD, today().plus(DatePeriod(days = 1)).toString()))
+        planSettings?.let { planWithCalendars(it, calendars) }
+    }
+
     /** The addresses of the calendars with busy times; `null` if the platform cannot read them. */
     val calendars: String? get() = settings.calendars.takeIf { fetch != null }
 
@@ -997,7 +1088,7 @@ class TodoController(
      * A calendar that cannot be read is reported and left out.
      */
     // [impl->dsn~busy-times~1]
-    suspend fun planWithCalendars(settings: PlanSettings, calendars: String?): PlanResult? {
+    suspend fun planWithCalendars(settings: PlanSettings, calendars: String?, from: Int = minuteOfDay()): PlanResult? {
         val busy = mutableMapOf<LocalDate, List<Span>>()
         val problems = mutableListOf<String>()
         // [impl->dsn~sideline~1]
@@ -1023,15 +1114,19 @@ class TodoController(
         val bridge = outlook
         // [impl->dsn~outlook-busy~1]
         if (bridge != null) {
-            try {
-                val appointments = withContext(Dispatchers.Default) { bridge.busy(outlookCalendar, today(), today().plus(DatePeriod(years = 1))) }
-                OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
-            } catch (e: Exception) {
-                problems += "The calendar of Outlook was not read: ${e.message ?: e}"
-                log("The calendar of Outlook was not read", e)
+            for (account in this.settings.outlookBusyAccounts) {
+                // An account that is not read leaves the others: the plan is made with what is known, and the problem tells which one is missing.
+                val name = account ?: "the default account"
+                try {
+                    val appointments = withContext(Dispatchers.Default) { bridge.busy(account, today(), today().plus(DatePeriod(years = 1))) }
+                    OutlookCalendar.busyTimes(appointments, sideline).forEach { (date, spans) -> busy[date] = busy[date].orEmpty() + spans }
+                } catch (e: Exception) {
+                    problems += "The calendar of Outlook of $name was not read: ${e.message ?: e}"
+                    log("The calendar of Outlook of $name was not read", e)
+                }
             }
         }
-        val result = plan(settings, busy, problems) ?: return null
+        val result = plan(settings, busy, problems, from) ?: return null
         // [impl->dsn~busy-plan~1]
         if (!planMember.isNullOrBlank()) updateAbsences()
         // [impl->dsn~outlook-blocks~1]
@@ -1069,9 +1164,10 @@ class TodoController(
      * The todo.txt file is not changed: the plan is derived from it.
      *
      * @param busy the times that are taken, by day
+     * @param from the minute of today from which on the plan starts
      */
     // [impl->dsn~plan-dialog~1]
-    fun plan(settings: PlanSettings, busy: Map<LocalDate, List<Span>> = emptyMap(), problems: List<String> = emptyList()): PlanResult? {
+    fun plan(settings: PlanSettings, busy: Map<LocalDate, List<Span>> = emptyMap(), problems: List<String> = emptyList(), from: Int = minuteOfDay()): PlanResult? {
         var result: PlanResult? = null
         guarded {
             val files = storage as? CompanionFiles ?: return@guarded
@@ -1088,7 +1184,7 @@ class TodoController(
             // A block does not start at an odd minute.
             // ponytail: a year ahead, as far as the widest named barrier; longer when a barrier with a date lies behind.
             val upcoming = iceRecurOccurrences(files.readCompanion(ICE_RECUR_FILE).orEmpty(), today().plus(DatePeriod(days = 1))..today().plus(DatePeriod(days = 366)))
-            val plan = plan(file.entries, planConfig, busy, today(), (minuteOfDay() + 14) / 15 * 15, upcoming)
+            val plan = plan(file.entries, planConfig, busy, today(), (from + 14) / 15 * 15, upcoming)
             files.writeCompanion(CalendarTxt.NAME, CalendarTxt.write(files.readCompanion(CalendarTxt.NAME).orEmpty(), plan.blocks, today()))
             // [impl->dsn~ics-export~1]
             files.writeCompanion(Ics.NAME, Ics.write(plan.blocks, today()))
@@ -1319,11 +1415,7 @@ class TodoController(
 
     fun toggle(entry: Entry) {
         // [impl->dsn~latex-todos~1]
-        // The document is not changed: the completed line hides the TODO until its text changes.
-        if (Outlook.isItem(entry) && entry.task.tag(Task.LATEX) != null) {
-            write(file.add(entry.task.complete(today(), settings.writeDates)), "Complete task: ${entry.task.description}")
-            return
-        }
+        if (!entry.task.completable) return
         // [impl->dsn~outlook-complete~1]
         if (Outlook.isItem(entry)) {
             entry.task.tag(Task.OUTLOOK)?.let(Outlook::entryId)?.let { entryId ->

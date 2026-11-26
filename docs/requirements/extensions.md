@@ -149,6 +149,20 @@ Covers:
 
 Needs: dsn
 
+### Links back from a page of OneNote
+`req~onenote-backlinks~1`
+
+On Windows with OneNote and AnchorHub, a page of OneNote that tasks refer to shows at its top a link to each of these tasks, named by its description.
+A click on the link opens the task in koppter.
+The links follow the tasks: a changed description changes its link, a completed task, also one that is archived, has its link struck through, and a deleted task loses its link.
+The file of the tasks gets no tag for this.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Items of Outlook
 `req~outlook-items~1`
 
@@ -168,8 +182,9 @@ Needs: dsn
 
 The user gives a project the main file of a LaTeX document.
 On the desktop, the list shows the TODOs of that file and of the files it takes in as tasks of the project, without writing them to the file, and shows new and removed TODOs while the application is open.
-When the user changes a TODO, such as by giving it a priority, or completes it, it is written to the file as a task that refers to the TODO, which is then no longer shown on its own.
+When the user changes a TODO, such as by giving it a priority, it is written to the file as a task that refers to the TODO, which is then no longer shown on its own.
 The document is not changed.
+So the user cannot tick off an open TODO, nor a task that refers to one: the mark of a document stands in the place of its checkbox, and a tap on it says that the TODO is done when it is removed from the document.
 
 Covers:
 
@@ -731,6 +746,45 @@ Covers:
 
 Needs: impl, utest
 
+### Link to one task
+`dsn~task-link~1`
+
+`taskLink` writes the link `koppter://task?onenote=<key>&text=<description>` for a task and one of its tags `onenote:`, with the values encoded as by `linkTo`; `taskLinkOf` reads it back, also as `koppter:task?` and `koppter://task/?`.
+The key (`oneNoteKey`) is the GUID of `page-id={…}` in the link of OneNote, with the braces as they are or encoded, and the whole link for one without it; keys are compared without regard to case.
+`TaskLink.find` takes the tasks with a tag `onenote:` of that key, and of these the ones whose description is the text of the link; when none has it, as the task was edited since the link was written, all of them.
+`TodoController.openLink` opens the edit dialog of a single task that it finds (`taskRequested`), also a completed one; for several, it shows the list with the key as the text of the filter, completed tasks and those before their threshold date included, as `dsn~app-links~1` does for a filter.
+With none in the file, the message, in the snackbar as other failures, says whether the task is archived in `done.txt`, which the application does not edit, or no task refers to the page.
+
+The flow of `.claude/skills/ux-review/SKILL.md`: the link opens the existing edit dialog, whose Save, Cancel, Esc and back behave as for a click on the task; the dialog has the focus.
+Nothing of it is kept in the settings, except the filter for several tasks, as for every link.
+On a phone, the same link opens the dialog; Android has no AnchorHub, so the links on the page come from a desktop.
+
+Covers:
+
+* `req~onenote-backlinks~1`
+* `adr~task-link-by-page-and-text~1`
+
+Needs: impl, utest
+
+### Links back on the pages of OneNote
+`dsn~onenote-backlinks~1`
+
+`backlinks` makes the complete set of links: for each task of the file and each completed task of `done.txt`, and for each of its tags `onenote:`, the link of OneNote with its scheme, the description as the label, the link of `dsn~task-link~1` and whether the task is completed.
+A task that is in both files, after an archiving that failed halfway, counts once.
+`TodoController.syncBacklinks` sends the set at the start, after each synchronization that succeeded, which follows every change of the file, and, for a file without synchronization, at each periodic synchronization; it does not send the set that was sent last with success, and nothing before the file was read, as an empty set would remove every link.
+It runs off the main thread, one call at a time, and logs what fails.
+On the desktop, `AnchorHubOneNote` writes the set as JSON to `ankd onenote-backlinks-sync` with the source `koppter` and the icon of the application, `koppter.png` in Base64, which the page shows in front of the links: AnchorHub removes the links of this source from the pages that the set no longer names and strikes through those of completed tasks.
+Its answer counts the pages updated, removed and unchanged and names those that failed; the counts and every failure go to the log, and a set with a failed page is sent again at the next synchronization.
+An AnchorHub without the command is found by `dsn~anchorhub-version~1`; this is logged once and the set is not sent again until the next start.
+Any other failure, such as an exit code other than 0, is logged with what AnchorHub printed to its error output, and the set is sent again.
+
+Covers:
+
+* `req~onenote-backlinks~1`
+* `adr~outlook-through-anchorhub~1`
+
+Needs: impl, utest
+
 ### Items of Outlook in the list
 `dsn~outlook-items~1`
 
@@ -772,7 +826,12 @@ Comments are left out.
 A TODO is the argument of one of the commands `\todo`, `\Todo`, `\TODO`, `\FIXME`, `\missingfigure`, `\zebratodo`, `\snaptodo`, `\fxnote`, `\fxwarning`, `\fxerror`, `\fxfatal`, `\draftnote`, `\pdfcomment`, `\commentatside` and the second one of `\commentontext`: the packages compared in `gadr-latex-packages`, without those with generic names such as `\note` and `\comment`.
 `App` has `TodoController.refreshLatex` read the documents at the start, after a change of the key, and every minute.
 `Latex.entries` makes each TODO an entry with a negative index below those of the items of Outlook, whose task has the text, the project, the hashtag `#latex` and the tag `tex:`, a hash of the file and the text in base 36 (`Latex.tag`); a TODO that the tag `tex:` of a line names, open or completed, is left out.
-`TodoController.visible` adds them to the lines of the file; `replace` and `move` add the changed task as a new line, as for an item of Outlook, and `toggle` adds it completed.
+`TodoController.visible` adds them to the lines of the file; `replace` and `move` add the changed task as a new line, as for an item of Outlook.
+`Task.completable` is false for an open task with the tag `tex:`, and `toggle` leaves such a task as it is.
+`DoneBox` shows the checkbox of a task in the list, the board, the inbox, the overview and the family calendar; for such a task, it shows the icon of a document instead, as a disabled checkbox looks almost like an enabled one.
+A tap on the icon shows the hint *Can't be ticked off here: done when the TODO is removed from the LaTeX document* as a tooltip, which stays until the next tap elsewhere and on the desktop also appears when the pointer rests on it: a phone has no hover.
+A completed line with the tag, from a version that allowed ticking it off, keeps its checkbox and can be reopened.
+A click on the task opens the TODO in the document (`dsn~latex-open~1`).
 `TaskLabels` shows the tag as the label *LaTeX*.
 
 Covers:

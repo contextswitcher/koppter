@@ -85,7 +85,7 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
      * A command that answers and prints nothing fails, with the reason that `ankd version` gives.
      */
     // [impl->dsn~anchorhub-version~1]
-    private fun run(vararg arguments: String, input: String? = null): String {
+    internal fun run(vararg arguments: String, input: String? = null): String {
         val command = arguments.first()
         val output = execute(*arguments, input = input)
         if (output.isBlank() && !silent(command)) {
@@ -95,7 +95,8 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
                 Logger.warn(e, "AnchorHub version failed")
                 null
             }
-            error(version?.let { missingCommand(it, command) } ?: "AnchorHub $command gave no answer")
+            version?.let { missingCommand(it, command) }?.let { throw MissingCommand(it) }
+            error("AnchorHub $command gave no answer")
         }
         return output
     }
@@ -130,6 +131,9 @@ internal class AnchorHubOutlook(private val ankd: Path) : OutlookBridge {
         }
     }
 }
+
+/** AnchorHub lacks a command, which only its latest release brings. */
+internal class MissingCommand(message: String) : IllegalStateException(message)
 
 /**
  * Why AnchorHub cannot run [command], from what `ankd version` printed, or `null` when it lists the command

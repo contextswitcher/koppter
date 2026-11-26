@@ -68,7 +68,7 @@ koppter writes tasks in that order, so a line written the same way does not chan
 | `#hashtag` | A property shared across projects | `#money`, `#quick`. Starts with a letter or a currency sign. `#someday` marks a task that is not decided yet: it is not a next action of its project either. |
 | `id:1`, `p:1` | Order between tasks | The task with `id:1` waits for the tasks with `p:1`. Pick a value that the file does not use yet: `grep -o ' id:[^ ]*' todo.txt`. |
 | `ol:AAAAAKGyw9Q` | The item of Outlook that the task stands for | Written by koppter together with `#outlook`; keep both as they are. A line with it hides the item of Outlook in koppter, and completing the task marks the item done there. |
-| `onenote:https://d.docs.live.net/…/Notes.one#Page&section-id={…}&page-id={…}&end` | The page of OneNote that the task refers to | The link as OneNote copies it, with `onenote:` in front; keep it unchanged. Drop the address of `onedrive.live.com` that OneNote copies with it. |
+| `onenote:https://d.docs.live.net/…/Notes.one#Page&section-id={…}&page-id={…}&end` | The page of OneNote that the task refers to | The link as OneNote copies it, with `onenote:` in front; keep it unchanged. Drop the address of `onedrive.live.com` that OneNote copies with it. koppter puts a link back to the task on that page; it finds the task by the page and its description. |
 | `tex:1x2y3z` | The TODO of a LaTeX document that the task stands for | Written by koppter together with `#latex`; keep both as they are. A line with it hides the TODO in koppter; the document is not changed. |
 | `note:k3f.md` | Details of several lines | Write them to `notes/k3f.md` (three characters, a name not in use) and name the file in the tag. |
 

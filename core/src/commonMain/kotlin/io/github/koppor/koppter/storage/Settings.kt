@@ -62,6 +62,8 @@ data class Settings(
     val committerEmail: String = "",
     /** The account whose main calendar takes the plan, by its name in Outlook; blank for the default account. */
     val outlookCalendar: String = "",
+    /** Further accounts of Outlook, separated by blanks, whose main calendars count as busy and are shown, without the plan; see [outlookBusyAccounts]. */
+    val outlookBusyCalendars: String = "",
     /** For how many weeks from today the plan is written to the calendar of Outlook; 0 writes nothing. */
     val outlookWeeks: Int = 3,
     /** The program that opens a TODO of a LaTeX document, as a template of [io.github.koppor.koppter.latex.Latex.command]; blank for the program of the system. */
@@ -86,6 +88,17 @@ data class Settings(
     val hiddenCalendars: String = "",
 ) {
     // [impl->dsn~settings-file~1]
+    /**
+     * The accounts of Outlook whose main calendars count as busy: that of the plan, `null` for the default account, then the further ones.
+     */
+    // [impl->dsn~outlook-busy~1]
+    val outlookBusyAccounts: List<String?>
+        get() {
+            val plan = outlookCalendar.trim().ifEmpty { null }
+            val further = outlookBusyCalendars.split(Regex("[\\s,;]+")).filter { it.isNotEmpty() && !it.equals(plan, ignoreCase = true) }.distinctBy { it.lowercase() }
+            return listOf(plan) + further
+        }
+
     fun toProperties(): Map<String, String> = mapOf(
         TODO_FILE to todoFile,
         SHARED_LISTS to sharedLists,
@@ -106,6 +119,7 @@ data class Settings(
         COMMITTER_NAME to committerName,
         COMMITTER_EMAIL to committerEmail,
         OUTLOOK_CALENDAR to outlookCalendar,
+        OUTLOOK_BUSY_CALENDARS to outlookBusyCalendars,
         OUTLOOK_WEEKS to outlookWeeks.toString(),
         LATEX_EDITOR to latexEditor,
         CONTEXT_SWITCHER_SYNC to contextSwitcherSync.toString(),
@@ -136,6 +150,7 @@ data class Settings(
         private const val COMMITTER_NAME = "committerName"
         private const val COMMITTER_EMAIL = "committerEmail"
         private const val OUTLOOK_CALENDAR = "outlookCalendar"
+        private const val OUTLOOK_BUSY_CALENDARS = "outlookBusyCalendars"
         private const val OUTLOOK_WEEKS = "outlookWeeks"
         private const val LATEX_EDITOR = "latexEditor"
         private const val CONTEXT_SWITCHER_SYNC = "contextSwitcherSync"
@@ -169,6 +184,7 @@ data class Settings(
             committerName = properties[COMMITTER_NAME].orEmpty(),
             committerEmail = properties[COMMITTER_EMAIL].orEmpty(),
             outlookCalendar = properties[OUTLOOK_CALENDAR].orEmpty(),
+            outlookBusyCalendars = properties[OUTLOOK_BUSY_CALENDARS].orEmpty(),
             outlookWeeks = properties[OUTLOOK_WEEKS]?.toIntOrNull()?.takeIf { it >= 0 } ?: Settings().outlookWeeks,
             latexEditor = properties[LATEX_EDITOR].orEmpty(),
             contextSwitcherSync = properties[CONTEXT_SWITCHER_SYNC].toBoolean(),

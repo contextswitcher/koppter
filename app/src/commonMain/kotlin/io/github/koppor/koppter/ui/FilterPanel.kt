@@ -81,101 +81,104 @@ fun FilterPanel(
     /** The field for the text of the filter, below the heading; `null` where the main screen shows it above the list. */
     search: (@Composable () -> Unit)? = null,
 ) {
-    Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp).testTag("filter-panel")) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Text("Filter", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).testTag("filter-heading"))
-            // In the heading, not below the criteria: there it lay out of view in a window of common height, and the switches Open and Done stand last.
-            TextButton(
-                onClick = {
-                    onChange(Filter())
-                    onTopOnly(false)
-                    onNextOnly(false)
-                },
-                enabled = !filter.isDefault || topOnly || nextOnly,
-                modifier = Modifier.testTag("filter-clear"),
-            ) {
-                Text("Clear all")
+    // The switches Open and Done stay below the part that scrolls: at its end, they lay below a window of common height.
+    Column(modifier.testTag("filter-panel")) {
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(start = 12.dp, top = 12.dp, end = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                Text("Filter", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).testTag("filter-heading"))
+                // In the heading, not below the criteria: there it lay out of view in a window of common height, and the switches Open and Done stand last.
+                TextButton(
+                    onClick = {
+                        onChange(Filter())
+                        onTopOnly(false)
+                        onNextOnly(false)
+                    },
+                    enabled = !filter.isDefault || topOnly || nextOnly,
+                    modifier = Modifier.testTag("filter-clear"),
+                ) {
+                    Text("Clear all")
+                }
+                if (onClose != null) {
+                    IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
+                }
             }
-            if (onClose != null) {
-                IconButton(onClick = onClose, modifier = Modifier.testTag("filter-close")) { Icon(Icons.Default.Close, contentDescription = "Close the filter") }
+            search?.invoke()
+            // [impl->dsn~filter-label-search~2]
+            var projectSearch by remember { mutableStateOf("") }
+            var contextSearch by remember { mutableStateOf("") }
+            var hashtagSearch by remember { mutableStateOf("") }
+            // A text typed for one kind of label may name a label of another kind; the line below the field says so
+            // instead of narrowing the other kinds at once, which would move the panel under the typing.
+            val kinds = listOf(
+                Triple("projects", projects, projectSearch) to { it: String -> projectSearch = it },
+                Triple("contexts", contexts, contextSearch) to { it: String -> contextSearch = it },
+                Triple("hashtags", hashtags, hashtagSearch) to { it: String -> hashtagSearch = it },
+            )
+            fun elsewhere(own: String): Elsewhere? {
+                val word = kinds.first { it.first.first == own }.first.third
+                val hits = kinds.filter { (kind, _) -> kind.first != own && kind.third != word }
+                    .map { (kind, set) -> Triple(kind.first, found(kind.second, word).size, set) }
+                    .filter { it.second > 0 }
+                if (hits.isEmpty()) return null
+                return Elsewhere(hits.joinToString(", ", prefix = "also: ") { (name, count) -> "$name ($count)" }) { hits.forEach { it.third(word) } }
             }
-        }
-        search?.invoke()
-        // [impl->dsn~filter-label-search~2]
-        var projectSearch by remember { mutableStateOf("") }
-        var contextSearch by remember { mutableStateOf("") }
-        var hashtagSearch by remember { mutableStateOf("") }
-        // A text typed for one kind of label may name a label of another kind; the line below the field says so
-        // instead of narrowing the other kinds at once, which would move the panel under the typing.
-        val kinds = listOf(
-            Triple("projects", projects, projectSearch) to { it: String -> projectSearch = it },
-            Triple("contexts", contexts, contextSearch) to { it: String -> contextSearch = it },
-            Triple("hashtags", hashtags, hashtagSearch) to { it: String -> hashtagSearch = it },
-        )
-        fun elsewhere(own: String): Elsewhere? {
-            val word = kinds.first { it.first.first == own }.first.third
-            val hits = kinds.filter { (kind, _) -> kind.first != own && kind.third != word }
-                .map { (kind, set) -> Triple(kind.first, found(kind.second, word).size, set) }
-                .filter { it.second > 0 }
-            if (hits.isEmpty()) return null
-            return Elsewhere(hits.joinToString(", ", prefix = "also: ") { (name, count) -> "$name ($count)" }) { hits.forEach { it.third(word) } }
-        }
-        val touch = !LocalKeyboard.current
+            val touch = !LocalKeyboard.current
 
-        Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
-            onChange(filter.copy(hideFuture = !it))
-        }
-        // [impl->dsn~top-tasks~1]
-        Option("Only the first $topCount tasks", topOnly, "top", onTopOnly)
-        // [impl->dsn~next-actions~1]
-        Option("Only the next action of each project", nextOnly, "next-actions", onNextOnly)
+            Option("Show tasks before their start date", !filter.hideFuture, "filter-future") {
+                onChange(filter.copy(hideFuture = !it))
+            }
+            // [impl->dsn~top-tasks~1]
+            Option("Only the first $topCount tasks", topOnly, "top", onTopOnly)
+            // [impl->dsn~next-actions~1]
+            Option("Only the next action of each project", nextOnly, "next-actions", onNextOnly)
 
-        LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }, touch = touch) { value, suffix, modifier ->
-            PriorityLabel(value, modifier, suffix)
-        }
-        // [impl->dsn~project-hierarchy~1]
-        LabelFilter(
-            "Projects", narrowed(projects, projectSearch), filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
-            search = projectSearch, onSearch = { projectSearch = it }, searchTag = "filter-projects-search", elsewhere = elsewhere("projects"), touch = touch,
-            matches = found(projects, projectSearch).size, total = projects.size,
-            order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
-            excluded = filter.excludedProjects, onInclude = { onChange(filter.copy(excludedProjects = filter.excludedProjects - it)) },
-        ) { value, suffix, modifier ->
-            val exclude = { onChange(filter.copy(projects = filter.projects - value, excludedProjects = filter.excludedProjects + value)) }
-            // A selected project stands outside the tree and shows its path.
-            WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }, copyLink = false, onRename = { onRename('+', value, it) }) {
-                ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+            LabelFilter("Priorities", priorities, filter.priorities, { "filter-priority-$it" }, { onChange(filter.copy(priorities = it)) }, touch = touch) { value, suffix, modifier ->
+                PriorityLabel(value, modifier, suffix)
             }
-        }
-        // [impl->dsn~context-hierarchy~1]
-        LabelFilter(
-            "Contexts", narrowed(contexts, contextSearch), filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
-            search = contextSearch, onSearch = { contextSearch = it }, searchTag = "filter-contexts-search", elsewhere = elsewhere("contexts"), touch = touch,
-            matches = found(contexts, contextSearch).size, total = contexts.size,
-            order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
-            excluded = filter.excludedContexts, onInclude = { onChange(filter.copy(excludedContexts = filter.excludedContexts - it)) },
-        ) { value, suffix, modifier ->
-            val exclude = { onChange(filter.copy(contexts = filter.contexts - value, excludedContexts = filter.excludedContexts + value)) }
-            // A selected context stands outside the tree and shows its path.
-            WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }, copyLink = false, onRename = { onRename('@', value, it) }) {
-                ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+            // [impl->dsn~project-hierarchy~1]
+            LabelFilter(
+                "Projects", narrowed(projects, projectSearch), filter.projects, { "filter-project-$it" }, { onChange(filter.copy(projects = it)) },
+                search = projectSearch, onSearch = { projectSearch = it }, searchTag = "filter-projects-search", elsewhere = elsewhere("projects"), touch = touch,
+                matches = found(projects, projectSearch).size, total = projects.size,
+                order = hierarchyOrder, depth = { project -> project.count { it == LEVEL_SEPARATOR } },
+                excluded = filter.excludedProjects, onInclude = { onChange(filter.copy(excludedProjects = filter.excludedProjects - it)) },
+            ) { value, suffix, modifier ->
+                val exclude = { onChange(filter.copy(projects = filter.projects - value, excludedProjects = filter.excludedProjects + value)) }
+                // A selected project stands outside the tree and shows its path.
+                WithLinkMenu(LINK_PROJECT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedProjects }, copyLink = false, onRename = { onRename('+', value, it) }) {
+                    ProjectLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+                }
             }
-        }
-        // [impl->dsn~hashtags-in-ui~1]
-        LabelFilter(
-            "Hashtags", narrowed(hashtags, hashtagSearch), filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
-            search = hashtagSearch, onSearch = { hashtagSearch = it }, searchTag = "filter-hashtags-search", elsewhere = elsewhere("hashtags"), touch = touch,
-            matches = found(hashtags, hashtagSearch).size, total = hashtags.size,
-            excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
-        ) { value, suffix, modifier ->
-            val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
-            WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }, copyLink = false, onRename = { onRename('#', value, it) }) {
-                HashtagLabel(value, modifier, suffix)
+            // [impl->dsn~context-hierarchy~1]
+            LabelFilter(
+                "Contexts", narrowed(contexts, contextSearch), filter.contexts, { "filter-context-$it" }, { onChange(filter.copy(contexts = it)) },
+                search = contextSearch, onSearch = { contextSearch = it }, searchTag = "filter-contexts-search", elsewhere = elsewhere("contexts"), touch = touch,
+                matches = found(contexts, contextSearch).size, total = contexts.size,
+                order = hierarchyOrder, depth = { context -> context.count { it == LEVEL_SEPARATOR } },
+                excluded = filter.excludedContexts, onInclude = { onChange(filter.copy(excludedContexts = filter.excludedContexts - it)) },
+            ) { value, suffix, modifier ->
+                val exclude = { onChange(filter.copy(contexts = filter.contexts - value, excludedContexts = filter.excludedContexts + value)) }
+                // A selected context stands outside the tree and shows its path.
+                WithLinkMenu(LINK_CONTEXT, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedContexts }, copyLink = false, onRename = { onRename('@', value, it) }) {
+                    ContextLabel(value, modifier, suffix, path = suffix.isNotEmpty())
+                }
+            }
+            // [impl->dsn~hashtags-in-ui~1]
+            LabelFilter(
+                "Hashtags", narrowed(hashtags, hashtagSearch), filter.hashtags, { "filter-hashtag-$it" }, { onChange(filter.copy(hashtags = it)) },
+                search = hashtagSearch, onSearch = { hashtagSearch = it }, searchTag = "filter-hashtags-search", elsewhere = elsewhere("hashtags"), touch = touch,
+                matches = found(hashtags, hashtagSearch).size, total = hashtags.size,
+                excluded = filter.excludedHashtags, onInclude = { onChange(filter.copy(excludedHashtags = filter.excludedHashtags - it)) },
+            ) { value, suffix, modifier ->
+                val exclude = { onChange(filter.copy(hashtags = filter.hashtags - value, excludedHashtags = filter.excludedHashtags + value)) }
+                WithLinkMenu(LINK_HASHTAG, value, longPress = true, onExclude = exclude.takeIf { value !in filter.excludedHashtags }, copyLink = false, onRename = { onRename('#', value, it) }) {
+                    HashtagLabel(value, modifier, suffix)
+                }
             }
         }
 
         // The criterion that is changed least often stands last.
-        Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val open = filter.completion != Completion.COMPLETED
             val done = filter.completion != Completion.OPEN
             fun show(open: Boolean, done: Boolean) = onChange(

@@ -36,7 +36,7 @@ class PlannerTest {
         assertEquals(listOf("Running", "Later", "Tomorrow"), CalendarTxt.ahead(blocks, today, minutes("10:00")).map { it.text })
     }
 
-    // [utest->dsn~android-block-notification~1]
+    // [utest->dsn~android-block-notification~2]
     @Test
     fun theCurrentBlockRunsNowAndTheNextOneStartsLater() {
         val blocks = CalendarTxt.blocks(

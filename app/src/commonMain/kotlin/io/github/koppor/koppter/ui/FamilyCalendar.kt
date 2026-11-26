@@ -23,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -292,7 +291,7 @@ private fun MemberHeader(member: String, onAdd: (() -> Unit)?, modifier: Modifie
 private fun FamilyTask(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () -> Unit) {
     val task = entry.task
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).testTag("family-task"), verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("family-toggle"))
+        DoneBox(task, onToggle, "family-toggle")
         Column(Modifier.weight(1f)) {
             Text(
                 task.description,

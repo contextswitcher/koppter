@@ -26,6 +26,7 @@ import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasAnyDescendant
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -120,7 +121,13 @@ private class MemoryStorage(var text: String) : TodoStorage, CompanionFiles {
 }
 
 /** Outlook as AnchorHub would show it, with what was asked of it. */
-private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appointments: List<OutlookBusy> = emptyList(), var blocks: Int = 0) : OutlookBridge {
+private class FakeOutlook(
+    val items: List<OutlookItem> = emptyList(),
+    val appointments: List<OutlookBusy> = emptyList(),
+    var blocks: Int = 0,
+    /** The appointments of further accounts by their name; [appointments] are those of any other account. */
+    val accounts: Map<String, List<OutlookBusy>> = emptyMap(),
+) : OutlookBridge {
     val opened = mutableListOf<String>()
     val completed = mutableListOf<String>()
     var synced: Pair<ClosedRange<LocalDateTime>, List<OutlookBlock>>? = null
@@ -141,7 +148,11 @@ private class FakeOutlook(val items: List<OutlookItem> = emptyList(), val appoin
         cleared++
         return blocks.also { blocks = 0 }
     }
-    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = appointments.also { shown += from to to }
+    override fun busy(calendar: String?, from: LocalDate, to: LocalDate) = (accounts[calendar] ?: appointments).also {
+        shown += from to to
+        read += calendar
+    }
+    val read = mutableListOf<String?>()
     val shown = mutableListOf<Pair<LocalDate, LocalDate>>()
     val sidelined = mutableListOf<Pair<String, Boolean>>()
     override fun sideline(entryId: String, on: Boolean) {
@@ -235,7 +246,7 @@ class AppTest {
         assertTrue(bounds("Return the books").bottom <= bounds("Next (1)").top)
         assertTrue(bounds("Next (1)").bottom <= bounds("Write the report").top)
         onNodeWithText("Done (1)").assertDoesNotExist()
-        onNodeWithTag("filter-done").performScrollTo().performClick()
+        onNodeWithTag("filter-done").performClick()
         assertTrue(bounds("Write the report").bottom <= bounds("Done (1)").top)
         assertTrue(bounds("Done (1)").bottom <= bounds("Sharpen the pencils").top)
         // The due date decides on which side of the line a task stands, not its priority.
@@ -1241,7 +1252,7 @@ class AppTest {
         onNodeWithTag("filter-clear").performClick()
         onAllNodesWithTag("task").assertCountEquals(3)
         // Open and done are two switches; switching off the only selected one selects the other.
-        onNodeWithTag("filter-done").performScrollTo().performClick()
+        onNodeWithTag("filter-done").performClick()
         onAllNodesWithTag("task").assertCountEquals(4)
         onNodeWithTag("filter-open").performClick()
         onAllNodesWithTag("task").assertCountEquals(1)
@@ -1427,10 +1438,16 @@ class AppTest {
         onNodeWithText("Cite the study", useUnmergedTree = true).assertExists()
         assertEquals(before, storage.text)
 
-        // Completing a TODO writes a completed line, which hides it; the document stays as it is.
+        // A TODO is done when it is removed from the document: the mark of a document stands for its checkbox,
+        // a tap on it says so, and toggling it changes nothing.
+        val latexMark = hasTestTag("task-done-latex") and hasAnyAncestor(hasTestTag("task") and hasAnyDescendant(hasText("Cite the study")))
+        onAllNodes(hasTestTag("task-done") and hasAnyAncestor(hasTestTag("task") and hasAnyDescendant(hasText("Cite the study"))), useUnmergedTree = true)
+            .assertCountEquals(0)
+        onAllNodes(latexMark, useUnmergedTree = true).onFirst().performClick()
+        waitUntil { onAllNodesWithText(LATEX_DONE_HINT).fetchSemanticsNodes().isNotEmpty() }
         runOnIdle { controller.toggle(controller.visible.first { it.task.description.startsWith("Cite the study") }) }
-        assertTrue(storage.text.trim().lines().last().matches(Regex("x (\\S+ )?Cite the study \\+GarageSale #latex tex:\\w+")), storage.text)
-        assertTrue(controller.visible.none { it.task.description.startsWith("Cite the study") })
+        assertEquals(before, storage.text)
+        assertEquals(1, controller.visible.count { it.task.description.startsWith("Cite the study") })
         assertEquals(1, controller.visible.count { it.task.description.startsWith("Add the outline") })
 
         // [utest->dsn~latex-rematch~1]
@@ -1468,6 +1485,21 @@ class AppTest {
         controller.updateSettings(controller.settings.copy(outlookWeeks = 0))
         runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
         assertNull(outlook.synced)
+    }
+
+    // [utest->dsn~outlook-busy~1]
+    @Test
+    fun theCalendarsOfFurtherAccountsCountAsBusyButTakeNoBlocks() {
+        val lecture = OutlookBusy(LocalDateTime(2026, 11, 12, 0, 0), LocalDateTime(2026, 11, 26, 0, 0), false, BusyStatus.BUSY)
+        val outlook = FakeOutlook(accounts = mapOf("me@uni.example" to listOf(lecture)))
+        val settings = Settings(outlookWeeks = 4, outlookBusyCalendars = "me@uni.example, ME@uni.example")
+        val controller = TodoController(settings, { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 8 * 60 }, outlook = outlook)
+        runBlocking { controller.planWithCalendars(controller.planSettings!!, null) }
+        // The default account and the further one, each once.
+        assertEquals(listOf(null, "me@uni.example"), outlook.read)
+        val (_, blocks) = outlook.synced!!
+        assertTrue(blocks.isNotEmpty())
+        assertTrue(blocks.all { it.start >= lecture.end }, blocks.toString())
     }
 
     // [utest->dsn~outlook-clear~1]
@@ -2097,9 +2129,28 @@ class AppTest {
         onNodeWithTag("agenda-due").assertDoesNotExist()
     }
 
+    // [utest->dsn~android-block-notification~2]
+    @Test
+    fun postponingPlansFromTheEndOfTheBlockAndNotTodayLeavesTheTaskForTomorrow() {
+        storage.text = "(A) Thank Mom dur:1h\n(B) Post signs dur:1h\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, minuteOfDay = { 9 * 60 })
+        controller.load()
+        controller.plan(PlanSettings("General = Mon-Fri 09:00-12:00", "", ""))
+
+        runBlocking { controller.postpone(10 * 60) }
+        assertEquals("2026-11-12 w46 Thu  10:00-11:00 Thank Mom. 11:00-12:00 Post signs\n", storage.companions.getValue("calendar.txt"))
+
+        runBlocking { controller.notToday(controller.entryNamed("Thank Mom")!!) }
+        assertEquals("(A) Thank Mom dur:1h t:2026-11-13\n(B) Post signs dur:1h\n", storage.text)
+        assertEquals(
+            "2026-11-12 w46 Thu  09:00-10:00 Post signs\n2026-11-13 w46 Fri  09:00-10:00 Thank Mom\n",
+            storage.companions.getValue("calendar.txt"),
+        )
+    }
+
     // [utest->dsn~agenda~1]
     @Test
-    fun theAgendaShowsTheBlocksOfTheNextDaysAndWhatIsDueWithoutABlock() = runComposeUiTest {
+    fun theAgendaShowsTheBlocksOfTheNextDaysAndWhatIsDueWithoutABlock()= runComposeUiTest {
         storage.text += "Sweep the floor due:2026-11-12\n"
         storage.companions["calendar.txt"] = """
             2026-11-11 w46 Wed  09:00-09:30 Yesterday
@@ -3247,6 +3298,64 @@ class AppTest {
 
         runOnUiThread { controller.openLink("koppter://new") }
         onNodeWithTag("edit-heading").assertTextEquals("New task")
+    }
+
+    // [utest->dsn~task-link~1]
+    @Test
+    fun aLinkToATaskOpensItsDialogOrListsTheTasksOfThePage() = runComposeUiTest {
+        val page = "https://d.docs.live.net/1/Work.one#Plan&section-id={8D0158A8-979F-4ABA-9DC2-77F6F43A00C8}&page-id={666AC41B-1C96-448D-AF38-3DEF10279206}&end"
+        storage.text = "Call the dentist onenote:$page\nBook the hotel onenote:$page\nPost signs +GarageSale\n"
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        runOnUiThread { controller.openLink("koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Book%20the%20hotel") }
+        onNodeWithTag("edit-description").assertTextContains("Book the hotel", substring = true)
+        onNodeWithTag("edit-cancel").performClick()
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+
+        // The text was edited since the link was made: of the two tasks of the page, neither is meant more than the other.
+        runOnUiThread { controller.openLink("koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Call%20the%20doctor") }
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+        onAllNodesWithTag("task").assertCountEquals(2)
+        assertEquals("666AC41B-1C96-448D-AF38-3DEF10279206", controller.filter.text)
+
+        runOnUiThread { controller.openLink("koppter://task?onenote=https%3A%2F%2Fexample.org%2FNumbers.one&text=Write%20the%20review") }
+        onNodeWithTag("edit-dialog").assertDoesNotExist()
+    }
+
+    // [utest->dsn~task-link~1]
+    @Test
+    fun aLinkToAnArchivedOrMissingTaskSaysWhy() {
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        controller.openLink("koppter://task?onenote=https%3A%2F%2Fexample.org%2FNumbers.one&text=Write%20the%20review")
+        assertEquals("The task is completed and archived in done.txt: Write the review", controller.error)
+        controller.openLink("koppter://task?onenote=00000000-0000-0000-0000-000000000000&text=Gone")
+        assertEquals("No task refers to this page of OneNote any more, so its link goes at the next synchronization: Gone", controller.error)
+    }
+
+    // [utest->dsn~onenote-backlinks~1]
+    @Test
+    fun theLinksToTheTasksAreSentWhenTheyChanged() {
+        storage.text = "Call the dentist onenote:https://example.org/Health.one\nPost signs +GarageSale\n"
+        storage.companions["done.txt"] = "x 2026-10-01 Write the review onenote:https://example.org/Numbers.one\n"
+        val sent = mutableListOf<List<io.github.koppor.koppter.todotxt.Backlink>>()
+        var succeeds = false
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, oneNoteBacklinks = { sent += it; succeeds })
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(listOf("Call the dentist" to false, "Write the review" to true), sent.single().map { it.label to it.done })
+        // Not sent successfully: again at the next synchronization.
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(2, sent.size)
+        succeeds = true
+        runBlocking { controller.syncBacklinks() }
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(3, sent.size)
+        // A deleted task drops out of the complete set.
+        controller.delete(controller.file.entries.first { it.task.description == "Call the dentist" })
+        runBlocking { controller.syncBacklinks() }
+        assertEquals(listOf("Write the review"), sent.last().map { it.label })
     }
 
     // [utest->dsn~app-link-copy~1]

@@ -849,6 +849,20 @@ koppter://filter?project=Fair&context=phone
 * On Android, the installed application opens the links.
 * The packages for Linux and macOS do not register the links yet.
 
+## Links back from OneNote
+
+On Windows with OneNote and [AnchorHub](#tasks-of-outlook), a page of OneNote that a task refers to with the tag `onenote:` shows at its top a link to the task ([decision 0057](docs/decisions/0057-link-to-a-task-by-its-page-of-onenote-and-its-text.md)):
+
+```text
+koppter://task?onenote=666AC41B-1C96-448D-AF38-3DEF10279206&text=Call%20the%20dentist
+```
+
+* koppter sends the links at its start and after each synchronization; a changed description changes its link, a completed task, also one archived in `done.txt`, has its link struck through, and a deleted task loses its link.
+* The link names the page by its `page-id` and the task by its description.
+  It opens the edit dialog of the task; when the task was edited since and the page has several tasks, the list shows them.
+* The todo.txt file gets no tag for it.
+* An AnchorHub without the command is noted in the log, and the pages get no links.
+
 ## Filter shared with ContextSwitcher
 
 On the desktop, koppter and [ContextSwitcher](https://github.com/contextswitcher/contextswitcher) can share the projects and contexts of their filters.

@@ -66,7 +66,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -336,7 +335,7 @@ fun TaskCard(entry: Entry, today: LocalDate, onToggle: () -> Unit, onOpen: () ->
         menuAt?.let { at -> Box(Modifier.offset { at }) { DueMenu(dueMenu, entry, today) { dueMenu = false } } }
         Card(onClick = onOpen, modifier = Modifier.fillMaxWidth().then(secondaryClick).testTag("task")) {
             Row(Modifier.padding(end = 10.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = task.completed, onCheckedChange = { onToggle() }, modifier = Modifier.testTag("task-done"))
+                DoneBox(task, onToggle)
                 // [impl->dsn~task-card~1]
                 // In one line where the description and the labels fit next to each other, so that the description stands
                 // at the height of the checkbox; otherwise the labels above the description, each with the whole width.

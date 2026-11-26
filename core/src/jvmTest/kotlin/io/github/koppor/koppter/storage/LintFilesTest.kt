@@ -27,7 +27,8 @@ class LintFilesTest {
                 "ice_recur.txt:3: error: the line is not understood",
                 "koppter.yml: error: General: \"noon\" is neither days nor times",
                 "koppter.yml: error: @reading: \"max 2h/year\" is no limit",
-            ).map { directory.resolve(it).toString() },
+            // A message is not a path: Windows does not allow the colon in one.
+            ).map { "$directory${java.io.File.separator}$it" },
             lintFiles(todo).map { it.toString() },
         )
     }
