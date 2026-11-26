@@ -51,6 +51,29 @@ Covers:
 
 Needs: dsn
 
+### Templates of tasks
+`req~templates~1`
+
+The user keeps sets of tasks that are needed again and again, such as everything for a journey, and adds the tasks of such a template at once, all due on the same day and at the same time.
+A task of a template can have a note, such as a checklist.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
+### Checklist in a note
+`req~note-checklist~1`
+
+The user ticks off the items of a checklist in the note of a task without editing its text.
+
+Covers:
+
+* `feat~extensions~1`
+
+Needs: dsn
+
 ### Images of a task
 `req~note-images~1`
 
@@ -910,6 +933,37 @@ A change of the note alone is passed to the storage as a change of its own, so t
 Covers:
 
 * `req~notes~1`
+
+Needs: impl, utest
+
+### Templates of tasks
+`dsn~templates~1`
+
+The templates are kept in `templates.txt` next to the todo.txt file, which is edited by hand.
+A line `# name` starts a template; each further line that does not start with a blank is a task of it in the notation of todo.txt, and the indented lines below a task are its note, without the indentation of their first line.
+A line that starts with `#` without a blank, such as a hashtag, is a task.
+For a storage with companion files, the button `++` stands right of the button `+` of a new task, on a phone among the floating buttons and in a wide window in the row of the views.
+It opens a dialog that lists the templates with the descriptions of their tasks, a single template already chosen, and the due date and time for all tasks, both optional, with the days of the due chips; *Add* names the number of tasks.
+Without `templates.txt`, the dialog says where the templates are kept and shows an example.
+*Add* adds all tasks of the template in one change `Add template: <name>`, each with the chosen `due:` and `dueby:` in place of its own, and each note in a file of its own with a new name.
+*Cancel*, Esc, a click beside the dialog and back close it without a change.
+A date of a template relative to the due date is not supported.
+
+Covers:
+
+* `req~templates~1`
+
+Needs: impl, utest
+
+### Checklist in a note
+`dsn~note-checklist~1`
+
+The items of a Markdown task list in the note, `- [ ] text` and `- [x] text` at any depth and with `*` or `+` as well, are shown in the edit dialog directly below the description, with check boxes in rows of at least 48 dp and the count of checked items, as ticking them off is what such a task is opened for.
+A click on an item changes only its mark in the field of the note, which is saved with *Save* as any other change of the note.
+
+Covers:
+
+* `req~note-checklist~1`
 
 Needs: impl, utest
 

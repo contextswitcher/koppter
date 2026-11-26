@@ -15,7 +15,7 @@ A task that is written well lands in the right area, shows up on the right day a
 2. Otherwise read `todoFile` from the settings of koppter: `~/.config/koppter/settings.properties` (or `$XDG_CONFIG_HOME/koppter`, on Windows `%APPDATA%\koppter`).
 3. If that key is empty, the file is `~/todo.txt`.
 
-The files next to it belong to it: `ice_recur.txt` (schedules), `notes/` (notes, and the images that a note shows as `![](k3f-1.jpg)`), `koppter.yml` (configuration), `calendar.txt` (the plan, written by koppter: do not edit it), `done.txt` (the tasks completed more than a month ago, moved there by koppter).
+The files next to it belong to it: `ice_recur.txt` (schedules), `notes/` (notes, and the images that a note shows as `![](k3f-1.jpg)`), `koppter.yml` (configuration), `templates.txt` (templates of tasks: a line `# name` starts a template, each further line is a task, and indented lines below a task are its note), `calendar.txt` (the plan, written by koppter: do not edit it), `done.txt` (the tasks completed more than a month ago, moved there by koppter).
 
 ## Read before writing
 

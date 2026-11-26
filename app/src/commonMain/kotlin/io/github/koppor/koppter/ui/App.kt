@@ -108,6 +108,8 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -350,6 +352,7 @@ private fun MainScreen(
     var draft by remember { mutableStateOf<Draft?>(null) }
     var showSettings by remember { mutableStateOf(false) }
     var schedule by remember { mutableStateOf<String?>(null) }
+    var templates by remember { mutableStateOf<List<io.github.koppor.koppter.todotxt.Template>?>(null) }
     var planning by remember { mutableStateOf<PlanSettings?>(null) }
     /** The member whose time map is edited. */
     var timesOf by remember { mutableStateOf<String?>(null) }
@@ -383,7 +386,7 @@ private fun MainScreen(
             controller.taskRequested = null
         }
     }
-    val dialog = editing != null || showSettings || schedule != null || planning != null
+    val dialog = editing != null || showSettings || schedule != null || planning != null || templates != null
     LaunchedEffect(focused, dialog) { if (!focused && !dialog) rootFocus.requestFocus() }
 
     // [impl->dsn~keyboard-shortcuts~1]
@@ -536,7 +539,11 @@ private fun MainScreen(
             val barActions: @Composable RowScope.() -> Unit = {
                 // [impl->dsn~main-screen~1]
                 // A wide window has room in the row, and a button there covers no task.
-                if (wideNow && controller.view != View.FAMILY) BarButton(Icons.Default.Add, "New task", "new-task") { editing = Editing(null) }
+                if (wideNow && controller.view != View.FAMILY) {
+                    BarButton(Icons.Default.Add, "New task", "new-task") { editing = Editing(null) }
+                    // [impl->dsn~templates~1]
+                    if (controller.canSchedule) TemplateButton { templates = controller.templates() }
+                }
                 // [impl->dsn~restart-to-update~1]
                 // Words, as no icon tells that the application ends and comes back.
                 // [impl->dsn~android-update~1]
@@ -578,6 +585,10 @@ private fun MainScreen(
                             }
                             SmallFloatingActionButton(onClick = { editing = Editing(null) }, modifier = Modifier.testTag("new-task")) {
                                 Icon(Icons.Default.Add, contentDescription = "New task")
+                            }
+                            // [impl->dsn~templates~1]
+                            if (controller.canSchedule) SmallFloatingActionButton(onClick = { templates = controller.templates() }, modifier = Modifier.testTag("new-from-template")) {
+                                Text("++", Modifier.semantics { contentDescription = TEMPLATE_BUTTON })
                             }
                         }
                     }
@@ -780,6 +791,12 @@ private fun MainScreen(
             fixedName = Family.TIME_MAP,
         )
     }
+    templates?.let {
+        TemplateDialog(it, controller.today(), onAdd = { template, due, by ->
+            controller.addTemplate(template, due, by)
+            templates = null
+        }, onDismiss = { templates = null })
+    }
     schedule?.let {
         ScheduleDialog(
             schedule = it,
@@ -945,6 +962,21 @@ private fun Modifier.sidewaysScroll(): Modifier {
         if (state.canScrollForward) drawRect(Brush.horizontalGradient(listOf(background.copy(alpha = 0f), background), size.width - fade, size.width), Offset(size.width - fade, 0f), Size(fade, size.height))
     }.horizontalScroll(state)
 }
+
+/** The button of the templates beside the one of a new task: two signs, as one stands for one new task. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TemplateButton(onClick: () -> Unit) {
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(TEMPLATE_BUTTON) } },
+        state = rememberTooltipState(),
+    ) {
+        TextButton(onClick = onClick, modifier = Modifier.testTag("new-from-template").semantics { contentDescription = TEMPLATE_BUTTON }) { Text("++") }
+    }
+}
+
+private const val TEMPLATE_BUTTON = "New tasks from a template"
 
 /** A button of the top bar. Its description is its tooltip as well, as an icon alone does not tell what it does. */
 @OptIn(ExperimentalMaterial3Api::class)

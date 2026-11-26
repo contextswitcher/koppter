@@ -960,6 +960,53 @@ class AppTest {
         onNodeWithTag("restart-to-update").assertTextEquals("Downloading update")
     }
 
+    // [utest->dsn~templates~1]
+    @Test
+    fun theTasksOfATemplateAreAddedTogetherWithTheirDueDateAndNotes() = runComposeUiTest {
+        storage.text = ""
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        // Without templates.txt, the dialog says where the templates are kept, and Cancel adds nothing.
+        onNodeWithTag("new-from-template").performClick()
+        onNodeWithTag("template-empty").assertExists()
+        onNodeWithTag("template-add").assertIsNotEnabled()
+        onNodeWithTag("template-cancel").performClick()
+        onNodeWithTag("template-dialog").assertDoesNotExist()
+
+        storage.companions["templates.txt"] = "# Swimming\nPack the bag +swim\n  - [ ] towel\nBuy a ticket +swim due:2026-01-01\n# Trip\nBook the train\n"
+        onNodeWithTag("new-from-template").performClick()
+        onNodeWithTag("template-add").assertIsNotEnabled()
+        onNodeWithTag("template-0").performClick()
+        onNodeWithTag("template-due").performTextInput("2026-11-20")
+        onNodeWithTag("template-by").performTextInput("9:30")
+        onNodeWithTag("template-add").performClick()
+        onNodeWithTag("template-dialog").assertDoesNotExist()
+
+        val note = Regex("Pack the bag \\+swim due:2026-11-20 dueby:9:30 note:(\\w+\\.md)").find(storage.text)!!.groupValues[1]
+        assertTrue("Buy a ticket +swim due:2026-11-20 dueby:9:30" in storage.text, storage.text)
+        assertFalse("Book the train" in storage.text)
+        assertEquals("- [ ] towel\n", storage.companions["notes/$note"])
+        assertEquals("Add template: Swimming", storage.changes.last())
+    }
+
+    // [utest->dsn~note-checklist~1]
+    @Test
+    fun anItemOfTheChecklistOfANoteIsTickedOffInTheDialog() = runComposeUiTest {
+        storage.text = "Pack the bag note:abc.md\n"
+        storage.companions["notes/abc.md"] = "- [ ] towel\n- [x] goggles\n"
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
+        setContent { App(controller, "todo.txt") }
+
+        openTask("Pack the bag")
+        onNodeWithText("Checklist (1/2)").assertExists()
+        onNodeWithTag("edit-checklist-0").performClick()
+        onNodeWithTag("edit-note").assertTextContains("- [x] towel\n- [x] goggles\n")
+        onNodeWithTag("edit-checklist-1").performClick()
+        onNodeWithTag("edit-save").performClick()
+        assertEquals("- [x] towel\n- [ ] goggles\n", storage.companions["notes/abc.md"])
+    }
+
     // [utest->dsn~note-images~1]
     @Test
     fun anImageIsAttachedToTheNoteOfATaskAndShownInItsDialog() = runComposeUiTest {

@@ -1,5 +1,12 @@
 package io.github.koppor.koppter.ui
 
+import androidx.compose.foundation.layout.heightIn
+import io.github.koppor.koppter.todotxt.toggleItem
+import io.github.koppor.koppter.todotxt.checklist
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Checkbox
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -329,6 +336,30 @@ fun EditDialog(
                             modifier = Modifier.fillMaxWidth().focusRequester(descriptionFocus).testTag("edit-description"),
                         )
 
+                        // [impl->dsn~note-checklist~1]
+                        // Above the other fields: ticking off an item is what a task with a checklist is opened for.
+                        val items = checklist(note.text)
+                        if (items.isNotEmpty()) {
+                            Column(Modifier.testTag("edit-checklist")) {
+                                Text("Checklist (${items.count { it.checked }}/${items.size})", style = MaterialTheme.typography.labelLarge)
+                                for (item in items) {
+                                    Row(
+                                        Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(item.checked, role = Role.Checkbox) { note = note.copy(text = toggleItem(note.text, item.line)) }
+                                            .testTag("edit-checklist-${item.line}"),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Checkbox(item.checked, onCheckedChange = null)
+                                        Text(
+                                            item.text,
+                                            Modifier.padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                                            textDecoration = if (item.checked) TextDecoration.LineThrough else null,
+                                            color = if (item.checked) MaterialTheme.colorScheme.onSurfaceVariant else Color.Unspecified,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             val names = LocalPriorityNames.current
                             val choices = (listOf<Char?>(null) + names.choices).let { if (priority in it) it else it + priority }
@@ -612,7 +643,7 @@ private val Clock: ImageVector by lazy {
 // [impl->dsn~edit-pickers~1]
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun TimeField(label: String, example: String, value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
+internal fun TimeField(label: String, example: String, value: String, onChange: (String) -> Unit, valid: Boolean, modifier: Modifier) {
     var picking by remember { mutableStateOf(false) }
     OutlinedTextField(
         value = value,
@@ -756,7 +787,7 @@ internal expect fun mondayFirstLocale(): CalendarLocale
 internal expect fun TextMenu(items: List<Pair<String, () -> Unit>>, content: @Composable () -> Unit)
 
 /** A button of the calendar of a [DateField], the value that it writes into the field and the sentence shown while the pointer rests on it. */
-private data class Shortcut(val title: String, val value: String, val help: String? = null)
+internal data class Shortcut(val title: String, val value: String, val help: String? = null)
 
 /** The distances before the due date that the start date offers. */
 private val startChoices = listOf(7 to "1w", 3 to "3d").map { (days, value) ->
@@ -777,7 +808,7 @@ private fun startNote(text: String, start: LocalDate?, due: LocalDate?): String?
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DateField(
+internal fun DateField(
     label: String,
     value: String,
     onChange: (String) -> Unit,

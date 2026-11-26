@@ -61,6 +61,9 @@ import io.github.koppor.koppter.todotxt.renameLabel
 import io.github.koppor.koppter.todotxt.PriorityNames
 import io.github.koppor.koppter.todotxt.DONE_FILE
 import io.github.koppor.koppter.todotxt.ICE_RECUR_FILE
+import io.github.koppor.koppter.todotxt.TEMPLATES_FILE
+import io.github.koppor.koppter.todotxt.Template
+import io.github.koppor.koppter.todotxt.parseTemplates
 import io.github.koppor.koppter.todotxt.archive
 import io.github.koppor.koppter.todotxt.expire
 import io.github.koppor.koppter.todotxt.SUGGESTED_ICE_RECUR
@@ -1433,6 +1436,34 @@ class TodoController(
         if (task.body.isBlank()) return
         guarded { saveNote(task, note, images) }
         write(withChanged(file, changed).add(task.created(today(), settings.writeDates)), "Add task: ${task.description}")
+    }
+
+    /** The templates of `templates.txt`; empty if the file does not exist, `null` if the storage keeps no files next to todo.txt or it cannot be read. */
+    // [impl->dsn~templates~1]
+    fun templates(): List<Template>? = try {
+        (storage as? CompanionFiles)?.let { parseTemplates(it.readCompanion(TEMPLATES_FILE).orEmpty()) }
+    } catch (e: Exception) {
+        failed(e)
+        null
+    }
+
+    /** Adds the tasks of the template in one change, each due on [due] at [by] where given, and each with its note in a file of its own. */
+    // [impl->dsn~templates~1]
+    fun addTemplate(template: Template, due: LocalDate?, by: String?) {
+        val names = mutableSetOf<String>()
+        val tasks = template.tasks.map { (line, note) ->
+            val parsed = Task.parse(line)
+            var task = parsed.withTag(Task.DUE, due?.toString() ?: parsed.tag(Task.DUE)).withTag(Task.BY, by ?: parsed.tag(Task.BY))
+            if (note.isNotEmpty()) {
+                // Several tasks are added at once: a random name must not repeat, nor name a note that exists.
+                val name = generateSequence { newNoteName() }.first { it !in names && (storage as? CompanionFiles)?.readCompanion("$NOTES_DIRECTORY/$it") == null }
+                names += name
+                task = task.withTag(Task.NOTE, name)
+                guarded { saveNote(task, note, emptyMap()) }
+            }
+            task.created(today(), settings.writeDates)
+        }
+        write(tasks.fold(file) { new, task -> new.add(task) }, "Add template: ${template.name}")
     }
 
     /** Whether the open task has a block today: completing it frees time for the tasks without one. */

@@ -382,6 +382,21 @@ class ScreenshotTest {
             save("review/$size-$name.png")
         }
         screen("list") {}
+        // [utest->dsn~templates~1]
+        screen("templates") {
+            storage.companions["templates.txt"] = "# Swimming course\nPack the swimming bag +Sport @home\n  - [ ] towel\n  - [ ] goggles\nBuy a ten-visit card +Sport\n\n# Business trip\nBook the train +Travel\nSubmit the travel request +Travel\nAsk Dana to cover the Friday meeting @office\n"
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("new-from-template").performClick()
+            onNodeWithTag("template-0").performClick()
+        }
+        // [utest->dsn~note-checklist~1]
+        screen("edit-checklist", extra = "Pack the swimming bag +Sport @home note:swm.md\n") {
+            storage.companions["notes/swm.md"] = "- [x] towel\n- [ ] goggles\n- [ ] shampoo\n\nThe locker needs a coin.\n"
+            onNodeWithTag("list-switch").performClick()
+            onNodeWithTag("task-list").performScrollToNode(hasText("Pack the swimming bag", substring = true))
+            onNodeWithText("Pack the swimming bag", substring = true, useUnmergedTree = true).performClick()
+            onNodeWithTag("edit-dialog").assertExists()
+        }
         // [utest->dsn~latex-todos~1]
         screen("latex-todo", extra = "Cite the survey on remote work +Paper #latex tex:1x2y3z\n") {
             onNodeWithTag("list-switch").performClick()
