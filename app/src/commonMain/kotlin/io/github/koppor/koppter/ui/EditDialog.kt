@@ -1003,16 +1003,16 @@ private fun NameList(
                 for (name in top) {
                     SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
                 }
-                if (rest.isNotEmpty()) {
-                    // A button, not a chip: as a chip it read as one more name.
-                    TextButton(onClick = { more = !more }, modifier = Modifier.testTag("$tag-more")) { Text(if (more) "Less" else "More (${rest.size})…") }
-                }
                 if (more && rest.isNotEmpty()) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag("$tag-rest"), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         for (name in rest) {
                             SuggestionChip(onClick = { add(name) }, label = { Text("$sign$name") }, modifier = Modifier.testTag("$tag-suggest-$name"))
                         }
                     }
+                }
+                if (rest.isNotEmpty()) {
+                    // A button, not a chip: as a chip it read as one more name. After the rest, so that *Less* ends the list it shortens.
+                    TextButton(onClick = { more = !more }, modifier = Modifier.testTag("$tag-more")) { Text(if (more) "Less" else "More (${rest.size})…") }
                 }
                 if (!wide) field(Modifier.align(Alignment.CenterVertically))
             }

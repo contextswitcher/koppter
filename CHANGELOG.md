@@ -16,6 +16,10 @@ and this project adheres to [Calendar Versioning](https://calver.org/) with the 
 
 - The buttons that close the settings, the plan dialog, the editor of a time map, the editor of the schedule and the list of the applications, where it is now called *Close*, stand in their headings, as in the edit dialog, and stay in view while the content scrolls.
 
+### Fixed
+
+- In the edit dialog, *Less* stands after the expanded names of projects, contexts and hashtags instead of between them.
+
 ## [2026-11-25] - 2026-11-25
 
 ### Added
