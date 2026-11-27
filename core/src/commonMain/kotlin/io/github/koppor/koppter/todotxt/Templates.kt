@@ -9,24 +9,35 @@ data class TemplateTask(val line: String, val note: String)
 /** A set of tasks that are added together, such as everything to do before a journey. */
 data class Template(val name: String, val tasks: List<TemplateTask>)
 
-private val HEADING = Regex("^# +(.+)$")
+private val HEADING = Regex("^(#{1,6}) +(.+?)(?: +#+)?$")
+private val BREAK = Regex("^(?:-{3,}|\\*{3,}|_{3,})$")
+private val ITEM_MARK = Regex("^[-*+] +")
 
 /**
- * Reads `templates.txt`: a line `# name` starts a template, each further line that does not start with a blank is a task of it,
+ * Reads `templates.txt`, which is Markdown as well: a heading `## name` starts a template, and a file without such a heading
+ * takes `# name` instead, so that a file of one title `# …` and its templates `## …` passes a linter that allows one title.
+ * Each further line that does not start with a blank is a task of it in the notation of todo.txt, as a list item or as a plain line,
  * and the indented lines below a task are its note, without the indentation of its first line.
- * Lines before the first heading, and blank lines between tasks, are ignored.
+ * Lines outside of a template, blank lines between tasks and separators such as `---` are ignored.
  */
 // [impl->dsn~templates~1]
 fun parseTemplates(text: String): List<Template> {
+    val lines = text.replace("\r\n", "\n").lines()
+    val level = if (lines.any { HEADING.matchEntire(it.trimEnd())?.groupValues?.get(1) == "##" }) 2 else 1
     val templates = mutableListOf<Pair<String, MutableList<Pair<String, MutableList<String>>>>>()
-    for (line in text.replace("\r\n", "\n").lines()) {
+    // Whether the lines belong to the last template: a heading of another level, such as the title, ends it.
+    var inTemplate = false
+    for (line in lines) {
         val heading = HEADING.matchEntire(line.trimEnd())
         when {
-            heading != null -> templates += heading.groupValues[1].trim() to mutableListOf()
-            templates.isEmpty() -> {}
+            heading != null -> {
+                inTemplate = heading.groupValues[1].length == level
+                if (inTemplate) templates += heading.groupValues[2].trim() to mutableListOf()
+            }
+            !inTemplate || BREAK.matches(line.trim()) -> {}
             line.isBlank() -> templates.last().second.lastOrNull()?.second?.add("")
             line[0].isWhitespace() -> templates.last().second.lastOrNull()?.second?.add(line)
-            else -> templates.last().second += line.trim() to mutableListOf()
+            else -> templates.last().second += line.trim().replaceFirst(ITEM_MARK, "") to mutableListOf()
         }
     }
     return templates.map { (name, tasks) ->

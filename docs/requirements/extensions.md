@@ -942,7 +942,10 @@ Needs: impl, utest
 `dsn~templates~1`
 
 The templates are kept in `templates.txt` next to the todo.txt file, which is edited by hand.
-A line `# name` starts a template; each further line that does not start with a blank is a task of it in the notation of todo.txt, and the indented lines below a task are its note, without the indentation of their first line.
+The file is Markdown that passes markdownlint with its default rules, which allow one title `#`: a heading `## name` starts a template, and only a file without such a heading takes `# name` instead.
+A heading of another level, such as the title `# Templates`, ends the template above it, and the lines up to the next template are ignored, so that the title and the rules below it are no template.
+Each further line that does not start with a blank is a task of the template in the notation of todo.txt, as a list item `- …` or as a plain line, and the indented lines below a task are its note, without the indentation of their first line.
+A separator such as `---` between two templates is allowed and ignored.
 A line that starts with `#` without a blank, such as a hashtag, is a task.
 For a storage with companion files, the button `++` stands right of the button `+` of a new task, on a phone among the floating buttons and in a wide window in the row of the views.
 It opens a dialog that lists the templates with the descriptions of their tasks, a single template already chosen, and the due date and time for all tasks, both optional, with the days of the due chips; *Add* names the number of tasks.
@@ -960,7 +963,7 @@ Needs: impl, utest
 ### The file of the templates
 `dsn~templates-file~1`
 
-On the desktop, the dialog without `templates.txt` has the button *Create templates.txt and edit it*: it writes the file with the rules, which stand before the first template and are therefore ignored, and the example, and opens it in the program that the system has for it.
+On the desktop, the dialog without `templates.txt` has the button *Create templates.txt and edit it*: it writes the file with the title, the rules below it, which stand outside of the templates and are therefore ignored, and two templates separated by `---`, and opens it in the program that the system has for it.
 An existing file is opened as it is.
 The dialog closes, as the user goes on in the other program; the templates are read again when it is opened next.
 Android has no such program for a file of the folder, and the button is not shown there.

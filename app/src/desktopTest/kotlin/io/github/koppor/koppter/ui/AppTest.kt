@@ -1010,7 +1010,7 @@ class AppTest {
         onNodeWithTag("template-create").performClick()
         onNodeWithTag("template-dialog").assertDoesNotExist()
         assertEquals(listOf("|/home/ada/templates.txt"), opened)
-        assertEquals(listOf("Swimming"), parseTemplates(storage.companions.getValue("templates.txt")).map { it.name })
+        assertEquals(listOf("Swimming", "Business trip"), parseTemplates(storage.companions.getValue("templates.txt")).map { it.name })
 
         // A file that exists is opened as it is.
         storage.companions["templates.txt"] = "# Mine\n"

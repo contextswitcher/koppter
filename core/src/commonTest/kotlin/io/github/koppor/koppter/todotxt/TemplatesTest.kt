@@ -35,6 +35,42 @@ class TemplatesTest {
 
     // [utest->dsn~templates~1]
     @Test
+    fun withOneTitleTheTemplatesAreTheSectionsBelowItAndTheTasksTheirListItems() {
+        val text = """
+            |# Templates
+            |
+            |Each section is a template.
+            |
+            |## Swimming
+            |
+            |- Pack the bag +swim
+            |  - [ ] towel
+            |
+            |  The locker needs a coin.
+            |* Buy a ticket +swim
+            |
+            |---
+            |
+            |## Trip ##
+            |
+            |### Not a template
+            |
+            |- Ignored below a heading of another level
+        """.trimMargin()
+        assertEquals(
+            listOf(
+                Template("Swimming", listOf(
+                    TemplateTask("Pack the bag +swim", "- [ ] towel\n\nThe locker needs a coin.\n"),
+                    TemplateTask("Buy a ticket +swim", ""),
+                )),
+                Template("Trip", emptyList()),
+            ),
+            parseTemplates(text),
+        )
+    }
+
+    // [utest->dsn~templates~1]
+    @Test
     fun aHashtagAtTheStartOfALineIsATaskNotAHeading() {
         assertEquals(listOf(Template("T", listOf(TemplateTask("#call Mom", "")))), parseTemplates("# T\r\n#call Mom\r\n"))
     }
