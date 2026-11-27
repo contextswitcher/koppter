@@ -100,6 +100,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
@@ -784,6 +785,9 @@ internal expect fun mondayFirstLocale(): CalendarLocale
 /** Adds entries to the context menu of the text field in [content]; the desktop and Android build these menus each in their own way. */
 @Composable
 internal expect fun TextMenu(items: List<Pair<String, () -> Unit>>, content: @Composable () -> Unit)
+
+/** [text] as an entry of the clipboard, which wraps the type of the platform for its content. */
+internal expect fun plainText(text: String): ClipEntry
 
 /** A button of the calendar of a [DateField], the value that it writes into the field and the sentence shown while the pointer rests on it. */
 internal data class Shortcut(val title: String, val value: String, val help: String? = null)

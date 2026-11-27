@@ -30,11 +30,10 @@ import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Surface
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.ClipboardManager
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.material3.SuggestionChip
@@ -209,9 +208,8 @@ fun SettingsDialog(
     onHomeScreen: (Boolean) -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
-    // ponytail: the clipboard of text, as in Labels.kt. Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
-    @Suppress("DEPRECATION")
-    val clipboard = LocalClipboardManager.current
+    // Taken outside the dialog, which is a layer with a clipboard of its own that a test cannot replace.
+    val clipboard = LocalClipboard.current
     // That of the application, which reports a link that is not opened; taken outside the dialog as the clipboard is.
     val uriHandler = LocalUriHandler.current
     var todoFile by remember { mutableStateOf(settings.todoFile) }
@@ -666,7 +664,7 @@ fun SettingsDialog(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
                             .combinedClickable(onClick = {}, onLongClick = {
-                                clipboard.setText(AnnotatedString(commit))
+                                scope.launch { clipboard.setClipEntry(plainText(commit)) }
                                 copied = true
                             })
                             .testTag("settings-version"),
@@ -960,7 +958,8 @@ private fun CommitterField(
 /** The public key of the device, where the application has a key of its own. */
 // [impl->dsn~git-setup-dialog~1]
 @Composable
-private fun GitSection(git: GitSetupActions, @Suppress("DEPRECATION") clipboard: ClipboardManager, uriHandler: UriHandler, deployKeyPage: Pair<Forge, String>?) {
+private fun GitSection(git: GitSetupActions, clipboard: Clipboard, uriHandler: UriHandler, deployKeyPage: Pair<Forge, String>?) {
+    val scope = rememberCoroutineScope()
     val publicKey = remember { runCatching(git::publicKey).getOrElse { "No key: ${it.message}" } } ?: return
 
     var copied by remember { mutableStateOf(false) }
@@ -973,7 +972,7 @@ private fun GitSection(git: GitSetupActions, @Suppress("DEPRECATION") clipboard:
     // A tap copies the whole key: selecting a line of some hundred characters on a touch screen does not work well.
     Surface(
         onClick = {
-            clipboard.setText(AnnotatedString(publicKey))
+            scope.launch { clipboard.setClipEntry(plainText(publicKey)) }
             copied = true
         },
         color = MaterialTheme.colorScheme.surfaceVariant,
@@ -987,7 +986,7 @@ private fun GitSection(git: GitSetupActions, @Suppress("DEPRECATION") clipboard:
         val (forge, page) = deployKeyPage
         OutlinedButton(
             onClick = {
-                clipboard.setText(AnnotatedString(publicKey))
+                scope.launch { clipboard.setClipEntry(plainText(publicKey)) }
                 copied = true
                 uriHandler.openUri(page)
             },

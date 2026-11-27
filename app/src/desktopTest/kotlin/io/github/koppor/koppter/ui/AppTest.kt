@@ -62,8 +62,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.platform.ClipEntry
+import androidx.compose.ui.platform.Clipboard
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.UriHandler
 import io.github.koppor.koppter.storage.ConfigFile
@@ -2984,20 +2986,15 @@ class AppTest {
     fun theSettingsShowTheVersionWhereThePlatformTellsIt() = runComposeUiTest {
         var version by mutableStateOf<String?>(null)
         var copied: String? = null
-        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
-            override fun getText() = copied?.let(::AnnotatedString)
-            override fun setText(annotatedString: AnnotatedString) {
-                copied = annotatedString.text
-            }
-        }
+        val clipboard = clipboard { copied = it }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt", version = version) } }
+        setContent { CompositionLocalProvider(LocalClipboard provides clipboard) { App(controller, "todo.txt", version = version) } }
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-version").assertDoesNotExist()
         version = "2026-11-18 · 1234abc (2026-11-18 09:30)"
         onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30)")
         onNodeWithTag("settings-version").performTouchInput { longClick() }
-        assertEquals("1234abc", copied)
+        waitUntil { copied == "1234abc" }
         onNodeWithTag("settings-version").assertTextEquals("2026-11-18 · 1234abc (2026-11-18 09:30) · Copied 1234abc")
     }
 
@@ -3292,12 +3289,7 @@ class AppTest {
     @Test
     fun aClickOnThePublicKeyCopiesItAndAPastedPageOfGitHubBecomesTheAddressForSsh() = runComposeUiTest {
         var copied: String? = null
-        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
-            override fun getText() = copied?.let(::AnnotatedString)
-            override fun setText(annotatedString: AnnotatedString) {
-                copied = annotatedString.text
-            }
-        }
+        val clipboard = clipboard { copied = it }
         val git = object : GitSetupActions {
             override fun publicKey() = "ecdsa-sha2-nistp256 AAAA koppter"
             override suspend fun clone(url: String) = error("not cloned in this test")
@@ -3312,12 +3304,12 @@ class AppTest {
             }
         }
         setContent {
-            CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard, LocalUriHandler provides links) { App(controller, "todo.txt", git = git) }
+            CompositionLocalProvider(LocalClipboard provides clipboard, LocalUriHandler provides links) { App(controller, "todo.txt", git = git) }
         }
 
         onNodeWithTag("open-settings").performClick()
         onNodeWithTag("settings-public-key").performScrollTo().performClick()
-        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        waitUntil { copied == "ecdsa-sha2-nistp256 AAAA koppter" }
         onNodeWithTag("settings-public-key-help").assertTextContains("Copied to the clipboard.", substring = true)
         // Without the address of a repository of GitHub, there is no page to open.
         onNodeWithTag("settings-add-key").assertDoesNotExist()
@@ -3330,7 +3322,7 @@ class AppTest {
         // The page for a deploy key of that repository, with the key in the clipboard.
         copied = null
         onNodeWithTag("settings-add-key").performScrollTo().performClick()
-        assertEquals("ecdsa-sha2-nistp256 AAAA koppter", copied)
+        waitUntil { copied == "ecdsa-sha2-nistp256 AAAA koppter" }
         assertEquals(listOf("https://github.com/demo-user/todo/settings/keys/new"), opened)
         assertEquals("https://github.com/demo-user/my.todo/settings/keys/new", deployKeyPage(" ssh://git@github.com/demo-user/my.todo.git ")?.second)
         assertEquals("https://codeberg.org/demo-user/todo/settings/keys", deployKeyPage("git@codeberg.org:demo-user/todo.git")?.second)
@@ -3636,24 +3628,19 @@ class AppTest {
     fun theMenuOfALabelCopiesTheLinkToItsTasks() = runComposeUiTest {
         storage.text = "Post signs +GarageSale @errands>city #quick\n"
         var copied: String? = null
-        val clipboard = object : androidx.compose.ui.platform.ClipboardManager {
-            override fun getText() = copied?.let(::AnnotatedString)
-            override fun setText(annotatedString: AnnotatedString) {
-                copied = annotatedString.text
-            }
-        }
+        val clipboard = clipboard { copied = it }
         val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) })
-        setContent { CompositionLocalProvider(androidx.compose.ui.platform.LocalClipboardManager provides clipboard) { App(controller, "todo.txt") } }
+        setContent { CompositionLocalProvider(LocalClipboard provides clipboard) { App(controller, "todo.txt") } }
 
         // A label of the task: the menu of the label opens, not that of the card.
         onNodeWithTag("label-project-GarageSale", useUnmergedTree = true).performMouseInput { rightClick() }
         onNodeWithTag("due-menu").assertDoesNotExist()
         onNodeWithTag("copy-link").assertTextEquals("Copy link").performClick()
-        assertEquals("koppter://filter?project=GarageSale", copied)
+        waitUntil { copied == "koppter://filter?project=GarageSale" }
         onNodeWithTag("link-menu").assertDoesNotExist()
         onNodeWithTag("label-hashtag-quick", useUnmergedTree = true).performMouseInput { rightClick() }
         onNodeWithTag("copy-link").performClick()
-        assertEquals("koppter://filter?hashtag=quick", copied)
+        waitUntil { copied == "koppter://filter?hashtag=quick" }
 
         // A label of the filter panel has a menu without the link and is not selected by that click.
         onNodeWithTag("filter-context-errands>city").performMouseInput { rightClick() }
@@ -4399,5 +4386,14 @@ class AppTest {
         // A task that is done has no time any more.
         onAllNodesWithTag("family-toggle")[0].performClick()
         waitUntil { anna.companions["calendar.txt"] == "2026-11-12 w46 Thu  15:00-15:30 Absent\n" }
+    }
+}
+
+/** A clipboard that hands what is copied to [copy] as text. */
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+private fun clipboard(copy: (String) -> Unit) = object : Clipboard {
+    override suspend fun getClipEntry(): ClipEntry? = null
+    override suspend fun setClipEntry(clipEntry: ClipEntry?) {
+        copy((clipEntry!!.nativeClipEntry as java.awt.datatransfer.Transferable).getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor) as String)
     }
 }

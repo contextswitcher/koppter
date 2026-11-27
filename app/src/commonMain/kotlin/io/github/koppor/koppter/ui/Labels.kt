@@ -35,6 +35,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -47,12 +48,11 @@ import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import io.github.koppor.koppter.todotxt.MarkdownLink
 import io.github.koppor.koppter.todotxt.bareAddresses
@@ -78,6 +78,7 @@ import io.github.koppor.koppter.outlook.Outlook
 import io.github.koppor.koppter.todotxt.Task
 import io.github.koppor.koppter.todotxt.lastLevel
 import io.github.koppor.koppter.todotxt.linkTo
+import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
 /** Tells the state of the plan of a task and a text about it; `null` for a task that shows none. */
@@ -437,9 +438,8 @@ fun WithLinkMenu(
     var renaming by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<ConfigFile.ProjectProperties?>(null) }
     val projectEditor = LocalProjectEditor.current.takeIf { key == LINK_PROJECT }
-    // ponytail: the clipboard of text, which is deprecated for one that needs code per platform; move when it is removed.
-    @Suppress("DEPRECATION")
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     val uriHandler = LocalUriHandler.current
     val sign = when (key) {
         LINK_PROJECT -> "+"
@@ -484,7 +484,7 @@ fun WithLinkMenu(
                 DropdownMenuItem(
                     text = { Text("Copy link") },
                     onClick = {
-                        clipboard.setText(AnnotatedString(linkTo(key, name)))
+                        scope.launch { clipboard.setClipEntry(plainText(linkTo(key, name))) }
                         open = false
                     },
                     modifier = Modifier.testTag("copy-link"),
