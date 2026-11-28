@@ -1173,6 +1173,7 @@ Needs: impl
 `SettingsDialog` edits the location of the todo.txt file, the switch for writing dates, the number of top tasks, the board columns defined by filters, the names of the priorities, the links of projects and contexts and the colors.
 Tabs group the settings: File (the file, the shared lists and the git repository), Tasks, Colors, and Integrations where the platform offers Outlook, ContextSwitcher or LaTeX.
 The title, the tabs and the buttons stay in view while the content of a tab scrolls, and what was typed in a tab stays when another tab is shown.
+The dialog takes the height of the window, so that its edges stay where they are when another tab is shown.
 A changed location makes the controller load the other file.
 The fields for the board columns and the share actions hold what is in effect, which without a definition of the user are the defaults of the configuration.
 A field for a block of the configuration file shows an example in a pale color while it is empty.

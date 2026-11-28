@@ -1716,6 +1716,19 @@ class AppTest {
         onNodeWithTag("calendar-appointment", useUnmergedTree = true).assertHasNoClickAction()
     }
 
+    // [utest->dsn~settings-dialog~1]
+    @Test
+    fun theSettingsKeepTheirSizeWhenAnotherTabIsShown() = runDesktopComposeUiTest(width = 1280, height = 720) {
+        val controller = TodoController(Settings(), { storage }, today = { LocalDate(2026, 11, 12) }, outlook = FakeOutlook(blocks = 7))
+        setContent { App(controller, "todo.txt") }
+        onNodeWithTag("open-settings").performClick()
+        val file = onNodeWithTag("settings-dialog").getBoundsInRoot()
+        for (tab in listOf("tasks", "colors", "integrations")) {
+            onNodeWithTag("settings-tab-$tab").performClick()
+            assertEquals(file, onNodeWithTag("settings-dialog").getBoundsInRoot(), tab)
+        }
+    }
+
     // [utest->dsn~outlook-clear~1]
     @Test
     fun theBlocksOfKoppterAreRemovedFromOutlookAfterTheUserConfirmedTheirNumber() = runComposeUiTest {
